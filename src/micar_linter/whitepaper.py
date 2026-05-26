@@ -37,14 +37,14 @@ class Whitepaper:
 
 
 def load_whitepaper(path: Path) -> Whitepaper:
-    """Load and validate a white paper JSON, PDF, or DOCX file."""
+    """Load and validate a white paper JSON, PDF, DOCX, or XHTML file."""
     suffix = path.suffix.lower()
 
     if suffix == ".json":
         return _load_json(path)
-    if suffix in (".pdf", ".docx"):
+    if suffix in (".pdf", ".docx", ".xhtml", ".html"):
         return _load_document(path, suffix)
-    raise SystemExit(f"Unsupported file format '{suffix}'. Expected: .json, .pdf, .docx")
+    raise SystemExit(f"Unsupported file format '{suffix}'. Expected: .json, .pdf, .docx, .xhtml, .html")
 
 
 def _load_json(path: Path) -> Whitepaper:
@@ -88,15 +88,22 @@ def _load_document(path: Path, suffix: str) -> Whitepaper:
     if not path.exists():
         raise SystemExit(f"File not found: {path}")
 
+    ixbrl_issues = []
     try:
         if suffix == ".pdf":
             from micar_linter.document import load_from_pdf
 
             sections = load_from_pdf(path)
-        else:
+        elif suffix == ".docx":
             from micar_linter.document import load_from_docx
 
             sections = load_from_docx(path)
+        else:
+            from micar_linter.xhtml_parser import load_from_xhtml
+            from micar_linter.ixbrl import validate_ixbrl
+
+            sections = load_from_xhtml(path)
+            ixbrl_issues = validate_ixbrl(path)
     except SystemExit:
         raise
     except Exception as exc:
@@ -124,6 +131,8 @@ def _load_document(path: Path, suffix: str) -> Whitepaper:
 
     title = path.stem.replace("-", " ").replace("_", " ").title()
     metadata = {"source_file": str(path)}
+    if ixbrl_issues:
+        metadata["ixbrl_issues"] = tuple(ixbrl_issues)
 
     return Whitepaper(
         title=title,

@@ -55,6 +55,24 @@ class Linter:
 
     @staticmethod
     def _apply(rule: Rule, whitepaper: Whitepaper) -> Finding:
+        if rule.rule_id == "COMMON.IXBRL_TAGGING":
+            source_file = str(whitepaper.metadata.get("source_file", ""))
+            if source_file.lower().endswith((".xhtml", ".html")):
+                tag_issues = whitepaper.metadata.get("ixbrl_issues", ())
+                if tag_issues:
+                    return Finding(
+                        rule=rule,
+                        status="review",
+                        word_count=0,
+                        issues=tuple(tag_issues),
+                    )
+            return Finding(
+                rule=rule,
+                status="pass",
+                word_count=0,
+                issues=(),
+            )
+
         text = whitepaper.section(rule.section)
         word_count = _count_words(text)
 

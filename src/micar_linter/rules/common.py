@@ -61,4 +61,12 @@ COMMON_RULES: tuple[Rule, ...] = (
         min_words=10,
         severity=Severity.MAJOR,
     ),
+    Rule(
+        rule_id="COMMON.IXBRL_TAGGING",
+        citation="Art. 2 VO (EU) 2024/2984",
+        section="ixbrl_tagging",
+        label="Inline XBRL (iXBRL) compliance and ESMA metadata tagging",
+        min_words=0,
+        severity=Severity.BLOCKER,
+    ),
 )
