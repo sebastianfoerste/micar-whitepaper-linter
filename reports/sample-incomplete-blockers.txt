@@ -1,7 +1,7 @@
 MiCAR Whitepaper Linter — Incomplete EuroStable ART Draft
 Whitepaper type: ART
 ==============================================================================
-Pass: 0  |  Review: 10  |  Missing: 4  |  Blockers: 11
+Pass: 1  |  Review: 12  |  Missing: 4  |  Blockers: 13
 
 [REVIEW] [BLOCKER] COMMON.SUMMARY  Plain-language summary
            Cite:  Art. 6 Abs. 7, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR
@@ -31,6 +31,10 @@ Pass: 0  |  Review: 10  |  Missing: 4  |  Blockers: 11
            Section: 'language'  (1 words)
            -  Section is thin: 1 words, expected at least 10.
            -  Missing review terms: language.
+
+[PASS  ] [BLOCKER] COMMON.IXBRL_TAGGING  Inline XBRL (iXBRL) compliance and ESMA metadata tagging
+           Cite:  Art. 2 VO (EU) 2024/2984
+           Section: 'ixbrl_tagging'  (0 words)
 
 [REVIEW] [BLOCKER] ANNEX_II.A  Information about the issuer of the ART (legal form, governance, prudential profile)
            Cite:  Anhang II Teil A MiCAR
@@ -67,11 +71,24 @@ Pass: 0  |  Review: 10  |  Missing: 4  |  Blockers: 11
            -  Section is thin: 3 words, expected at least 150.
            -  Missing review terms: market, credit, liquidity, operational, de-peg, redemption, reserve.
 
-[REVIEW] [BLOCKER] ANNEX_II.G  Reserve of assets (composition, custody, segregation, valuation, audit)
-           Cite:  Anhang II Teil G i.V.m. Art. 36 MiCAR
+[REVIEW] [BLOCKER] ANNEX_II.G.COMPOSITION  Reserve composition and investment limits (Art. 36(1) MiCAR / EBA RTS)
+           Cite:  Anhang II Teil G i.V.m. Art. 36 Abs. 1 MiCAR
            Section: 'reserve_of_assets'  (3 words)
-           -  Section is thin: 3 words, expected at least 150.
-           -  Missing review terms: composition, segregation, custodian, valuation, audit.
+           -  Section is thin: 3 words, expected at least 60.
+           -  Missing review terms: composition, deposit, concentration.
+           -  Missing required pattern: '(30\s*%|thirty\s*percent)'.
+
+[REVIEW] [BLOCKER] ANNEX_II.G.CUSTODY  Custody policy and custodian selection (Art. 36(2) MiCAR)
+           Cite:  Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR
+           Section: 'reserve_of_assets'  (3 words)
+           -  Section is thin: 3 words, expected at least 60.
+           -  Missing review terms: custody, custodian, segregation, insolvency.
+
+[REVIEW] [BLOCKER] ANNEX_II.G.VALUATION_AUDIT  Valuation procedure and audit frequency (Art. 36(3) MiCAR)
+           Cite:  Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR
+           Section: 'reserve_of_assets'  (3 words)
+           -  Section is thin: 3 words, expected at least 50.
+           -  Missing review terms: valuation, audit.
 
 [MISS  ] [MAJOR  ] ANNEX_II.H  Principal adverse environmental and climate-related impact of the consensus mechanism
            Cite:  Anhang II Teil H i.V.m. ESMA RTS on sustainability indicators

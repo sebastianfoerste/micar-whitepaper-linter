@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+
 from lxml import etree
+
 from micar_linter.document import match_heading_to_section
 
 
@@ -29,9 +31,9 @@ def load_from_xhtml(path: Path) -> dict[str, str]:
             continue
 
         is_heading = False
-        if elem.tag in ("h1", "h2", "h3", "h4", "h5", "h6"):
-            is_heading = True
-        elif elem.tag in ("b", "strong") and len(text) < 120:
+        is_tag_heading = elem.tag in ("h1", "h2", "h3", "h4", "h5", "h6")
+        is_bold_heading = elem.tag in ("b", "strong") and len(text) < 120
+        if is_tag_heading or is_bold_heading:
             is_heading = True
 
         if is_heading:

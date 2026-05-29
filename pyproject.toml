@@ -10,7 +10,7 @@ readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.11"
 authors = [
-  { name = "Sebastian Förste" },
+  { name = "Alex Vance" },
 ]
 keywords = ["micar", "compliance", "legal-tech", "crypto-asset", "regulatory", "eu"]
 classifiers = [

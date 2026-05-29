@@ -35,16 +35,36 @@ class Whitepaper:
         value = self.sections.get(key, "")
         return value if isinstance(value, str) else str(value)
 
+    @property
+    def language(self) -> str:
+        """Detect draft language (en or de).
+
+        Checks metadata first (allows CLI/config override), then falls back to heuristics.
+        """
+        meta_lang = self.metadata.get("language")
+        if meta_lang in ("en", "de"):
+            return meta_lang
+
+        full_text = " ".join(self.sections.values()).lower()
+        german_words = {"der", "die", "das", "und", "ist", "mit", "von", "eine", "oder"}
+        english_words = {"the", "and", "is", "of", "with", "for", "that", "this", "or"}
+
+        words = [w.strip(".,;:?!()[]{}") for w in full_text.split()]
+        de_count = sum(1 for w in words if w in german_words)
+        en_count = sum(1 for w in words if w in english_words)
+
+        return "de" if de_count > en_count else "en"
+
 
 def load_whitepaper(path: Path) -> Whitepaper:
-    """Load and validate a white paper JSON, PDF, DOCX, or XHTML file."""
+    """Load and validate a white paper JSON, PDF, DOCX, Markdown, or XHTML file."""
     suffix = path.suffix.lower()
 
     if suffix == ".json":
         return _load_json(path)
-    if suffix in (".pdf", ".docx", ".xhtml", ".html"):
+    if suffix in (".pdf", ".docx", ".xhtml", ".html", ".md"):
         return _load_document(path, suffix)
-    raise SystemExit(f"Unsupported file format '{suffix}'. Expected: .json, .pdf, .docx, .xhtml, .html")
+    raise SystemExit(f"Unsupported file format '{suffix}'. Expected: .json, .pdf, .docx, .xhtml, .html, .md")
 
 
 def _load_json(path: Path) -> Whitepaper:
@@ -98,9 +118,13 @@ def _load_document(path: Path, suffix: str) -> Whitepaper:
             from micar_linter.document import load_from_docx
 
             sections = load_from_docx(path)
+        elif suffix == ".md":
+            from micar_linter.document import load_from_markdown
+
+            sections = load_from_markdown(path)
         else:
-            from micar_linter.xhtml_parser import load_from_xhtml
             from micar_linter.ixbrl import validate_ixbrl
+            from micar_linter.xhtml_parser import load_from_xhtml
 
             sections = load_from_xhtml(path)
             ixbrl_issues = validate_ixbrl(path)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+
 from lxml import etree
 
 MANDATORY_MICA_TAGS = {
@@ -34,7 +35,7 @@ def validate_ixbrl(path: Path) -> list[str]:
     ns_map = root.nsmap
 
     ix_ns = None
-    for prefix, uri in ns_map.items():
+    for _prefix, uri in ns_map.items():
         if uri in ("http://www.xbrl.org/2013/inlineXBRL", "http://www.xbrl.org/2008/inlineXBRL"):
             ix_ns = uri
             break

@@ -85,3 +85,29 @@ def test_cli_main_json_format(tmp_path: Path, capsys):
     assert "findings" in report_data
 
 
+def test_cli_audit_log_and_lang(tmp_path: Path):
+    json_content = """{
+        "title": "German Token",
+        "type": "other",
+        "sections": {
+            "summary": "Dies ist die Zusammenfassung des Projekts. Sie enthält wesentliche Informationen.",
+            "risk_warning": "Das ist ein Warnhinweis bezüglich des Risikos eines Wertverlusts."
+        }
+    }"""
+    file_path = tmp_path / "german.json"
+    file_path.write_text(json_content, encoding="utf-8")
+    
+    audit_log_path = tmp_path / "audit_log.md"
+    
+    status = main([str(file_path), "--lang", "de", "--audit-log", str(audit_log_path)])
+    assert status == 0
+    
+    assert audit_log_path.exists()
+    log_text = audit_log_path.read_text(encoding="utf-8")
+    assert "# MiCAR Whitepaper Compliance Review Log" in log_text
+    assert "German Token" in log_text
+    assert "SHA-256 Checksum" in log_text
+    assert "COMMON.SUMMARY" in log_text
+
+
+

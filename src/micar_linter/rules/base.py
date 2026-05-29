@@ -46,8 +46,11 @@ class Rule:
     section: str
     label: str
     required_terms: tuple[str, ...] = ()
+    required_terms_de: tuple[str, ...] = ()
     required_patterns: tuple[str, ...] = ()
+    required_patterns_de: tuple[str, ...] = ()
     prohibited_patterns: tuple[str, ...] = ()
+    prohibited_patterns_de: tuple[str, ...] = ()
     min_words: int = 30
     severity: Severity = Severity.MAJOR
 

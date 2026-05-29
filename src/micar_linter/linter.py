@@ -73,51 +73,91 @@ class Linter:
                 issues=(),
             )
 
+        is_de = (whitepaper.language == "de")
+
         text = whitepaper.section(rule.section)
         word_count = _count_words(text)
 
         if not text.strip():
+            msg = "Abschnitt ist leer oder fehlt." if is_de else "Section is empty or absent."
             return Finding(
                 rule=rule,
                 status="missing",
                 word_count=0,
-                issues=("Section is empty or absent.",),
+                issues=(msg,),
             )
 
         issues: list[str] = []
         normalized = text.lower()
 
         if word_count < rule.min_words:
-            issues.append(
-                f"Section is thin: {word_count} words, expected at least {rule.min_words}."
-            )
+            if is_de:
+                issues.append(
+                    f"Abschnitt ist zu kurz: {word_count} Wörter, mindestens {rule.min_words} erwartet."
+                )
+            else:
+                issues.append(
+                    f"Section is thin: {word_count} words, expected at least {rule.min_words}."
+                )
 
-        # Legacy required terms
+        # Bilingual required terms
+        req_terms = rule.required_terms_de if (is_de and rule.required_terms_de) else rule.required_terms
         missing_terms = [
-            term for term in rule.required_terms if term.lower() not in normalized
+            term for term in req_terms if term.lower() not in normalized
         ]
         if missing_terms:
-            issues.append("Missing review terms: " + ", ".join(missing_terms) + ".")
+            prefix = "Fehlende Begriffe: " if is_de else "Missing review terms: "
+            issues.append(prefix + ", ".join(missing_terms) + ".")
 
-        # Advanced required regex patterns
-        for pattern in rule.required_patterns:
+        # Bilingual required regex patterns
+        req_patterns = (
+            rule.required_patterns_de
+            if (is_de and rule.required_patterns_de)
+            else rule.required_patterns
+        )
+        for pattern in req_patterns:
             try:
                 compiled = re.compile(pattern, re.IGNORECASE)
             except re.error as exc:
-                issues.append(f"Invalid required pattern regex '{pattern}': {exc}")
+                msg = (
+                    f"Ungültiges gefordertes Regex-Muster '{pattern}': {exc}"
+                    if is_de
+                    else f"Invalid required pattern regex '{pattern}': {exc}"
+                )
+                issues.append(msg)
                 continue
             if not compiled.search(text):
-                issues.append(f"Missing required pattern: '{pattern}'.")
+                msg = (
+                    f"Fehlendes gefordertes Muster: '{pattern}'."
+                    if is_de
+                    else f"Missing required pattern: '{pattern}'."
+                )
+                issues.append(msg)
 
-        # Prohibited regex patterns
-        for pattern in rule.prohibited_patterns:
+        # Bilingual prohibited regex patterns
+        proh_patterns = (
+            rule.prohibited_patterns_de
+            if (is_de and rule.prohibited_patterns_de)
+            else rule.prohibited_patterns
+        )
+        for pattern in proh_patterns:
             try:
                 compiled = re.compile(pattern, re.IGNORECASE)
             except re.error as exc:
-                issues.append(f"Invalid prohibited pattern regex '{pattern}': {exc}")
+                msg = (
+                    f"Ungültiges unzulässiges Regex-Muster '{pattern}': {exc}"
+                    if is_de
+                    else f"Invalid prohibited pattern regex '{pattern}': {exc}"
+                )
+                issues.append(msg)
                 continue
             if compiled.search(text):
-                issues.append(f"Prohibited content matched: '{pattern}'.")
+                msg = (
+                    f"Unzulässiger Inhalt gefunden: '{pattern}'."
+                    if is_de
+                    else f"Prohibited content matched: '{pattern}'."
+                )
+                issues.append(msg)
 
         status = "review" if issues else "pass"
         return Finding(rule=rule, status=status, word_count=word_count, issues=tuple(issues))

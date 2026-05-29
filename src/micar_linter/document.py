@@ -8,26 +8,26 @@ from pathlib import Path
 # Common patterns (in English and German) matching whitepaper section headings.
 # Word boundaries are used to avoid false positives.
 SECTION_PATTERNS = {
-    "summary": [r"\bsummary\b", r"\bzusammenfassung\b", r"\bplain-language\s+summary\b", r"\bkey\s+information\b"],
-    "risk_warning": [r"\brisk\s+warning\b", r"\bwarnhinweis\b", r"\bmandatory\s+warning\b"],
-    "management_statement": [r"\bmanagement\s+body\b", r"\bleitungsorgan\b", r"\bmanagement\s+statement\b", r"\bstatement\b.*\bmanagement\b"],
-    "notification_date": [r"\bdate\s+of\s+notification\b", r"\bnotifizierungsdatum\b", r"\bnotification\s+date\b"],
-    "language": [r"\blanguage\b", r"\bsprache\b"],
-    "offeror": [r"\bofferor\b", r"\banbieter\b"],
-    "issuer": [r"\bissuer\b", r"\bemittent\b"],
-    "trading_platform_operator": [r"\btrading\s+platform\b", r"\bhandelsplattform\b", r"\boperator\b.*\btrading\b"],
-    "project": [r"\bproject\b", r"\bprojekt\b", r"\bbusiness\s+model\b", r"\bteam\b"],
-    "offer_or_admission": [r"\bpublic\s+offer\b", r"\bzulassung\b", r"\badmission\s+to\s+trading\b", r"\boffer\b.*\badmission\b"],
+    "summary": [r"\bsummary\b", r"\bzusammenfassung\w*", r"\bplain-language\s+summary\b", r"\bkey\s+information\b"],
+    "risk_warning": [r"\brisk\s+warning\b", r"\bwarnhinweis\w*", r"\bmandatory\s+warning\b"],
+    "management_statement": [r"\bmanagement\s+body\b", r"\bleitungsorgan\w*", r"\bmanagement\s+statement\b", r"\bstatement\b.*\bmanagement\b"],
+    "notification_date": [r"\bdate\s+of\s+notification\b", r"\bnotifizierungsdatum\w*", r"\bnotification\s+date\b"],
+    "language": [r"\blanguage\b", r"\bsprache\w*"],
+    "offeror": [r"\bofferor\b", r"\banbieter\w*"],
+    "issuer": [r"\bissuer\b", r"\bemittent\w*"],
+    "trading_platform_operator": [r"\btrading\s+platform\b", r"\bhandelsplattform\w*", r"\boperator\b.*\btrading\b"],
+    "project": [r"\bproject\b", r"\bprojekt\w*", r"\bbusiness\s+model\b", r"\bteam\b"],
+    "offer_or_admission": [r"\bpublic\s+offer\b", r"\bzulassung\w*", r"\badmission\s+to\s+trading\b", r"\boffer\b.*\badmission\b"],
     "crypto_asset": [r"\bcrypto-asset\b", r"\bcrypto\s+asset\b", r"\bcharacteristics\b.*\bcrypto\b", r"\binformation\s+about\s+the\s+token\b", r"\bthe\s+token\b"],
     "art": [r"\basset-referenced\s+token\b", r"\bstabilisation\s+mechanism\b", r"\breference\s+assets\b", r"\binformation\s+about\s+the\s+token\b", r"\bthe\s+token\b"],
     "emt": [r"\be-money\s+token\b", r"\bdenomination\b", r"\breferenced\s+currency\b", r"\binformation\s+about\s+the\s+token\b", r"\bthe\s+token\b"],
     "rights_and_obligations": [r"\brights\s+and\s+obligations\b", r"\brechte\s+und\s+pflichten\b", r"\bholder\s+rights\b"],
-    "technology": [r"\btechnology\b", r"\btechnologie\b", r"\bunderlying\s+technology\b", r"\bdlt\b", r"\bconsensus\b"],
-    "risks": [r"\brisk\s+factors\b", r"\brisikofaktoren\b", r"\brisks\b", r"\brisiken\b"],
-    "environmental_impact": [r"\benvironmental\b", r"\bclimate\b", r"\bsustainability\b", r"\bumwelt\b", r"\bklima\b"],
-    "reserve_of_assets": [r"\breserve\b.*\bassets\b", r"\breservevermögen\b", r"\basset\s+reserve\b"],
-    "redemption": [r"\bredemption\b", r"\brücknahme\b", r"\bredemption\s+right\b"],
-    "safeguarding": [r"\bsafeguarding\b", r"\babsicherung\b", r"\bsicherung\b.*\bgelder\b"],
+    "technology": [r"\btechnology\b", r"\btechnologie\w*", r"\bunderlying\s+technology\b", r"\bdlt\b", r"\bconsensus\b"],
+    "risks": [r"\brisk\s+factors\b", r"\brisikofaktor\w*", r"\brisks\b", r"\brisiken\b"],
+    "environmental_impact": [r"\benvironmental\b", r"\bclimate\b", r"\bsustainability\b", r"\bumwelt\w*", r"\bklima\w*"],
+    "reserve_of_assets": [r"\breserve\b.*\bassets\b", r"\breservevermögen\w*", r"\basset\s+reserve\b"],
+    "redemption": [r"\bredemption\b", r"\brücknahme\w*", r"\bredemption\s+right\b"],
+    "safeguarding": [r"\bsafeguarding\b", r"\babsicherung\w*", r"\bsicherung\w*.*\bgelder\w*"],
 }
 
 
@@ -121,3 +121,34 @@ def load_from_pdf(path: Path) -> dict[str, str]:
                 sections.setdefault(k, []).append(line_clean)
 
     return {k: "\n".join(v) for k, v in sections.items()}
+
+
+def load_from_markdown(path: Path) -> dict[str, str]:
+    """Parse a Markdown file and extract text grouped under identified section headings."""
+    try:
+        content = path.read_text(encoding="utf-8")
+    except Exception as exc:
+        raise SystemExit(f"Error reading Markdown file {path}: {exc}") from exc
+
+    sections: dict[str, list[str]] = {}
+    current_keys = []
+
+    for line in content.splitlines():
+        line_clean = line.strip()
+        if not line_clean:
+            continue
+
+        # Detect Markdown headings (e.g. # Heading 1, ## Heading 2)
+        heading_match = re.match(r"^#{1,6}\s+(.+)$", line_clean)
+        if heading_match:
+            heading_text = heading_match.group(1).strip()
+            matched_keys = match_heading_to_section(heading_text)
+            # Reset current_keys if it's a heading, so we don't leak text into unrelated sections
+            current_keys = matched_keys
+        else:
+            if current_keys:
+                for k in current_keys:
+                    sections.setdefault(k, []).append(line_clean)
+
+    return {k: "\n".join(v) for k, v in sections.items()}
+

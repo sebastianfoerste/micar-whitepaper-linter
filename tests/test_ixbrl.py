@@ -1,8 +1,8 @@
 from pathlib import Path
-import pytest
+
 from micar_linter.ixbrl import validate_ixbrl
+from micar_linter.whitepaper import WhitepaperType, load_whitepaper
 from micar_linter.xhtml_parser import load_from_xhtml
-from micar_linter.whitepaper import load_whitepaper, WhitepaperType
 
 
 def test_ixbrl_malformed_xml(tmp_path: Path):
