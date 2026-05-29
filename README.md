@@ -17,6 +17,40 @@ A Python package that:
 - ranks findings by severity (BLOCKER for items that gate notification under Art. 8 / 17 / 49 MiCAR, MAJOR for material incompleteness, MINOR for drafting hygiene), and
 - emits either a human-readable report with pinpoint citations or machine-readable JSON for downstream pipelines.
 
+## Architecture
+
+```
+Input: JSON whitepaper draft
+        |
+        v
+┌─────────────────────────────────┐
+│       Regime Detector           │
+│  (other / art / emt)            │
+│  reads: regime, issuer, token   │
+└────────────┬────────────────────┘
+             │
+             v
+┌─────────────────────────────────┐
+│       Rule Engine               │
+│  Annex I / II / III rule set    │
+│  rule_id, section, severity     │
+└────────────┬────────────────────┘
+             │
+             v
+┌─────────────────────────────────┐
+│       Report Generator          │
+│  BLOCKER / MAJOR / MINOR        │
+│  pinpoint citation to MiCAR Art │
+│  human-readable + JSON output   │
+└─────────────────────────────────┘
+             │
+             v
+ Output: structured report
+   → reviewer reads BLOCKER items
+   → lawyer signs off or rejects
+   → downstream pipeline (JSON)
+```
+
 Each rule carries a stable `rule_id`, a citation in canonical legal form (`Anhang II Teil G i.V.m. Art. 36 MiCAR`), the section key it reads, and a severity. The rule sets are the contribution of a practising lawyer; the engine is generic.
 
 ## Status
