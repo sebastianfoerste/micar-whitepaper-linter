@@ -2,7 +2,7 @@
 
 Deterministic first-pass linter for MiCAR crypto-asset white paper drafts. Reads a JSON draft, applies the rule set keyed to the white paper regime, and emits a structured report with citations, severity levels and JSON output.
 
-This is not legal advice. It is a screening tool that a practising lawyer supervises.
+This project is a concrete example of encoding legal obligations into deterministic software controls for product, compliance and legal-review workflows. It is not legal advice. It is a screening tool that a practising lawyer supervises.
 
 ## What this proves
 
@@ -51,13 +51,13 @@ Python 3.11+, zero core runtime dependencies, hatchling build, pytest, ruff, Git
 ## How to run
 
 ```bash
-git clone https://github.com/sebastianforste/micar-whitepaper-linter.git
+git clone https://github.com/sebastianfoerste/micar-whitepaper-linter.git
 cd micar-whitepaper-linter
 python3 -m micar_linter examples/art-stablecoin.json
 python3 -m micar_linter examples/incomplete.json --strict
 ```
 
-No install needed for the JSON workflow: the core package has zero runtime dependencies and runs straight from source via `python3 -m micar_linter`. To install as a CLI named `micar-lint`, run `pip install -e .` and you can drop the `python3 -m`. For PDF or DOCX ingestion run `pip install -e ".[all]"`.
+No install needed for the JSON workflow: the core package has zero runtime dependencies and runs straight from source via `python3 -m micar_linter`. To install as a CLI named `micar-lint`, run `pip install -e .` and you can drop the `python3 -m`. For PDF or DOCX ingestion run `pip install -e " .[all]"`.
 
 JSON output for pipelines:
 
