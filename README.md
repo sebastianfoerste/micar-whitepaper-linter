@@ -4,7 +4,7 @@ Deterministic first-pass linter for MiCAR crypto-asset white paper drafts. Reads
 
 This project is a concrete example of encoding legal obligations into deterministic software controls for product, compliance and legal-review workflows. It is not legal advice. It is a screening tool that a practising lawyer supervises.
 
-## What this proves
+## Why it matters
 
 * Dense EU financial regulation can be translated into structured, testable software rules.
 * Legal automation is strongest when it produces cited findings, review states and machine-readable output.
@@ -78,35 +78,4 @@ Strict mode returns exit code 1 if any blocker finding is open. Wire it into a p
 
 [REVIEW] [BLOCKER] ANNEX_REVIEW  Reserve or safeguarding information
           Section: 'reserve_or_safeguarding'  (3 words)
-          - Section is thin: 3 words, expected at least 150.
-          - Missing review terms: composition, segregation, custodian, valuation, audit.
 ```
-
-## Input format
-
-A white paper draft is one JSON file with a top-level `type`, a `title`, and a `sections` object whose keys match the rule `section` identifiers. See `examples/` for one fixture per regime.
-
-## Layout
-
-```text
-src/micar_linter/
-  rules/
-  linter.py
-  report.py
-  cli.py
-examples/
-reports/
-tests/
-```
-
-## Launch readiness
-
-For a reviewer-friendly runbook covering demo path, checks, sample-data rules, architecture and safety posture, see [`docs/launch-readiness.md`](docs/launch-readiness.md).
-
-## Roadmap
-
-See open issues. Headline items: more granular rule coverage, German-language draft support, public supervisory source enrichment and a reviewer audit log.
-
-## License
-
-MIT. The legal classifications encoded in this repository reflect the author's reading of MiCAR and are not legal advice. A practising lawyer must supervise every white paper review.
