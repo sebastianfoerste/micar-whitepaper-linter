@@ -57,7 +57,7 @@ python3 -m micar_linter examples/art-stablecoin.json
 python3 -m micar_linter examples/incomplete.json --strict
 ```
 
-No install needed for the JSON workflow: the core package has zero runtime dependencies and runs straight from source via `python3 -m micar_linter`. To install as a CLI named `micar-lint`, run `pip install -e .` and you can drop the `python3 -m`. For PDF or DOCX ingestion run `pip install -e " .[all]"`.
+No install needed for the JSON workflow: the core package has zero runtime dependencies and runs straight from source via `python3 -m micar_linter`. To install as a CLI named `micar-lint`, run `pip install -e .` and you can drop the `python3 -m`. For PDF or DOCX ingestion run `pip install -e ".[all]"`.
 
 JSON output for pipelines:
 
