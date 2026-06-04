@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import sys
 from pathlib import Path
 
 from micar_linter import __version__
@@ -84,8 +85,9 @@ def main(argv: list[str] | None = None) -> int:
         try:
             args.audit_log.parent.mkdir(parents=True, exist_ok=True)
             args.audit_log.write_text(log_content, encoding="utf-8")
-        except Exception as exc:
-            print(f"Error writing audit log to {args.audit_log}: {exc}")
+        except OSError as exc:
+            print(f"error: cannot write audit log to {args.audit_log}: {exc}", file=sys.stderr)
+            return 2
 
     if args.strict and report.blockers:
         return 1

@@ -8,17 +8,17 @@ version = "0.1.0"
 description = "Deterministic first-pass linter for MiCAR crypto-asset white paper drafts."
 readme = "README.md"
 license = { file = "LICENSE" }
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 authors = [
-  { name = "Alex Vance" },
+  { name = "Sebastian Förste" },
 ]
 keywords = ["micar", "compliance", "legal-tech", "crypto-asset", "regulatory", "eu"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Legal Industry",
   "License :: OSI Approved :: MIT License",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Office/Business :: Financial",
 ]
 dependencies = []
@@ -38,15 +38,15 @@ dev = [
 micar-lint = "micar_linter.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/sebastianforste/micar-whitepaper-linter"
-Issues = "https://github.com/sebastianforste/micar-whitepaper-linter/issues"
+Homepage = "https://github.com/sebastianfoerste/micar-whitepaper-linter"
+Issues = "https://github.com/sebastianfoerste/micar-whitepaper-linter/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/micar_linter"]
 
 [tool.ruff]
 line-length = 110
-target-version = "py311"
+target-version = "py313"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]

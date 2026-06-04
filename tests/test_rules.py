@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 
 import pytest
 
@@ -37,3 +38,10 @@ def test_every_rule_carries_a_pinpoint_citation():
         for rule in rules:
             assert rule.citation.strip(), rule.rule_id
             assert any(token in rule.citation for token in ("Art.", "Anhang"))
+
+
+def test_project_metadata_points_to_current_repository():
+    pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
+
+    assert "github.com/sebastianfoerste/micar-whitepaper-linter" in pyproject
+    assert "github.com/sebastianforste/micar-whitepaper-linter" not in pyproject

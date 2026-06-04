@@ -110,4 +110,21 @@ def test_cli_audit_log_and_lang(tmp_path: Path):
     assert "COMMON.SUMMARY" in log_text
 
 
+def test_cli_audit_log_write_failure_is_visible(tmp_path: Path, capsys):
+    json_content = """{
+        "title": "Audit Failure Token",
+        "type": "other",
+        "sections": {
+            "summary": "This summary provides key information about the token."
+        }
+    }"""
+    file_path = tmp_path / "draft.json"
+    file_path.write_text(json_content, encoding="utf-8")
+
+    status = main([str(file_path), "--audit-log", str(tmp_path)])
+
+    assert status == 2
+    captured = capsys.readouterr()
+    assert "error: cannot write audit log" in captured.err
+
 
