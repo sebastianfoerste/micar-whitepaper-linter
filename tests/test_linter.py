@@ -174,3 +174,13 @@ def test_linter_warnings_on_unrecognized_sections():
     # The linter check should identify that misspelled_offeror is not in the ruleset
     assert len(report.warnings) > 0
     assert any("misspelled_offeror" in w for w in report.warnings)
+
+
+def test_severity_ranking_is_stable():
+    assert Severity.BLOCKER.value > Severity.MAJOR.value > Severity.MINOR.value
+    assert [severity.label for severity in Severity] == ["BLOCKER", "MAJOR", "MINOR"]
+    assert [severity.label for severity in sorted(Severity, key=lambda item: item.value)] == [
+        "MINOR",
+        "MAJOR",
+        "BLOCKER",
+    ]

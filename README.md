@@ -1,81 +1,114 @@
 # MiCAR Whitepaper Linter
 
-Deterministic first-pass linter for MiCAR crypto-asset white paper drafts. Reads a JSON draft, applies the rule set keyed to the white paper regime, and emits a structured report with citations, severity levels and JSON output.
+The MiCAR Whitepaper Linter is a deterministic Python tool and command-line application designed to validate draft crypto-asset white papers under the Markets in Crypto-Assets Regulation (MiCAR - Regulation (EU) 2023/1114). It maps Annex requirements (Annex I, II, III) directly into code check classes.
 
-This project is a concrete example of encoding legal obligations into deterministic software controls for product, compliance and legal-review workflows. It is not legal advice. It is a screening tool that a practising lawyer supervises.
+---
 
-## Why it matters
+## What it does
+The linter parses draft white papers represented in JSON, XHTML (Inline XBRL), or DOCX formats, identifies the regulatory token regime (Other Crypto-Asset, ART, EMT), runs rule checklists (risk warnings, reserve policies, redemption access, registry metrics), and prints structured markdown audits or outputs JSON payloads.
 
-* Dense EU financial regulation can be translated into structured, testable software rules.
-* Legal automation is strongest when it produces cited findings, review states and machine-readable output.
-* MiCAR review can be improved without pretending that a checklist replaces legal judgment.
+---
 
-## Problem
+## Quick Start
 
-Crypto-asset white paper review involves repeated structural checks across different regulatory regimes. Drafting reviews often catch the same categories of gaps repeatedly: missing required disclosures, thin sections, incomplete issuer information, unclear redemption language, incomplete reserve information and insufficient risk warnings.
-
-Doing that read-through manually on every draft is wasteful and inconsistent across reviewers.
-
-## What I built
-
-A Python package that:
-
-- detects the white paper regime from the draft itself,
-- applies the relevant rule set,
-- ranks findings by severity,
-- emits either a human-readable report or machine-readable JSON for downstream pipelines.
-
-## Architecture
-
-```mermaid
-flowchart TD
-  A[JSON white paper draft] --> B[Regime detector]
-  B --> C[Rule engine]
-  C --> D[Findings with severity]
-  D --> E[Human-readable report]
-  D --> F[JSON output]
-  E --> G[Lawyer review]
-  F --> H[Workflow quality gate]
-```
-
-Each rule carries a stable `rule_id`, a citation, the section key it reads and a severity. The rule sets are the contribution of a practising lawyer; the engine is generic.
-
-## Status
-
-Alpha. The core scaffolds are in place and cover the disclosure architecture end-to-end. More granular rules, language support and reviewer audit features are roadmap items.
-
-## Stack
-
-Python 3.11+, zero core runtime dependencies, hatchling build, pytest, ruff, GitHub Actions CI. Optional extras `[docx]` and `[pdf]` unlock DOCX and PDF white paper ingestion.
-
-## How to run
+Run one synthetic white paper and inspect cited findings:
 
 ```bash
-git clone https://github.com/sebastianfoerste/micar-whitepaper-linter.git
-cd micar-whitepaper-linter
-python3 -m micar_linter examples/art-stablecoin.json
-python3 -m micar_linter examples/incomplete.json --strict
+uv run --extra dev python -m micar_linter examples/art-stablecoin.json --json
 ```
 
-No install needed for the JSON workflow: the core package has zero runtime dependencies and runs straight from source via `python3 -m micar_linter`. To install as a CLI named `micar-lint`, run `pip install -e .` and you can drop the `python3 -m`. For PDF or DOCX ingestion run `pip install -e ".[all]"`.
-
-JSON output for pipelines:
+For human-readable output:
 
 ```bash
-python3 -m micar_linter examples/emt-token.json --json
+uv run --extra dev python -m micar_linter examples/incomplete.json
 ```
 
-Strict mode returns exit code 1 if any blocker finding is open. Wire it into a pre-review quality gate.
+The output is a first-pass rule report with citations, severity, status and review notes. It is not legal advice and does not replace lawyer review.
 
-## Sample output
+---
 
-`reports/sample-art-pass.txt` and `reports/sample-incomplete-blockers.txt` are committed so a reviewer sees the tool working without installing anything.
+## Core Features
+- **Deterministic Regulatory Audits**: Maps statutory rules for Annex I (other crypto-assets), Annex II (Asset-Referenced Tokens), and Annex III (E-Money Tokens).
+- **Multiple Document Format Parsers**: Extracts white paper blocks from XHTML (Inline XBRL tags), JSON structures, and DOCX files.
+- **Rules-as-Code Engine**: Implements severity scales (Blocker, Major, Minor, Pass) for compliance findings.
+- **CI/CD Integrations**: Outputs machine-readable JSON reports suitable for automated pipeline checks.
+- **Artifact Manifests & Remediation Reports**: Writes local SHA-256 manifests and structured remediation plans for open findings. Manifests include export eligibility and missing-output warnings, but do not store raw confidential source snippets.
+- **Coverage Matrices & Batch Packs**: Writes disclosure coverage matrices, source-anchor metadata, and directory-level batch review packs with hashes, blocker IDs, and manifest digests.
 
-```text
-[MISS  ] [BLOCKER] COMMON.RISK_WARNING  Mandatory risk warning statement
-          Section: 'risk_warning'  (0 words)
-          - Section is empty or absent.
+---
 
-[REVIEW] [BLOCKER] ANNEX_REVIEW  Reserve or safeguarding information
-          Section: 'reserve_or_safeguarding'  (3 words)
+## What this proves
+
+This repository shows that MiCAR white-paper requirements can be encoded as deterministic, cited and testable rules. It is a regulation-as-code proof: annex selection is explicit, rule IDs are stable, missing mandatory disclosures produce cited findings, severity is tested, and JSON outputs can be used by review workflows without hiding the legal basis.
+
+The tool deliberately preserves legal judgment. It identifies disclosure gaps and produces draft review artifacts. It does not decide whether a white paper is lawful, complete for filing or commercially acceptable.
+
+---
+
+## Tech Stack
+- **Runtime**: Python (>= 3.13)
+- **Packaging/Installer**: Hatchling, `uv`
+- **Optional File Parsers**: `python-docx` (DOCX), `pypdf` (PDF)
+- **Testing**: pytest
+
+---
+
+## Repository Structure
+- `src/micar_linter/`: Source modules.
+  - `rules/`: Concrete Annex I, II, III check files.
+  - `ixbrl.py` & `xhtml_parser.py`: iXBRL XHTML tag compilers.
+  - `document.py` & `whitepaper.py`: Logical document abstractions.
+  - `report.py`: Compile final audit reports.
+  - `cli.py` & `__main__.py`: CLI interface.
+- `tests/`: Pytest files checking parser stability.
+- `examples/`: Sample compliant and incomplete white papers.
+- `reports/`: Text logs of sample run results.
+
+---
+
+## Setup & Running Instructions
+
+### 1. Install Library
+Sync dependencies using `uv`:
+```bash
+uv sync --all-extras
 ```
+Or use pip inside a virtual environment:
+```bash
+pip install -e ".[all]"
+```
+
+### 2. Running the Linter
+Run the linter against a document:
+```bash
+# Run CLI
+uv run micar-lint examples/incomplete.json
+
+# Write reviewer artifacts
+uv run micar-lint examples/incomplete.json \
+  --audit-log reports/incomplete-audit.md \
+  --remediation-output reports/incomplete-remediation.json \
+  --coverage-output reports/incomplete-coverage.json \
+  --manifest-output reports/incomplete-manifest.json
+
+# Batch review a directory
+uv run micar-lint examples \
+  --batch-output reports/example-batch-pack.json
+```
+
+---
+
+## Testing Commands
+Run the full local proof gate:
+```bash
+make check
+```
+
+Run the pytest suite directly:
+```bash
+uv run --extra dev pytest
+```
+
+## Extending the rule set
+
+See [How to Extend the Rule Set](docs/rule-extension-guide.md) before adding a new disclosure rule.

@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from micar_linter.anchors import SourceAnchor, build_source_anchors
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Finding, Rule, Severity
 from micar_linter.whitepaper import Whitepaper, WhitepaperType
@@ -18,6 +19,7 @@ class Report:
     whitepaper_type: WhitepaperType
     findings: tuple[Finding, ...]
     warnings: tuple[str, ...] = field(default_factory=tuple)
+    source_anchors: dict[str, SourceAnchor] = field(default_factory=dict)
 
     @property
     def passed(self) -> tuple[Finding, ...]:
@@ -183,6 +185,7 @@ def lint_whitepaper(whitepaper: Whitepaper) -> Report:
         whitepaper_type=whitepaper.type,
         findings=findings,
         warnings=tuple(warnings),
+        source_anchors=build_source_anchors(whitepaper, findings),
     )
 
 

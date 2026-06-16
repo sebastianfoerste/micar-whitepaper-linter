@@ -34,11 +34,11 @@ def test_cli_main_success(tmp_path: Path):
     }"""
     file_path = tmp_path / "other.json"
     file_path.write_text(json_content, encoding="utf-8")
-    
+
     # Run in normal mode
     status = main([str(file_path)])
     assert status == 0
-    
+
     # Run in strict mode
     status_strict = main([str(file_path), "--strict"])
     assert status_strict == 1
@@ -59,7 +59,7 @@ def test_cli_main_strict_blocker(tmp_path: Path):
     }"""
     file_path = tmp_path / "bad.json"
     file_path.write_text(json_content, encoding="utf-8")
-    
+
     # Strict mode should exit with status 1 due to blockers
     status = main([str(file_path), "--strict"])
     assert status == 1
@@ -75,10 +75,10 @@ def test_cli_main_json_format(tmp_path: Path, capsys):
     }"""
     file_path = tmp_path / "json_test.json"
     file_path.write_text(json_content, encoding="utf-8")
-    
+
     status = main([str(file_path), "--json"])
     assert status == 0
-    
+
     captured = capsys.readouterr()
     report_data = json.loads(captured.out)
     assert report_data["title"] == "Clean Token"
@@ -96,18 +96,83 @@ def test_cli_audit_log_and_lang(tmp_path: Path):
     }"""
     file_path = tmp_path / "german.json"
     file_path.write_text(json_content, encoding="utf-8")
-    
+
     audit_log_path = tmp_path / "audit_log.md"
-    
+
     status = main([str(file_path), "--lang", "de", "--audit-log", str(audit_log_path)])
     assert status == 0
-    
+
     assert audit_log_path.exists()
     log_text = audit_log_path.read_text(encoding="utf-8")
     assert "# MiCAR Whitepaper Compliance Review Log" in log_text
     assert "German Token" in log_text
     assert "SHA-256 Checksum" in log_text
     assert "COMMON.SUMMARY" in log_text
+
+
+def test_cli_manifest_output_tracks_source_and_audit_log(tmp_path: Path):
+    json_content = """{
+        "title": "Manifest Token",
+        "type": "other",
+        "sections": {
+            "summary": "This summary provides key information about the token and its offer."
+        }
+    }"""
+    file_path = tmp_path / "manifest.json"
+    file_path.write_text(json_content, encoding="utf-8")
+    audit_log_path = tmp_path / "audit_log.md"
+    manifest_path = tmp_path / "manifest-output.json"
+
+    status = main(
+        [
+            str(file_path),
+            "--audit-log",
+            str(audit_log_path),
+            "--manifest-output",
+            str(manifest_path),
+        ]
+    )
+
+    assert status == 0
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["schema"] == "micar-whitepaper-linter.artifact-manifest.v1"
+    assert manifest["source"]["sha256"]
+    assert manifest["outputs"][0]["path"] == str(audit_log_path)
+    assert manifest["export_eligibility"]["review_required"] is True
+    assert len(manifest["overall_digest"]) == 64
+
+
+def test_cli_remediation_output_is_manifest_tracked(tmp_path: Path):
+    json_content = """{
+        "title": "Remediation Token",
+        "type": "other",
+        "sections": {
+            "summary": "Short"
+        }
+    }"""
+    file_path = tmp_path / "remediation.json"
+    file_path.write_text(json_content, encoding="utf-8")
+    remediation_path = tmp_path / "remediation-output.json"
+    manifest_path = tmp_path / "manifest-output.json"
+
+    status = main(
+        [
+            str(file_path),
+            "--remediation-output",
+            str(remediation_path),
+            "--manifest-output",
+            str(manifest_path),
+        ]
+    )
+
+    assert status == 0
+    remediation = json.loads(remediation_path.read_text(encoding="utf-8"))
+    assert remediation["schema"] == "micar-whitepaper-linter.remediation-report.v1"
+    assert remediation["status"] == "BLOCKED"
+
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["outputs"][0]["path"] == str(remediation_path)
+    assert manifest["export_eligibility"]["machine_export_ready"] is False
 
 
 def test_cli_audit_log_write_failure_is_visible(tmp_path: Path, capsys):
@@ -126,5 +191,3 @@ def test_cli_audit_log_write_failure_is_visible(tmp_path: Path, capsys):
     assert status == 2
     captured = capsys.readouterr()
     assert "error: cannot write audit log" in captured.err
-
-

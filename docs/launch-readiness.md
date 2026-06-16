@@ -52,15 +52,16 @@ pip install -e ".[all]"
 3. Show that blocker findings create a non-zero exit code.
 4. Run JSON output and inspect machine-readable findings.
 5. Open the sample reports under `reports/`.
-6. Inspect `src/micar_linter/rules/` to show that legal review logic is explicit and testable.
+6. Generate audit-log, remediation, and manifest artifacts for the incomplete example.
+7. Inspect `src/micar_linter/rules/` to show that legal review logic is explicit and testable.
 
 ## Checks
 
 ```bash
-pytest
-ruff check .
-python -m micar_linter examples/incomplete.json --strict
-python -m micar_linter examples/emt-token.json --json
+make check
+uv run --extra dev python -m micar_linter examples/incomplete.json --strict
+uv run --extra dev python -m micar_linter examples/emt-token.json --json
+uv run --extra dev python -m micar_linter examples/incomplete.json --audit-log /tmp/micar-audit.md --remediation-output /tmp/micar-remediation.json --manifest-output /tmp/micar-manifest.json
 ```
 
 ## Sample data rule

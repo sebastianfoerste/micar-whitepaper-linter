@@ -76,6 +76,11 @@ def render_json(report: Report) -> str:
                 "status": f.status,
                 "word_count": f.word_count,
                 "issues": list(f.issues),
+                "source_anchor": (
+                    report.source_anchors[f.rule.rule_id].to_json()
+                    if f.rule.rule_id in report.source_anchors
+                    else None
+                ),
             }
             for f in report.findings
         ],
@@ -143,4 +148,3 @@ def render_audit_log(report: Report, source_file: str, sha256: str) -> str:
     lines.append("```")
 
     return "\n".join(lines)
-
