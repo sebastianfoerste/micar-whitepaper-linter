@@ -1,4 +1,4 @@
-"""MiCAR Whitepaper Linter — deterministic first-pass screening for MiCAR white papers."""
+"""MiCAR Whitepaper Linter - deterministic first-pass screening for MiCAR white papers."""
 
 __version__ = "0.1.0"
 

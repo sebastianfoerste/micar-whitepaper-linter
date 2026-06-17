@@ -1,11 +1,11 @@
-"""Annex I MiCAR — crypto-assets other than ARTs and EMTs.
+"""Annex I MiCAR - crypto-assets other than ARTs and EMTs.
 
 Reference: Anhang I VO (EU) 2023/1114 i.V.m. Art. 6 MiCAR.
 
 Annex I is structured as Parts A through J. Each Part bundles point-level
 disclosure requirements. The rules below are scaffolded at the Part level;
 point-level granularity (e.g. Annex I, Part D, point 5) is left as a
-deliberate extension point — those interpretive calls are the practising
+deliberate extension point - those interpretive calls are the practising
 lawyer's contribution and are tracked in the project issues.
 """
 

@@ -1,4 +1,4 @@
-"""Annex III MiCAR — e-money tokens (EMTs).
+"""Annex III MiCAR - e-money tokens (EMTs).
 
 Reference: Anhang III VO (EU) 2023/1114 i.V.m. Art. 51 MiCAR.
 

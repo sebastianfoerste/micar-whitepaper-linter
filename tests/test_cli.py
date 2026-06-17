@@ -191,3 +191,45 @@ def test_cli_audit_log_write_failure_is_visible(tmp_path: Path, capsys):
     assert status == 2
     captured = capsys.readouterr()
     assert "error: cannot write audit log" in captured.err
+
+
+def test_cli_report_language_keeps_blockers_review_gated(tmp_path: Path, capsys):
+    json_content = """{
+        "title": "Review Gate Token",
+        "type": "other",
+        "sections": {
+            "summary": "Short"
+        }
+    }"""
+    file_path = tmp_path / "review-gate.json"
+    file_path.write_text(json_content, encoding="utf-8")
+
+    status = main([str(file_path)])
+
+    assert status == 0
+    captured = capsys.readouterr()
+    assert "not package-ready" in captured.out
+    assert "external review or filing workflow" in captured.out
+    assert "lawyer has signed off" in captured.out
+    assert "client-ready" not in captured.out
+    assert "cannot proceed" not in captured.out
+
+
+def test_cli_coverage(tmp_path: Path, capsys):
+    json_content = """{
+        "title": "Coverage Test Token",
+        "type": "other",
+        "sections": {
+            "summary": "This summary provides key information about the token."
+        }
+    }"""
+    file_path = tmp_path / "coverage_test.json"
+    file_path.write_text(json_content, encoding="utf-8")
+
+    status = main([str(file_path), "--coverage"])
+    assert status == 0
+
+    captured = capsys.readouterr()
+    assert "MiCAR Whitepaper Coverage Matrix - Coverage Test Token" in captured.out
+    assert "Whitepaper type: OTHER" in captured.out
+    assert "COMMON.SUMMARY" in captured.out

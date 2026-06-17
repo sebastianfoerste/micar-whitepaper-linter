@@ -1,4 +1,4 @@
-"""Annex II MiCAR — asset-referenced tokens (ARTs).
+"""Annex II MiCAR - asset-referenced tokens (ARTs).
 
 Reference: Anhang II VO (EU) 2023/1114 i.V.m. Art. 19 MiCAR.
 

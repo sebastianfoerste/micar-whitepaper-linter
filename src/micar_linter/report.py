@@ -1,4 +1,4 @@
-"""Report rendering — plain text and JSON."""
+"""Report rendering - plain text and JSON."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ _TITLE_BAR = "=" * 78
 
 def render_text(report: Report) -> str:
     lines: list[str] = []
-    lines.append(f"MiCAR Whitepaper Linter — {report.title}")
+    lines.append(f"MiCAR Whitepaper Linter - {report.title}")
     lines.append(f"Whitepaper type: {report.whitepaper_type.value.upper()}")
     lines.append(_TITLE_BAR)
     lines.append(
@@ -47,8 +47,9 @@ def render_text(report: Report) -> str:
         lines.append("All required disclosures present. Lawyer review still required.")
     else:
         lines.append(
-            "First-pass screening only. The MiCAR notification under "
-            "Art. 8 / 17 / 49 MiCAR cannot proceed until BLOCKER items are cured."
+            "First-pass screening only. The draft is not package-ready. The "
+            "MiCAR notification under Art. 8 / 17 / 49 MiCAR should not enter an external review "
+            "or filing workflow until BLOCKER items are cured and a lawyer has signed off."
         )
     lines.append("This tool is not legal advice.")
     return "\n".join(lines)
@@ -124,8 +125,9 @@ def render_audit_log(report: Report, source_file: str, sha256: str) -> str:
     if report.blockers:
         lines.append("> [!WARNING]")
         lines.append(
-            "> **BLOCKER issues are currently open.** "
-            "Notification under Art. 8 / 17 / 49 MiCAR is barred."
+            "> **BLOCKER issues are currently open.** The draft is not package-ready "
+            "for an external review or filing workflow until the gaps are cured "
+            "and a lawyer has signed off."
         )
         lines.append("")
     else:
@@ -136,9 +138,9 @@ def render_audit_log(report: Report, source_file: str, sha256: str) -> str:
     lines.append("## Lawyer Sign-off")
     lines.append("")
     lines.append(
-        "This document constitutes an automated compliance audit checklist. "
-        "The reviewing lawyer must sign below to verify the accuracy of this review "
-        "and confirm compliance with MiCAR Regulation."
+        "This document is an automated disclosure checklist. "
+        "The reviewing lawyer must sign below only after reviewing the automated findings, "
+        "the source draft and any filing decision independently."
     )
     lines.append("")
     lines.append("```")
@@ -147,4 +149,31 @@ def render_audit_log(report: Report, source_file: str, sha256: str) -> str:
     lines.append("Signature:      __________________________________")
     lines.append("```")
 
+    return "\n".join(lines)
+
+
+def render_coverage_table(report: Report) -> str:
+    lines = []
+    lines.append(f"MiCAR Whitepaper Coverage Matrix - {report.title}")
+    lines.append(f"Whitepaper type: {report.whitepaper_type.value.upper()}")
+    lines.append("=" * 78)
+    lines.append(f"| {'Rule ID':<20} | {'Citation':<15} | {'Severity':<8} | {'Status':<7} |")
+    lines.append("|" + "-" * 22 + "|" + "-" * 17 + "|" + "-" * 10 + "|" + "-" * 9 + "|")
+    for finding in report.findings:
+        rule_id = finding.rule.rule_id
+        citation = finding.rule.citation
+        severity = finding.rule.severity.label
+        status = finding.status.upper()
+        lines.append(
+            f"| {rule_id:<20} | {citation:<15} | {severity:<8} | {status:<7} |"
+        )
+    lines.append("=" * 78)
+    lines.append(
+        "Pass: {p}  |  Review: {r}  |  Missing: {m}  |  Blockers: {b}".format(
+            p=len(report.passed),
+            r=len(report.needs_review),
+            m=len(report.missing),
+            b=len(report.blockers),
+        )
+    )
     return "\n".join(lines)

@@ -13,7 +13,7 @@ from micar_linter.batch import build_batch_review_pack, render_batch_review_pack
 from micar_linter.coverage import build_coverage_matrix, render_coverage_matrix
 from micar_linter.linter import lint_whitepaper
 from micar_linter.remediation import render_remediation_report
-from micar_linter.report import render_audit_log, render_json, render_text
+from micar_linter.report import render_audit_log, render_coverage_table, render_json, render_text
 from micar_linter.whitepaper import load_whitepaper
 
 
@@ -65,6 +65,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to write a JSON disclosure coverage matrix.",
     )
     parser.add_argument(
+        "--coverage",
+        action="store_true",
+        help="Print a clean, console-formatted coverage summary table to stdout.",
+    )
+    parser.add_argument(
         "--batch-output",
         type=Path,
         help="Path to write a JSON batch review pack when the input path is a directory.",
@@ -100,6 +105,10 @@ def main(argv: list[str] | None = None) -> int:
         whitepaper.metadata["language"] = args.lang
 
     report = lint_whitepaper(whitepaper)
+
+    if args.coverage:
+        print(render_coverage_table(report))
+        return 0
 
     if args.json:
         print(render_json(report))

@@ -9,6 +9,30 @@ The linter parses draft white papers represented in JSON, XHTML (Inline XBRL), o
 
 ---
 
+## Reviewer Demo Path
+
+Run the full local gate:
+
+```bash
+make check
+```
+
+Then generate the review bundle from synthetic data:
+
+```bash
+uv run --extra dev python -m micar_linter examples/incomplete.json \
+  --audit-log /tmp/micar-incomplete-audit.md \
+  --remediation-output /tmp/micar-incomplete-remediation.json \
+  --coverage-output /tmp/micar-incomplete-coverage.json \
+  --manifest-output /tmp/micar-incomplete-manifest.json
+```
+
+The outputs are review artifacts for a qualified lawyer. They do not certify a
+white paper, approve a notification or replace legal review.
+
+The example issuers, tokens, dates, register numbers and authority references in
+`examples/` are fictional synthetic fixtures for local testing.
+
 ## Quick Start
 
 Run one synthetic white paper and inspect cited findings:
@@ -42,6 +66,10 @@ The output is a first-pass rule report with citations, severity, status and revi
 This repository shows that MiCAR white-paper requirements can be encoded as deterministic, cited and testable rules. It is a regulation-as-code proof: annex selection is explicit, rule IDs are stable, missing mandatory disclosures produce cited findings, severity is tested, and JSON outputs can be used by review workflows without hiding the legal basis.
 
 The tool deliberately preserves legal judgment. It identifies disclosure gaps and produces draft review artifacts. It does not decide whether a white paper is lawful, complete for filing or commercially acceptable.
+
+The report language treats blocker findings as package-readiness issues. Open
+blockers mean the draft should stay out of an external review or filing workflow
+until the gaps are cured and a lawyer has signed off.
 
 ---
 
@@ -112,3 +140,18 @@ uv run --extra dev pytest
 ## Extending the rule set
 
 See [How to Extend the Rule Set](docs/rule-extension-guide.md) before adding a new disclosure rule.
+
+## Reviewer Checklist
+
+Use this checklist when evaluating the repository as a portfolio project or employer demo:
+
+- [ ] Run `make check` - 48 tests pass (ruff lint, pytest suite, smoke command).
+- [ ] Run `uv run micar-lint examples/art-stablecoin.json` - report prints blocker summary and lawyer sign-off block.
+- [ ] Run `uv run micar-lint examples/incomplete.json` - report correctly flags BLOCKER items and signals package-not-ready.
+- [ ] Run `uv run micar-lint examples --batch-output /tmp/batch.json` - batch output written with per-file findings.
+- [ ] Review `src/micar_linter/report.py` - confirm blocker language says "should not enter filing workflow" not "cannot proceed".
+- [ ] Review `tests/test_cli.py::test_cli_report_language_keeps_blockers_review_gated` - regression guard on legal language.
+- [ ] Review `examples/art-stablecoin.json` - confirm fixture labels are synthetic (fictional issuer, dates, registration).
+- [ ] Review `PRIVACY.md` - confirm demo boundary and synthetic-only requirement.
+- [ ] Review `docs/DEMO_ASSET_PLAN.md` for demo guidance.
+- [ ] Confirm "This tool is not legal advice." appears in every report output.

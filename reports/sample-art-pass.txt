@@ -1,4 +1,4 @@
-MiCAR Whitepaper Linter — EuroStable ART White Paper
+MiCAR Whitepaper Linter — Synthetic EuroStable ART White Paper
 Whitepaper type: ART
 ==============================================================================
 Pass: 15  |  Review: 2  |  Missing: 0  |  Blockers: 2
@@ -75,5 +75,5 @@ Pass: 15  |  Review: 2  |  Missing: 0  |  Blockers: 2
            Section: 'redemption'  (125 words)
 
 ==============================================================================
-First-pass screening only. The MiCAR notification under Art. 8 / 17 / 49 MiCAR cannot proceed until BLOCKER items are cured.
+First-pass screening only. The draft is not package-ready. The MiCAR notification under Art. 8 / 17 / 49 MiCAR should not enter an external review or filing workflow until BLOCKER items are cured and a lawyer has signed off.
 This tool is not legal advice.

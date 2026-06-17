@@ -1,5 +1,5 @@
 {
-  "title": "Incomplete EuroStable ART Draft",
+  "title": "Incomplete Synthetic EuroStable ART Draft",
   "type": "art",
   "sections": {
     "summary": "EuroStable is a token.",
@@ -7,7 +7,7 @@
     "management_statement": "Signed.",
     "notification_date": "TBD.",
     "language": "English.",
-    "issuer": "EuroStable AG, Hamburg.",
+    "issuer": "Synthetic EuroStable AG, fictional demo issuer.",
     "art": "EuroStable is a stablecoin.",
     "offer_or_admission": "",
     "rights_and_obligations": "Holders have rights.",
