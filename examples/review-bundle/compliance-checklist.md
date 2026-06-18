@@ -4,7 +4,7 @@
 - **Regime/Type**: ART
 - **Source File**: examples/art-stablecoin.json
 - **SHA-256 Checksum**: `c520a00ef8829fc4f4f607903c5a66b08b09a469ebe7b949e1e001c2ff881ae3`
-- **Review Timestamp**: 2026-06-17 14:48:35
+- **Review Timestamp**: 2026-06-18 08:38:21
 
 ## Rule Compliance Checklist
 

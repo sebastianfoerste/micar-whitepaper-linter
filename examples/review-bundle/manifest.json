@@ -1,6 +1,6 @@
 {
   "schema": "micar-whitepaper-linter.artifact-manifest.v1",
-  "generated_at": "2026-06-17T12:48:35.246257+00:00",
+  "generated_at": "2026-06-18T06:38:21.674355+00:00",
   "source": {
     "path": "examples/art-stablecoin.json",
     "sha256": "c520a00ef8829fc4f4f607903c5a66b08b09a469ebe7b949e1e001c2ff881ae3"
@@ -19,16 +19,16 @@
   },
   "outputs": [
     {
-      "path": "examples/review-bundle/compliance-checklist.md",
-      "sha256": "093e3a6957f775c347e8426187a838339d48153548248aed5b847164b50f788e"
+      "path": "dist/review-bundle/compliance-checklist.md",
+      "sha256": "9a0811f5357b9bf07396fab6a76074330f52f49acb6f0921d11819cd0cac14c5"
     },
     {
-      "path": "examples/review-bundle/remediation-checklist.json",
+      "path": "dist/review-bundle/remediation-checklist.json",
       "sha256": "3c957960b1b5df376a3f732cbe5ae8b4826f3dc37557c44942b2a84200dc90a3"
     },
     {
-      "path": "examples/review-bundle/coverage-matrix.json",
-      "sha256": "e0081b7bdb496ce8cd59bfbe9b075e8d9b9f85c7d939b3204bf47324de5baae7"
+      "path": "dist/review-bundle/coverage-matrix.json",
+      "sha256": "021e6d36953010e49f58b8697d2c64a4e049fc39b63322a905c6186f6cca1004"
     }
   ],
   "warnings": [],
@@ -42,5 +42,5 @@
     "notice": "Automated linter output requires substantive lawyer review before external use."
   },
   "review_notice": "Manifest proves local artifact integrity only. It is not a legal opinion, signature, notification, or filing approval.",
-  "overall_digest": "42feb87181dc3b5aaa5836714dd025fe26c293638d4ac087f624a052db257614"
+  "overall_digest": "3293b4c86b6cdf7232af3c5ddf51af25572d9bb92e3fe2ef9ab2bb20af8398ff"
 }
