@@ -21,10 +21,7 @@ Then generate the review bundle from synthetic data:
 
 ```bash
 uv run --extra dev python -m micar_linter examples/incomplete.json \
-  --audit-log /tmp/micar-incomplete-audit.md \
-  --remediation-output /tmp/micar-incomplete-remediation.json \
-  --coverage-output /tmp/micar-incomplete-coverage.json \
-  --manifest-output /tmp/micar-incomplete-manifest.json
+  --review-bundle-dir /tmp/micar-incomplete-review-bundle
 ```
 
 The outputs are review artifacts for a qualified lawyer. They do not certify a
@@ -112,12 +109,9 @@ Run the linter against a document:
 # Run CLI
 uv run micar-lint examples/incomplete.json
 
-# Write reviewer artifacts
+# Write a complete reviewer bundle
 uv run micar-lint examples/incomplete.json \
-  --audit-log reports/incomplete-audit.md \
-  --remediation-output reports/incomplete-remediation.json \
-  --coverage-output reports/incomplete-coverage.json \
-  --manifest-output reports/incomplete-manifest.json
+  --review-bundle-dir reports/incomplete-review-bundle
 
 # Batch review a directory
 uv run micar-lint examples \
@@ -148,6 +142,7 @@ Use this checklist when evaluating the repository as a portfolio project or empl
 - [ ] Run `make check` - 48 tests pass (ruff lint, pytest suite, smoke command).
 - [ ] Run `uv run micar-lint examples/art-stablecoin.json` - report prints blocker summary and lawyer sign-off block.
 - [ ] Run `uv run micar-lint examples/incomplete.json` - report correctly flags BLOCKER items and signals package-not-ready.
+- [ ] Run `uv run micar-lint examples/incomplete.json --review-bundle-dir /tmp/micar-review-bundle` - one command writes checklist, remediation, coverage, sign-off and manifest files.
 - [ ] Run `uv run micar-lint examples --batch-output /tmp/batch.json` - batch output written with per-file findings.
 - [ ] Review `src/micar_linter/report.py` - confirm blocker language says "should not enter filing workflow" not "cannot proceed".
 - [ ] Review `tests/test_cli.py::test_cli_report_language_keeps_blockers_review_gated` - regression guard on legal language.

@@ -175,6 +175,35 @@ def test_cli_remediation_output_is_manifest_tracked(tmp_path: Path):
     assert manifest["export_eligibility"]["machine_export_ready"] is False
 
 
+def test_cli_review_bundle_writes_one_command_review_pack(tmp_path: Path):
+    json_content = """{
+        "title": "Bundle Token",
+        "type": "other",
+        "sections": {
+            "summary": "Short"
+        }
+    }"""
+    file_path = tmp_path / "bundle.json"
+    bundle_dir = tmp_path / "review-bundle"
+    file_path.write_text(json_content, encoding="utf-8")
+
+    status = main([str(file_path), "--review-bundle-dir", str(bundle_dir)])
+
+    assert status == 0
+    assert (bundle_dir / "compliance-checklist.md").exists()
+    assert (bundle_dir / "remediation-checklist.json").exists()
+    assert (bundle_dir / "coverage-matrix.json").exists()
+    assert (bundle_dir / "reviewer-signoff.md").exists()
+    manifest = json.loads((bundle_dir / "manifest.json").read_text(encoding="utf-8"))
+    coverage = json.loads((bundle_dir / "coverage-matrix.json").read_text(encoding="utf-8"))
+
+    assert manifest["bundle_schema"] == "micar-whitepaper-linter.review-bundle.v1"
+    assert manifest["export_eligibility"]["review_required"] is True
+    assert len(manifest["outputs"]) == 4
+    assert coverage["coverage"][0]["source_anchor"]
+    assert "Lawyer Sign-off" in (bundle_dir / "reviewer-signoff.md").read_text(encoding="utf-8")
+
+
 def test_cli_audit_log_write_failure_is_visible(tmp_path: Path, capsys):
     json_content = """{
         "title": "Audit Failure Token",

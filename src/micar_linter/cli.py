@@ -14,6 +14,7 @@ from micar_linter.coverage import build_coverage_matrix, render_coverage_matrix
 from micar_linter.linter import lint_whitepaper
 from micar_linter.remediation import render_remediation_report
 from micar_linter.report import render_audit_log, render_coverage_table, render_json, render_text
+from micar_linter.review_bundle import write_review_bundle
 from micar_linter.whitepaper import load_whitepaper
 
 
@@ -70,6 +71,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Print a clean, console-formatted coverage summary table to stdout.",
     )
     parser.add_argument(
+        "--review-bundle-dir",
+        type=Path,
+        help="Directory to write the complete review bundle.",
+    )
+    parser.add_argument(
         "--batch-output",
         type=Path,
         help="Path to write a JSON batch review pack when the input path is a directory.",
@@ -106,7 +112,7 @@ def main(argv: list[str] | None = None) -> int:
 
     report = lint_whitepaper(whitepaper)
 
-    if args.coverage:
+    if args.coverage and not args.review_bundle_dir:
         print(render_coverage_table(report))
         return 0
 
@@ -116,6 +122,22 @@ def main(argv: list[str] | None = None) -> int:
         print(render_text(report))
 
     written_outputs: list[Path] = []
+
+    if args.review_bundle_dir:
+        try:
+            bundle_paths = write_review_bundle(
+                report,
+                source_path=args.path,
+                directory=args.review_bundle_dir,
+            )
+        except OSError as exc:
+            print(
+                f"error: cannot write review bundle to {args.review_bundle_dir}: {exc}",
+                file=sys.stderr,
+            )
+            return 2
+        written_outputs.extend(bundle_paths)
+        print(f"review-bundle: {args.review_bundle_dir}", file=sys.stderr if args.json else sys.stdout)
 
     if args.audit_log:
         sha256 = calculate_sha256(args.path)

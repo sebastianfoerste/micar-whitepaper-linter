@@ -14,9 +14,5 @@ smoke:
 	$(UV) run --extra dev python -m micar_linter examples/art-stablecoin.json --json > /tmp/micar-linter-smoke.json
 
 review-bundle:
-	mkdir -p dist/review-bundle
 	$(UV) run --extra dev python -m micar_linter examples/art-stablecoin.json \
-		--audit-log dist/review-bundle/compliance-checklist.md \
-		--remediation-output dist/review-bundle/remediation-checklist.json \
-		--coverage-output dist/review-bundle/coverage-matrix.json \
-		--manifest-output dist/review-bundle/manifest.json
+		--review-bundle-dir dist/review-bundle
