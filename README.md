@@ -11,13 +11,17 @@ The linter parses draft white papers represented in JSON, XHTML (Inline XBRL), o
 
 ## Reviewer Demo Path
 
-Run the full local gate:
+Clone, install, and watch it catch blockers in a synthetic ART draft:
 
 ```bash
-make check
+make install   # uv sync --extra dev
+make test      # 49 tests
+make demo      # lint examples/incomplete.json — cited blockers, deterministic
 ```
 
-Then generate the review bundle from synthetic data:
+![Linter output: an incomplete ART draft scored Pass 1 / Review 12 / Missing 4 / Blockers 13, each finding cited to a MiCAR article](docs/linter-output.svg)
+
+Run the full local gate with `make check`, or generate the review bundle from synthetic data:
 
 ```bash
 uv run --extra dev python -m micar_linter examples/incomplete.json \

@@ -1,8 +1,14 @@
 UV ?= uv
 
-.PHONY: check lint test smoke review-bundle
+.PHONY: check install demo lint test smoke review-bundle
 
 check: lint test smoke review-bundle
+
+install:
+	$(UV) sync --extra dev
+
+demo:
+	$(UV) run --extra dev python -m micar_linter examples/incomplete.json
 
 lint:
 	$(UV) run --extra dev ruff check src tests

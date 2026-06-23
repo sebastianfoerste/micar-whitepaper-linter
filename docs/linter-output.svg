@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="608" height="376" viewBox="0 0 608 376" font-family="SFMono-Regular,ui-monospace,Menlo,Consolas,monospace">
+<rect x="0" y="0" width="608" height="376" rx="10" fill="#0d1117"/>
+<rect x="0" y="0" width="608" height="36" rx="10" fill="#161b22"/>
+<rect x="0" y="26" width="608" height="10" fill="#161b22"/>
+<circle cx="20" cy="18" r="6" fill="#ff5f56"/>
+<circle cx="40" cy="18" r="6" fill="#ffbd2e"/>
+<circle cx="60" cy="18" r="6" fill="#27c93f"/>
+<text x="304" y="23" fill="#8b949e" font-size="13" text-anchor="middle">micar-lint examples/incomplete.json</text>
+<text x="22.0" y="66" fill="#8b949e" font-size="14" xml:space="preserve">$ </text>
+<text x="38.8" y="66" fill="#3fb950" font-size="14" xml:space="preserve">make install &amp;&amp; make test</text>
+<text x="22.0" y="88" fill="#8b949e" font-size="14" xml:space="preserve">49 passed in 1.01s</text>
+<text x="22.0" y="110" fill="#8b949e" font-size="14" xml:space="preserve">$ </text>
+<text x="38.8" y="110" fill="#3fb950" font-size="14" xml:space="preserve">make demo</text>
+<text x="22.0" y="132" fill="#f0f6fc" font-size="14" font-weight="700" xml:space="preserve">MiCAR Whitepaper Linter — incomplete ART draft</text>
+<text x="22.0" y="154" fill="#c9d1d9" font-size="14" xml:space="preserve">Pass: 1   Review: 12   Missing: 4   </text>
+<text x="324.4" y="154" fill="#f85149" font-size="14" xml:space="preserve">Blockers: 13</text>
+<text x="22.0" y="176" fill="#c9d1d9" font-size="14" xml:space="preserve"></text>
+<text x="22.0" y="198" fill="#f85149" font-size="14" xml:space="preserve">[MISS]   </text>
+<text x="97.6" y="198" fill="#d29922" font-size="14" xml:space="preserve">[BLOCKER] </text>
+<text x="181.6" y="198" fill="#f0f6fc" font-size="14" font-weight="700" xml:space="preserve">COMMON.RISK_WARNING</text>
+<text x="22.0" y="220" fill="#8b949e" font-size="14" xml:space="preserve">   cite: </text>
+<text x="97.6" y="220" fill="#58a6ff" font-size="14" xml:space="preserve">Art. 6 Abs. 5, Art. 19 Abs. 5, Art. 51 Abs. 5 MiCAR</text>
+<text x="22.0" y="242" fill="#8b949e" font-size="14" xml:space="preserve">   section 'risk_warning' (0 words) — empty or absent</text>
+<text x="22.0" y="264" fill="#c9d1d9" font-size="14" xml:space="preserve"></text>
+<text x="22.0" y="286" fill="#d29922" font-size="14" xml:space="preserve">[REVIEW] </text>
+<text x="97.6" y="286" fill="#d29922" font-size="14" xml:space="preserve">[BLOCKER] </text>
+<text x="181.6" y="286" fill="#c9d1d9" font-size="14" xml:space="preserve">ANNEX_II.A — issuer information</text>
+<text x="22.0" y="308" fill="#8b949e" font-size="14" xml:space="preserve">   cite: </text>
+<text x="97.6" y="308" fill="#58a6ff" font-size="14" xml:space="preserve">Anhang II Teil A MiCAR</text>
+<text x="22.0" y="330" fill="#c9d1d9" font-size="14" xml:space="preserve"></text>
+<text x="22.0" y="352" fill="#8b949e" font-size="14" xml:space="preserve">13 blockers must clear before the Art. 8 notification.</text>
+</svg>
