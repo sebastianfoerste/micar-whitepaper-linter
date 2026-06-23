@@ -149,5 +149,4 @@ Use this checklist when evaluating the repository as a portfolio project or empl
 - [ ] Review `examples/art-stablecoin.json` - confirm fixture labels are synthetic (fictional issuer, dates, registration).
 - [ ] Review `PRIVACY.md` - confirm demo boundary and synthetic-only requirement.
 - [ ] Review [docs/sample-review-bundle.md](docs/sample-review-bundle.md) - confirms synthetic review bundle outputs.
-- [ ] Review `docs/DEMO_ASSET_PLAN.md` for demo guidance.
 - [ ] Confirm "This tool is not legal advice." appears in every report output.
