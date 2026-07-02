@@ -58,7 +58,8 @@ The output is a first-pass rule report with citations, severity, status and revi
 - **Rules-as-Code Engine**: Implements severity scales (Blocker, Major, Minor, Pass) for compliance findings.
 - **CI/CD Integrations**: Outputs machine-readable JSON reports suitable for automated pipeline checks.
 - **Artifact Manifests & Remediation Reports**: Writes local SHA-256 manifests and structured remediation plans for open findings. Manifests include export eligibility and missing-output warnings, but do not store raw confidential source snippets.
-- **Coverage Matrices & Batch Packs**: Writes disclosure coverage matrices, source-anchor metadata, and directory-level batch review packs with hashes, blocker IDs, and manifest digests.
+- **Coverage Matrices, Review Tables & Batch Packs**: Writes disclosure coverage matrices, review-table rows with source anchors and reviewer states, and directory-level batch review packs with hashes, blocker IDs, and manifest digests.
+- **Playbook Review Profile**: Adds `micar-linter.playbook-review.v1` to review-table JSON. This is a Legora-inspired product pattern, no Legora integration or dependency. It covers rule review Skills, tabular review, trusted local sources, review bundle exports, Lists tasks and blocked filing gates.
 
 ---
 
@@ -146,7 +147,7 @@ Use this checklist when evaluating the repository as a portfolio project or empl
 - [ ] Run `make check` - 48 tests pass (ruff lint, pytest suite, smoke command).
 - [ ] Run `uv run micar-lint examples/art-stablecoin.json` - report prints blocker summary and lawyer sign-off block.
 - [ ] Run `uv run micar-lint examples/incomplete.json` - report correctly flags BLOCKER items and signals package-not-ready.
-- [ ] Run `uv run micar-lint examples/incomplete.json --review-bundle-dir /tmp/micar-review-bundle` - one command writes checklist, remediation, coverage, sign-off and manifest files.
+- [ ] Run `uv run micar-lint examples/incomplete.json --review-bundle-dir /tmp/micar-review-bundle` - one command writes checklist, remediation, coverage, review table, sign-off and manifest files.
 - [ ] Run `uv run micar-lint examples --batch-output /tmp/batch.json` - batch output written with per-file findings.
 - [ ] Review `src/micar_linter/report.py` - confirm blocker language says "should not enter filing workflow" not "cannot proceed".
 - [ ] Review `tests/test_cli.py::test_cli_report_language_keeps_blockers_review_gated` - regression guard on legal language.

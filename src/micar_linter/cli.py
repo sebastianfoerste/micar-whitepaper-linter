@@ -15,6 +15,12 @@ from micar_linter.linter import lint_whitepaper
 from micar_linter.remediation import render_remediation_report
 from micar_linter.report import render_audit_log, render_coverage_table, render_json, render_text
 from micar_linter.review_bundle import write_review_bundle
+from micar_linter.review_table import (
+    build_review_table,
+    build_review_table_comparison,
+    render_review_table,
+    render_review_table_comparison,
+)
 from micar_linter.whitepaper import load_whitepaper
 
 
@@ -28,7 +34,12 @@ def build_parser() -> argparse.ArgumentParser:
             "citations to MiCAR articles and annexes. Not legal advice."
         ),
     )
-    parser.add_argument("path", type=Path, help="Path to a whitepaper draft file.")
+    parser.add_argument(
+        "paths",
+        nargs="+",
+        type=Path,
+        help="Path to one or more local whitepaper draft files.",
+    )
     parser.add_argument(
         "--json",
         action="store_true",
@@ -64,6 +75,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--coverage-output",
         type=Path,
         help="Path to write a JSON disclosure coverage matrix.",
+    )
+    parser.add_argument(
+        "--review-table-output",
+        type=Path,
+        help="Path to write a JSON review table for rule-by-rule lawyer review.",
+    )
+    parser.add_argument(
+        "--compare-review-table-output",
+        type=Path,
+        help="Path to write a JSON comparison of multiple local draft review tables.",
     )
     parser.add_argument(
         "--coverage",
@@ -102,6 +123,18 @@ def calculate_sha256(path: Path) -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    paths: list[Path] = args.paths
+
+    if args.compare_review_table_output:
+        return _run_review_table_comparison(args, paths)
+
+    if len(paths) != 1:
+        print(
+            "error: multiple draft paths require --compare-review-table-output <path>",
+            file=sys.stderr,
+        )
+        return 2
+    args.path = paths[0]
 
     if args.path.is_dir():
         return _run_batch(args)
@@ -177,6 +210,21 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 2
 
+    if args.review_table_output:
+        try:
+            args.review_table_output.parent.mkdir(parents=True, exist_ok=True)
+            args.review_table_output.write_text(
+                render_review_table(build_review_table(report, source_path=args.path)),
+                encoding="utf-8",
+            )
+            written_outputs.append(args.review_table_output)
+        except OSError as exc:
+            print(
+                f"error: cannot write review table to {args.review_table_output}: {exc}",
+                file=sys.stderr,
+            )
+            return 2
+
     if args.manifest_output:
         manifest = build_artifact_manifest(
             report,
@@ -194,6 +242,54 @@ def main(argv: list[str] | None = None) -> int:
             return 2
 
     if args.strict and report.blockers:
+        return 1
+    return 0
+
+
+def _run_review_table_comparison(args: argparse.Namespace, paths: list[Path]) -> int:
+    if len(paths) < 2:
+        print(
+            "error: --compare-review-table-output requires at least two local draft paths",
+            file=sys.stderr,
+        )
+        return 2
+    directory_inputs = [path for path in paths if path.is_dir()]
+    if directory_inputs:
+        print(
+            "error: comparison input must be local draft files, not directories",
+            file=sys.stderr,
+        )
+        return 2
+
+    try:
+        comparison = build_review_table_comparison(paths)
+        args.compare_review_table_output.parent.mkdir(parents=True, exist_ok=True)
+        args.compare_review_table_output.write_text(
+            render_review_table_comparison(comparison),
+            encoding="utf-8",
+        )
+    except (OSError, SystemExit) as exc:
+        print(
+            f"error: cannot write review table comparison to {args.compare_review_table_output}: {exc}",
+            file=sys.stderr,
+        )
+        return 2
+
+    if args.json:
+        print(render_review_table_comparison(comparison), end="")
+    else:
+        print(
+            (
+                "Review table comparison written to {path}. "
+                "Rule groups: {groups}. Blocker groups: {blockers}."
+            ).format(
+                path=args.compare_review_table_output,
+                groups=comparison["summary"]["rule_groups"],
+                blockers=comparison["summary"]["blocker_groups"],
+            )
+        )
+
+    if args.strict and comparison["summary"]["blocker_groups"]:
         return 1
     return 0
 

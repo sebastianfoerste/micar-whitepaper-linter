@@ -14,6 +14,7 @@ from micar_linter.coverage import build_coverage_matrix, render_coverage_matrix
 from micar_linter.linter import Report
 from micar_linter.remediation import render_remediation_report
 from micar_linter.report import render_audit_log
+from micar_linter.review_table import build_review_table, render_review_table
 
 REVIEW_BUNDLE_SCHEMA = "micar-whitepaper-linter.review-bundle.v1"
 
@@ -31,6 +32,7 @@ def write_review_bundle(
     compliance_path = directory / "compliance-checklist.md"
     remediation_path = directory / "remediation-checklist.json"
     coverage_path = directory / "coverage-matrix.json"
+    review_table_path = directory / "review-table.json"
     signoff_path = directory / "reviewer-signoff.md"
     manifest_path = directory / "manifest.json"
 
@@ -43,9 +45,15 @@ def write_review_bundle(
         render_coverage_matrix(build_coverage_matrix(report, generated_at=timestamp)),
         encoding="utf-8",
     )
+    review_table_path.write_text(
+        render_review_table(
+            build_review_table(report, source_path=source_path, generated_at=timestamp),
+        ),
+        encoding="utf-8",
+    )
     signoff_path.write_text(render_signoff_page(report, timestamp), encoding="utf-8")
 
-    outputs = [compliance_path, remediation_path, coverage_path, signoff_path]
+    outputs = [compliance_path, remediation_path, coverage_path, review_table_path, signoff_path]
     manifest = build_artifact_manifest(
         report,
         source_path=source_path,
