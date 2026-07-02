@@ -34,3 +34,11 @@ This document details the functional features implemented in the MiCAR Whitepape
 - **Related Files**:
   - [src/micar_linter/report.py](file:///Users/sebastian/Developer/micar-whitepaper-linter/src/micar_linter/report.py)
 - **Status**: Fully Implemented.
+
+## 5. Playbook Review Profile
+- **Description**: Adds `micar-linter.playbook-review.v1` to review-table JSON. This is a Legora-inspired product pattern, no Legora integration or dependency.
+- **Related Files**:
+  - `src/micar_linter/review_table.py`
+  - `src/micar_linter/cli.py`
+  - `tests/test_review_table.py`
+- **Status**: Fully Implemented. The profile exposes deterministic Skills, tabular review economics, trusted local source coverage, review bundle exports, Lists tasks and blocked filing gates. `externalActionAllowed` is false.

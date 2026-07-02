@@ -175,6 +175,98 @@ def test_cli_remediation_output_is_manifest_tracked(tmp_path: Path):
     assert manifest["export_eligibility"]["machine_export_ready"] is False
 
 
+def test_cli_review_table_output_is_manifest_tracked(tmp_path: Path):
+    json_content = """{
+        "title": "Review Table Token",
+        "type": "other",
+        "sections": {
+            "summary": "Short"
+        }
+    }"""
+    file_path = tmp_path / "review-table.json"
+    file_path.write_text(json_content, encoding="utf-8")
+    review_table_path = tmp_path / "review-table-output.json"
+    manifest_path = tmp_path / "manifest-output.json"
+
+    status = main(
+        [
+            str(file_path),
+            "--review-table-output",
+            str(review_table_path),
+            "--manifest-output",
+            str(manifest_path),
+        ]
+    )
+
+    assert status == 0
+    review_table = json.loads(review_table_path.read_text(encoding="utf-8"))
+    assert review_table["schema"] == "micar-whitepaper-linter.review-table.v1"
+    assert review_table["summary"]["export_gate"] == "blocked"
+    assert review_table["review_table_economics"]["llm_route"] == "none"
+    assert review_table["rows"][0]["source_anchor"]
+
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["outputs"][0]["path"] == str(review_table_path)
+    assert manifest["export_eligibility"]["machine_export_ready"] is False
+
+
+def test_cli_review_table_comparison_output(tmp_path: Path, capsys):
+    first = tmp_path / "draft-a.json"
+    second = tmp_path / "draft-b.json"
+    comparison_path = tmp_path / "review-table-comparison.json"
+    first.write_text(
+        """{
+            "title": "Comparison Token",
+            "type": "other",
+            "sections": {
+                "summary": "Short"
+            }
+        }""",
+        encoding="utf-8",
+    )
+    second.write_text(
+        """{
+            "title": "Comparison Token",
+            "type": "other",
+            "sections": {
+                "summary": "This summary provides key information about the token and its offer."
+            }
+        }""",
+        encoding="utf-8",
+    )
+
+    status = main(
+        [
+            str(first),
+            str(second),
+            "--compare-review-table-output",
+            str(comparison_path),
+        ]
+    )
+
+    assert status == 0
+    captured = capsys.readouterr()
+    assert "Review table comparison written" in captured.out
+    comparison = json.loads(comparison_path.read_text(encoding="utf-8"))
+    assert comparison["schema"] == "micar-whitepaper-linter.review-table-comparison.v1"
+    assert comparison["source_count"] == 2
+    assert comparison["external_action_allowed"] is False
+    assert comparison["groups"][0]["drafts"][0]["source_anchor"]
+
+
+def test_cli_multiple_paths_require_comparison_output(tmp_path: Path, capsys):
+    first = tmp_path / "draft-a.json"
+    second = tmp_path / "draft-b.json"
+    first.write_text('{"title":"A","type":"other","sections":{"summary":"Short"}}', encoding="utf-8")
+    second.write_text('{"title":"B","type":"other","sections":{"summary":"Short"}}', encoding="utf-8")
+
+    status = main([str(first), str(second)])
+
+    assert status == 2
+    captured = capsys.readouterr()
+    assert "multiple draft paths require --compare-review-table-output" in captured.err
+
+
 def test_cli_review_bundle_writes_one_command_review_pack(tmp_path: Path):
     json_content = """{
         "title": "Bundle Token",
@@ -193,14 +285,18 @@ def test_cli_review_bundle_writes_one_command_review_pack(tmp_path: Path):
     assert (bundle_dir / "compliance-checklist.md").exists()
     assert (bundle_dir / "remediation-checklist.json").exists()
     assert (bundle_dir / "coverage-matrix.json").exists()
+    assert (bundle_dir / "review-table.json").exists()
     assert (bundle_dir / "reviewer-signoff.md").exists()
     manifest = json.loads((bundle_dir / "manifest.json").read_text(encoding="utf-8"))
     coverage = json.loads((bundle_dir / "coverage-matrix.json").read_text(encoding="utf-8"))
+    review_table = json.loads((bundle_dir / "review-table.json").read_text(encoding="utf-8"))
 
     assert manifest["bundle_schema"] == "micar-whitepaper-linter.review-bundle.v1"
     assert manifest["export_eligibility"]["review_required"] is True
-    assert len(manifest["outputs"]) == 4
+    assert len(manifest["outputs"]) == 5
     assert coverage["coverage"][0]["source_anchor"]
+    assert review_table["review_table_economics"]["estimated_cell_tasks"] > 0
+    assert review_table["rows"][0]["source_anchor"]
     assert "Lawyer Sign-off" in (bundle_dir / "reviewer-signoff.md").read_text(encoding="utf-8")
 
 
