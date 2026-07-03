@@ -1,0 +1,46 @@
+{
+  "schema": "micar-whitepaper-linter.artifact-manifest.v1",
+  "generated_at": "2026-06-18T06:38:21.674355+00:00",
+  "source": {
+    "path": "examples/art-stablecoin.json",
+    "sha256": "c520a00ef8829fc4f4f607903c5a66b08b09a469ebe7b949e1e001c2ff881ae3"
+  },
+  "report": {
+    "title": "Synthetic EuroStable ART White Paper",
+    "whitepaper_type": "art",
+    "passed": 15,
+    "review": 2,
+    "missing": 0,
+    "blockers": 2,
+    "blocker_rule_ids": [
+      "ANNEX_II.G.COMPOSITION",
+      "ANNEX_II.G.CUSTODY"
+    ]
+  },
+  "outputs": [
+    {
+      "path": "dist/review-bundle/compliance-checklist.md",
+      "sha256": "9a0811f5357b9bf07396fab6a76074330f52f49acb6f0921d11819cd0cac14c5"
+    },
+    {
+      "path": "dist/review-bundle/remediation-checklist.json",
+      "sha256": "3c957960b1b5df376a3f732cbe5ae8b4826f3dc37557c44942b2a84200dc90a3"
+    },
+    {
+      "path": "dist/review-bundle/coverage-matrix.json",
+      "sha256": "021e6d36953010e49f58b8697d2c64a4e049fc39b63322a905c6186f6cca1004"
+    }
+  ],
+  "warnings": [],
+  "export_eligibility": {
+    "machine_export_ready": false,
+    "blocked_by": [
+      "ANNEX_II.G.COMPOSITION",
+      "ANNEX_II.G.CUSTODY"
+    ],
+    "review_required": true,
+    "notice": "Automated linter output requires substantive lawyer review before external use."
+  },
+  "review_notice": "Manifest proves local artifact integrity only. It is not a legal opinion, signature, notification, or filing approval.",
+  "overall_digest": "3293b4c86b6cdf7232af3c5ddf51af25572d9bb92e3fe2ef9ab2bb20af8398ff"
+}

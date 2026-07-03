@@ -1,0 +1,311 @@
+{
+  "schema": "micar-whitepaper-linter.coverage-matrix.v1",
+  "generated_at": "2026-06-18T06:38:21.673676+00:00",
+  "title": "Synthetic EuroStable ART White Paper",
+  "whitepaper_type": "art",
+  "summary": {
+    "total": 17,
+    "pass": 15,
+    "review": 2,
+    "missing": 0,
+    "blockers": 2
+  },
+  "coverage": [
+    {
+      "rule_id": "COMMON.SUMMARY",
+      "annex": "COMMON",
+      "section": "summary",
+      "citation": "Art. 6 Abs. 7, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "word_count": 85,
+      "blocker": false,
+      "next_action": "Keep disclosure under lawyer review before external use.",
+      "source_anchor": {
+        "section_key": "summary",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:summary:77a216d8936c9e11",
+        "section_length": 587
+      }
+    },
+    {
+      "rule_id": "COMMON.RISK_WARNING",
+      "annex": "COMMON",
+      "section": "risk_warning",
+      "citation": "Art. 6 Abs. 5, Art. 19 Abs. 5, Art. 51 Abs. 5 MiCAR",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "word_count": 73,
+      "blocker": false,
+      "next_action": "Keep disclosure under lawyer review before external use.",
+      "source_anchor": {
+        "section_key": "risk_warning",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:risk_warning:917509f1f5fd1c03",
+        "section_length": 419
+      }
+    },
+    {
+      "rule_id": "COMMON.MANAGEMENT_STATEMENT",
+      "annex": "COMMON",
+      "section": "management_statement",
+      "citation": "Art. 6 Abs. 6, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "word_count": 60,
+      "blocker": false,
+      "next_action": "Keep disclosure under lawyer review before external use.",
+      "source_anchor": {
+        "section_key": "management_statement",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:management_statement:41e81a6c1adf1447",
+        "section_length": 393
+      }
+    },
+    {
+      "rule_id": "COMMON.NOTIFICATION_DATE",
+      "annex": "COMMON",
+      "section": "notification_date",
+      "citation": "Art. 8 Abs. 1, Art. 17, Art. 49 MiCAR",
+      "severity": "MAJOR",
+      "status": "pass",
+      "word_count": 9,
+      "blocker": false,
+      "next_action": "Keep disclosure under lawyer review before external use.",
+      "source_anchor": {
+        "section_key": "notification_date",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:notification_date:999fe7e5c1e73368",
+        "section_length": 71
+      }
+    },
+    {
+      "rule_id": "COMMON.LANGUAGE",
+      "annex": "COMMON",
+      "section": "language",
+      "citation": "Art. 6 Abs. 12, Art. 19 Abs. 11, Art. 51 Abs. 10 MiCAR",
+      "severity": "MAJOR",
+      "status": "pass",
+      "word_count": 28,
+      "blocker": false,
+      "next_action": "Keep disclosure under lawyer review before external use.",
+      "source_anchor": {
+        "section_key": "language",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:language:362dc54713ffa583",
+        "section_length": 178
+      }
+    },
+    {
+      "rule_id": "COMMON.IXBRL_TAGGING",
+      "annex": "COMMON",
+      "section": "ixbrl_tagging",
+      "citation": "Art. 2 VO (EU) 2024/2984",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "word_count": 0,
+      "blocker": false,
+      "next_action": "Keep disclosure under lawyer review before external use.",
+      "source_anchor": {
+        "section_key": "ixbrl_tagging",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:ixbrl_tagging:6320a902d08da530",
+        "section_length": 0
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.A",
+      "annex": "ANNEX_II",
+      "section": "issuer",
+      "citation": "Anhang II Teil A MiCAR",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "word_count": 94,
+      "blocker": false,
+      "next_action": "Keep disclosure under lawyer review before external use.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:774aa124539a6b12",
+        "section_length": 638
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.B",
+      "annex": "ANNEX_II",
+      "section": "art",
+      "citation": "Anhang II Teil B MiCAR",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "word_count": 95,
+      "blocker": false,
+      "next_action": "Keep disclosure under lawyer review before external use.",
+      "source_anchor": {
+        "section_key": "art",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:art:7d113704646d32c8",
+        "section_length": 667
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C",
+      "annex": "ANNEX_II",
+      "section": "offer_or_admission",
+      "citation": "Anhang II Teil C MiCAR",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "word_count": 77,
+      "blocker": false,
+      "next_action": "Keep disclosure under lawyer review before external use.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:8a5033d26187ac64",
+        "section_length": 569
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D",
+      "annex": "ANNEX_II",
+      "section": "rights_and_obligations",
+      "citation": "Anhang II Teil D i.V.m. Art. 39 MiCAR",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "word_count": 94,
+      "blocker": false,
+      "next_action": "Keep disclosure under lawyer review before external use.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:fdbeb2b6e2baaaea",
+        "section_length": 584
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.E",
+      "annex": "ANNEX_II",
+      "section": "technology",
+      "citation": "Anhang II Teil E MiCAR",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "word_count": 77,
+      "blocker": false,
+      "next_action": "Keep disclosure under lawyer review before external use.",
+      "source_anchor": {
+        "section_key": "technology",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:technology:3c1ac378d73a8b8a",
+        "section_length": 528
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.F",
+      "annex": "ANNEX_II",
+      "section": "risks",
+      "citation": "Anhang II Teil F MiCAR",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "word_count": 157,
+      "blocker": false,
+      "next_action": "Keep disclosure under lawyer review before external use.",
+      "source_anchor": {
+        "section_key": "risks",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:risks:fb6c82fce9769e1f",
+        "section_length": 1058
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.G.COMPOSITION",
+      "annex": "ANNEX_II",
+      "section": "reserve_of_assets",
+      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 1 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 173,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "reserve_of_assets",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:reserve_of_assets:ee417c234e51d76c",
+        "section_length": 1115
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.G.CUSTODY",
+      "annex": "ANNEX_II",
+      "section": "reserve_of_assets",
+      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 173,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "reserve_of_assets",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:reserve_of_assets:96d35787e5627922",
+        "section_length": 1115
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.G.VALUATION_AUDIT",
+      "annex": "ANNEX_II",
+      "section": "reserve_of_assets",
+      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "word_count": 173,
+      "blocker": false,
+      "next_action": "Keep disclosure under lawyer review before external use.",
+      "source_anchor": {
+        "section_key": "reserve_of_assets",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:reserve_of_assets:a4d139a663a2d182",
+        "section_length": 1115
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.H",
+      "annex": "ANNEX_II",
+      "section": "environmental_impact",
+      "citation": "Anhang II Teil H i.V.m. ESMA RTS on sustainability indicators",
+      "severity": "MAJOR",
+      "status": "pass",
+      "word_count": 104,
+      "blocker": false,
+      "next_action": "Keep disclosure under lawyer review before external use.",
+      "source_anchor": {
+        "section_key": "environmental_impact",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:environmental_impact:7ea892f342676666",
+        "section_length": 742
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.I",
+      "annex": "ANNEX_II",
+      "section": "redemption",
+      "citation": "Anhang II Teil I i.V.m. Art. 39 MiCAR",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "word_count": 125,
+      "blocker": false,
+      "next_action": "Keep disclosure under lawyer review before external use.",
+      "source_anchor": {
+        "section_key": "redemption",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:redemption:b068b69a32233498",
+        "section_length": 812
+      }
+    }
+  ],
+  "blockers": [
+    "ANNEX_II.G.COMPOSITION",
+    "ANNEX_II.G.CUSTODY"
+  ],
+  "warnings": [],
+  "review_notice": "Coverage matrix is a deterministic disclosure checklist. It is not legal advice, a signature, a notification, or filing approval.",
+  "digest": "804aef64331420a65e9b799c77588d4dcd3486a5d7ea687e6153989d9496984f"
+}

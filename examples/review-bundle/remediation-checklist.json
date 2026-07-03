@@ -1,0 +1,56 @@
+{
+  "schema": "micar-whitepaper-linter.remediation-report.v1",
+  "title": "Synthetic EuroStable ART White Paper",
+  "whitepaper_type": "art",
+  "status": "BLOCKED",
+  "summary": {
+    "open_items": 2,
+    "blockers": 2,
+    "review_items": 2,
+    "missing_sections": 0
+  },
+  "items": [
+    {
+      "rule_id": "ANNEX_II.G.COMPOSITION",
+      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 1 MiCAR",
+      "section": "reserve_of_assets",
+      "label": "Reserve composition and investment limits (Art. 36(1) MiCAR / EBA RTS)",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "Missing review terms: concentration.",
+        "Missing required pattern: '(30\\s*%|thirty\\s*percent)'."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "reserve_of_assets",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:reserve_of_assets:ee417c234e51d76c",
+        "section_length": 1115
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.G.CUSTODY",
+      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR",
+      "section": "reserve_of_assets",
+      "label": "Custody policy and custodian selection (Art. 36(2) MiCAR)",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "Missing review terms: insolvency."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "reserve_of_assets",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:reserve_of_assets:96d35787e5627922",
+        "section_length": 1115
+      }
+    }
+  ],
+  "warnings": []
+}
