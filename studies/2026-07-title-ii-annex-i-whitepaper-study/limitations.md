@@ -10,6 +10,6 @@ The rule set is intentionally narrow. It checks selected high-signal Annex I and
 
 The study does not cover asset-referenced tokens or e-money tokens.
 
-The output uses anonymized study IDs. Issuer names and raw source documents are not included in the public findings.
+The findings tables use WP-ID study identifiers and do not print issuer names inline. They are not anonymized: the source manifest (`sample-manifest.csv`) lists each WP-ID's underlying public ESMA register entry and white-paper URL, so any finding can be traced back to its public source document. Raw white-paper files are not committed.
 
 Human review remains required before publication of any substantive legal assessment.
