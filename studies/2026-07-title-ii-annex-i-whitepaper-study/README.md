@@ -10,7 +10,7 @@ Raw white papers are not committed. Store downloaded source documents under `.st
 
 - `source-manifest.json`: normalized source metadata, register row hashes, and sample inclusion status.
 - `sample-manifest.csv`: compact CSV view of the included v1 sample.
-- `findings-anonymized.json`: machine-flagged potential disclosure gaps using anonymized study IDs.
+- `findings-anonymized.json`: machine-flagged potential disclosure gaps keyed by WP-ID study identifiers. The IDs are pseudonymous labels, not anonymization: `sample-manifest.csv` maps each WP-ID to its public ESMA register entry.
 - `findings-anonymized.csv`: flat finding-level CSV for review.
 - `findings-summary.md`: rendered public study report.
 - `methodology.md`: sampling, extraction, and rule methodology.
