@@ -1,6 +1,10 @@
 # MiCAR Whitepaper Linter
 
+[![CI](https://github.com/sebastianfoerste/micar-whitepaper-linter/actions/workflows/ci.yml/badge.svg)](https://github.com/sebastianfoerste/micar-whitepaper-linter/actions/workflows/ci.yml)
+
 The MiCAR Whitepaper Linter is a deterministic Python tool for reviewing draft crypto-asset white papers under MiCAR. It maps Annex requirements into code check classes and produces cited review artifacts over synthetic examples.
+
+![Linter output: pass/review/missing findings with pinpoint MiCAR citations](docs/demo.svg)
 
 ## Real-world study: MiCAR Title II white papers
 

@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 520" font-family="SF Mono, Menlo, Consolas, monospace" font-size="13">
+  <rect width="760" height="520" rx="10" fill="#0d1117"/>
+  <circle cx="22" cy="20" r="6" fill="#ff5f57"/>
+  <circle cx="42" cy="20" r="6" fill="#febc2e"/>
+  <circle cx="62" cy="20" r="6" fill="#28c840"/>
+  <text x="380" y="24" fill="#8b949e" font-size="12" text-anchor="middle">uv run python -m micar_linter examples/incomplete.json</text>
+
+  <text x="24" y="58" fill="#e6edf3" font-weight="bold">MiCAR Whitepaper Linter — Incomplete Synthetic EuroStable ART Draft</text>
+  <text x="24" y="78" fill="#8b949e">Whitepaper type: ART</text>
+  <text x="24" y="98" fill="#8b949e">==============================================================================</text>
+  <text x="24" y="120" fill="#e6edf3">Pass: <tspan fill="#3fb950" font-weight="bold">1</tspan>  |  Review: <tspan fill="#d29922" font-weight="bold">12</tspan>  |  Missing: <tspan fill="#f85149" font-weight="bold">4</tspan>  |  Blockers: <tspan fill="#f85149" font-weight="bold">13</tspan></text>
+
+  <text x="24" y="156" fill="#d29922">[REVIEW] <tspan fill="#f85149">[BLOCKER]</tspan> <tspan fill="#e6edf3" font-weight="bold">COMMON.SUMMARY</tspan>  <tspan fill="#8b949e">Plain-language summary</tspan></text>
+  <text x="94" y="174" fill="#79c0ff">Cite:  Art. 6 Abs. 7, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR</text>
+  <text x="94" y="192" fill="#8b949e">Section: 'summary'  (4 words)</text>
+  <text x="94" y="210" fill="#8b949e">-  Section is thin: 4 words, expected at least 80.</text>
+  <text x="94" y="228" fill="#8b949e">-  Missing review terms: summary, key information.</text>
+
+  <text x="24" y="260" fill="#f85149">[MISS  ] [BLOCKER] <tspan fill="#e6edf3" font-weight="bold">COMMON.RISK_WARNING</tspan>  <tspan fill="#8b949e">Mandatory risk warning statement</tspan></text>
+  <text x="94" y="278" fill="#79c0ff">Cite:  Art. 6 Abs. 5, Art. 19 Abs. 5, Art. 51 Abs. 5 MiCAR</text>
+  <text x="94" y="296" fill="#8b949e">-  Section is empty or absent.</text>
+
+  <text x="24" y="328" fill="#d29922">[REVIEW] [MAJOR  ] <tspan fill="#e6edf3" font-weight="bold">COMMON.NOTIFICATION_DATE</tspan>  <tspan fill="#8b949e">Date of notification to the NCA</tspan></text>
+  <text x="94" y="346" fill="#79c0ff">Cite:  Art. 8 Abs. 1, Art. 17, Art. 49 MiCAR</text>
+  <text x="94" y="364" fill="#8b949e">-  Section is thin: 1 word, expected at least 5.</text>
+
+  <text x="24" y="396" fill="#3fb950">[PASS  ] <tspan fill="#f85149">[BLOCKER]</tspan> <tspan fill="#e6edf3" font-weight="bold">COMMON.IXBRL_TAGGING</tspan>  <tspan fill="#8b949e">iXBRL compliance and ESMA metadata tagging</tspan></text>
+  <text x="94" y="414" fill="#79c0ff">Cite:  Art. 2 VO (EU) 2024/2984</text>
+
+  <text x="24" y="446" fill="#d29922">[REVIEW] <tspan fill="#f85149">[BLOCKER]</tspan> <tspan fill="#e6edf3" font-weight="bold">ANNEX_II.A</tspan>  <tspan fill="#8b949e">Issuer information (legal form, governance, prudential profile)</tspan></text>
+  <text x="94" y="464" fill="#79c0ff">Cite:  Anhang II Teil A MiCAR</text>
+
+  <text x="24" y="498" fill="#8b949e" font-style="italic">Deterministic checks, pinpoint citations, human review gate. Not legal advice.</text>
+</svg>
