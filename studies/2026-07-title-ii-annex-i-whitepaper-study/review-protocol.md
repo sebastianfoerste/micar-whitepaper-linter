@@ -6,6 +6,8 @@ Create a defensible reference label for every document-rule cell without convert
 
 ## Materials
 
+Reviewers work in `human-review-blinded.csv`. Detector outcomes are merged into `human-review-matrix.csv` only after the independent labels are recorded.
+
 Reviewers receive:
 
 - the exact source document identified by `document_sha256`;
