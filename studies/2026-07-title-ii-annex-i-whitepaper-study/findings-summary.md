@@ -4,7 +4,7 @@ Study title: **MiCAR White Paper Study 2026: Annex I Disclosure Patterns in Noti
 
 This study runs deterministic first-pass checks over publicly available Title II crypto-asset white-paper text. A candidate flag means that a specified Annex I or Article 6 element was not found in extracted text. It is not a reviewed legal finding.
 
-The output is a research artifact. It does not provide legal advice and does not assess the full legal sufficiency of any white paper. Findings tables use WP-ID identifiers rather than printing issuer names inline; the source manifest links each WP-ID to its public ESMA register entry, so findings are traceable to their source and are not anonymized. Findings are machine-flagged and pending human legal review; a flag is a candidate gap in extracted text, not a confirmed deficiency by the named issuer.
+The output is a research artifact. It does not provide legal advice or assess the full legal sufficiency of any white paper. Tables use WP identifiers, but the public source manifest links those identifiers to issuer names and URLs. The data are pseudonymous, not anonymous.
 
 ## Sample
 
