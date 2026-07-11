@@ -22,7 +22,7 @@ if __name__ == "__main__":
                 "--annex",
                 "annex-i",
                 "--out",
-                str(STUDY_DIR / "findings-anonymized.json"),
+                str(STUDY_DIR / "findings-pseudonymous.json"),
             ]
         )
     )
