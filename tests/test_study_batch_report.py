@@ -149,7 +149,7 @@ def test_study_report_contains_required_sections_and_pending_review(tmp_path: Pa
         "## What the linter checks",
         "## What it does not check",
         "## Aggregate findings",
-        "## Most frequent potential gaps",
+        "## Most frequent detector flags",
         "## Examples pending human review",
         "## Limitations",
         "## Human validation gate",
