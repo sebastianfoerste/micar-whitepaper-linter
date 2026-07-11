@@ -142,7 +142,7 @@ def test_study_report_contains_required_sections_and_pending_review(tmp_path: Pa
 
     report = render_study_report(payload)
 
-    assert "# 10 Notified MiCAR Title II White Papers Reviewed" in report
+    assert "# MiCAR Title II White Paper Pilot" in report
     for heading in (
         "## Sample",
         "## Methodology",
@@ -152,6 +152,7 @@ def test_study_report_contains_required_sections_and_pending_review(tmp_path: Pa
         "## Most frequent potential gaps",
         "## Examples pending human review",
         "## Limitations",
+        "## Human validation gate",
         "## Reproducibility",
     ):
         assert heading in report
