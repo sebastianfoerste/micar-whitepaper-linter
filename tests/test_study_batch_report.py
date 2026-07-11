@@ -62,7 +62,7 @@ def _cached_html(cache: Path) -> None:
     )
 
 
-def test_study_batch_outputs_anonymized_pending_review_findings(tmp_path: Path):
+def test_study_batch_outputs_pseudonymous_pending_review_findings(tmp_path: Path):
     manifest_path = _manifest(tmp_path)
     cache = tmp_path / "cache"
     _cached_html(cache)
@@ -92,7 +92,7 @@ def test_study_batch_writes_flat_csv(tmp_path: Path):
     cache = tmp_path / "cache"
     _cached_html(cache)
     payload = build_study_findings(manifest_path, cache)
-    csv_path = tmp_path / "findings-anonymized.csv"
+    csv_path = tmp_path / "findings-pseudonymous.csv"
 
     write_study_findings_csv(payload, csv_path)
     csv_text = csv_path.read_text(encoding="utf-8")
