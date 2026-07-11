@@ -1,0 +1,29 @@
+{
+  "schema_version": "micar-study-human-validation.v1",
+  "rows_total": 150,
+  "rows_completed": 0,
+  "rows_pending": 150,
+  "completion_rate": 0,
+  "label_counts": {
+    "extraction_failure": 0,
+    "missing": 0,
+    "not_applicable": 0,
+    "pending": 150,
+    "present": 0,
+    "uncertain": 0
+  },
+  "confusion_matrix": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 0,
+    "tn": 0
+  },
+  "metrics": {
+    "precision": null,
+    "recall": null,
+    "f1": null,
+    "evaluable_rows": 0
+  },
+  "publication_ready": false,
+  "metric_note": "Precision, recall, and F1 use only human labels 'present' and 'missing'. Uncertain, extraction-failure, not-applicable, and pending rows are excluded."
+}
