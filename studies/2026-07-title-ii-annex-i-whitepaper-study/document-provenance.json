@@ -1,0 +1,175 @@
+{
+  "schema_version": "micar-study-document-provenance.v1",
+  "study_id": "2026-07-title-ii-annex-i",
+  "processed_at": "2026-07-03T07:30:05.881540+00:00",
+  "manifest_path": "source-manifest.json",
+  "source_files_committed": false,
+  "source_file_policy": "Raw white papers are not committed. Each processed source is identified by its public URL in source-manifest.json and by the SHA-256 digest of the exact bytes processed.",
+  "identifier_policy": "WP identifiers are pseudonymous labels. The public source manifest links them to named issuers and public URLs; the dataset is not anonymous.",
+  "documents": [
+    {
+      "study_doc_id": "WP-001",
+      "document_sha256": "80eab5f4d73e285d53fca49b074e2aba926ab80f1928d678c4edeb9891fafb6e",
+      "register_row_sha256": "2df244821643f1a5817ecda2073271ed01085a938671385181749bbeba1fc98c",
+      "detected_format": "xhtml",
+      "text_extraction": "ok",
+      "extraction_metadata": {
+        "format": "xhtml",
+        "pages": null,
+        "warnings": [],
+        "ixbrl_tag_count": 201,
+        "label_count": 201
+      },
+      "human_review_status": "pending_review"
+    },
+    {
+      "study_doc_id": "WP-002",
+      "document_sha256": "1a570493c05f656af68350b2d008793b7e5b0a1d5deb5df252fc5803078ef1e2",
+      "register_row_sha256": "7866a48621186486190cfa79ab10612ef0e8ca80b2c47ffa5ffff814c3e722a5",
+      "detected_format": "html",
+      "text_extraction": "ok",
+      "extraction_metadata": {
+        "format": "html",
+        "pages": null,
+        "warnings": [],
+        "ixbrl_tag_count": 158,
+        "label_count": 159
+      },
+      "human_review_status": "pending_review"
+    },
+    {
+      "study_doc_id": "WP-003",
+      "document_sha256": "9b33a5d568cd54ccf4071fefe52127b001192298e57e2fed5a208a2b374947eb",
+      "register_row_sha256": "d5b9ea7a469821403b8f6f23b6a72f5f30d6d64de6bf94bdff37dcad0831f29c",
+      "detected_format": "xhtml",
+      "text_extraction": "ok",
+      "extraction_metadata": {
+        "format": "xhtml",
+        "pages": null,
+        "warnings": [],
+        "ixbrl_tag_count": 0,
+        "label_count": 0
+      },
+      "human_review_status": "pending_review"
+    },
+    {
+      "study_doc_id": "WP-004",
+      "document_sha256": "07456475e29c05cbeb5b27a99fa6b66f0278f2e43eadf4ad5946c39f342f1aa6",
+      "register_row_sha256": "a25d8bf4c4e22b60e869b37ea2a047898bd2acf99336d5814a69c7504ab4b460",
+      "detected_format": "xhtml",
+      "text_extraction": "ok",
+      "extraction_metadata": {
+        "format": "xhtml",
+        "pages": null,
+        "warnings": [],
+        "ixbrl_tag_count": 0,
+        "label_count": 0
+      },
+      "human_review_status": "pending_review"
+    },
+    {
+      "study_doc_id": "WP-005",
+      "document_sha256": "064121584d596e1f5143ad230efb838b68e7109c77811f2c143330affb6f161b",
+      "register_row_sha256": "f441b509a276ddd96bfff18c3e5513b218ae9706e3e7a1765f4f16e08fa3fd16",
+      "detected_format": "xhtml",
+      "text_extraction": "ok",
+      "extraction_metadata": {
+        "format": "xhtml",
+        "pages": null,
+        "warnings": [],
+        "ixbrl_tag_count": 0,
+        "label_count": 0
+      },
+      "human_review_status": "pending_review"
+    },
+    {
+      "study_doc_id": "WP-007",
+      "document_sha256": "d75e75263e886b5b25538a36ccd72ed57289718492fc708590935d44ee9301ed",
+      "register_row_sha256": "344f68dc197997cde1e135048bec16838f4fcfcb505cfffc67199861a2b34400",
+      "detected_format": "html",
+      "text_extraction": "ok",
+      "extraction_metadata": {
+        "format": "html",
+        "pages": null,
+        "warnings": [],
+        "ixbrl_tag_count": 0,
+        "label_count": 27
+      },
+      "human_review_status": "pending_review"
+    },
+    {
+      "study_doc_id": "WP-009",
+      "document_sha256": "303305c4ac2da9804c2280344a6dd4a97a33db7a8c4867cb28c2b61138c3ce38",
+      "register_row_sha256": "e56f09ec1ae72ab835be5de702ab8210f115a323e70fd7d4dc38f16d00856f01",
+      "detected_format": "pdf",
+      "text_extraction": "ok",
+      "extraction_metadata": {
+        "format": "pdf",
+        "pages": 41,
+        "warnings": [],
+        "ixbrl_tag_count": 0,
+        "label_count": 0
+      },
+      "human_review_status": "pending_review"
+    },
+    {
+      "study_doc_id": "WP-010",
+      "document_sha256": "e181a9b9992f1e5b0766a50718153c811ad2dfef81bc78596bc921f9858b5ad4",
+      "register_row_sha256": "16d4fad2dccd4d557fbc29902d1d00c6d954a694a559b543b3e3072c2b9b4953",
+      "detected_format": "pdf",
+      "text_extraction": "ok",
+      "extraction_metadata": {
+        "format": "pdf",
+        "pages": 35,
+        "warnings": [],
+        "ixbrl_tag_count": 0,
+        "label_count": 0
+      },
+      "human_review_status": "pending_review"
+    },
+    {
+      "study_doc_id": "WP-011",
+      "document_sha256": "4317bc308de4570efea7afd30d48737aee38e3ab02a24841ad0dc045f6a5c1b2",
+      "register_row_sha256": "7098f26c57113c24a81d00c8ef6a2beb89ec96309c8d564b9d0df8c68d61d79d",
+      "detected_format": "pdf",
+      "text_extraction": "ok",
+      "extraction_metadata": {
+        "format": "pdf",
+        "pages": 39,
+        "warnings": [],
+        "ixbrl_tag_count": 0,
+        "label_count": 0
+      },
+      "human_review_status": "pending_review"
+    },
+    {
+      "study_doc_id": "WP-012",
+      "document_sha256": "37b91e308c4ee168261e928f5ea519d3b8892fa9cb1965096638656ba95d6893",
+      "register_row_sha256": "e487cebcc433de870a1b8eac975012d78deb83529559a9831b7bf1b1c2c70779",
+      "detected_format": "pdf",
+      "text_extraction": "ok",
+      "extraction_metadata": {
+        "format": "pdf",
+        "pages": 40,
+        "warnings": [],
+        "ixbrl_tag_count": 0,
+        "label_count": 0
+      },
+      "human_review_status": "pending_review"
+    }
+  ],
+  "excluded_documents": [
+    {
+      "study_doc_id": "WP-006",
+      "register_row_hash_sha256": "b4c155900b3c511da53f8f4a46d0b9f85d0febf494d9b2b56b16addf5d6ecdfe",
+      "exclusion_reason": "cached_document_not_found",
+      "whitepaper_url_hash_sha256": "1631cda5dd0841eda21f7183f39888e2dfe27e1eeb8129ee6dafb130727b8317"
+    },
+    {
+      "study_doc_id": "WP-008",
+      "register_row_hash_sha256": "647944be6f236de3d99bf2dac0f13cb316b240511d0f097ca2bb9724c1442d94",
+      "exclusion_reason": "cached_document_not_found",
+      "whitepaper_url_hash_sha256": "0cec791c0a9803571304ece313e074056eb56fbb3f6791acbf3493e5fb41a7b1"
+    }
+  ]
+}
