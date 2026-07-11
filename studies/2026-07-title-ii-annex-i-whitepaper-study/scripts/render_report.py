@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render the study Markdown report from anonymized findings."""
+"""Render the study Markdown report from pseudonymous findings."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ if __name__ == "__main__":
         main(
             [
                 "--findings",
-                str(STUDY_DIR / "findings-anonymized.json"),
+                str(STUDY_DIR / "findings-pseudonymous.json"),
                 "--out",
                 str(STUDY_DIR / "findings-summary.md"),
             ]
