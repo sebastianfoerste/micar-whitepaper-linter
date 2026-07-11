@@ -22,6 +22,7 @@ Raw white papers are not committed. Downloaded source files belong under `.study
 - `findings-pseudonymous.json`: machine-generated candidate flags keyed by WP identifier.
 - `findings-pseudonymous.csv`: flat candidate-flag table.
 - `human-review-matrix.csv`: all 150 document-rule cells awaiting qualified human labels.
+- `human-review-summary.json`: current completion and validation metrics; it remains publication-blocking while rows are pending.
 - `review-protocol.md`: label definitions, review procedure, adjudication, and publication gate.
 - `findings-summary.md`: rendered pilot report.
 - `methodology.md`: source, sampling, extraction, rule, and metric methodology.
