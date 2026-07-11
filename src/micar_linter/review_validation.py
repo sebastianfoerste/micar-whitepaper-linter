@@ -5,8 +5,9 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 ALLOWED_LABELS = {
     "pending",
@@ -53,7 +54,11 @@ def summarize_rows(rows: Iterable[Mapping[str, str]]) -> dict[str, Any]:
 
     precision = _ratio(counts["tp"], counts["tp"] + counts["fp"])
     recall = _ratio(counts["tp"], counts["tp"] + counts["fn"])
-    f1 = None if precision is None or recall is None or precision + recall == 0 else 2 * precision * recall / (precision + recall)
+    f1 = (
+        None
+        if precision is None or recall is None or precision + recall == 0
+        else 2 * precision * recall / (precision + recall)
+    )
     completed = total - label_counts["pending"]
 
     return {
