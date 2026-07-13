@@ -20,6 +20,8 @@ def _manifest(tmp_path: Path) -> Path:
             {
                 "study_id": "2026-07-title-ii-annex-i",
                 "scope": "Title II crypto-assets other than ARTs or EMTs",
+                "register_source_detail": "fixture-source.csv",
+                "register_source_sha256": "d" * 64,
                 "entries": [
                     {
                         "study_doc_id": "WP-001",
@@ -76,6 +78,7 @@ def test_study_batch_outputs_anonymized_pending_review_findings(tmp_path: Path):
 
     assert payload["schema"] == "micar-whitepaper-linter.title-ii-annex-i-study-findings.v1"
     assert payload["summary"]["documents_reviewed"] == 1
+    assert payload["source_manifest"]["register_source_sha256"] == "d" * 64
     assert payload["results"][0]["study_doc_id"] == "WP-001"
     assert payload["results"][0]["human_review_status"] == "pending_review"
     assert payload["results"][0]["rules_checked"] == 15
@@ -97,7 +100,7 @@ def test_study_batch_writes_flat_csv(tmp_path: Path):
     write_study_findings_csv(payload, csv_path)
     csv_text = csv_path.read_text(encoding="utf-8")
 
-    assert "study_doc_id,document_hash_sha256,format" in csv_text
+    assert "study_doc_id,record_type,document_status,document_hash_sha256" in csv_text
     assert "WP-001" in csv_text
     assert "pending_review" in csv_text
 
@@ -133,6 +136,13 @@ def test_study_batch_carries_manifest_exclusions(tmp_path: Path):
     assert payload["excluded_documents"][0]["study_doc_id"] == "WP-001"
     assert payload["excluded_documents"][0]["exclusion_reason"] == "cached_document_not_found"
 
+    csv_path = tmp_path / "findings-anonymized.csv"
+    write_study_findings_csv(payload, csv_path)
+    csv_text = csv_path.read_text(encoding="utf-8")
+
+    assert "exclusion,excluded" in csv_text
+    assert "cached_document_not_found" in csv_text
+
 
 def test_study_report_contains_required_sections_and_pending_review(tmp_path: Path):
     manifest_path = _manifest(tmp_path)
@@ -150,12 +160,14 @@ def test_study_report_contains_required_sections_and_pending_review(tmp_path: Pa
         "## What it does not check",
         "## Aggregate findings",
         "## Most frequent potential gaps",
+        "## Excluded documents",
         "## Examples pending human review",
         "## Limitations",
         "## Reproducibility",
     ):
         assert heading in report
     assert "Human review status: pending_review" in report
+    assert "Source manifest input SHA-256" in report
 
 
 def test_study_rules_accept_response_time_and_ticker_title(tmp_path: Path):
@@ -206,5 +218,5 @@ def test_study_rules_accept_response_time_and_ticker_title(tmp_path: Path):
     rendered = render_study_findings_json(payload)
 
     assert "ANNEX_I_PART_A_06_CONTACT_RESPONSE_PERIOD" not in finding_ids
-    assert "ANNEX_I_PART_B_01_ASSET_NAME_ABBREVIATION" not in finding_ids
+    assert "ANNEX_I_PART_D_01_ASSET_NAME_ABBREVIATION" not in finding_ids
     assert "Named Parent Limited" not in rendered

@@ -41,8 +41,8 @@ class StudyRule:
 
 STUDY_RULES: tuple[StudyRule, ...] = (
     StudyRule(
-        rule_id="ANNEX_I_PART_A_01_LEGAL_FORM",
-        annex_item="Annex I, Part A",
+        rule_id="ANNEX_I_PART_A_02_LEGAL_FORM",
+        annex_item="Annex I, Part A, item 2",
         label="Legal form",
         missing_element="legal form of the offeror or person seeking admission to trading",
         required_patterns=(
@@ -60,8 +60,8 @@ STUDY_RULES: tuple[StudyRule, ...] = (
         section_hint="Offeror information",
     ),
     StudyRule(
-        rule_id="ANNEX_I_PART_A_02_REGISTERED_ADDRESS",
-        annex_item="Annex I, Part A",
+        rule_id="ANNEX_I_PART_A_03_REGISTERED_ADDRESS",
+        annex_item="Annex I, Part A, item 3",
         label="Registered address or head office",
         missing_element="registered address or head office",
         required_patterns=(
@@ -75,8 +75,8 @@ STUDY_RULES: tuple[StudyRule, ...] = (
         section_hint="Offeror information",
     ),
     StudyRule(
-        rule_id="ANNEX_I_PART_A_03_REGISTRATION_DATE",
-        annex_item="Annex I, Part A",
+        rule_id="ANNEX_I_PART_A_04_REGISTRATION_DATE",
+        annex_item="Annex I, Part A, item 4",
         label="Registration date",
         missing_element="date of registration, incorporation, or establishment",
         required_patterns=(
@@ -91,8 +91,8 @@ STUDY_RULES: tuple[StudyRule, ...] = (
         section_hint="Offeror information",
     ),
     StudyRule(
-        rule_id="ANNEX_I_PART_A_04_LEI_OR_IDENTIFIER",
-        annex_item="Annex I, Part A",
+        rule_id="ANNEX_I_PART_A_05_LEI_OR_IDENTIFIER",
+        annex_item="Annex I, Part A, item 5",
         label="LEI or other identifier",
         missing_element="legal entity identifier or other identifier",
         required_patterns=(
@@ -108,8 +108,8 @@ STUDY_RULES: tuple[StudyRule, ...] = (
         section_hint="Offeror information",
     ),
     StudyRule(
-        rule_id="ANNEX_I_PART_A_05_CONTACT_PHONE_EMAIL",
-        annex_item="Annex I, Part A",
+        rule_id="ANNEX_I_PART_A_06_CONTACT_PHONE_EMAIL",
+        annex_item="Annex I, Part A, item 6",
         label="Contact telephone number and email",
         missing_element="both contact telephone number and email address",
         required_patterns=(
@@ -141,8 +141,8 @@ STUDY_RULES: tuple[StudyRule, ...] = (
         section_hint="Contact information",
     ),
     StudyRule(
-        rule_id="ANNEX_I_PART_A_07_MANAGEMENT_BODY",
-        annex_item="Annex I, Part A",
+        rule_id="ANNEX_I_PART_A_08_MANAGEMENT_BODY",
+        annex_item="Annex I, Part A, item 8",
         label="Management body identity and functions",
         missing_element="identity and functions of the management body",
         required_patterns=(
@@ -156,8 +156,8 @@ STUDY_RULES: tuple[StudyRule, ...] = (
         section_hint="Management body",
     ),
     StudyRule(
-        rule_id="ANNEX_I_PART_A_08_CONFLICTS_OF_INTEREST",
-        annex_item="Annex I, Part A",
+        rule_id="ANNEX_I_PART_E_18_CONFLICTS_OF_INTEREST",
+        annex_item="Annex I, Part E, item 18",
         label="Conflicts of interest",
         missing_element="conflicts of interest disclosure",
         required_patterns=(
@@ -170,8 +170,8 @@ STUDY_RULES: tuple[StudyRule, ...] = (
         section_hint="Conflicts of interest",
     ),
     StudyRule(
-        rule_id="ANNEX_I_PART_A_09_FINANCIAL_CONDITION",
-        annex_item="Annex I, Part A",
+        rule_id="ANNEX_I_PART_A_10_FINANCIAL_CONDITION",
+        annex_item="Annex I, Part A, item 10",
         label="Financial condition",
         missing_element="financial condition disclosure",
         required_patterns=(
@@ -193,8 +193,8 @@ STUDY_RULES: tuple[StudyRule, ...] = (
         section_hint="Financial condition",
     ),
     StudyRule(
-        rule_id="ANNEX_I_PART_B_01_ASSET_NAME_ABBREVIATION",
-        annex_item="Annex I, Part B",
+        rule_id="ANNEX_I_PART_D_01_ASSET_NAME_ABBREVIATION",
+        annex_item="Annex I, Part D, item 1",
         label="Crypto-asset name and abbreviation",
         missing_element="crypto-asset name and abbreviation",
         required_patterns=(
@@ -209,10 +209,12 @@ STUDY_RULES: tuple[StudyRule, ...] = (
         section_hint="Crypto-asset information",
     ),
     StudyRule(
-        rule_id="ANNEX_I_PART_B_02_DESIGN_DEVELOPMENT_PERSONS",
-        annex_item="Annex I, Part B",
-        label="Persons involved in design and development",
-        missing_element="persons involved in design and development",
+        rule_id="ANNEX_I_PART_D_03_IMPLEMENTATION_PERSONS",
+        annex_item="Annex I, Part D, item 3",
+        label="Persons involved in crypto-asset project implementation",
+        missing_element=(
+            "natural or legal persons involved in implementation of the crypto-asset project"
+        ),
         required_patterns=(
             r"\bdesign and development\b",
             r"\bpersons? involved\b",
@@ -225,10 +227,10 @@ STUDY_RULES: tuple[StudyRule, ...] = (
         section_hint="Design and development",
     ),
     StudyRule(
-        rule_id="ANNEX_I_PART_B_03_UTILITY_CHARACTERISTICS",
-        annex_item="Annex I, Part B",
-        label="Utility and characteristics",
-        missing_element="utility, characteristics, or functionality of the crypto-asset",
+        rule_id="ANNEX_I_PART_F_02_CHARACTERISTICS_FUNCTIONALITY",
+        annex_item="Annex I, Part F, item 2",
+        label="Characteristics and functionality",
+        missing_element="characteristics or functionality of the crypto-asset",
         required_patterns=(
             r"\butility\b",
             r"\bcharacteristics?\b",
@@ -397,6 +399,16 @@ def build_study_findings(
         "schema": STUDY_FINDINGS_SCHEMA,
         "study_id": manifest.get("study_id", "2026-07-title-ii-annex-i"),
         "generated_at": timestamp.isoformat(),
+        "source_manifest": {
+            "register_source": manifest.get("register_source", ""),
+            "register_source_detail": manifest.get("register_source_detail", ""),
+            "register_source_sha256": manifest.get("register_source_sha256", ""),
+            "official_esma_title_ii_csv": manifest.get("official_esma_title_ii_csv", ""),
+            "esma_mica_page": manifest.get("esma_mica_page", ""),
+            "retrieved_at": manifest.get("retrieved_at", ""),
+            "sample_method": manifest.get("sample_method", ""),
+            "random_seed": manifest.get("random_seed"),
+        },
         "manifest_path": str(manifest_path),
         "cache_dir": str(cache_dir),
         "scope": manifest.get("scope", "Title II crypto-assets other than ARTs or EMTs"),
@@ -424,8 +436,12 @@ def render_study_findings_json(payload: dict[str, Any]) -> str:
 def write_study_findings_csv(payload: dict[str, Any], out: Path) -> None:
     fields = [
         "study_doc_id",
+        "record_type",
+        "document_status",
         "document_hash_sha256",
+        "register_row_hash_sha256",
         "format",
+        "text_extraction",
         "annex",
         "rule_id",
         "annex_item",
@@ -436,18 +452,24 @@ def write_study_findings_csv(payload: dict[str, Any], out: Path) -> None:
         "matched_text",
         "human_review_status",
         "human_review_note",
+        "exclusion_reason",
+        "warnings",
     ]
     out.parent.mkdir(parents=True, exist_ok=True)
     with out.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fields)
+        writer = csv.DictWriter(handle, fieldnames=fields, lineterminator="\n")
         writer.writeheader()
         for result in payload["results"]:
             for finding in result["findings"]:
                 writer.writerow(
                     {
                         "study_doc_id": result["study_doc_id"],
+                        "record_type": "finding",
+                        "document_status": "included",
                         "document_hash_sha256": result["document_hash_sha256"],
+                        "register_row_hash_sha256": result.get("register_row_hash_sha256", ""),
                         "format": result["format"],
+                        "text_extraction": result.get("text_extraction", ""),
                         "annex": result["annex"],
                         "rule_id": finding["rule_id"],
                         "annex_item": finding["annex_item"],
@@ -458,8 +480,34 @@ def write_study_findings_csv(payload: dict[str, Any], out: Path) -> None:
                         "matched_text": finding["evidence"]["matched_text"],
                         "human_review_status": finding["human_review_status"],
                         "human_review_note": finding["human_review_note"],
+                        "exclusion_reason": "",
+                        "warnings": "",
                     }
                 )
+        for excluded in payload.get("excluded_documents", []):
+            writer.writerow(
+                {
+                    "study_doc_id": excluded.get("study_doc_id", ""),
+                    "record_type": "exclusion",
+                    "document_status": "excluded",
+                    "document_hash_sha256": excluded.get("document_hash_sha256", ""),
+                    "register_row_hash_sha256": excluded.get("register_row_hash_sha256", ""),
+                    "format": excluded.get("format", ""),
+                    "text_extraction": excluded.get("text_extraction", ""),
+                    "annex": payload.get("annex", ""),
+                    "rule_id": "",
+                    "annex_item": "",
+                    "finding_type": "",
+                    "confidence": "",
+                    "page_or_section": "",
+                    "missing_element": "",
+                    "matched_text": "",
+                    "human_review_status": "",
+                    "human_review_note": "",
+                    "exclusion_reason": excluded.get("exclusion_reason", ""),
+                    "warnings": ";".join(excluded.get("warnings", [])),
+                }
+            )
 
 
 def _process_study_entry(entry: dict[str, Any], cache_dir: Path) -> dict[str, Any]:

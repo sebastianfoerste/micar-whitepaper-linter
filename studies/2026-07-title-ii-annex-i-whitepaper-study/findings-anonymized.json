@@ -1,7 +1,17 @@
 {
   "schema": "micar-whitepaper-linter.title-ii-annex-i-study-findings.v1",
   "study_id": "2026-07-title-ii-annex-i",
-  "generated_at": "2026-07-03T07:30:05.881540+00:00",
+  "generated_at": "2026-07-06T07:52:42.712075+00:00",
+  "source_manifest": {
+    "register_source": "ESMA Interim MiCA Register",
+    "register_source_detail": "micar_title_ii_whitepaper_20_source_pack/source-manifest.json",
+    "register_source_sha256": "518e106991a110c9ff3955a20bfac7fcebcef3d040631cb10c26aed0ef8a0a94",
+    "official_esma_title_ii_csv": "https://www.esma.europa.eu/sites/default/files/2024-12/OTHER.csv",
+    "esma_mica_page": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica",
+    "retrieved_at": "2026-07-03T07:15:58.115312+00:00",
+    "sample_method": "first",
+    "random_seed": null
+  },
   "manifest_path": "studies/2026-07-title-ii-annex-i-whitepaper-study/source-manifest.json",
   "cache_dir": ".study-cache/title-ii-whitepapers",
   "scope": "Title II crypto-assets other than asset-referenced tokens and e-money tokens",
@@ -12,32 +22,32 @@
   "language_policy": "Findings are machine-flagged potential disclosure gaps. They are not legal advice and do not state that an issuer failed to comply with MiCAR.",
   "rules": [
     {
-      "rule_id": "ANNEX_I_PART_A_01_LEGAL_FORM",
-      "annex_item": "Annex I, Part A",
+      "rule_id": "ANNEX_I_PART_A_02_LEGAL_FORM",
+      "annex_item": "Annex I, Part A, item 2",
       "label": "Legal form",
       "missing_element": "legal form of the offeror or person seeking admission to trading"
     },
     {
-      "rule_id": "ANNEX_I_PART_A_02_REGISTERED_ADDRESS",
-      "annex_item": "Annex I, Part A",
+      "rule_id": "ANNEX_I_PART_A_03_REGISTERED_ADDRESS",
+      "annex_item": "Annex I, Part A, item 3",
       "label": "Registered address or head office",
       "missing_element": "registered address or head office"
     },
     {
-      "rule_id": "ANNEX_I_PART_A_03_REGISTRATION_DATE",
-      "annex_item": "Annex I, Part A",
+      "rule_id": "ANNEX_I_PART_A_04_REGISTRATION_DATE",
+      "annex_item": "Annex I, Part A, item 4",
       "label": "Registration date",
       "missing_element": "date of registration, incorporation, or establishment"
     },
     {
-      "rule_id": "ANNEX_I_PART_A_04_LEI_OR_IDENTIFIER",
-      "annex_item": "Annex I, Part A",
+      "rule_id": "ANNEX_I_PART_A_05_LEI_OR_IDENTIFIER",
+      "annex_item": "Annex I, Part A, item 5",
       "label": "LEI or other identifier",
       "missing_element": "legal entity identifier or other identifier"
     },
     {
-      "rule_id": "ANNEX_I_PART_A_05_CONTACT_PHONE_EMAIL",
-      "annex_item": "Annex I, Part A",
+      "rule_id": "ANNEX_I_PART_A_06_CONTACT_PHONE_EMAIL",
+      "annex_item": "Annex I, Part A, item 6",
       "label": "Contact telephone number and email",
       "missing_element": "both contact telephone number and email address"
     },
@@ -48,40 +58,40 @@
       "missing_element": "period of days within which an investor will receive an answer"
     },
     {
-      "rule_id": "ANNEX_I_PART_A_07_MANAGEMENT_BODY",
-      "annex_item": "Annex I, Part A",
+      "rule_id": "ANNEX_I_PART_A_08_MANAGEMENT_BODY",
+      "annex_item": "Annex I, Part A, item 8",
       "label": "Management body identity and functions",
       "missing_element": "identity and functions of the management body"
     },
     {
-      "rule_id": "ANNEX_I_PART_A_08_CONFLICTS_OF_INTEREST",
-      "annex_item": "Annex I, Part A",
+      "rule_id": "ANNEX_I_PART_E_18_CONFLICTS_OF_INTEREST",
+      "annex_item": "Annex I, Part E, item 18",
       "label": "Conflicts of interest",
       "missing_element": "conflicts of interest disclosure"
     },
     {
-      "rule_id": "ANNEX_I_PART_A_09_FINANCIAL_CONDITION",
-      "annex_item": "Annex I, Part A",
+      "rule_id": "ANNEX_I_PART_A_10_FINANCIAL_CONDITION",
+      "annex_item": "Annex I, Part A, item 10",
       "label": "Financial condition",
       "missing_element": "financial condition disclosure"
     },
     {
-      "rule_id": "ANNEX_I_PART_B_01_ASSET_NAME_ABBREVIATION",
-      "annex_item": "Annex I, Part B",
+      "rule_id": "ANNEX_I_PART_D_01_ASSET_NAME_ABBREVIATION",
+      "annex_item": "Annex I, Part D, item 1",
       "label": "Crypto-asset name and abbreviation",
       "missing_element": "crypto-asset name and abbreviation"
     },
     {
-      "rule_id": "ANNEX_I_PART_B_02_DESIGN_DEVELOPMENT_PERSONS",
-      "annex_item": "Annex I, Part B",
-      "label": "Persons involved in design and development",
-      "missing_element": "persons involved in design and development"
+      "rule_id": "ANNEX_I_PART_D_03_IMPLEMENTATION_PERSONS",
+      "annex_item": "Annex I, Part D, item 3",
+      "label": "Persons involved in crypto-asset project implementation",
+      "missing_element": "natural or legal persons involved in implementation of the crypto-asset project"
     },
     {
-      "rule_id": "ANNEX_I_PART_B_03_UTILITY_CHARACTERISTICS",
-      "annex_item": "Annex I, Part B",
-      "label": "Utility and characteristics",
-      "missing_element": "utility, characteristics, or functionality of the crypto-asset"
+      "rule_id": "ANNEX_I_PART_F_02_CHARACTERISTICS_FUNCTIONALITY",
+      "annex_item": "Annex I, Part F, item 2",
+      "label": "Characteristics and functionality",
+      "missing_element": "characteristics or functionality of the crypto-asset"
     },
     {
       "rule_id": "ARTICLE_6_05_MANDATORY_WARNINGS",
@@ -114,39 +124,39 @@
         "count": 4
       },
       {
-        "rule_id": "ANNEX_I_PART_A_05_CONTACT_PHONE_EMAIL",
+        "rule_id": "ANNEX_I_PART_A_06_CONTACT_PHONE_EMAIL",
         "count": 3
       },
       {
-        "rule_id": "ANNEX_I_PART_A_08_CONFLICTS_OF_INTEREST",
+        "rule_id": "ANNEX_I_PART_E_18_CONFLICTS_OF_INTEREST",
         "count": 3
       },
       {
-        "rule_id": "ANNEX_I_PART_A_09_FINANCIAL_CONDITION",
+        "rule_id": "ANNEX_I_PART_A_10_FINANCIAL_CONDITION",
         "count": 2
       },
       {
-        "rule_id": "ANNEX_I_PART_A_02_REGISTERED_ADDRESS",
+        "rule_id": "ANNEX_I_PART_A_03_REGISTERED_ADDRESS",
         "count": 1
       },
       {
-        "rule_id": "ANNEX_I_PART_A_03_REGISTRATION_DATE",
+        "rule_id": "ANNEX_I_PART_A_04_REGISTRATION_DATE",
         "count": 1
       },
       {
-        "rule_id": "ANNEX_I_PART_A_04_LEI_OR_IDENTIFIER",
+        "rule_id": "ANNEX_I_PART_A_05_LEI_OR_IDENTIFIER",
         "count": 1
       },
       {
-        "rule_id": "ANNEX_I_PART_A_07_MANAGEMENT_BODY",
+        "rule_id": "ANNEX_I_PART_A_08_MANAGEMENT_BODY",
         "count": 1
       },
       {
-        "rule_id": "ANNEX_I_PART_B_02_DESIGN_DEVELOPMENT_PERSONS",
+        "rule_id": "ANNEX_I_PART_D_03_IMPLEMENTATION_PERSONS",
         "count": 1
       },
       {
-        "rule_id": "ANNEX_I_PART_B_03_UTILITY_CHARACTERISTICS",
+        "rule_id": "ANNEX_I_PART_F_02_CHARACTERISTICS_FUNCTIONALITY",
         "count": 1
       },
       {
@@ -204,8 +214,8 @@
       "human_review_status": "pending_review",
       "findings": [
         {
-          "rule_id": "ANNEX_I_PART_A_09_FINANCIAL_CONDITION",
-          "annex_item": "Annex I, Part A",
+          "rule_id": "ANNEX_I_PART_A_10_FINANCIAL_CONDITION",
+          "annex_item": "Annex I, Part A, item 10",
           "label": "Financial condition",
           "finding_type": "potential_disclosure_gap",
           "confidence": "medium",
@@ -219,16 +229,16 @@
           "human_review_note": "Pending Sebastian legal review."
         },
         {
-          "rule_id": "ANNEX_I_PART_B_02_DESIGN_DEVELOPMENT_PERSONS",
-          "annex_item": "Annex I, Part B",
-          "label": "Persons involved in design and development",
+          "rule_id": "ANNEX_I_PART_D_03_IMPLEMENTATION_PERSONS",
+          "annex_item": "Annex I, Part D, item 3",
+          "label": "Persons involved in crypto-asset project implementation",
           "finding_type": "potential_disclosure_gap",
           "confidence": "high",
           "machine_flagged": true,
           "evidence": {
             "page_or_section": "Design and development",
             "matched_text": "ken sale rounds. Funds are held in multi-signature wallets and allocated as follows: 35% Product and Protocol Development, 35% Liquidity and Market-Making, 30% Operations, Legal, and Compliance. The company has no outstanding debt",
-            "missing_element": "persons involved in design and development"
+            "missing_element": "natural or legal persons involved in implementation of the crypto-asset project"
           },
           "human_review_status": "pending_review",
           "human_review_note": "Pending Sebastian legal review."
@@ -255,8 +265,8 @@
       "human_review_status": "pending_review",
       "findings": [
         {
-          "rule_id": "ANNEX_I_PART_A_05_CONTACT_PHONE_EMAIL",
-          "annex_item": "Annex I, Part A",
+          "rule_id": "ANNEX_I_PART_A_06_CONTACT_PHONE_EMAIL",
+          "annex_item": "Annex I, Part A, item 6",
           "label": "Contact telephone number and email",
           "finding_type": "potential_disclosure_gap",
           "confidence": "high",
@@ -306,8 +316,8 @@
       "human_review_status": "pending_review",
       "findings": [
         {
-          "rule_id": "ANNEX_I_PART_A_05_CONTACT_PHONE_EMAIL",
-          "annex_item": "Annex I, Part A",
+          "rule_id": "ANNEX_I_PART_A_06_CONTACT_PHONE_EMAIL",
+          "annex_item": "Annex I, Part A, item 6",
           "label": "Contact telephone number and email",
           "finding_type": "potential_disclosure_gap",
           "confidence": "high",
@@ -357,8 +367,8 @@
       "human_review_status": "pending_review",
       "findings": [
         {
-          "rule_id": "ANNEX_I_PART_A_05_CONTACT_PHONE_EMAIL",
-          "annex_item": "Annex I, Part A",
+          "rule_id": "ANNEX_I_PART_A_06_CONTACT_PHONE_EMAIL",
+          "annex_item": "Annex I, Part A, item 6",
           "label": "Contact telephone number and email",
           "finding_type": "potential_disclosure_gap",
           "confidence": "high",
@@ -408,8 +418,8 @@
       "human_review_status": "pending_review",
       "findings": [
         {
-          "rule_id": "ANNEX_I_PART_A_02_REGISTERED_ADDRESS",
-          "annex_item": "Annex I, Part A",
+          "rule_id": "ANNEX_I_PART_A_03_REGISTERED_ADDRESS",
+          "annex_item": "Annex I, Part A, item 3",
           "label": "Registered address or head office",
           "finding_type": "potential_disclosure_gap",
           "confidence": "medium",
@@ -423,8 +433,8 @@
           "human_review_note": "Pending Sebastian legal review."
         },
         {
-          "rule_id": "ANNEX_I_PART_A_03_REGISTRATION_DATE",
-          "annex_item": "Annex I, Part A",
+          "rule_id": "ANNEX_I_PART_A_04_REGISTRATION_DATE",
+          "annex_item": "Annex I, Part A, item 4",
           "label": "Registration date",
           "finding_type": "potential_disclosure_gap",
           "confidence": "medium",
@@ -438,8 +448,8 @@
           "human_review_note": "Pending Sebastian legal review."
         },
         {
-          "rule_id": "ANNEX_I_PART_A_04_LEI_OR_IDENTIFIER",
-          "annex_item": "Annex I, Part A",
+          "rule_id": "ANNEX_I_PART_A_05_LEI_OR_IDENTIFIER",
+          "annex_item": "Annex I, Part A, item 5",
           "label": "LEI or other identifier",
           "finding_type": "potential_disclosure_gap",
           "confidence": "medium",
@@ -468,8 +478,8 @@
           "human_review_note": "Pending Sebastian legal review."
         },
         {
-          "rule_id": "ANNEX_I_PART_A_07_MANAGEMENT_BODY",
-          "annex_item": "Annex I, Part A",
+          "rule_id": "ANNEX_I_PART_A_08_MANAGEMENT_BODY",
+          "annex_item": "Annex I, Part A, item 8",
           "label": "Management body identity and functions",
           "finding_type": "potential_disclosure_gap",
           "confidence": "medium",
@@ -483,8 +493,8 @@
           "human_review_note": "Pending Sebastian legal review."
         },
         {
-          "rule_id": "ANNEX_I_PART_A_08_CONFLICTS_OF_INTEREST",
-          "annex_item": "Annex I, Part A",
+          "rule_id": "ANNEX_I_PART_E_18_CONFLICTS_OF_INTEREST",
+          "annex_item": "Annex I, Part E, item 18",
           "label": "Conflicts of interest",
           "finding_type": "potential_disclosure_gap",
           "confidence": "medium",
@@ -498,8 +508,8 @@
           "human_review_note": "Pending Sebastian legal review."
         },
         {
-          "rule_id": "ANNEX_I_PART_A_09_FINANCIAL_CONDITION",
-          "annex_item": "Annex I, Part A",
+          "rule_id": "ANNEX_I_PART_A_10_FINANCIAL_CONDITION",
+          "annex_item": "Annex I, Part A, item 10",
           "label": "Financial condition",
           "finding_type": "potential_disclosure_gap",
           "confidence": "medium",
@@ -513,16 +523,16 @@
           "human_review_note": "Pending Sebastian legal review."
         },
         {
-          "rule_id": "ANNEX_I_PART_B_03_UTILITY_CHARACTERISTICS",
-          "annex_item": "Annex I, Part B",
-          "label": "Utility and characteristics",
+          "rule_id": "ANNEX_I_PART_F_02_CHARACTERISTICS_FUNCTIONALITY",
+          "annex_item": "Annex I, Part F, item 2",
+          "label": "Characteristics and functionality",
           "finding_type": "potential_disclosure_gap",
           "confidence": "high",
           "machine_flagged": true,
           "evidence": {
             "page_or_section": "Utility and characteristics",
             "matched_text": "Markdown . Copy On this page LEGAL 📜 MiCAR Whitepaper [ISSUER]. has published and notified the MiCAR crypto-asset white paper for [SYMBOL] to its home Member State (MFSA). This crypto-asset marketing communication has not bee",
-            "missing_element": "utility, characteristics, or functionality of the crypto-asset"
+            "missing_element": "characteristics or functionality of the crypto-asset"
           },
           "human_review_status": "pending_review",
           "human_review_note": "Pending Sebastian legal review."
@@ -634,8 +644,8 @@
       "human_review_status": "pending_review",
       "findings": [
         {
-          "rule_id": "ANNEX_I_PART_A_08_CONFLICTS_OF_INTEREST",
-          "annex_item": "Annex I, Part A",
+          "rule_id": "ANNEX_I_PART_E_18_CONFLICTS_OF_INTEREST",
+          "annex_item": "Annex I, Part E, item 18",
           "label": "Conflicts of interest",
           "finding_type": "potential_disclosure_gap",
           "confidence": "medium",
@@ -670,8 +680,8 @@
       "human_review_status": "pending_review",
       "findings": [
         {
-          "rule_id": "ANNEX_I_PART_A_08_CONFLICTS_OF_INTEREST",
-          "annex_item": "Annex I, Part A",
+          "rule_id": "ANNEX_I_PART_E_18_CONFLICTS_OF_INTEREST",
+          "annex_item": "Annex I, Part E, item 18",
           "label": "Conflicts of interest",
           "finding_type": "potential_disclosure_gap",
           "confidence": "medium",
@@ -701,5 +711,5 @@
       "whitepaper_url_hash_sha256": "0cec791c0a9803571304ece313e074056eb56fbb3f6791acbf3493e5fb41a7b1"
     }
   ],
-  "digest": "6966455c1a7fef214b85ebdb6076eb9845d412ca6a530a29b1b0db192650cafd"
+  "digest": "a0f8a82a135f22738357799c40420a45446b1cef839780859f285d9b958f79c1"
 }
