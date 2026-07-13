@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import sys
 from pathlib import Path
 
@@ -11,6 +12,12 @@ from micar_linter import __version__
 from micar_linter.artifact_manifest import build_artifact_manifest, render_artifact_manifest
 from micar_linter.batch import build_batch_review_pack, render_batch_review_pack
 from micar_linter.coverage import build_coverage_matrix, render_coverage_matrix
+from micar_linter.legora_workspace import (
+    build_change_set,
+    build_review_sidecar,
+    build_workflow_pack,
+    write_legora_bundle,
+)
 from micar_linter.linter import lint_whitepaper
 from micar_linter.remediation import render_remediation_report
 from micar_linter.report import render_audit_log, render_coverage_table, render_json, render_text
@@ -22,6 +29,7 @@ from micar_linter.review_table import (
     render_review_table_comparison,
 )
 from micar_linter.whitepaper import load_whitepaper
+from micar_linter.workspace import build_whitepaper_workspace, render_whitepaper_workspace
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -102,9 +110,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to write a JSON batch review pack when the input path is a directory.",
     )
     parser.add_argument(
+        "--workspace-output",
+        type=Path,
+        help=("Path to write a local white paper vault, interactive review table and reusable playbook."),
+    )
+    parser.add_argument(
         "--version",
         action="version",
         version=f"micar-lint {__version__}",
+    )
+    parser.add_argument(
+        "--legora-bundle-dir",
+        type=Path,
+        help="Write collaboration sidecar, document change set and supervised workflow pack.",
+    )
+    parser.add_argument(
+        "--workflow-action",
+        choices=["validate", "inspect", "run"],
+        help="Validate, inspect or run the supervised local white paper workflow.",
     )
     return parser
 
@@ -124,6 +147,43 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     paths: list[Path] = args.paths
+
+    if args.workspace_output:
+        try:
+            workspace = build_whitepaper_workspace(paths)
+            args.workspace_output.parent.mkdir(parents=True, exist_ok=True)
+            args.workspace_output.write_text(render_whitepaper_workspace(workspace), encoding="utf-8")
+        except (OSError, SystemExit, ValueError) as exc:
+            print(f"error: cannot write white paper workspace: {exc}", file=sys.stderr)
+            return 2
+        if args.json:
+            print(render_whitepaper_workspace(workspace), end="")
+        else:
+            print(
+                "White paper workspace written to "
+                f"{args.workspace_output}. Documents: {workspace['vault']['document_count']}."
+            )
+        if args.legora_bundle_dir:
+            write_legora_bundle(workspace, args.legora_bundle_dir)
+        if args.workflow_action:
+            sidecar = build_review_sidecar(workspace)
+            change_set = build_change_set(workspace)
+            workflow = build_workflow_pack(workspace, sidecar, change_set)
+            if args.workflow_action == "validate":
+                print("workflow.definition.v1 and workflow.run.v1 validated")
+            elif args.workflow_action == "inspect":
+                print(json.dumps(workflow, indent=2))
+            else:
+                if not args.legora_bundle_dir:
+                    print("error: --workflow-action run requires --legora-bundle-dir", file=sys.stderr)
+                    return 2
+                print(
+                    f"Supervised workflow run status: {workflow['run']['status']}. "
+                    "External action remains disabled."
+                )
+        if args.strict and workspace["review_table"]["summary"]["blockers"]:
+            return 1
+        return 0
 
     if args.compare_review_table_output:
         return _run_review_table_comparison(args, paths)
@@ -312,8 +372,7 @@ def _run_batch(args: argparse.Namespace) -> int:
     else:
         print(
             (
-                "Batch review pack written to {path}. "
-                "Supported files: {supported}. Blocked files: {blocked}."
+                "Batch review pack written to {path}. Supported files: {supported}. Blocked files: {blocked}."
             ).format(
                 path=args.batch_output,
                 supported=pack["summary"]["supported_files"],

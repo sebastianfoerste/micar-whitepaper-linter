@@ -1,0 +1,45 @@
+name: 'MiCAR Whitepaper Lint'
+description: >-
+  Deterministic first-pass lint of a MiCAR crypto-asset whitepaper draft.
+  Pinpoint citations to MiCAR articles and annexes, blocker-gated exit code.
+  Not legal advice.
+author: 'Sebastian Förste'
+branding:
+  icon: 'check-square'
+  color: 'blue'
+
+inputs:
+  whitepaper:
+    description: 'Path to the whitepaper draft (JSON, XHTML, or DOCX) in the consumer repository.'
+    required: true
+  strict:
+    description: 'Fail the job if any BLOCKER-severity finding is open.'
+    required: false
+    default: 'true'
+  extra-args:
+    description: 'Additional CLI arguments passed to micar-lint (e.g. --json, --coverage).'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+
+    - name: Lint whitepaper
+      shell: bash
+      env:
+        INPUT_WHITEPAPER: ${{ inputs.whitepaper }}
+        INPUT_STRICT: ${{ inputs.strict }}
+        INPUT_EXTRA_ARGS: ${{ inputs.extra-args }}
+      run: |
+        STRICT_ARGS=()
+        if [ "${INPUT_STRICT}" = "true" ]; then
+          STRICT_ARGS=("--strict")
+        fi
+        EXTRA_ARGS=()
+        if [ -n "${INPUT_EXTRA_ARGS}" ]; then
+          read -r -a EXTRA_ARGS <<< "${INPUT_EXTRA_ARGS}"
+        fi
+        uvx --from "${GITHUB_ACTION_PATH}" micar-lint "${INPUT_WHITEPAPER}" "${STRICT_ARGS[@]}" "${EXTRA_ARGS[@]}"

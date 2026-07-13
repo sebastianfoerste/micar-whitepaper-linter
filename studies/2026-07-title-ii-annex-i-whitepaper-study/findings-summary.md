@@ -23,22 +23,27 @@ Each document is loaded locally from `.study-cache/`. XHTML and HTML are parsed 
 
 ESMA states on its MiCA page that the interim register includes five CSV files, with the Title II white-paper file covering crypto-assets other than asset-referenced tokens and e-money tokens. ESMA also states that white papers in the register have not been reviewed or approved by any competent authority.
 
+Current-source check: ESMA's MiCA page was checked on 2026-07-06 and displayed a register last update of 3 July 2026. Article 8 states that competent authorities shall not require prior approval of Title II crypto-asset white papers before publication. Article 109 states that ESMA's register includes white papers for crypto-assets other than asset-referenced tokens or e-money tokens.
+
+Source manifest: `micar_title_ii_whitepaper_20_source_pack/source-manifest.json`
+Source manifest input SHA-256: `518e106991a110c9ff3955a20bfac7fcebcef3d040631cb10c26aed0ef8a0a94`
+
 ## What the linter checks
 
 The study checks 15 deterministic controls: 12 high-signal Annex I disclosure fields and 3 Article 6 controls.
 
-- `ANNEX_I_PART_A_01_LEGAL_FORM`: Legal form (Annex I, Part A).
-- `ANNEX_I_PART_A_02_REGISTERED_ADDRESS`: Registered address or head office (Annex I, Part A).
-- `ANNEX_I_PART_A_03_REGISTRATION_DATE`: Registration date (Annex I, Part A).
-- `ANNEX_I_PART_A_04_LEI_OR_IDENTIFIER`: LEI or other identifier (Annex I, Part A).
-- `ANNEX_I_PART_A_05_CONTACT_PHONE_EMAIL`: Contact telephone number and email (Annex I, Part A).
+- `ANNEX_I_PART_A_02_LEGAL_FORM`: Legal form (Annex I, Part A, item 2).
+- `ANNEX_I_PART_A_03_REGISTERED_ADDRESS`: Registered address or head office (Annex I, Part A, item 3).
+- `ANNEX_I_PART_A_04_REGISTRATION_DATE`: Registration date (Annex I, Part A, item 4).
+- `ANNEX_I_PART_A_05_LEI_OR_IDENTIFIER`: LEI or other identifier (Annex I, Part A, item 5).
+- `ANNEX_I_PART_A_06_CONTACT_PHONE_EMAIL`: Contact telephone number and email (Annex I, Part A, item 6).
 - `ANNEX_I_PART_A_06_CONTACT_RESPONSE_PERIOD`: Response period for investor contact (Annex I, Part A, item 6).
-- `ANNEX_I_PART_A_07_MANAGEMENT_BODY`: Management body identity and functions (Annex I, Part A).
-- `ANNEX_I_PART_A_08_CONFLICTS_OF_INTEREST`: Conflicts of interest (Annex I, Part A).
-- `ANNEX_I_PART_A_09_FINANCIAL_CONDITION`: Financial condition (Annex I, Part A).
-- `ANNEX_I_PART_B_01_ASSET_NAME_ABBREVIATION`: Crypto-asset name and abbreviation (Annex I, Part B).
-- `ANNEX_I_PART_B_02_DESIGN_DEVELOPMENT_PERSONS`: Persons involved in design and development (Annex I, Part B).
-- `ANNEX_I_PART_B_03_UTILITY_CHARACTERISTICS`: Utility and characteristics (Annex I, Part B).
+- `ANNEX_I_PART_A_08_MANAGEMENT_BODY`: Management body identity and functions (Annex I, Part A, item 8).
+- `ANNEX_I_PART_E_18_CONFLICTS_OF_INTEREST`: Conflicts of interest (Annex I, Part E, item 18).
+- `ANNEX_I_PART_A_10_FINANCIAL_CONDITION`: Financial condition (Annex I, Part A, item 10).
+- `ANNEX_I_PART_D_01_ASSET_NAME_ABBREVIATION`: Crypto-asset name and abbreviation (Annex I, Part D, item 1).
+- `ANNEX_I_PART_D_03_IMPLEMENTATION_PERSONS`: Persons involved in crypto-asset project implementation (Annex I, Part D, item 3).
+- `ANNEX_I_PART_F_02_CHARACTERISTICS_FUNCTIONALITY`: Characteristics and functionality (Annex I, Part F, item 2).
 - `ARTICLE_6_05_MANDATORY_WARNINGS`: Mandatory warning statements (Article 6).
 - `ARTICLE_6_06_MANAGEMENT_BODY_STATEMENT`: Management body statement (Article 6).
 - `ARTICLE_6_07_SUMMARY`: Summary (Article 6).
@@ -69,48 +74,55 @@ Document byte hashes and extraction metadata are recorded in `document-provenanc
 | Rule ID | Count |
 | --- | ---: |
 | `ANNEX_I_PART_A_06_CONTACT_RESPONSE_PERIOD` | 4 |
-| `ANNEX_I_PART_A_05_CONTACT_PHONE_EMAIL` | 3 |
-| `ANNEX_I_PART_A_08_CONFLICTS_OF_INTEREST` | 3 |
-| `ANNEX_I_PART_A_09_FINANCIAL_CONDITION` | 2 |
-| `ANNEX_I_PART_A_02_REGISTERED_ADDRESS` | 1 |
-| `ANNEX_I_PART_A_03_REGISTRATION_DATE` | 1 |
-| `ANNEX_I_PART_A_04_LEI_OR_IDENTIFIER` | 1 |
-| `ANNEX_I_PART_A_07_MANAGEMENT_BODY` | 1 |
-| `ANNEX_I_PART_B_02_DESIGN_DEVELOPMENT_PERSONS` | 1 |
-| `ANNEX_I_PART_B_03_UTILITY_CHARACTERISTICS` | 1 |
+| `ANNEX_I_PART_A_06_CONTACT_PHONE_EMAIL` | 3 |
+| `ANNEX_I_PART_E_18_CONFLICTS_OF_INTEREST` | 3 |
+| `ANNEX_I_PART_A_10_FINANCIAL_CONDITION` | 2 |
+| `ANNEX_I_PART_A_03_REGISTERED_ADDRESS` | 1 |
+| `ANNEX_I_PART_A_04_REGISTRATION_DATE` | 1 |
+| `ANNEX_I_PART_A_05_LEI_OR_IDENTIFIER` | 1 |
+| `ANNEX_I_PART_A_08_MANAGEMENT_BODY` | 1 |
+| `ANNEX_I_PART_D_03_IMPLEMENTATION_PERSONS` | 1 |
+| `ANNEX_I_PART_F_02_CHARACTERISTICS_FUNCTIONALITY` | 1 |
+
+## Excluded documents
+
+| Study ID | Reason |
+| --- | --- |
+| `WP-006` | `cached_document_not_found` |
+| `WP-008` | `cached_document_not_found` |
 
 ## Examples pending human review
 
-### WP-002 - `ANNEX_I_PART_B_02_DESIGN_DEVELOPMENT_PERSONS`
+### WP-002 - `ANNEX_I_PART_D_03_IMPLEMENTATION_PERSONS`
 
-- Annex item: Annex I, Part B
+- Annex item: Annex I, Part D, item 3
 - Confidence: high
 - Pinpoint: Design and development
-- Missing element: persons involved in design and development
+- Missing element: natural or legal persons involved in implementation of the crypto-asset project
 - Extracted context: ken sale rounds. Funds are held in multi-signature wallets and allocated as follows: 35% Product and Protocol Development, 35% Liquidity and Market-Making, 30% Operations, Legal, and Compliance. The company has no outstanding debt
 - Review status: pending_review
 
-### WP-003 - `ANNEX_I_PART_A_05_CONTACT_PHONE_EMAIL`
+### WP-003 - `ANNEX_I_PART_A_06_CONTACT_PHONE_EMAIL`
 
-- Annex item: Annex I, Part A
+- Annex item: Annex I, Part A, item 6
 - Confidence: high
 - Pinpoint: Contact information
 - Missing element: both contact telephone number and email address
 - Extracted context: A A.6 Legal entity identifier N/A A.7 Another identifier required pursuant to applicable national law N/A A.8 Contact telephone number N/A A.9 E-mail address N/A A.10 Response time (Days) N/A A.11 Parent company N/A A.12 Member
 - Review status: pending_review
 
-### WP-004 - `ANNEX_I_PART_A_05_CONTACT_PHONE_EMAIL`
+### WP-004 - `ANNEX_I_PART_A_06_CONTACT_PHONE_EMAIL`
 
-- Annex item: Annex I, Part A
+- Annex item: Annex I, Part A, item 6
 - Confidence: high
 - Pinpoint: Contact information
 - Missing element: both contact telephone number and email address
 - Extracted context: A A.6 Legal entity identifier N/A A.7 Another identifier required pursuant to applicable national law N/A A.8 Contact telephone number N/A A.9 E-mail address N/A A.10 Response time (Days) N/A A.11 Parent company N/A A.12 Member
 - Review status: pending_review
 
-### WP-005 - `ANNEX_I_PART_A_05_CONTACT_PHONE_EMAIL`
+### WP-005 - `ANNEX_I_PART_A_06_CONTACT_PHONE_EMAIL`
 
-- Annex item: Annex I, Part A
+- Annex item: Annex I, Part A, item 6
 - Confidence: high
 - Pinpoint: Contact information
 - Missing element: both contact telephone number and email address
@@ -158,5 +170,7 @@ uv run micar-study-report \
 - ESMA Article 6 interactive rulebook: https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-6-content-and-form-crypto-asset
 - ESMA Article 8 interactive rulebook: https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-8-notification-crypto-asset-white
 - ESMA Article 109 interactive rulebook: https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-109-register-crypto-asset-white
+- ESMA Annex I disclosure items: https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/disclosure-items-crypto-asset-white-paper
+- EUR-Lex Regulation (EU) 2023/1114: https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
 
-Findings digest: `6966455c1a7fef214b85ebdb6076eb9845d412ca6a530a29b1b0db192650cafd`
+Findings digest: `a0f8a82a135f22738357799c40420a45446b1cef839780859f285d9b958f79c1`

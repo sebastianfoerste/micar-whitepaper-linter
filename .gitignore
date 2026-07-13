@@ -20,3 +20,9 @@ htmlcov/
 .study-cache/
 studies/**/raw/
 studies/**/downloads/
+studies/**/review-worksheet.md
+
+# Safety rules (auto-added)
+node_modules/
+*.db
+*.sqlite

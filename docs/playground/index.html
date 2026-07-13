@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MiCAR Whitepaper Linter: Playground</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0d1117; color: #e6edf3; font: 15px/1.5 -apple-system, "Segoe UI", sans-serif; }
+  header { padding: 24px 28px 8px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  header p { color: #8b949e; margin: 0; font-size: 14px; }
+  header a { color: #79c0ff; text-decoration: none; }
+  .bar { display: flex; gap: 10px; align-items: center; padding: 14px 28px; flex-wrap: wrap; }
+  button { background: #21262d; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; padding: 7px 16px; font-size: 14px; cursor: pointer; }
+  button:hover { background: #30363d; }
+  button.primary { background: #238636; border-color: #2ea043; font-weight: 600; }
+  button.primary:disabled { background: #21262d; color: #8b949e; cursor: wait; }
+  #status { color: #8b949e; font-size: 13px; }
+  main { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 0 28px 28px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  textarea, #out { width: 100%; height: 65vh; background: #010409; border: 1px solid #30363d; border-radius: 8px; padding: 14px; font: 12.5px/1.6 "SF Mono", Menlo, Consolas, monospace; color: #e6edf3; }
+  textarea { resize: vertical; }
+  #out { overflow: auto; white-space: pre-wrap; margin: 0; }
+  .pass { color: #3fb950; } .review { color: #d29922; } .miss { color: #f85149; } .cite { color: #79c0ff; } .dim { color: #8b949e; }
+  footer { padding: 0 28px 24px; color: #8b949e; font-size: 12.5px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>MiCAR Whitepaper Linter: Playground</h1>
+  <p>Deterministic Annex checks with pinpoint MiCAR citations, running entirely in your browser via Pyodide. Nothing you paste leaves this page.
+     Repo: <a href="https://github.com/sebastianfoerste/micar-whitepaper-linter">sebastianfoerste/micar-whitepaper-linter</a></p>
+</header>
+<div class="bar">
+  <button class="primary" id="lint" disabled>Lint whitepaper</button>
+  <button id="load-incomplete">Load incomplete draft</button>
+  <button id="load-complete">Load complete draft</button>
+  <span id="status">Loading Python runtime (~10s on first visit)…</span>
+</div>
+<main>
+  <textarea id="input" spellcheck="false" aria-label="Whitepaper draft JSON"></textarea>
+  <pre id="out"><span class="dim">Output appears here. Findings are staged pass / review / missing, as a first pass for lawyer review. They are not a legal conclusion.</span></pre>
+</main>
+<footer>Synthetic examples only. Not legal advice. MIT-licensed. MiCAR = Regulation (EU) 2023/1114.</footer>
+
+<script id="sample-incomplete" type="application/json">
+{
+  "title": "Incomplete Synthetic EuroStable ART Draft",
+  "type": "art",
+  "sections": {
+    "summary": "EuroStable is a token.",
+    "risk_warning": "",
+    "management_statement": "Signed.",
+    "notification_date": "TBD.",
+    "language": "English.",
+    "issuer": "Synthetic EuroStable AG, fictional demo issuer.",
+    "art": "EuroStable is a stablecoin.",
+    "offer_or_admission": "",
+    "rights_and_obligations": "Holders have rights.",
+    "technology": "Built on a blockchain.",
+    "risks": "There are risks.",
+    "reserve_of_assets": "Reserve is held.",
+    "environmental_impact": "",
+    "redemption": ""
+  }
+}
+</script>
+
+<script type="module">
+const $ = (id) => document.getElementById(id);
+const sampleIncomplete = $("sample-incomplete").textContent.trim();
+$("input").value = sampleIncomplete;
+$("load-incomplete").onclick = () => { $("input").value = sampleIncomplete; };
+
+let sampleComplete = null;
+$("load-complete").onclick = async () => {
+  if (!sampleComplete) {
+    try {
+      const r = await fetch("https://raw.githubusercontent.com/sebastianfoerste/micar-whitepaper-linter/main/examples/art-stablecoin.json");
+      sampleComplete = await r.text();
+    } catch { sampleComplete = sampleIncomplete; }
+  }
+  $("input").value = sampleComplete;
+};
+
+function colorize(text) {
+  const esc = text.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  return esc.split("\n").map((line) => {
+    if (line.includes("[MISS")) return `<span class="miss">${line}</span>`;
+    if (line.includes("[REVIEW]")) return `<span class="review">${line}</span>`;
+    if (line.includes("[PASS")) return `<span class="pass">${line}</span>`;
+    if (line.trimStart().startsWith("Cite:")) return `<span class="cite">${line}</span>`;
+    if (line.trimStart().startsWith("-") || line.trimStart().startsWith("Section:")) return `<span class="dim">${line}</span>`;
+    return line;
+  }).join("\n");
+}
+
+import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v0.28.2/full/pyodide.mjs";
+const pyodide = await loadPyodide();
+$("status").textContent = "Installing linter…";
+await pyodide.loadPackage("micropip");
+const wheelUrl = new URL("micar_whitepaper_linter-0.1.0-py3-none-any.whl", location.href).href;
+await pyodide.runPythonAsync(`
+import micropip
+await micropip.install("${wheelUrl}")
+`);
+$("status").textContent = "Ready. Runs locally. No data leaves the browser.";
+$("lint").disabled = false;
+
+$("lint").onclick = () => {
+  const out = $("out");
+  try { JSON.parse($("input").value); }
+  catch (e) { out.innerHTML = `<span class="miss">Input is not valid JSON: ${String(e).replace(/</g, "&lt;")}</span>`; return; }
+  pyodide.globals.set("draft_text", $("input").value);
+  const result = pyodide.runPython(`
+import io, contextlib
+from pathlib import Path
+from micar_linter import cli
+Path("/tmp/wp.json").write_text(draft_text, encoding="utf-8")
+buf = io.StringIO()
+with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+    code = cli.main(["/tmp/wp.json"])
+buf.getvalue() + f"\\n(exit code with --strict would be {1 if 'Blockers: 0' not in buf.getvalue() else 0})"
+`);
+  out.innerHTML = colorize(result);
+};
+</script>
+</body>
+</html>

@@ -30,6 +30,7 @@ def test_esma_register_normalizes_official_other_csv(tmp_path: Path):
     assert manifest["study_id"] == "2026-07-title-ii-annex-i"
     assert manifest["register_source_detail"] == "OTHER.csv"
     assert manifest["identifier_policy"].startswith("WP identifiers are pseudonymous")
+    assert len(manifest["register_source_sha256"]) == 64
     assert entry["study_doc_id"] == "WP-001"
     assert entry["asset_type"] == "Title II"
     assert entry["home_member_state"] == "DE"
@@ -37,6 +38,28 @@ def test_esma_register_normalizes_official_other_csv(tmp_path: Path):
     assert entry["whitepaper_url"] == "https://example.test/wp.xhtml"
     assert entry["included"] is True
     assert len(entry["register_row_hash_sha256"]) == 64
+
+
+def test_esma_register_normalizes_bare_official_urls(tmp_path: Path):
+    csv_path = tmp_path / "OTHER.csv"
+    csv_path.write_text(
+        "\n".join(
+            [
+                "ae_competentAuthority,ae_homeMemberState,ae_lei_name,ae_lei,ae_lei_cou_code,"
+                "ae_lei_name_casp,ae_lei_casp,ae_offerCode_cou,ae_DTI_FFG,ae_DTI,wp_url,"
+                "wp_comments,wp_lastupdate",
+                "Austrian Financial Market Authority (FMA),AT,Example GmbH,LEI123,AT,"
+                ",,,FFG123,DTI456,WWW.EXAMPLE.AT/path,,03/07/2026",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    manifest = build_source_manifest(csv_path, retrieved_at=datetime(2026, 7, 6, tzinfo=UTC))
+    entry = manifest["entries"][0]
+
+    assert entry["whitepaper_url"] == "https://WWW.EXAMPLE.AT/path"
+    assert entry["landing_page_url"] == "https://WWW.EXAMPLE.AT/path"
 
 
 def test_source_pack_selection_is_first_ten_and_stable(tmp_path: Path):

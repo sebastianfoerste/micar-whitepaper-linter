@@ -27,6 +27,10 @@ Document hashes and extraction metadata are collected in `document-provenance.js
 
 WP identifiers are pseudonymous labels. Because the source manifest contains public issuer names and URLs, the dataset is not anonymous.
 
+The source manifest also records a SHA-256 hash of the source CSV or JSON used to build the manifest. This lets a reader distinguish the frozen pilot sample from later versions of ESMA's live Title II CSV.
+
+Current-source check: ESMA's MiCA page was checked on 2026-07-06. The page displayed a register last update of 3 July 2026, listed the Title II white-paper CSV first among the five interim register files, and stated that registered white papers have not been reviewed or approved by any competent authority.
+
 ## Sampling
 
 The committed v1 run uses the first ten eligible candidates from the curated source pack. `WP-006` and `WP-008` were excluded because the source files were unavailable in the local cache; `WP-011` and `WP-012` backfilled the sample.

@@ -16,6 +16,10 @@ ESMA_MICA_PAGE = (
 ESMA_ARTICLE_6 = "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-6-content-and-form-crypto-asset"
 ESMA_ARTICLE_8 = "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-8-notification-crypto-asset-white"
 ESMA_ARTICLE_109 = "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-109-register-crypto-asset-white"
+ESMA_ANNEX_I = "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/disclosure-items-crypto-asset-white-paper"
+EUR_LEX_MICAR = "https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng"
+ESMA_PAGE_LAST_CHECKED = "2026-07-06"
+ESMA_PAGE_LAST_UPDATE = "3 July 2026"
 
 
 def render_study_report(payload: dict[str, Any]) -> str:
@@ -24,6 +28,10 @@ def render_study_report(payload: dict[str, Any]) -> str:
     potential_gaps = summary["potential_gaps"]
     high_confidence = summary["high_confidence_gaps"]
     review_status = payload.get("human_review_status", "pending_review")
+    source_manifest = payload.get("source_manifest", {})
+    source_detail = _display_source_detail(
+        source_manifest.get("register_source_detail", payload.get("manifest_path", ""))
+    )
     example_heading = (
         "Examples with pinpoint references"
         if review_status == "reviewed"
@@ -42,10 +50,13 @@ def render_study_report(payload: dict[str, Any]) -> str:
         ),
         "",
         (
-            "The output is a research artifact. It does not provide legal advice or assess the full "
-            "legal sufficiency of any white paper. Tables use WP identifiers, but the public source "
-            "manifest links those identifiers to issuer names and URLs. The data are pseudonymous, "
-            "not anonymous."
+            "The output is a research artifact. It does not provide legal advice and does not "
+            "assess the full legal sufficiency of any white paper. Findings tables use WP-ID "
+            "identifiers rather than printing issuer names inline; the source manifest links each "
+            "WP-ID to its public ESMA register entry, so findings are traceable to their source "
+            "and are not anonymized. Findings are machine-flagged and pending human legal review; "
+            "a flag is a candidate gap in extracted text, not a confirmed deficiency by the named "
+            "issuer."
         ),
         "",
         "## Sample",
@@ -78,6 +89,17 @@ def render_study_report(payload: dict[str, Any]) -> str:
             "e-money tokens. ESMA also states that white papers in the register have not been reviewed "
             "or approved by any competent authority."
         ),
+        "",
+        (
+            f"Current-source check: ESMA's MiCA page was checked on {ESMA_PAGE_LAST_CHECKED} "
+            f"and displayed a register last update of {ESMA_PAGE_LAST_UPDATE}. Article 8 states "
+            "that competent authorities shall not require prior approval of Title II crypto-asset "
+            "white papers before publication. Article 109 states that ESMA's register includes "
+            "white papers for crypto-assets other than asset-referenced tokens or e-money tokens."
+        ),
+        "",
+        f"Source manifest: `{source_detail}`",
+        f"Source manifest input SHA-256: `{source_manifest.get('register_source_sha256', '')}`",
         "",
         "## What the linter checks",
         "",
@@ -133,6 +155,22 @@ def render_study_report(payload: dict[str, Any]) -> str:
             lines.append(f"| `{item['rule_id']}` | {item['count']} |")
     else:
         lines.append("No candidate gaps were flagged.")
+
+    lines.extend(["", "## Excluded documents", ""])
+    excluded_documents = payload.get("excluded_documents", [])
+    if excluded_documents:
+        lines.extend(
+            [
+                "| Study ID | Reason |",
+                "| --- | --- |",
+            ]
+        )
+        for item in excluded_documents:
+            lines.append(
+                f"| `{item.get('study_doc_id', '')}` | `{item.get('exclusion_reason', '')}` |"
+            )
+    else:
+        lines.append("No documents were excluded in this run.")
 
     lines.extend(["", f"## {example_heading}", ""])
     examples = _example_findings(payload)
@@ -198,6 +236,8 @@ def render_study_report(payload: dict[str, Any]) -> str:
             f"- ESMA Article 6 interactive rulebook: {ESMA_ARTICLE_6}",
             f"- ESMA Article 8 interactive rulebook: {ESMA_ARTICLE_8}",
             f"- ESMA Article 109 interactive rulebook: {ESMA_ARTICLE_109}",
+            f"- ESMA Annex I disclosure items: {ESMA_ANNEX_I}",
+            f"- EUR-Lex Regulation (EU) 2023/1114: {EUR_LEX_MICAR}",
             "",
             f"Findings digest: `{payload.get('digest', '')}`",
             "",
@@ -216,6 +256,14 @@ def _example_findings(payload: dict[str, Any]) -> list[tuple[dict[str, Any], dic
         if len(examples) >= 5:
             break
     return examples
+
+
+def _display_source_detail(value: Any) -> str:
+    text = str(value or "")
+    source_pack_marker = "micar_title_ii_whitepaper_20_source_pack"
+    if source_pack_marker in text:
+        return source_pack_marker + text.split(source_pack_marker, 1)[1]
+    return text
 
 
 def build_parser() -> argparse.ArgumentParser:

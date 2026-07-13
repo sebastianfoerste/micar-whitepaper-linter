@@ -10,7 +10,11 @@ The sample contains ten processed documents selected by convenience from a curat
 
 The v1 source pack must be reconciled against a dated official ESMA Title II CSV before any reviewed publication. A register-row hash identifies normalized metadata; it is not a hash of the white-paper document. Exact processed-byte hashes are recorded separately in `document-provenance.json`.
 
-Raw source files are not committed. Remote sources may change or disappear, which limits later reproduction unless the same bytes can be obtained lawfully.
+The committed pilot uses a frozen 20-entry source pack for reproducibility. ESMA updates the interim register regularly, so rerunning the workflow against the live Title II CSV can produce a different sample and different extraction results.
+
+The findings tables use WP-ID study identifiers and do not print issuer names inline. They are not anonymized: the source manifest (`sample-manifest.csv`) lists each WP-ID's underlying public ESMA register entry and white-paper URL, so any finding can be traced back to its public source document. Raw white-paper files are not committed.
+
+Remote sources may change or disappear, which limits later reproduction unless the same bytes can be obtained lawfully.
 
 ## Extraction
 

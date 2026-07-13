@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -17,13 +18,23 @@ REVIEW_TABLE_SCHEMA = "micar-whitepaper-linter.review-table"
 REVIEW_TABLE_COMPARISON_SCHEMA = "micar-whitepaper-linter.review-table-comparison"
 
 
+def _reproducible_timestamp(generated_at: datetime | None) -> datetime:
+    if generated_at is not None:
+        return generated_at
+    raw_epoch = os.environ.get("SOURCE_DATE_EPOCH", "0")
+    try:
+        return datetime.fromtimestamp(int(raw_epoch), UTC)
+    except ValueError as error:
+        raise ValueError("SOURCE_DATE_EPOCH must be an integer Unix timestamp") from error
+
+
 def build_review_table(
     report: Report,
     *,
     source_path: Path | None = None,
     generated_at: datetime | None = None,
 ) -> dict[str, Any]:
-    timestamp = generated_at or datetime.now(UTC)
+    timestamp = _reproducible_timestamp(generated_at)
     rows = [_review_row(report, finding) for finding in report.findings]
     blocker_rows = [row for row in rows if row["blocker"]]
 
@@ -69,7 +80,7 @@ def build_review_table_comparison(
     *,
     generated_at: datetime | None = None,
 ) -> dict[str, Any]:
-    timestamp = generated_at or datetime.now(UTC)
+    timestamp = _reproducible_timestamp(generated_at)
     tables = [
         build_review_table(
             lint_whitepaper(load_whitepaper(path)),
