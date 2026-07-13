@@ -1,4 +1,4 @@
-# Legora-inspired programme
+# Review-workspace programme
 
 The white-paper workspace emits a digest-bound collaboration sidecar, document change set and supervised workflow pack. Review cells support locks, assignment, comments and decisions with expected revisions. Source-digest changes mark the sidecar stale.
 

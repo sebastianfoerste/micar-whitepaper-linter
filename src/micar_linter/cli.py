@@ -11,13 +11,13 @@ from pathlib import Path
 from micar_linter import __version__
 from micar_linter.artifact_manifest import build_artifact_manifest, render_artifact_manifest
 from micar_linter.batch import build_batch_review_pack, render_batch_review_pack
-from micar_linter.coverage import build_coverage_matrix, render_coverage_matrix
-from micar_linter.legora_workspace import (
+from micar_linter.collaboration_workspace import (
     build_change_set,
     build_review_sidecar,
     build_workflow_pack,
-    write_legora_bundle,
+    write_collaboration_bundle,
 )
+from micar_linter.coverage import build_coverage_matrix, render_coverage_matrix
 from micar_linter.linter import lint_whitepaper
 from micar_linter.remediation import render_remediation_report
 from micar_linter.report import render_audit_log, render_coverage_table, render_json, render_text
@@ -120,7 +120,7 @@ def build_parser() -> argparse.ArgumentParser:
         version=f"micar-lint {__version__}",
     )
     parser.add_argument(
-        "--legora-bundle-dir",
+        "--collaboration-bundle-dir",
         type=Path,
         help="Write collaboration sidecar, document change set and supervised workflow pack.",
     )
@@ -148,14 +148,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     paths: list[Path] = args.paths
 
-    if args.workspace_output or args.legora_bundle_dir or args.workflow_action:
+    if args.workspace_output or args.collaboration_bundle_dir or args.workflow_action:
         try:
             workspace = build_whitepaper_workspace(paths)
             if args.workspace_output:
                 args.workspace_output.parent.mkdir(parents=True, exist_ok=True)
-                args.workspace_output.write_text(
-                    render_whitepaper_workspace(workspace), encoding="utf-8"
-                )
+                args.workspace_output.write_text(render_whitepaper_workspace(workspace), encoding="utf-8")
         except (OSError, SystemExit, ValueError) as exc:
             print(f"error: cannot write white paper workspace: {exc}", file=sys.stderr)
             return 2
@@ -166,8 +164,8 @@ def main(argv: list[str] | None = None) -> int:
                 "White paper workspace written to "
                 f"{args.workspace_output}. Documents: {workspace['vault']['document_count']}."
             )
-        if args.legora_bundle_dir:
-            write_legora_bundle(workspace, args.legora_bundle_dir)
+        if args.collaboration_bundle_dir:
+            write_collaboration_bundle(workspace, args.collaboration_bundle_dir)
         if args.workflow_action:
             sidecar = build_review_sidecar(workspace)
             change_set = build_change_set(workspace)
@@ -177,8 +175,8 @@ def main(argv: list[str] | None = None) -> int:
             elif args.workflow_action == "inspect":
                 print(json.dumps(workflow, indent=2))
             else:
-                if not args.legora_bundle_dir:
-                    print("error: --workflow-action run requires --legora-bundle-dir", file=sys.stderr)
+                if not args.collaboration_bundle_dir:
+                    print("error: --workflow-action run requires --collaboration-bundle-dir", file=sys.stderr)
                     return 2
                 print(
                     f"Supervised workflow run status: {workflow['run']['status']}. "

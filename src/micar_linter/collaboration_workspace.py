@@ -307,7 +307,7 @@ def build_workflow_pack(
     return {"definitions": definitions, "run": run}
 
 
-def write_legora_bundle(workspace: dict[str, Any], output_dir: Path) -> list[Path]:
+def write_collaboration_bundle(workspace: dict[str, Any], output_dir: Path) -> list[Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
     sidecar = build_review_sidecar(workspace)
     change_set = build_change_set(workspace)

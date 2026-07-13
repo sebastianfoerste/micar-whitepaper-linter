@@ -7,7 +7,7 @@ import docx
 import pytest
 from lxml import etree
 
-from micar_linter.legora_workspace import (
+from micar_linter.collaboration_workspace import (
     build_change_set,
     build_review_sidecar,
     build_workflow_pack,
