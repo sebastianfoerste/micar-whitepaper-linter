@@ -41,6 +41,7 @@ dev = [
 micar-lint = "micar_linter.cli:main"
 micar-lint-batch = "micar_linter.batch:main_study_batch"
 micar-study-report = "micar_linter.study_report:main"
+micar-review-summary = "micar_linter.review_validation:main"
 
 [project.urls]
 Homepage = "https://github.com/sebastianfoerste/micar-whitepaper-linter"

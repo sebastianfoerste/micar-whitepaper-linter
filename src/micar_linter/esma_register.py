@@ -58,21 +58,47 @@ def build_source_manifest(
         "study_id": STUDY_ID,
         "retrieved_at": timestamp.isoformat(),
         "register_source": REGISTER_SOURCE,
-        "register_source_detail": source_label,
+        "register_source_detail": _portable_source_label(source_label),
         "register_source_sha256": source_sha256,
+        "source_type": (
+            "official_esma_csv" if source_label == OFFICIAL_TITLE_II_CSV else "curated_candidate_manifest"
+        ),
+        "provenance_note": (
+            "A curated candidate manifest must be reconciled against the official ESMA Title II CSV "
+            "before any reviewed legal conclusion is published."
+        ),
         "official_esma_title_ii_csv": OFFICIAL_TITLE_II_CSV,
         "esma_mica_page": ESMA_MICA_PAGE,
         "scope": TITLE_II_SCOPE,
         "sample_method": sample_method,
         "sample_size": sample_size,
         "random_seed": random_seed if sample_method == "random" else None,
+        "identifier_policy": (
+            "WP identifiers are pseudonymous labels. The source manifest contains public issuer names "
+            "and URLs, so the dataset is not anonymous."
+        ),
+        "hash_policy": {
+            "register_row_hash_sha256": "SHA-256 over the canonical normalized register row.",
+            "document_hash_sha256": "SHA-256 over the exact source bytes processed by the study batch.",
+        },
         "raw_files_included": False,
         "raw_file_policy": (
             "Raw white papers are not committed. Fetch locally into .study-cache/ and commit only "
-            "metadata, hashes, anonymized findings, methodology, limitations, and rendered reports."
+            "metadata, hashes, pseudonymous findings, methodology, limitations, and rendered reports."
         ),
         "entries": entries,
     }
+
+
+def _portable_source_label(source_label: str) -> str:
+    """Avoid committing machine-specific absolute paths to source metadata."""
+    if source_label.startswith(("https://", "http://")):
+        return source_label
+    path = Path(source_label)
+    try:
+        return str(path.resolve().relative_to(Path.cwd().resolve()))
+    except ValueError:
+        return path.name
 
 
 def render_manifest(manifest: dict[str, Any]) -> str:
@@ -110,7 +136,7 @@ def _load_source_rows(source: str | Path) -> tuple[list[dict[str, Any]], str, st
         with urllib.request.urlopen(req, timeout=30) as response:
             raw = response.read()
         text = raw.decode("utf-8-sig")
-        return list(csv.DictReader(StringIO(text))), source_text, _bytes_sha256(raw)
+        return _non_blank_csv_rows(text), source_text, _bytes_sha256(raw)
 
     path = Path(source)
     raw = path.read_bytes()
@@ -122,7 +148,15 @@ def _load_source_rows(source: str | Path) -> tuple[list[dict[str, Any]], str, st
         return [dict(row) for row in rows], str(path), _bytes_sha256(raw)
 
     text = raw.decode("utf-8-sig")
-    return list(csv.DictReader(StringIO(text))), str(path), _bytes_sha256(raw)
+    return _non_blank_csv_rows(text), str(path), _bytes_sha256(raw)
+
+
+def _non_blank_csv_rows(text: str) -> list[dict[str, Any]]:
+    return [
+        dict(row)
+        for row in csv.DictReader(StringIO(text))
+        if any((value or "").strip() for value in row.values())
+    ]
 
 
 def _normalize_row(row: dict[str, Any], index: int) -> dict[str, Any]:

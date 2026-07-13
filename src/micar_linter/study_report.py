@@ -7,10 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-TITLE = (
-    "10 Notified MiCAR Title II White Papers Reviewed: Recurring Annex I Disclosure Gaps "
-    "Flagged by Deterministic Rules"
-)
+TITLE = "MiCAR Title II White Paper Pilot: Machine-Flagged Annex I Candidate Gaps Pending Human Review"
 STUDY_NAME = "MiCAR White Paper Study 2026: Annex I Disclosure Patterns in Notified Title II White Papers"
 ESMA_MICA_PAGE = (
     "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/"
@@ -48,8 +45,8 @@ def render_study_report(payload: dict[str, Any]) -> str:
         "",
         (
             "This study runs deterministic first-pass checks over publicly available Title II "
-            "crypto-asset white-paper text. Findings are potential disclosure gaps where a "
-            "specified Annex I or Article 6 element was not found in extracted text."
+            "crypto-asset white-paper text. A candidate flag means that a specified Annex I "
+            "or Article 6 element was not found in extracted text. It is not a reviewed legal finding."
         ),
         "",
         (
@@ -74,10 +71,10 @@ def render_study_report(payload: dict[str, Any]) -> str:
         "## Methodology",
         "",
         (
-            "The sample is drawn from the ESMA Interim MiCA Register Title II source data and the "
-            "local source manifest. The default v1 rule uses the first eligible WP-001 to WP-010 "
-            "candidate set from the source pack, with candidate backfill if a document is inaccessible "
-            "or extraction quality is insufficient."
+            "The v1 sample comes from a curated 20-entry candidate manifest derived from public register "
+            "data. It uses the first ten eligible candidates, with backfill where a document is "
+            "inaccessible or extraction quality is insufficient. This convenience sample is reproducible "
+            "but is not random, issuer-deduplicated, stratified, or statistically representative."
         ),
         "",
         (
@@ -129,11 +126,19 @@ def render_study_report(payload: dict[str, Any]) -> str:
             "## Aggregate findings",
             "",
             f"- Rules checked per document: {summary['rules_checked_per_document']}",
-            f"- Machine-flagged potential disclosure gaps: {potential_gaps}",
-            f"- High-confidence potential gaps: {high_confidence}",
+            f"- Machine-flagged candidate gaps: {potential_gaps}",
+            f"- High-confidence detector flags: {high_confidence}",
             f"- Human review status: {review_status}",
             "",
-            "## Most frequent potential gaps",
+            "## Human validation gate",
+            "",
+            "The 150 document-rule cells are listed in `human-review-matrix.csv`. No precision, recall, "
+            "false-positive, or false-negative claim is made until qualified reviewers label every cell "
+            "under `review-protocol.md` and `micar-review-summary --require-complete` exits successfully.",
+            "",
+            "Document byte hashes and extraction metadata are recorded in `document-provenance.json`.",
+            "",
+            "## Most frequent detector flags",
             "",
         ]
     )
@@ -149,7 +154,7 @@ def render_study_report(payload: dict[str, Any]) -> str:
         for item in frequent[:10]:
             lines.append(f"| `{item['rule_id']}` | {item['count']} |")
     else:
-        lines.append("No potential gaps were flagged.")
+        lines.append("No candidate gaps were flagged.")
 
     lines.extend(["", "## Excluded documents", ""])
     excluded_documents = payload.get("excluded_documents", [])
@@ -194,9 +199,9 @@ def render_study_report(payload: dict[str, Any]) -> str:
             "## Limitations",
             "",
             (
-                "The sample is not statistically representative. It is a reproducible pilot sample "
-                "intended to test whether deterministic Annex I review produces useful public "
-                "research artifacts."
+                "The sample is a small convenience sample with repeated issuers. It is not statistically "
+                "representative and must not support prevalence estimates. It tests the review "
+                "workflow and detector behavior only."
             ),
             "",
             (
@@ -205,23 +210,23 @@ def render_study_report(payload: dict[str, Any]) -> str:
                 "pattern does not capture, or outside the v1 rule scope."
             ),
             "",
-            "Excluded documents are listed in `findings-anonymized.json` with reasons.",
+            "Excluded documents are listed in `findings-pseudonymous.json` with reasons.",
             "",
             "## Reproducibility",
             "",
             "```bash",
             "uv run python -m micar_linter.esma_register \\",
-            "  --csv .study-cache/esma-title-ii-register.csv \\",
+            "  --csv studies/2026-07-title-ii-annex-i-whitepaper-study/sample-manifest.csv \\",
             "  --out studies/2026-07-title-ii-annex-i-whitepaper-study/source-manifest.json",
             "",
             "uv run micar-lint-batch \\",
             "  --manifest studies/2026-07-title-ii-annex-i-whitepaper-study/source-manifest.json \\",
             "  --cache .study-cache/title-ii-whitepapers \\",
             "  --annex annex-i \\",
-            "  --out studies/2026-07-title-ii-annex-i-whitepaper-study/findings-anonymized.json",
+            "  --out studies/2026-07-title-ii-annex-i-whitepaper-study/findings-pseudonymous.json",
             "",
             "uv run micar-study-report \\",
-            "  --findings studies/2026-07-title-ii-annex-i-whitepaper-study/findings-anonymized.json \\",
+            "  --findings studies/2026-07-title-ii-annex-i-whitepaper-study/findings-pseudonymous.json \\",
             "  --out studies/2026-07-title-ii-annex-i-whitepaper-study/findings-summary.md",
             "```",
             "",

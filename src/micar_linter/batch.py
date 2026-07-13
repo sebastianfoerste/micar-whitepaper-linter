@@ -409,16 +409,17 @@ def build_study_findings(
             "sample_method": manifest.get("sample_method", ""),
             "random_seed": manifest.get("random_seed"),
         },
-        "manifest_path": str(manifest_path),
-        "cache_dir": str(cache_dir),
+        "manifest_path": _portable_path(manifest_path),
+        "cache_dir": _portable_path(cache_dir),
         "scope": manifest.get("scope", "Title II crypto-assets other than ARTs or EMTs"),
         "annex": "Annex I",
         "sample_target": sample_size,
         "sample_size": len(processed),
         "human_review_status": _aggregate_human_review_status(processed),
         "language_policy": (
-            "Findings are machine-flagged potential disclosure gaps. They are not legal advice "
-            "and do not state that an issuer failed to comply with MiCAR."
+            "Rows are machine-generated detector outputs. A flag means that the specified element "
+            "was not found in extracted text. It is not a reviewed legal finding, legal advice, "
+            "or a statement that an issuer failed to comply with MiCAR."
         ),
         "rules": [_study_rule_metadata(rule) for rule in STUDY_RULES],
         "summary": _study_summary(processed, excluded),
@@ -596,7 +597,7 @@ def _study_finding(
             "missing_element": rule.missing_element,
         },
         "human_review_status": "pending_review",
-        "human_review_note": "Pending Sebastian legal review.",
+        "human_review_note": "Pending qualified human legal review.",
     }
 
 
@@ -786,6 +787,14 @@ def _aggregate_human_review_status(results: list[dict[str, Any]]) -> str:
     return "reviewed" if statuses == {"reviewed"} else "pending_review"
 
 
+def _portable_path(path: Path) -> str:
+    """Return a stable relative locator without leaking a local home-directory path."""
+    try:
+        return str(path.resolve().relative_to(Path.cwd().resolve()))
+    except ValueError:
+        return path.name
+
+
 def _digest(payload: dict[str, Any]) -> str:
     unsigned = {key: value for key, value in payload.items() if key != "digest"}
     encoded = json.dumps(unsigned, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
@@ -820,7 +829,7 @@ def main_study_batch(argv: list[str] | None = None) -> int:
     print(
         (
             "Study findings written to {json_path} and {csv_path}. "
-            "Documents reviewed: {docs}. Potential gaps: {gaps}."
+            "Documents processed: {docs}. Candidate flags: {gaps}."
         ).format(
             json_path=args.out,
             csv_path=csv_path,

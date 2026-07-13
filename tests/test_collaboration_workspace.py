@@ -7,7 +7,7 @@ import docx
 import pytest
 from lxml import etree
 
-from micar_linter.legora_workspace import (
+from micar_linter.collaboration_workspace import (
     build_change_set,
     build_review_sidecar,
     build_workflow_pack,
@@ -84,6 +84,44 @@ def test_docx_redline_uses_tracked_insertions_and_deletions(tmp_path) -> None:
         for node in xml.xpath(".//w:ins", namespaces=ns)
     ]
     assert inserted_changes == [change_set["changes"][0]["proposed_text"]]
+
+
+def test_docx_replaces_matching_paragraph_inside_table_cell(tmp_path) -> None:
+    source = tmp_path / "table-source.docx"
+    document = docx.Document()
+    document.add_table(rows=1, cols=1).cell(0, 0).text = "Replace this table clause"
+    document.save(source)
+    source_digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    change_set = {
+        "source_digests": {"source": source_digest},
+        "export_allowed": True,
+        "changes": [
+            {
+                "decision": "accepted",
+                "original_text": "Replace this table clause",
+                "proposed_text": "Literal <replacement> & text",
+            }
+        ],
+    }
+    output = render_tracked_docx(source, tmp_path / "table-reviewed.docx", change_set)
+    with zipfile.ZipFile(output) as package:
+        xml = etree.fromstring(package.read("word/document.xml"))
+    ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+    table_text = "".join(xml.xpath(".//w:tc//w:t/text()", namespaces=ns))
+    assert table_text == "Literal <replacement> & text"
+
+
+def test_tracked_docx_rejects_out_of_range_source_epoch(tmp_path, monkeypatch) -> None:
+    source = tmp_path / "source.docx"
+    docx.Document().save(source)
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    monkeypatch.setenv("SOURCE_DATE_EPOCH", "999999999999999999999")
+    with pytest.raises(ValueError, match="valid integer Unix timestamp"):
+        render_tracked_docx(
+            source,
+            tmp_path / "reviewed.docx",
+            {"source_digests": {"source": digest}, "export_allowed": True, "changes": []},
+        )
 
 
 def test_workflow_pack_blocks_unreviewed_cells() -> None:

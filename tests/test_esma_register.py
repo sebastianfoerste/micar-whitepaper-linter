@@ -28,6 +28,8 @@ def test_esma_register_normalizes_official_other_csv(tmp_path: Path):
     entry = manifest["entries"][0]
 
     assert manifest["study_id"] == "2026-07-title-ii-annex-i"
+    assert manifest["register_source_detail"] == "OTHER.csv"
+    assert manifest["identifier_policy"].startswith("WP identifiers are pseudonymous")
     assert len(manifest["register_source_sha256"]) == 64
     assert entry["study_doc_id"] == "WP-001"
     assert entry["asset_type"] == "Title II"

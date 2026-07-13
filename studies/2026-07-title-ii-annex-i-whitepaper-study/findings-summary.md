@@ -1,10 +1,10 @@
-# 10 Notified MiCAR Title II White Papers Reviewed: Recurring Annex I Disclosure Gaps Flagged by Deterministic Rules
+# MiCAR Title II White Paper Pilot: Machine-Flagged Annex I Candidate Gaps Pending Human Review
 
 Study title: **MiCAR White Paper Study 2026: Annex I Disclosure Patterns in Notified Title II White Papers**
 
-This study runs deterministic first-pass checks over publicly available Title II crypto-asset white-paper text. Findings are potential disclosure gaps where a specified Annex I or Article 6 element was not found in extracted text.
+This study runs deterministic first-pass checks over publicly available Title II crypto-asset white-paper text. A candidate flag means that a specified Annex I or Article 6 element was not found in extracted text. It is not a reviewed legal finding.
 
-The output is a research artifact. It does not provide legal advice and does not assess the full legal sufficiency of any white paper. Findings tables use WP-ID identifiers rather than printing issuer names inline; the source manifest links each WP-ID to its public ESMA register entry, so findings are traceable to their source and are not anonymized. Findings are machine-flagged and pending human legal review; a flag is a candidate gap in extracted text, not a confirmed deficiency by the named issuer.
+The output is a research artifact. It does not provide legal advice or assess the full legal sufficiency of any white paper. Tables use WP identifiers, but the public source manifest links those identifiers to issuer names and URLs. The data are pseudonymous, not anonymous.
 
 ## Sample
 
@@ -17,7 +17,7 @@ The output is a research artifact. It does not provide legal advice and does not
 
 ## Methodology
 
-The sample is drawn from the ESMA Interim MiCA Register Title II source data and the local source manifest. The default v1 rule uses the first eligible WP-001 to WP-010 candidate set from the source pack, with candidate backfill if a document is inaccessible or extraction quality is insufficient.
+The v1 sample comes from a curated 20-entry candidate manifest derived from public register data. It uses the first ten eligible candidates, with backfill where a document is inaccessible or extraction quality is insufficient. This convenience sample is reproducible but is not random, issuer-deduplicated, stratified, or statistically representative.
 
 Each document is loaded locally from `.study-cache/`. XHTML and HTML are parsed first, including visible text and available inline XBRL tag names. PDF files are extracted with `pypdf`. Text files are used only as a fallback. Weak extraction is recorded as an exclusion.
 
@@ -59,11 +59,17 @@ The study checks 15 deterministic controls: 12 high-signal Annex I disclosure fi
 ## Aggregate findings
 
 - Rules checked per document: 15
-- Machine-flagged potential disclosure gaps: 21
-- High-confidence potential gaps: 9
+- Machine-flagged candidate gaps: 21
+- High-confidence detector flags: 9
 - Human review status: pending_review
 
-## Most frequent potential gaps
+## Human validation gate
+
+The 150 document-rule cells are listed in `human-review-matrix.csv`. No precision, recall, false-positive, or false-negative claim is made until qualified reviewers label every cell under `review-protocol.md` and `micar-review-summary --require-complete` exits successfully.
+
+Document byte hashes and extraction metadata are recorded in `document-provenance.json`.
+
+## Most frequent detector flags
 
 | Rule ID | Count |
 | --- | ---: |
@@ -134,27 +140,27 @@ The study checks 15 deterministic controls: 12 high-signal Annex I disclosure fi
 
 ## Limitations
 
-The sample is not statistically representative. It is a reproducible pilot sample intended to test whether deterministic Annex I review produces useful public research artifacts.
+The sample is a small convenience sample with repeated issuers. It is not statistically representative and must not support prevalence estimates. It tests the review workflow and detector behavior only.
 
 Extraction quality can affect results. A field may be present in a source document but absent from extracted text, present under wording that the current deterministic pattern does not capture, or outside the v1 rule scope.
 
-Excluded documents are listed in `findings-anonymized.json` with reasons.
+Excluded documents are listed in `findings-pseudonymous.json` with reasons.
 
 ## Reproducibility
 
 ```bash
 uv run python -m micar_linter.esma_register \
-  --csv .study-cache/esma-title-ii-register.csv \
+  --csv studies/2026-07-title-ii-annex-i-whitepaper-study/sample-manifest.csv \
   --out studies/2026-07-title-ii-annex-i-whitepaper-study/source-manifest.json
 
 uv run micar-lint-batch \
   --manifest studies/2026-07-title-ii-annex-i-whitepaper-study/source-manifest.json \
   --cache .study-cache/title-ii-whitepapers \
   --annex annex-i \
-  --out studies/2026-07-title-ii-annex-i-whitepaper-study/findings-anonymized.json
+  --out studies/2026-07-title-ii-annex-i-whitepaper-study/findings-pseudonymous.json
 
 uv run micar-study-report \
-  --findings studies/2026-07-title-ii-annex-i-whitepaper-study/findings-anonymized.json \
+  --findings studies/2026-07-title-ii-annex-i-whitepaper-study/findings-pseudonymous.json \
   --out studies/2026-07-title-ii-annex-i-whitepaper-study/findings-summary.md
 ```
 

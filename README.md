@@ -12,10 +12,13 @@ The MiCAR Whitepaper Linter is a deterministic Python tool for reviewing draft c
 
 This repository now includes a reproducible pilot study over publicly available Title II crypto-asset white papers listed in ESMA's MiCA register.
 
-The study runs deterministic Annex I checks over a sample of notified white papers and reports recurring potential disclosure gaps with source hashes, methodology, limitations, and pending human-review examples.
+The study runs deterministic Annex I checks over a reproducible convenience sample and publishes machine-flagged candidate gaps, exact document hashes, extraction metadata, limitations, and a 150-cell human-review matrix. The candidate flags are not reviewed legal findings.
 
-Read the study:
-`studies/2026-07-title-ii-annex-i-whitepaper-study/findings-summary.md`
+Read the study report and validation protocol:
+
+- `studies/2026-07-title-ii-annex-i-whitepaper-study/findings-summary.md`
+- `studies/2026-07-title-ii-annex-i-whitepaper-study/review-protocol.md`
+- `studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-matrix.csv`
 
 Raw white papers are not committed. Study outputs are deterministic first-pass research artifacts and are not legal advice.
 
@@ -74,17 +77,17 @@ This route keeps the human-review boundary visible while showing the determinist
 - Review table export: adds rule-by-rule rows with blocker status, citations, remediation, reviewer decision state and bundle export eligibility.
 - Workspace export: `--workspace-output <path>` writes a local batch vault, conditional review table and reusable review playbook. Open blockers keep filing and external-review readiness disabled.
 
-## What this proves
+## Verified behavior
 
-MiCAR white-paper requirements can be encoded as deterministic, cited and testable rules. Annex selection is explicit, rule IDs are stable, missing disclosures produce cited findings, severity is tested, and JSON outputs can be used by review workflows without hiding the legal basis.
+MiCAR white-paper requirements can be encoded as deterministic, cited and testable rules. Annex selection is explicit, rule IDs are stable, unmatched disclosure patterns produce cited candidate flags, severity is tested, and JSON outputs can be used by review workflows without hiding the legal basis.
 
-The tool preserves legal judgment. It identifies disclosure gaps and produces draft review artifacts. It does not decide whether a white paper is lawful or complete.
+The tool preserves legal judgment. It flags candidate disclosure gaps and produces draft review artifacts. It does not decide whether a white paper is lawful or complete.
 
 ## Tech stack
 
 Python, Hatchling, uv and pytest.
 
-## Reviewer checklist
+## Verification checklist
 
 - Run `make check`.
 - Run `uv run micar-lint examples/art-stablecoin.json`.
@@ -95,4 +98,4 @@ Python, Hatchling, uv and pytest.
 
 ## Collaborative redline bundle
 
-Run `micar-lint <draft> --workspace-output workspace.json --legora-bundle-dir review/` to generate a digest-bound collaboration sidecar, MiCAR playbook change set and supervised workflow pack. Accepted changes can be rendered as genuine OOXML tracked insertions and deletions in a copied DOCX. The source draft is never overwritten.
+Run `micar-lint <draft> --workspace-output workspace.json --collaboration-bundle-dir review/` to generate a digest-bound collaboration sidecar, MiCAR playbook change set and supervised workflow pack. Accepted changes can be rendered as genuine OOXML tracked insertions and deletions in a copied DOCX. The source draft is never overwritten.

@@ -67,7 +67,12 @@ def _load_html(path: Path) -> LoadedDocument:
     raw = path.read_bytes()
     warnings: list[str] = []
     try:
-        parser = etree.XMLParser(recover=True, huge_tree=True)
+        parser = etree.XMLParser(
+            recover=True,
+            huge_tree=True,
+            resolve_entities=False,
+            no_network=True,
+        )
         tree = etree.fromstring(raw, parser=parser)
     except Exception:
         parser = etree.HTMLParser(encoding="utf-8")

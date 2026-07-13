@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import tempfile
 import zipfile
 from datetime import UTC, datetime, timedelta
@@ -14,6 +15,15 @@ from lxml import etree
 
 W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 NSMAP = {"w": W_NS}
+
+
+def _reproducible_timestamp() -> str:
+    raw_epoch = os.environ.get("SOURCE_DATE_EPOCH", "0")
+    try:
+        timestamp = datetime.fromtimestamp(int(raw_epoch), UTC)
+    except (ValueError, OverflowError, OSError) as error:
+        raise ValueError("SOURCE_DATE_EPOCH must be a valid integer Unix timestamp") from error
+    return timestamp.replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def build_review_sidecar(workspace: dict[str, Any]) -> dict[str, Any]:
@@ -180,12 +190,14 @@ def render_tracked_docx(
     expected_digests = set(change_set.get("source_digests", {}).values())
     if expected_digests and hashlib.sha256(source.read_bytes()).hexdigest() not in expected_digests:
         raise ValueError("source DOCX digest does not match the reviewed workspace")
+    change_timestamp = _reproducible_timestamp()
     with tempfile.TemporaryDirectory() as temp_dir:
         extracted = Path(temp_dir)
         with zipfile.ZipFile(source) as package:
             package.extractall(extracted)
         document_path = extracted / "word" / "document.xml"
-        tree = etree.parse(str(document_path))
+        parser = etree.XMLParser(resolve_entities=False, no_network=True)
+        tree = etree.parse(str(document_path), parser=parser)
         body = tree.find("w:body", NSMAP)
         if body is None:
             raise ValueError("DOCX is missing word/document.xml body")
@@ -200,7 +212,7 @@ def render_tracked_docx(
                 {
                     f"{{{W_NS}}}id": str(index * 2),
                     f"{{{W_NS}}}author": author,
-                    f"{{{W_NS}}}date": "2026-07-13T00:00:00Z",
+                    f"{{{W_NS}}}date": change_timestamp,
                 },
             )
             deleted_run = etree.SubElement(deleted, f"{{{W_NS}}}r")
@@ -213,11 +225,11 @@ def render_tracked_docx(
                 {
                     f"{{{W_NS}}}id": str(index * 2 + 1),
                     f"{{{W_NS}}}author": author,
-                    f"{{{W_NS}}}date": "2026-07-13T00:00:00Z",
+                    f"{{{W_NS}}}date": change_timestamp,
                 },
             )
             inserted_run = etree.SubElement(inserted, f"{{{W_NS}}}r")
-            etree.SubElement(inserted_run, f"{{{W_NS}}}t").text = change["proposed_text"]
+            etree.SubElement(inserted_run, f"{{{W_NS}}}t").text = change.get("proposed_text") or ""
             source_paragraph = next(
                 (
                     candidate
@@ -227,8 +239,8 @@ def render_tracked_docx(
                 ),
                 None,
             )
-            if source_paragraph is not None and source_paragraph.getparent() is body:
-                body.replace(source_paragraph, paragraph)
+            if source_paragraph is not None:
+                source_paragraph.getparent().replace(source_paragraph, paragraph)
             else:
                 body.insert(body.index(section) if section is not None else len(body), paragraph)
         tree.write(str(document_path), xml_declaration=True, encoding="UTF-8", standalone=True)
@@ -295,7 +307,7 @@ def build_workflow_pack(
     return {"definitions": definitions, "run": run}
 
 
-def write_legora_bundle(workspace: dict[str, Any], output_dir: Path) -> list[Path]:
+def write_collaboration_bundle(workspace: dict[str, Any], output_dir: Path) -> list[Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
     sidecar = build_review_sidecar(workspace)
     change_set = build_change_set(workspace)

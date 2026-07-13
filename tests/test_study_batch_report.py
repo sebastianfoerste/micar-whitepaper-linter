@@ -64,7 +64,7 @@ def _cached_html(cache: Path) -> None:
     )
 
 
-def test_study_batch_outputs_anonymized_pending_review_findings(tmp_path: Path):
+def test_study_batch_outputs_pseudonymous_pending_review_findings(tmp_path: Path):
     manifest_path = _manifest(tmp_path)
     cache = tmp_path / "cache"
     _cached_html(cache)
@@ -95,7 +95,7 @@ def test_study_batch_writes_flat_csv(tmp_path: Path):
     cache = tmp_path / "cache"
     _cached_html(cache)
     payload = build_study_findings(manifest_path, cache)
-    csv_path = tmp_path / "findings-anonymized.csv"
+    csv_path = tmp_path / "findings-pseudonymous.csv"
 
     write_study_findings_csv(payload, csv_path)
     csv_text = csv_path.read_text(encoding="utf-8")
@@ -152,17 +152,18 @@ def test_study_report_contains_required_sections_and_pending_review(tmp_path: Pa
 
     report = render_study_report(payload)
 
-    assert "# 10 Notified MiCAR Title II White Papers Reviewed" in report
+    assert "# MiCAR Title II White Paper Pilot" in report
     for heading in (
         "## Sample",
         "## Methodology",
         "## What the linter checks",
         "## What it does not check",
         "## Aggregate findings",
-        "## Most frequent potential gaps",
+        "## Most frequent detector flags",
         "## Excluded documents",
         "## Examples pending human review",
         "## Limitations",
+        "## Human validation gate",
         "## Reproducibility",
     ):
         assert heading in report
