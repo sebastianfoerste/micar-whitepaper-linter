@@ -35,13 +35,14 @@ def build_whitepaper_vault(paths: list[Path]) -> dict[str, Any]:
         whitepaper = load_whitepaper(path)
         report = lint_whitepaper(whitepaper)
         table = build_review_table(report, source_path=path)
+        source_sha256 = file_sha256(path)
         documents.append(
             {
-                "document_id": file_sha256(path),
+                "document_id": source_sha256,
                 "title": whitepaper.title,
                 "whitepaper_type": whitepaper.type.value,
                 "source_path": str(path),
-                "source_sha256": file_sha256(path),
+                "source_sha256": source_sha256,
                 "review_table": table,
                 "blocker_count": table["summary"]["blockers"],
                 "access_mode": "local_review",

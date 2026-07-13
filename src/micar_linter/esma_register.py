@@ -136,7 +136,7 @@ def _load_source_rows(source: str | Path) -> tuple[list[dict[str, Any]], str, st
         with urllib.request.urlopen(req, timeout=30) as response:
             raw = response.read()
         text = raw.decode("utf-8-sig")
-        return list(csv.DictReader(StringIO(text))), source_text, _bytes_sha256(raw)
+        return _non_blank_csv_rows(text), source_text, _bytes_sha256(raw)
 
     path = Path(source)
     raw = path.read_bytes()
@@ -148,7 +148,15 @@ def _load_source_rows(source: str | Path) -> tuple[list[dict[str, Any]], str, st
         return [dict(row) for row in rows], str(path), _bytes_sha256(raw)
 
     text = raw.decode("utf-8-sig")
-    return list(csv.DictReader(StringIO(text))), str(path), _bytes_sha256(raw)
+    return _non_blank_csv_rows(text), str(path), _bytes_sha256(raw)
+
+
+def _non_blank_csv_rows(text: str) -> list[dict[str, Any]]:
+    return [
+        dict(row)
+        for row in csv.DictReader(StringIO(text))
+        if any((value or "").strip() for value in row.values())
+    ]
 
 
 def _normalize_row(row: dict[str, Any], index: int) -> dict[str, Any]:

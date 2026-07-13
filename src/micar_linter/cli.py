@@ -148,17 +148,20 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     paths: list[Path] = args.paths
 
-    if args.workspace_output:
+    if args.workspace_output or args.legora_bundle_dir or args.workflow_action:
         try:
             workspace = build_whitepaper_workspace(paths)
-            args.workspace_output.parent.mkdir(parents=True, exist_ok=True)
-            args.workspace_output.write_text(render_whitepaper_workspace(workspace), encoding="utf-8")
+            if args.workspace_output:
+                args.workspace_output.parent.mkdir(parents=True, exist_ok=True)
+                args.workspace_output.write_text(
+                    render_whitepaper_workspace(workspace), encoding="utf-8"
+                )
         except (OSError, SystemExit, ValueError) as exc:
             print(f"error: cannot write white paper workspace: {exc}", file=sys.stderr)
             return 2
-        if args.json:
+        if args.json and args.workspace_output:
             print(render_whitepaper_workspace(workspace), end="")
-        else:
+        elif args.workspace_output:
             print(
                 "White paper workspace written to "
                 f"{args.workspace_output}. Documents: {workspace['vault']['document_count']}."

@@ -24,8 +24,8 @@ def _reproducible_timestamp(generated_at: datetime | None) -> datetime:
     raw_epoch = os.environ.get("SOURCE_DATE_EPOCH", "0")
     try:
         return datetime.fromtimestamp(int(raw_epoch), UTC)
-    except ValueError as error:
-        raise ValueError("SOURCE_DATE_EPOCH must be an integer Unix timestamp") from error
+    except (ValueError, OverflowError, OSError) as error:
+        raise ValueError("SOURCE_DATE_EPOCH must be a valid integer Unix timestamp") from error
 
 
 def build_review_table(

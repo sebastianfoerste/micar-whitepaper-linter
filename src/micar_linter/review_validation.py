@@ -28,6 +28,8 @@ def summarize_rows(rows: Iterable[Mapping[str, str]]) -> dict[str, Any]:
     total = 0
 
     for row_number, row in enumerate(rows, start=2):
+        if not any((value or "").strip() for value in row.values()):
+            continue
         total += 1
         detector_status = (row.get("detector_status") or "").strip()
         human_label = (row.get("human_label") or "pending").strip() or "pending"
