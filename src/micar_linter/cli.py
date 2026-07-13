@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import sys
 from pathlib import Path
 
@@ -11,7 +12,12 @@ from micar_linter import __version__
 from micar_linter.artifact_manifest import build_artifact_manifest, render_artifact_manifest
 from micar_linter.batch import build_batch_review_pack, render_batch_review_pack
 from micar_linter.coverage import build_coverage_matrix, render_coverage_matrix
-from micar_linter.legora_workspace import write_legora_bundle
+from micar_linter.legora_workspace import (
+    build_change_set,
+    build_review_sidecar,
+    build_workflow_pack,
+    write_legora_bundle,
+)
 from micar_linter.linter import lint_whitepaper
 from micar_linter.remediation import render_remediation_report
 from micar_linter.report import render_audit_log, render_coverage_table, render_json, render_text
@@ -118,6 +124,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Write collaboration sidecar, document change set and supervised workflow pack.",
     )
+    parser.add_argument(
+        "--workflow-action",
+        choices=["validate", "inspect", "run"],
+        help="Validate, inspect or run the supervised local white paper workflow.",
+    )
     return parser
 
 
@@ -154,6 +165,22 @@ def main(argv: list[str] | None = None) -> int:
             )
         if args.legora_bundle_dir:
             write_legora_bundle(workspace, args.legora_bundle_dir)
+        if args.workflow_action:
+            sidecar = build_review_sidecar(workspace)
+            change_set = build_change_set(workspace)
+            workflow = build_workflow_pack(workspace, sidecar, change_set)
+            if args.workflow_action == "validate":
+                print("workflow.definition.v1 and workflow.run.v1 validated")
+            elif args.workflow_action == "inspect":
+                print(json.dumps(workflow, indent=2))
+            else:
+                if not args.legora_bundle_dir:
+                    print("error: --workflow-action run requires --legora-bundle-dir", file=sys.stderr)
+                    return 2
+                print(
+                    f"Supervised workflow run status: {workflow['run']['status']}. "
+                    "External action remains disabled."
+                )
         if args.strict and workspace["review_table"]["summary"]["blockers"]:
             return 1
         return 0

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import tempfile
 import zipfile
@@ -74,6 +75,57 @@ def lock_cell(
     return result
 
 
+def update_cell(
+    sidecar: dict[str, Any],
+    target_id: str,
+    actor: str,
+    expected_revision: int,
+    now: datetime,
+    *,
+    assignee: str | None = None,
+    comment: str | None = None,
+    decision: str | None = None,
+) -> dict[str, Any]:
+    result = json.loads(json.dumps(sidecar))
+    cell = next((item for item in result["cells"] if item["target_id"] == target_id), None)
+    if cell is None:
+        raise ValueError(f"unknown review cell: {target_id}")
+    if cell["revision"] != expected_revision:
+        raise ValueError("409 Conflict: stale review cell revision")
+    lock = cell.get("lock")
+    if lock and datetime.fromisoformat(lock["expires_at"]) > now and lock["actor"] != actor:
+        raise ValueError(f"409 Conflict: review cell is locked by {lock['actor']}")
+    if decision is not None and decision not in {"approved", "changes_requested", "rejected"}:
+        raise ValueError("invalid review decision")
+    if comment is not None and not comment.strip():
+        raise ValueError("comment body is required")
+    cell["revision"] += 1
+    if assignee is not None:
+        cell["reviewer"] = assignee
+    if decision is not None:
+        cell["decision"] = decision
+    if comment is not None:
+        cell["comments"].append(
+            {
+                "id": f"comment:{cell['revision']}",
+                "author": actor,
+                "body": comment.strip(),
+                "created_at": now.isoformat(),
+                "status": "open",
+            }
+        )
+    result["activity"].append(
+        {
+            "event": "review_cell_updated",
+            "target_id": target_id,
+            "actor": actor,
+            "occurred_at": now.isoformat(),
+            "revision": cell["revision"],
+        }
+    )
+    return result
+
+
 def build_change_set(workspace: dict[str, Any]) -> dict[str, Any]:
     changes = []
     for row in workspace["review_table"]["rows"]:
@@ -94,6 +146,9 @@ def build_change_set(workspace: dict[str, Any]) -> dict[str, Any]:
         )
     return {
         "schema": "document.change-set.v1",
+        "source_digests": {
+            item["document_id"]: item["source_sha256"] for item in workspace["vault"]["documents"]
+        },
         "playbook_version": 1,
         "changes": changes,
         "source_preserved": True,
@@ -110,7 +165,7 @@ def decide_change(change_set: dict[str, Any], change_id: str, decision: str) -> 
         raise ValueError(f"unknown change: {change_id}")
     change["decision"] = decision
     result["export_allowed"] = bool(result["changes"]) and all(
-        item["decision"] == "accepted" for item in result["changes"]
+        item["decision"] in {"accepted", "rejected"} for item in result["changes"]
     )
     return result
 
@@ -121,7 +176,10 @@ def render_tracked_docx(
     if source.resolve() == output.resolve():
         raise ValueError("redline output must not overwrite the source document")
     if not change_set.get("export_allowed"):
-        raise ValueError("tracked DOCX export requires all changes to be accepted")
+        raise ValueError("tracked DOCX export requires every change to be decided")
+    expected_digests = set(change_set.get("source_digests", {}).values())
+    if expected_digests and hashlib.sha256(source.read_bytes()).hexdigest() not in expected_digests:
+        raise ValueError("source DOCX digest does not match the reviewed workspace")
     with tempfile.TemporaryDirectory() as temp_dir:
         extracted = Path(temp_dir)
         with zipfile.ZipFile(source) as package:
@@ -132,7 +190,9 @@ def render_tracked_docx(
         if body is None:
             raise ValueError("DOCX is missing word/document.xml body")
         section = body.find("w:sectPr", NSMAP)
-        for index, change in enumerate(change_set["changes"], start=1):
+        for index, change in enumerate(
+            (item for item in change_set["changes"] if item["decision"] == "accepted"), start=1
+        ):
             paragraph = etree.Element(f"{{{W_NS}}}p")
             deleted = etree.SubElement(
                 paragraph,
@@ -158,7 +218,19 @@ def render_tracked_docx(
             )
             inserted_run = etree.SubElement(inserted, f"{{{W_NS}}}r")
             etree.SubElement(inserted_run, f"{{{W_NS}}}t").text = change["proposed_text"]
-            body.insert(body.index(section) if section is not None else len(body), paragraph)
+            source_paragraph = next(
+                (
+                    candidate
+                    for candidate in body.xpath(".//w:p", namespaces=NSMAP)
+                    if change["original_text"]
+                    and change["original_text"] in "".join(candidate.xpath(".//w:t/text()", namespaces=NSMAP))
+                ),
+                None,
+            )
+            if source_paragraph is not None and source_paragraph.getparent() is body:
+                body.replace(source_paragraph, paragraph)
+            else:
+                body.insert(body.index(section) if section is not None else len(body), paragraph)
         tree.write(str(document_path), xml_declaration=True, encoding="UTF-8", standalone=True)
         output.parent.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as target:
@@ -177,6 +249,10 @@ def build_workflow_pack(
             "id": "micar-whitepaper-review",
             "version": 1,
             "status": "active",
+            "source_policy": "approved workspace documents and pinned MiCAR citations only",
+            "permitted_roles": ["legal_reviewer", "approver"],
+            "input_schema": "micar.whitepaper.workspace.v1",
+            "artifact_contracts": ["review.collaboration.v1", "document.change-set.v1"],
             "steps": [
                 "lint",
                 "triage",
@@ -194,6 +270,18 @@ def build_workflow_pack(
         "schema": "workflow.run.v1",
         "id": "run:micar-whitepaper-review:v1",
         "definition_version": 1,
+        "definition_snapshot": definitions[0],
+        "inputs": {
+            "workspace_digest": hashlib.sha256(
+                json.dumps(
+                    {item["document_id"]: item["source_sha256"] for item in workspace["vault"]["documents"]},
+                    sort_keys=True,
+                ).encode()
+            ).hexdigest()
+        },
+        "source_refs": sorted({row["citation"] for row in workspace["review_table"]["rows"]}),
+        "decisions": [cell["decision"] for cell in sidecar["cells"]],
+        "audit": list(sidecar["activity"]),
         "status": "blocked" if blockers or pending or sidecar.get("stale") else "review_required",
         "blockers": {
             "lint": blockers,

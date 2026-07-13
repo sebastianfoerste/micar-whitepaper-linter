@@ -28,10 +28,13 @@ def test_review_table_projects_rule_findings_into_review_rows(tmp_path: Path):
     report = lint_whitepaper(load_whitepaper(draft_path))
 
     table = build_review_table(report, source_path=draft_path)
+    repeated = build_review_table(report, source_path=draft_path)
     rendered = json.loads(render_review_table(table))
     blocker_rows = [row for row in rendered["rows"] if row["blocker"]]
 
     assert rendered["schema"] == REVIEW_TABLE_SCHEMA
+    assert repeated == table
+    assert rendered["generated_at"] == "1970-01-01T00:00:00+00:00"
     assert rendered["source"]["sha256"]
     assert rendered["summary"]["export_gate"] == "blocked"
     assert rendered["review_table_economics"]["schema"] == (
