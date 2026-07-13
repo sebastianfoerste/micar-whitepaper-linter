@@ -10,6 +10,8 @@ The rule set is intentionally narrow. It checks selected high-signal Annex I and
 
 The study does not cover asset-referenced tokens or e-money tokens.
 
+The committed pilot uses a frozen 20-entry source pack for reproducibility. ESMA updates the interim register regularly, so rerunning the workflow against the live Title II CSV can produce a different sample and different extraction results.
+
 The findings tables use WP-ID study identifiers and do not print issuer names inline. They are not anonymized: the source manifest (`sample-manifest.csv`) lists each WP-ID's underlying public ESMA register entry and white-paper URL, so any finding can be traced back to its public source document. Raw white-paper files are not committed.
 
 Human review remains required before publication of any substantive legal assessment.

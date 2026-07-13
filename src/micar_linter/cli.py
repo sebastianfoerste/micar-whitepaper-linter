@@ -22,6 +22,7 @@ from micar_linter.review_table import (
     render_review_table_comparison,
 )
 from micar_linter.whitepaper import load_whitepaper
+from micar_linter.workspace import build_whitepaper_workspace, render_whitepaper_workspace
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -102,6 +103,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to write a JSON batch review pack when the input path is a directory.",
     )
     parser.add_argument(
+        "--workspace-output",
+        type=Path,
+        help=(
+            "Path to write a local white paper vault, interactive review table and reusable playbook."
+        ),
+    )
+    parser.add_argument(
         "--version",
         action="version",
         version=f"micar-lint {__version__}",
@@ -124,6 +132,27 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     paths: list[Path] = args.paths
+
+    if args.workspace_output:
+        try:
+            workspace = build_whitepaper_workspace(paths)
+            args.workspace_output.parent.mkdir(parents=True, exist_ok=True)
+            args.workspace_output.write_text(
+                render_whitepaper_workspace(workspace), encoding="utf-8"
+            )
+        except (OSError, SystemExit, ValueError) as exc:
+            print(f"error: cannot write white paper workspace: {exc}", file=sys.stderr)
+            return 2
+        if args.json:
+            print(render_whitepaper_workspace(workspace), end="")
+        else:
+            print(
+                "White paper workspace written to "
+                f"{args.workspace_output}. Documents: {workspace['vault']['document_count']}."
+            )
+        if args.strict and workspace["review_table"]["summary"]["blockers"]:
+            return 1
+        return 0
 
     if args.compare_review_table_output:
         return _run_review_table_comparison(args, paths)

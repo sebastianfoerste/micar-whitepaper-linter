@@ -37,7 +37,7 @@ def build_source_manifest(
 ) -> dict[str, Any]:
     """Read a CSV, JSON manifest, or URL and return a study source manifest."""
     timestamp = retrieved_at or datetime.now(UTC)
-    rows, source_label = _load_source_rows(source)
+    rows, source_label, source_sha256 = _load_source_rows(source)
     entries = [_normalize_row(row, index + 1) for index, row in enumerate(rows)]
     selected_ids = _select_entry_ids(entries, sample_size=sample_size, method=sample_method, seed=random_seed)
 
@@ -59,6 +59,7 @@ def build_source_manifest(
         "retrieved_at": timestamp.isoformat(),
         "register_source": REGISTER_SOURCE,
         "register_source_detail": source_label,
+        "register_source_sha256": source_sha256,
         "official_esma_title_ii_csv": OFFICIAL_TITLE_II_CSV,
         "esma_mica_page": ESMA_MICA_PAGE,
         "scope": TITLE_II_SCOPE,
@@ -102,24 +103,26 @@ def write_sample_manifest_csv(manifest: dict[str, Any], out: Path) -> None:
             writer.writerow({field: entry.get(field, "") for field in fields})
 
 
-def _load_source_rows(source: str | Path) -> tuple[list[dict[str, Any]], str]:
+def _load_source_rows(source: str | Path) -> tuple[list[dict[str, Any]], str, str]:
     source_text = str(source)
     if source_text.startswith(("http://", "https://")):
         req = urllib.request.Request(source_text, headers={"User-Agent": USER_AGENT})
         with urllib.request.urlopen(req, timeout=30) as response:
-            text = response.read().decode("utf-8-sig")
-        return list(csv.DictReader(StringIO(text))), source_text
+            raw = response.read()
+        text = raw.decode("utf-8-sig")
+        return list(csv.DictReader(StringIO(text))), source_text, _bytes_sha256(raw)
 
     path = Path(source)
+    raw = path.read_bytes()
     if path.suffix.lower() == ".json":
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(raw.decode("utf-8"))
         rows = data.get("entries")
         if not isinstance(rows, list):
             raise SystemExit(f"JSON manifest must contain an entries array: {path}")
-        return [dict(row) for row in rows], str(path)
+        return [dict(row) for row in rows], str(path), _bytes_sha256(raw)
 
-    text = path.read_text(encoding="utf-8-sig")
-    return list(csv.DictReader(StringIO(text))), str(path)
+    text = raw.decode("utf-8-sig")
+    return list(csv.DictReader(StringIO(text))), str(path), _bytes_sha256(raw)
 
 
 def _normalize_row(row: dict[str, Any], index: int) -> dict[str, Any]:
@@ -140,7 +143,7 @@ def _normalize_row(row: dict[str, Any], index: int) -> dict[str, Any]:
 
 def _normalize_official_row(row: dict[str, Any], index: int) -> dict[str, Any]:
     doc_id = f"WP-{index:03d}"
-    whitepaper_url = _clean(row.get("wp_url"))
+    whitepaper_url = _normalize_url(row.get("wp_url"))
     return {
         "study_doc_id": doc_id,
         "asset_type": "Title II",
@@ -167,7 +170,7 @@ def _normalize_official_row(row: dict[str, Any], index: int) -> dict[str, Any]:
 
 def _normalize_source_pack_row(row: dict[str, Any], index: int) -> dict[str, Any]:
     doc_id = _clean(row.get("study_doc_id")) or f"WP-{index:03d}"
-    whitepaper_url = _clean(row.get("whitepaper_url"))
+    whitepaper_url = _normalize_url(row.get("whitepaper_url"))
     return {
         "study_doc_id": doc_id,
         "asset_type": _clean(row.get("asset_type")) or "Title II",
@@ -184,7 +187,7 @@ def _normalize_source_pack_row(row: dict[str, Any], index: int) -> dict[str, Any
         "dti_functionally_fungible_group": _clean(row.get("dti_functionally_fungible_group")),
         "dti": _clean(row.get("dti")),
         "whitepaper_url": whitepaper_url,
-        "landing_page_url": _clean(row.get("landing_page_url")) or whitepaper_url,
+        "landing_page_url": _normalize_url(row.get("landing_page_url")) or whitepaper_url,
         "preferred_filename": _clean(row.get("preferred_filename"))
         or _preferred_filename(doc_id, whitepaper_url),
         "last_update": _clean(row.get("last_update")),
@@ -265,12 +268,27 @@ def _join_clean(*values: Any) -> str:
     return " / ".join(value for value in (_clean(item) for item in values) if value)
 
 
+def _normalize_url(value: Any) -> str:
+    text = _clean(value)
+    if not text or text.lower() in {"n/a", "na", "none", "-"}:
+        return ""
+    if text.startswith(("http://", "https://")):
+        return text
+    if re.match(r"^[A-Za-z0-9.-]+\.[A-Za-z]{2,}(?:/.*)?$", text):
+        return f"https://{text}"
+    return text
+
+
 def _clean(value: Any) -> str:
     if value is None:
         return ""
     text = str(value).strip()
     text = re.sub(r"\s+", " ", text)
     return text
+
+
+def _bytes_sha256(raw: bytes) -> str:
+    return hashlib.sha256(raw).hexdigest()
 
 
 def build_parser() -> argparse.ArgumentParser:

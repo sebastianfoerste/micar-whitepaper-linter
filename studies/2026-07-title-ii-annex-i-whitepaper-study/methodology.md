@@ -12,6 +12,10 @@ The study uses ESMA's interim MiCA register source data for Title II white paper
 
 Each source row is normalized into `source-manifest.json` and receives a SHA-256 hash over the canonical normalized row.
 
+The source manifest also records a SHA-256 hash of the source CSV or JSON used to build the manifest. This lets a reader distinguish the frozen pilot sample from later versions of ESMA's live Title II CSV.
+
+Current-source check: ESMA's MiCA page was checked on 2026-07-06. The page displayed a register last update of 3 July 2026, listed the Title II white-paper CSV first among the five interim register files, and stated that registered white papers have not been reviewed or approved by any competent authority.
+
 ## Sampling
 
 The v1 sample starts from the first 10 candidate entries in the local 20-entry source pack. In the committed run, `WP-006` and `WP-008` were excluded because the source URLs could not be fetched into the local cache, so `WP-011` and `WP-012` backfilled the reviewed sample.
@@ -39,21 +43,21 @@ TXT is a fallback only.
 
 The v1 study checks 15 deterministic controls:
 
-- Legal form.
-- Registered address or head office.
-- Registration date.
-- LEI or other identifier.
-- Contact telephone number and email.
-- Response period for investor contact.
-- Management body identity and functions.
-- Conflicts of interest.
-- Financial condition.
-- Crypto-asset name and abbreviation.
-- Persons involved in design and development.
-- Utility and characteristics.
-- Mandatory warning statements.
-- Management body statement.
-- Summary.
+- Annex I, Part A, item 2: legal form.
+- Annex I, Part A, item 3: registered address or head office.
+- Annex I, Part A, item 4: registration date.
+- Annex I, Part A, item 5: LEI or other identifier.
+- Annex I, Part A, item 6: contact telephone number and email.
+- Annex I, Part A, item 6: response period for investor contact.
+- Annex I, Part A, item 8: management body identity and functions.
+- Annex I, Part A, item 10: financial condition.
+- Annex I, Part D, item 1: crypto-asset name and abbreviation.
+- Annex I, Part D, item 3: persons involved in implementation of the crypto-asset project.
+- Annex I, Part E, item 18: potential conflicts of interest.
+- Annex I, Part F, item 2: crypto-asset characteristics and functionality.
+- Article 6(5): mandatory warning statements.
+- Article 6(6): management body statement.
+- Article 6(7): summary.
 
 Findings are machine-flagged potential disclosure gaps where the relevant item was not found in extracted text.
 
