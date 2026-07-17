@@ -46,13 +46,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: sebastianfoerste/micar-whitepaper-linter@main
+      - uses: sebastianfoerste/micar-whitepaper-linter@v1
         with:
           whitepaper: drafts/whitepaper.json
           strict: 'true'
 ```
 
 Inputs: `whitepaper` (path to a JSON/XHTML/DOCX draft), `strict` (default `true`), `extra-args` (e.g. `--json`, `--coverage`). A failing job means open blockers to review, not a legal conclusion.
+
+Fastest start: the [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template) repo ships this workflow preconfigured — click **Use this template**.
 
 ## Reviewer Route
 
