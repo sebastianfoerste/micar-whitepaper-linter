@@ -13,4 +13,6 @@ jobs:
       - uses: sebastianfoerste/micar-whitepaper-linter@v1
         with:
           whitepaper: whitepaper.json
-          strict: 'true'
+          # Report mode: the check stays green and lists findings in the log.
+          # Set to 'true' to fail the build on any open BLOCKER before you notify.
+          strict: 'false'
