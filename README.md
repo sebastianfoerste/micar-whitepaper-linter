@@ -101,3 +101,14 @@ Python, Hatchling, uv and pytest.
 ## Collaborative redline bundle
 
 Run `micar-lint <draft> --workspace-output workspace.json --collaboration-bundle-dir review/` to generate a digest-bound collaboration sidecar, MiCAR playbook change set and supervised workflow pack. Accepted changes can be rendered as genuine OOXML tracked insertions and deletions in a copied DOCX. The source draft is never overwritten.
+
+## Related
+
+Part of a portfolio of deterministic, review-gated EU-regulation tools:
+
+- [eu-ai-act-classifier](https://github.com/sebastianfoerste/eu-ai-act-classifier) — EU AI Act risk-tier classifier with cited obligations.
+- [dora-third-party-register-and-resilience-workbench](https://github.com/sebastianfoerste/dora-third-party-register-and-resilience-workbench) — DORA ICT third-party register and resilience workbench.
+- [eu-financial-reg-horizon-scanner](https://github.com/sebastianfoerste/eu-financial-reg-horizon-scanner) — Review-gated EU financial-regulation horizon scanner.
+- [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template) — Starter repo that lints a whitepaper draft in CI using this tool.
+
+Curated index of EU financial-regulation primary sources and tools: [awesome-eu-fintech-regulation](https://github.com/sebastianfoerste/awesome-eu-fintech-regulation).
