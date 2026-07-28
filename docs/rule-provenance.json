@@ -1,0 +1,506 @@
+{
+  "schema": "micar-whitepaper-linter.rule-provenance.v1",
+  "verified_on": "2026-07-28",
+  "coverage": {
+    "ruleset_entries": 47,
+    "mapped_entries": 47,
+    "unmapped_entries": 0,
+    "unique_rule_ids": 35,
+    "rulesets": 3,
+    "official_sources": 2
+  },
+  "unmapped": [],
+  "sources": {
+    "EU-2023-1114": {
+      "identifier": "Regulation (EU) 2023/1114",
+      "celex": "32023R1114",
+      "title": "Regulation on markets in crypto-assets",
+      "official_url": "https://eur-lex.europa.eu/eli/reg/2023/1114/oj?locale=en",
+      "role": "MiCAR articles and Annex I, II, and III disclosure requirements",
+      "verified_on": "2026-07-28"
+    },
+    "EU-2024-2984": {
+      "identifier": "Commission Implementing Regulation (EU) 2024/2984",
+      "celex": "32024R2984",
+      "title": "Implementing technical standards for crypto-asset white paper formats",
+      "official_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32024R2984",
+      "role": "Forms, formats, templates, and Inline XBRL tagging",
+      "verified_on": "2026-07-28"
+    }
+  },
+  "entries": [
+    {
+      "ruleset": "art",
+      "rule_id": "ANNEX_II.A",
+      "citation": "Anhang II Teil A MiCAR",
+      "section": "issuer",
+      "label": "Information about the issuer of the ART (legal form, governance, prudential profile)",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "883cb57bc91935e4df90b8d77f2b5600cf7a68f17c6b56c8e7e67203e1e451f5"
+    },
+    {
+      "ruleset": "art",
+      "rule_id": "ANNEX_II.B",
+      "citation": "Anhang II Teil B MiCAR",
+      "section": "art",
+      "label": "Information about the asset-referenced token (reference assets, stabilisation mechanism)",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "83153bcb180ff097aa50b8db43a12dad0144e9e0b1641920ead763e196459a35"
+    },
+    {
+      "ruleset": "art",
+      "rule_id": "ANNEX_II.C",
+      "citation": "Anhang II Teil C MiCAR",
+      "section": "offer_or_admission",
+      "label": "Information about the offer to the public of the ART or its admission to trading",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "c09b0a8f3d3216349f8bd2f25d1c03f65a96c87e3126a8b7a6a16c1c029437b6"
+    },
+    {
+      "ruleset": "art",
+      "rule_id": "ANNEX_II.D",
+      "citation": "Anhang II Teil D i.V.m. Art. 39 MiCAR",
+      "section": "rights_and_obligations",
+      "label": "Rights and obligations of holders (redemption right at par, complaints handling)",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "832c82e72253e0d4ae61838fcd7b120fe950d16949203da52c3991e0b61eb5cc"
+    },
+    {
+      "ruleset": "art",
+      "rule_id": "ANNEX_II.E",
+      "citation": "Anhang II Teil E MiCAR",
+      "section": "technology",
+      "label": "Information on the underlying technology (DLT, custody architecture, key management)",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "41c18c8d8e74b6026c0460defee483db6d3699f06ac7a02eac190a1aacaba1b2"
+    },
+    {
+      "ruleset": "art",
+      "rule_id": "ANNEX_II.F",
+      "citation": "Anhang II Teil F MiCAR",
+      "section": "risks",
+      "label": "Risk factors specific to ARTs (de-pegging, reserve impairment, redemption suspension)",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "9a24006e3f0397dac4e4edbae147dbfe8679bf9b83c88ef2faf2c7cd2403588d"
+    },
+    {
+      "ruleset": "art",
+      "rule_id": "ANNEX_II.G.COMPOSITION",
+      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 1 MiCAR",
+      "section": "reserve_of_assets",
+      "label": "Reserve composition and investment limits (Art. 36(1) MiCAR / EBA RTS)",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "df5cbe34d9bd8908c39d0ab73dcf8e9782d4ad0ecf699d8c7bd874541cf4339c"
+    },
+    {
+      "ruleset": "art",
+      "rule_id": "ANNEX_II.G.CUSTODY",
+      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR",
+      "section": "reserve_of_assets",
+      "label": "Custody policy and custodian selection (Art. 36(2) MiCAR)",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "76f7e128b86f297e331bd80a91732587358fe7f565596127034d4965a62b2426"
+    },
+    {
+      "ruleset": "art",
+      "rule_id": "ANNEX_II.G.VALUATION_AUDIT",
+      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR",
+      "section": "reserve_of_assets",
+      "label": "Valuation procedure and audit frequency (Art. 36(3) MiCAR)",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "93e8296855401726ef7c3c3febc74ba2f0abbd12a6bf4b045489e0b00a4191f2"
+    },
+    {
+      "ruleset": "art",
+      "rule_id": "ANNEX_II.H",
+      "citation": "Anhang II Teil H i.V.m. ESMA RTS on sustainability indicators",
+      "section": "environmental_impact",
+      "label": "Principal adverse environmental and climate-related impact of the consensus mechanism",
+      "severity": "MAJOR",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "ddcaef576542d46564be4c72026424e5fe3ceaae43b5c4f4431fd3661ce0f464"
+    },
+    {
+      "ruleset": "art",
+      "rule_id": "ANNEX_II.I",
+      "citation": "Anhang II Teil I i.V.m. Art. 39 MiCAR",
+      "section": "redemption",
+      "label": "Redemption rights and procedure (timing, fees, suspension conditions)",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "92960e560d3216308e99ef5b3becc77a0485282f29da0b253235961beb6920ed"
+    },
+    {
+      "ruleset": "art",
+      "rule_id": "COMMON.IXBRL_TAGGING",
+      "citation": "Art. 2 VO (EU) 2024/2984",
+      "section": "ixbrl_tagging",
+      "label": "Inline XBRL (iXBRL) compliance and ESMA metadata tagging",
+      "severity": "BLOCKER",
+      "source_id": "EU-2024-2984",
+      "rule_sha256": "c4f93776528b0f0e955ed294e39231e9e02d08f6ccb2c8aad9192753bcc42155"
+    },
+    {
+      "ruleset": "art",
+      "rule_id": "COMMON.LANGUAGE",
+      "citation": "Art. 6 Abs. 12, Art. 19 Abs. 11, Art. 51 Abs. 10 MiCAR",
+      "section": "language",
+      "label": "Language of the white paper (home Member State official language or customary in international finance)",
+      "severity": "MAJOR",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "dd8804ec98e8ebb2216e584b3ddd6220c980f4804a120f79a97b9494f2297bae"
+    },
+    {
+      "ruleset": "art",
+      "rule_id": "COMMON.MANAGEMENT_STATEMENT",
+      "citation": "Art. 6 Abs. 6, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR",
+      "section": "management_statement",
+      "label": "Statement by the management body on completeness, fairness, and clarity",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "6c0b70f78e4a7e5f6454b837d6595ff197969cb66d4a36df86517c66c91f3a14"
+    },
+    {
+      "ruleset": "art",
+      "rule_id": "COMMON.NOTIFICATION_DATE",
+      "citation": "Art. 8 Abs. 1, Art. 17, Art. 49 MiCAR",
+      "section": "notification_date",
+      "label": "Date of notification to the competent authority",
+      "severity": "MAJOR",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "57fb3a79bde184b006f443daafa677d9ee35e0dd4c9d464fe222dd5bfb93094a"
+    },
+    {
+      "ruleset": "art",
+      "rule_id": "COMMON.RISK_WARNING",
+      "citation": "Art. 6 Abs. 5, Art. 19 Abs. 5, Art. 51 Abs. 5 MiCAR",
+      "section": "risk_warning",
+      "label": "Mandatory risk warning statement",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "068115a592f0f9616d3f50ec84f507943f68407c19e21959d04a602d2ea8efaf"
+    },
+    {
+      "ruleset": "art",
+      "rule_id": "COMMON.SUMMARY",
+      "citation": "Art. 6 Abs. 7, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR",
+      "section": "summary",
+      "label": "Plain-language summary",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "e955fd87ba4437b0c425c6417d76a26320468be3aea06fc47aa65d660a11d079"
+    },
+    {
+      "ruleset": "emt",
+      "rule_id": "ANNEX_III.A",
+      "citation": "Anhang III Teil A MiCAR",
+      "section": "issuer",
+      "label": "Information about the issuer of the EMT (credit institution or e-money institution)",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "83376167af39ff4874e9a33d066d08c565767a90741c8fae26ace5900191cbda"
+    },
+    {
+      "ruleset": "emt",
+      "rule_id": "ANNEX_III.B",
+      "citation": "Anhang III Teil B MiCAR",
+      "section": "emt",
+      "label": "Information about the e-money token (referenced currency, denomination)",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "5adf3ebd8a915719ea608aafb9130e78685fca9824eabb6e46bf5bb66fc66758"
+    },
+    {
+      "ruleset": "emt",
+      "rule_id": "ANNEX_III.C",
+      "citation": "Anhang III Teil C MiCAR",
+      "section": "offer_or_admission",
+      "label": "Information about the offer to the public of the EMT or its admission to trading",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "d475dac226940800877b4b6c7dd20426aab60eb3a20aaf59d5203c051a97fb92"
+    },
+    {
+      "ruleset": "emt",
+      "rule_id": "ANNEX_III.D",
+      "citation": "Anhang III Teil D i.V.m. Art. 49 Abs. 3 MiCAR",
+      "section": "rights_and_obligations",
+      "label": "Rights and obligations of holders (redemption at par value, no interest)",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "461f89eaa8a9591361b1e3650efb2b3df7658dbcac441167a056c5148cb6c87c"
+    },
+    {
+      "ruleset": "emt",
+      "rule_id": "ANNEX_III.E",
+      "citation": "Anhang III Teil E MiCAR",
+      "section": "technology",
+      "label": "Information on the underlying technology (DLT, custody, key management)",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "4683fce454124ebd983f51c7616d0b913a278ea1cac1a413c505c6cc4f5a4ca9"
+    },
+    {
+      "ruleset": "emt",
+      "rule_id": "ANNEX_III.F",
+      "citation": "Anhang III Teil F MiCAR",
+      "section": "risks",
+      "label": "Risk factors specific to EMTs (safeguarding, redemption, operational)",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "df88eae30b9579e721a66ec4cf4a109924ebba9f04ff46b6c8a2093b7697394b"
+    },
+    {
+      "ruleset": "emt",
+      "rule_id": "ANNEX_III.G",
+      "citation": "Anhang III Teil G i.V.m. ESMA RTS on sustainability indicators",
+      "section": "environmental_impact",
+      "label": "Principal adverse environmental and climate-related impact of the consensus mechanism",
+      "severity": "MAJOR",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "31126fec31b4711575d1fd95e2cd38a97151e6a4bcaad4271c9e4ba85a3785bb"
+    },
+    {
+      "ruleset": "emt",
+      "rule_id": "ANNEX_III.SAFEGUARDING",
+      "citation": "Art. 54 MiCAR i.V.m. Art. 7 EMD2 (Richtlinie 2009/110/EG)",
+      "section": "safeguarding",
+      "label": "Safeguarding of funds received against EMT issuance",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "221d6d6195f17129ef8d7736a0292192a36c36d79fcb8c559c6b22a9ebdb4a1e"
+    },
+    {
+      "ruleset": "emt",
+      "rule_id": "COMMON.IXBRL_TAGGING",
+      "citation": "Art. 2 VO (EU) 2024/2984",
+      "section": "ixbrl_tagging",
+      "label": "Inline XBRL (iXBRL) compliance and ESMA metadata tagging",
+      "severity": "BLOCKER",
+      "source_id": "EU-2024-2984",
+      "rule_sha256": "c4f93776528b0f0e955ed294e39231e9e02d08f6ccb2c8aad9192753bcc42155"
+    },
+    {
+      "ruleset": "emt",
+      "rule_id": "COMMON.LANGUAGE",
+      "citation": "Art. 6 Abs. 12, Art. 19 Abs. 11, Art. 51 Abs. 10 MiCAR",
+      "section": "language",
+      "label": "Language of the white paper (home Member State official language or customary in international finance)",
+      "severity": "MAJOR",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "dd8804ec98e8ebb2216e584b3ddd6220c980f4804a120f79a97b9494f2297bae"
+    },
+    {
+      "ruleset": "emt",
+      "rule_id": "COMMON.MANAGEMENT_STATEMENT",
+      "citation": "Art. 6 Abs. 6, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR",
+      "section": "management_statement",
+      "label": "Statement by the management body on completeness, fairness, and clarity",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "6c0b70f78e4a7e5f6454b837d6595ff197969cb66d4a36df86517c66c91f3a14"
+    },
+    {
+      "ruleset": "emt",
+      "rule_id": "COMMON.NOTIFICATION_DATE",
+      "citation": "Art. 8 Abs. 1, Art. 17, Art. 49 MiCAR",
+      "section": "notification_date",
+      "label": "Date of notification to the competent authority",
+      "severity": "MAJOR",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "57fb3a79bde184b006f443daafa677d9ee35e0dd4c9d464fe222dd5bfb93094a"
+    },
+    {
+      "ruleset": "emt",
+      "rule_id": "COMMON.RISK_WARNING",
+      "citation": "Art. 6 Abs. 5, Art. 19 Abs. 5, Art. 51 Abs. 5 MiCAR",
+      "section": "risk_warning",
+      "label": "Mandatory risk warning statement",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "068115a592f0f9616d3f50ec84f507943f68407c19e21959d04a602d2ea8efaf"
+    },
+    {
+      "ruleset": "emt",
+      "rule_id": "COMMON.SUMMARY",
+      "citation": "Art. 6 Abs. 7, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR",
+      "section": "summary",
+      "label": "Plain-language summary",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "e955fd87ba4437b0c425c6417d76a26320468be3aea06fc47aa65d660a11d079"
+    },
+    {
+      "ruleset": "other",
+      "rule_id": "ANNEX_I.A",
+      "citation": "Anhang I Teil A MiCAR",
+      "section": "offeror",
+      "label": "Information about the offeror or person seeking admission to trading",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "37fbc6a377a94ed7a3719df00d58f757b643f55588b52fd2e31213a37a8b8c13"
+    },
+    {
+      "ruleset": "other",
+      "rule_id": "ANNEX_I.B",
+      "citation": "Anhang I Teil B MiCAR",
+      "section": "issuer",
+      "label": "Information about the issuer, if different from the offeror or person seeking admission",
+      "severity": "MAJOR",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "3a4a8dda1d5146e1f38bd846fe06224293ba51d21945801c15d4e369448faadb"
+    },
+    {
+      "ruleset": "other",
+      "rule_id": "ANNEX_I.C",
+      "citation": "Anhang I Teil C MiCAR",
+      "section": "trading_platform_operator",
+      "label": "Information about the operator of the trading platform, where applicable",
+      "severity": "MINOR",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "e1c2418cd86ba44835bea6a76ae10c73d8739cb69981a41c7c1fb0e238fbcb15"
+    },
+    {
+      "ruleset": "other",
+      "rule_id": "ANNEX_I.D",
+      "citation": "Anhang I Teil D MiCAR",
+      "section": "project",
+      "label": "Information about the crypto-asset project",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "3765b928118c57f846b59f981dba906fe4835fe4d44cf7d4c73da79d70f5ae9e"
+    },
+    {
+      "ruleset": "other",
+      "rule_id": "ANNEX_I.E",
+      "citation": "Anhang I Teil E MiCAR",
+      "section": "offer_or_admission",
+      "label": "Information about the offer to the public or admission to trading",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "fe290f7095e2be0825862bc432d5f878fc537b5d9fad707beaa8b4bb3db072a2"
+    },
+    {
+      "ruleset": "other",
+      "rule_id": "ANNEX_I.F",
+      "citation": "Anhang I Teil F MiCAR",
+      "section": "crypto_asset",
+      "label": "Information about the crypto-asset (type, characteristics, functionality)",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "67f49020489aebf0c40fbdf996e0054139574e469ad4f7ca6fc649f4d91fb1a6"
+    },
+    {
+      "ruleset": "other",
+      "rule_id": "ANNEX_I.G",
+      "citation": "Anhang I Teil G MiCAR",
+      "section": "rights_and_obligations",
+      "label": "Rights and obligations attached to the crypto-asset",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "8b42c3d8871a984c9aa18a656cf3236c32833672aa0f4c0ba1b6cb5647b50de5"
+    },
+    {
+      "ruleset": "other",
+      "rule_id": "ANNEX_I.H",
+      "citation": "Anhang I Teil H MiCAR",
+      "section": "technology",
+      "label": "Information on the underlying technology",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "0139941a6fe777a74bbf3b47a8fcf3fd3f4034390d1ec4d16a9f2be95a95e3a4"
+    },
+    {
+      "ruleset": "other",
+      "rule_id": "ANNEX_I.I",
+      "citation": "Anhang I Teil I MiCAR",
+      "section": "risks",
+      "label": "Risk factors (market, project, technology, mitigation measures)",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "82242599f9aa43f1ad6697a62e93bb4f906ee056855a3ed3affbecfec33f4ec9"
+    },
+    {
+      "ruleset": "other",
+      "rule_id": "ANNEX_I.J",
+      "citation": "Anhang I Teil J MiCAR i.V.m. ESMA RTS on sustainability indicators",
+      "section": "environmental_impact",
+      "label": "Principal adverse environmental and climate-related impact of the consensus mechanism",
+      "severity": "MAJOR",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "3f902f1ea6a18eda0c838a8fd24637b0dd601172685a92fb37a24b30eb4d4f95"
+    },
+    {
+      "ruleset": "other",
+      "rule_id": "COMMON.IXBRL_TAGGING",
+      "citation": "Art. 2 VO (EU) 2024/2984",
+      "section": "ixbrl_tagging",
+      "label": "Inline XBRL (iXBRL) compliance and ESMA metadata tagging",
+      "severity": "BLOCKER",
+      "source_id": "EU-2024-2984",
+      "rule_sha256": "c4f93776528b0f0e955ed294e39231e9e02d08f6ccb2c8aad9192753bcc42155"
+    },
+    {
+      "ruleset": "other",
+      "rule_id": "COMMON.LANGUAGE",
+      "citation": "Art. 6 Abs. 12, Art. 19 Abs. 11, Art. 51 Abs. 10 MiCAR",
+      "section": "language",
+      "label": "Language of the white paper (home Member State official language or customary in international finance)",
+      "severity": "MAJOR",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "dd8804ec98e8ebb2216e584b3ddd6220c980f4804a120f79a97b9494f2297bae"
+    },
+    {
+      "ruleset": "other",
+      "rule_id": "COMMON.MANAGEMENT_STATEMENT",
+      "citation": "Art. 6 Abs. 6, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR",
+      "section": "management_statement",
+      "label": "Statement by the management body on completeness, fairness, and clarity",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "6c0b70f78e4a7e5f6454b837d6595ff197969cb66d4a36df86517c66c91f3a14"
+    },
+    {
+      "ruleset": "other",
+      "rule_id": "COMMON.NOTIFICATION_DATE",
+      "citation": "Art. 8 Abs. 1, Art. 17, Art. 49 MiCAR",
+      "section": "notification_date",
+      "label": "Date of notification to the competent authority",
+      "severity": "MAJOR",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "57fb3a79bde184b006f443daafa677d9ee35e0dd4c9d464fe222dd5bfb93094a"
+    },
+    {
+      "ruleset": "other",
+      "rule_id": "COMMON.RISK_WARNING",
+      "citation": "Art. 6 Abs. 5, Art. 19 Abs. 5, Art. 51 Abs. 5 MiCAR",
+      "section": "risk_warning",
+      "label": "Mandatory risk warning statement",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "068115a592f0f9616d3f50ec84f507943f68407c19e21959d04a602d2ea8efaf"
+    },
+    {
+      "ruleset": "other",
+      "rule_id": "COMMON.SUMMARY",
+      "citation": "Art. 6 Abs. 7, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR",
+      "section": "summary",
+      "label": "Plain-language summary",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "e955fd87ba4437b0c425c6417d76a26320468be3aea06fc47aa65d660a11d079"
+    }
+  ],
+  "review_gate": "The ledger proves code-to-source-family coverage and rule integrity. A reviewer must still verify the current consolidated legal text and the substantive interpretation before reliance.",
+  "external_actions_allowed": false,
+  "overall_digest": "3058d268506366c944f8c4d036e9cfc574590419d554bcc7ca2b906276fd8e39"
+}

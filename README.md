@@ -54,7 +54,7 @@ jobs:
 
 Inputs: `whitepaper` (path to a JSON/XHTML/DOCX draft), `strict` (default `true`), `extra-args` (e.g. `--json`, `--coverage`). A failing job means open blockers to review, not a legal conclusion.
 
-Fastest start: the [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template) repo ships this workflow preconfigured — click **Use this template**.
+Fastest start: the [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template) repo ships this workflow preconfigured. Click **Use this template**.
 
 ## Reviewer Route
 
@@ -87,6 +87,15 @@ The tool preserves legal judgment. It flags candidate disclosure gaps and produc
 
 The reserve-floor check extracts percentage candidates and identifies the potentially applicable threshold under Articles 35(4), 36(4)(d), 45(3) and 45(7)(b) MiCAR from draft characterisation fields. It never returns `PASS`: applicability and any legal conclusion remain subject to lawyer confirmation.
 
+## Rule provenance ledger
+
+[`docs/rule-provenance.json`](docs/rule-provenance.json) binds every shipped
+ruleset entry to its official EU source family and a SHA-256 digest of the exact
+rule configuration. `make check` rebuilds the ledger and fails if a rule is
+unmapped or the committed proof has drifted. The ledger records source-family
+coverage and code integrity. Substantive legal interpretation and current-law
+verification remain lawyer review tasks.
+
 ## Tech stack
 
 Python, Hatchling, uv and pytest.
@@ -108,9 +117,9 @@ Run `micar-lint <draft> --workspace-output workspace.json --collaboration-bundle
 
 Part of a portfolio of deterministic, review-gated EU-regulation tools:
 
-- [eu-ai-act-classifier](https://github.com/sebastianfoerste/eu-ai-act-classifier) — EU AI Act risk-tier classifier with cited obligations.
-- [dora-third-party-register-and-resilience-workbench](https://github.com/sebastianfoerste/dora-third-party-register-and-resilience-workbench) — DORA ICT third-party register and resilience workbench.
-- [eu-financial-reg-horizon-scanner](https://github.com/sebastianfoerste/eu-financial-reg-horizon-scanner) — Review-gated EU financial-regulation horizon scanner.
-- [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template) — Starter repo that lints a whitepaper draft in CI using this tool.
+- [eu-ai-act-classifier](https://github.com/sebastianfoerste/eu-ai-act-classifier), EU AI Act risk-tier classifier with cited obligations.
+- [dora-third-party-register-and-resilience-workbench](https://github.com/sebastianfoerste/dora-third-party-register-and-resilience-workbench), DORA ICT third-party register and resilience workbench.
+- [eu-financial-reg-horizon-scanner](https://github.com/sebastianfoerste/eu-financial-reg-horizon-scanner), review-gated EU financial-regulation horizon scanner.
+- [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template), starter repo that lints a whitepaper draft in CI using this tool.
 
 Curated index of EU financial-regulation primary sources and tools: [awesome-eu-fintech-regulation](https://github.com/sebastianfoerste/awesome-eu-fintech-regulation).
