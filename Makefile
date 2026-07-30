@@ -1,6 +1,6 @@
 UV ?= uv
 
-.PHONY: check install demo lint test smoke review-bundle rule-proof rule-proof-check
+.PHONY: check install demo lint test smoke review-bundle rule-proof rule-proof-check rule-impact
 
 check: lint test smoke review-bundle rule-proof-check
 
@@ -28,3 +28,6 @@ rule-proof:
 
 rule-proof-check:
 	$(UV) run --extra dev micar-rule-proof --check docs/rule-provenance.json
+
+rule-impact:
+	$(UV) run --extra dev micar-rule-proof --impact-against docs/rule-provenance.json

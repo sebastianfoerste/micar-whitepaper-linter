@@ -96,6 +96,10 @@ unmapped or the committed proof has drifted. The ledger records source-family
 coverage and code integrity. Substantive legal interpretation and current-law
 verification remain lawyer review tasks.
 
+`make rule-impact` compares the committed ledger with the runtime ruleset. It
+reports added, removed, and changed rules, and blocks removals, blocker-rule
+changes, or source and citation remapping pending legal review.
+
 ## Tech stack
 
 Python, Hatchling, uv and pytest.
@@ -103,6 +107,7 @@ Python, Hatchling, uv and pytest.
 ## Verification checklist
 
 - Run `make check`.
+- Run `make rule-impact`.
 - Run `uv run micar-lint examples/art-stablecoin.json`.
 - Run `uv run micar-lint examples/incomplete.json`.
 - Generate a review bundle from a synthetic example.

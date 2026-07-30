@@ -5,6 +5,7 @@ import pytest
 from micar_linter.rule_provenance import (
     OFFICIAL_SOURCES,
     _validate,
+    build_rule_change_impact,
     build_rule_provenance_manifest,
 )
 
@@ -47,3 +48,33 @@ def test_validation_fails_closed_on_unmapped_rule():
 
     with pytest.raises(ValueError, match="unmapped rules"):
         _validate(manifest)
+
+
+def test_rule_change_impact_is_stable_for_identical_ledgers():
+    manifest = build_rule_provenance_manifest()
+
+    impact = build_rule_change_impact(manifest, manifest)
+
+    assert impact["status"] == "STABLE"
+    assert impact["summary"]["added"] == 0
+    assert impact["summary"]["removed"] == 0
+    assert impact["summary"]["changed"] == 0
+    assert len(impact["impact_sha256"]) == 64
+
+
+def test_rule_change_impact_blocks_changed_blocker_rule():
+    previous = build_rule_provenance_manifest()
+    current = deepcopy(previous)
+    blocker = next(
+        entry for entry in current["entries"] if entry["severity"] == "BLOCKER"
+    )
+    blocker["citation"] = blocker["citation"] + " (review candidate)"
+    blocker["rule_sha256"] = "0" * 64
+
+    impact = build_rule_change_impact(previous, current)
+
+    assert impact["status"] == "BLOCKED_PENDING_LEGAL_REVIEW"
+    assert impact["summary"]["blocker_rules_touched"] is True
+    assert impact["summary"]["source_mapping_changed"] is True
+    assert impact["changed"][0]["rule_id"] == blocker["rule_id"]
+    assert impact["external_actions_allowed"] is False
