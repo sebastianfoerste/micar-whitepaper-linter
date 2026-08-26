@@ -1,8 +1,8 @@
 UV ?= uv
 
-.PHONY: check install demo lint test smoke review-bundle
+.PHONY: check install demo lint test smoke review-bundle template-check template-export
 
-check: lint test smoke review-bundle
+check: lint test smoke review-bundle template-check
 
 install:
 	$(UV) sync --extra dev
@@ -22,3 +22,9 @@ smoke:
 review-bundle:
 	$(UV) run --extra dev python -m micar_linter examples/art-stablecoin.json \
 		--review-bundle-dir dist/review-bundle
+
+template-check:
+	python3 scripts/check_whitepaper_starter.py
+
+template-export:
+	scripts/export-whitepaper-starter.sh
