@@ -22,7 +22,8 @@ def test_load_whitepaper_valid(tmp_path: Path):
     assert wp.title == "Test Token"
     assert wp.type == WhitepaperType.EMT
     assert wp.section("summary") == "This is a summary of the token."
-    assert wp.metadata == {"extra_meta": "some_value"}
+    # A JSON draft can never claim validated iXBRL: the loader sets this, not the file.
+    assert wp.metadata == {"extra_meta": "some_value", "ixbrl_validated": False}
 
 
 def test_load_whitepaper_invalid_json(tmp_path: Path):

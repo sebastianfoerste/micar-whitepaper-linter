@@ -67,6 +67,9 @@ def load_whitepaper(path: Path) -> Whitepaper:
     raise SystemExit(f"Unsupported file format '{suffix}'. Expected: .json, .pdf, .docx, .xhtml, .html, .md")
 
 
+_RESERVED_METADATA_KEYS = ("ixbrl_validated", "ixbrl_issues")
+
+
 def _load_json(path: Path) -> Whitepaper:
     try:
         raw = path.read_text(encoding="utf-8")
@@ -94,7 +97,13 @@ def _load_json(path: Path) -> Whitepaper:
         str(k): (v if isinstance(v, str) else str(v))
         for k, v in data["sections"].items()
     }
-    metadata = {k: v for k, v in data.items() if k not in ("title", "type", "sections")}
+    metadata = {
+        k: v
+        for k, v in data.items()
+        if k not in ("title", "type", "sections") and k not in _RESERVED_METADATA_KEYS
+    }
+    # A JSON draft is never the notification format, so iXBRL cannot have been validated.
+    metadata["ixbrl_validated"] = False
 
     return Whitepaper(
         title=str(data.get("title", "Untitled white paper")),
@@ -109,6 +118,7 @@ def _load_document(path: Path, suffix: str) -> Whitepaper:
         raise SystemExit(f"File not found: {path}")
 
     ixbrl_issues = []
+    ixbrl_validated = False
     try:
         if suffix == ".pdf":
             from micar_linter.document import load_from_pdf
@@ -128,6 +138,7 @@ def _load_document(path: Path, suffix: str) -> Whitepaper:
 
             sections = load_from_xhtml(path)
             ixbrl_issues = validate_ixbrl(path)
+            ixbrl_validated = True
     except SystemExit:
         raise
     except Exception as exc:
@@ -154,9 +165,11 @@ def _load_document(path: Path, suffix: str) -> Whitepaper:
         sections.pop("emt", None)
 
     title = path.stem.replace("-", " ").replace("_", " ").title()
-    metadata = {"source_file": str(path)}
-    if ixbrl_issues:
-        metadata["ixbrl_issues"] = tuple(ixbrl_issues)
+    metadata = {
+        "source_file": str(path),
+        "ixbrl_validated": ixbrl_validated,
+        "ixbrl_issues": tuple(ixbrl_issues),
+    }
 
     return Whitepaper(
         title=title,

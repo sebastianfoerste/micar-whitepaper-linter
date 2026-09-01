@@ -58,22 +58,7 @@ class Linter:
     @staticmethod
     def _apply(rule: Rule, whitepaper: Whitepaper) -> Finding:
         if rule.rule_id == "COMMON.IXBRL_TAGGING":
-            source_file = str(whitepaper.metadata.get("source_file", ""))
-            if source_file.lower().endswith((".xhtml", ".html")):
-                tag_issues = whitepaper.metadata.get("ixbrl_issues", ())
-                if tag_issues:
-                    return Finding(
-                        rule=rule,
-                        status="review",
-                        word_count=0,
-                        issues=tuple(tag_issues),
-                    )
-            return Finding(
-                rule=rule,
-                status="pass",
-                word_count=0,
-                issues=(),
-            )
+            return _ixbrl_finding(rule, whitepaper)
 
         is_de = (whitepaper.language == "de")
 
@@ -191,3 +176,39 @@ def lint_whitepaper(whitepaper: Whitepaper) -> Report:
 
 def _count_words(text: str) -> int:
     return sum(1 for word in text.split() if word.strip())
+
+
+def _ixbrl_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """Format compliance fails closed.
+
+    Only a source that actually went through iXBRL validation can pass. A draft
+    format (JSON, DOCX, PDF, Markdown) cannot satisfy the notification format, so
+    it leaves the blocker open instead of reporting a pass it has not evidenced.
+    """
+    is_de = whitepaper.language == "de"
+    metadata = whitepaper.metadata
+    if not bool(metadata.get("ixbrl_validated", False)):
+        source_file = str(metadata.get("source_file", ""))
+        if source_file.lower().endswith((".xhtml", ".html")):
+            msg = (
+                "Inline-XBRL-Prüfung wurde für diese XHTML-Quelle nicht ausgeführt; "
+                "die Formatkonformität ist nicht nachgewiesen."
+                if is_de
+                else "Inline XBRL validation did not run for this XHTML source; "
+                "format compliance is unverified."
+            )
+        else:
+            msg = (
+                "Entwurfsformat: Die Notifizierung verlangt XHTML mit Inline-XBRL-Tagging. "
+                "Dieses Format kann die Anforderung nicht erfuellen; die inhaltlichen "
+                "Pruefungen gelten weiterhin."
+                if is_de
+                else "Draft format: notification requires XHTML with Inline XBRL tagging. "
+                "This format cannot satisfy that requirement; the content checks still apply."
+            )
+        return Finding(rule=rule, status="missing", word_count=0, issues=(msg,))
+
+    issues = tuple(metadata.get("ixbrl_issues", ()))
+    if issues:
+        return Finding(rule=rule, status="review", word_count=0, issues=issues)
+    return Finding(rule=rule, status="pass", word_count=0, issues=())
