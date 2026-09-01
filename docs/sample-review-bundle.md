@@ -26,7 +26,7 @@ The linter was run on `examples/art-stablecoin.json` to produce the following ou
 MiCAR Whitepaper Linter - Synthetic EuroStable ART White Paper
 Whitepaper type: ART
 ==============================================================================
-Pass: 15  |  Review: 2  |  Missing: 0  |  Blockers: 2
+Pass: 14  |  Review: 3  |  Missing: 1  |  Blockers: 4
 
 [PASS  ] [BLOCKER] COMMON.SUMMARY  Plain-language summary
            Cite:  Art. 6 Abs. 7, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR
@@ -48,9 +48,10 @@ Pass: 15  |  Review: 2  |  Missing: 0  |  Blockers: 2
            Cite:  Art. 6 Abs. 12, Art. 19 Abs. 11, Art. 51 Abs. 10 MiCAR
            Section: 'language'  (28 words)
 
-[PASS  ] [BLOCKER] COMMON.IXBRL_TAGGING  Inline XBRL (iXBRL) compliance and ESMA metadata tagging
+[MISS  ] [BLOCKER] COMMON.IXBRL_TAGGING  Inline XBRL (iXBRL) compliance and ESMA metadata tagging
            Cite:  Art. 2 VO (EU) 2024/2984
            Section: 'ixbrl_tagging'  (0 words)
+           -  Draft format: notification requires XHTML with Inline XBRL tagging. This format cannot satisfy that requirement; the content checks still apply.
 
 [PASS  ] [BLOCKER] ANNEX_II.A  Information about the issuer of the ART (legal form, governance, prudential profile)
            Cite:  Anhang II Teil A MiCAR
@@ -76,11 +77,15 @@ Pass: 15  |  Review: 2  |  Missing: 0  |  Blockers: 2
            Cite:  Anhang II Teil F MiCAR
            Section: 'risks'  (157 words)
 
-[REVIEW] [BLOCKER] ANNEX_II.G.COMPOSITION  Reserve composition and investment limits (Art. 36(1) MiCAR / EBA RTS)
-           Cite:  Anhang II Teil G i.V.m. Art. 36 Abs. 1 MiCAR
+[REVIEW] [BLOCKER] ANNEX_II.G.COMPOSITION_DISCLOSURE  Reserve composition disclosure (Annex II Part G)
+           Cite:  Anhang II Teil G i.V.m. Art. 36 MiCAR
            Section: 'reserve_of_assets'  (173 words)
            -  Missing review terms: concentration.
-           -  Missing required pattern: '(30\s*%|thirty\s*percent)'.
+
+[REVIEW] [BLOCKER] ANNEX_II.G.DEPOSIT_FLOOR_REVIEW  Minimum deposit floor for the reserve (Art. 36(4)(d) MiCAR) - requires characterised facts
+           Cite:  Anhang II Teil G i.V.m. Art. 36 Abs. 4 Buchst. d MiCAR
+           Section: 'reserve_of_assets'  (0 words)
+           -  Legal characterisation missing (references_official_currency, art_significant); the applicable minimum share cannot be determined. Human review required.
 
 [REVIEW] [BLOCKER] ANNEX_II.G.CUSTODY  Custody policy and custodian selection (Art. 36(2) MiCAR)
            Cite:  Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR
@@ -108,11 +113,11 @@ This tool is not legal advice.
 
 ## Compliance Coverage Statistics
 
-- **Total Checked Rules**: 17
-- **Passed Rules**: 15
-- **Rules Requiring Review**: 2 (both related to the reserve assets under Annex II Teil G)
-- **Missing Sections**: 0
-- **Total Blocker Violations**: 2 blockers (`ANNEX_II.G.COMPOSITION`, `ANNEX_II.G.CUSTODY`)
+- **Total Checked Rules**: 18
+- **Passed Rules**: 14
+- **Rules Requiring Review**: 3 (reserve disclosure, the fact-dependent deposit floor, and custody under Annex II Teil G)
+- **Missing Sections**: 1 (format: a JSON draft cannot satisfy the XHTML/iXBRL notification format)
+- **Total Blocker Violations**: 4 blockers (`COMMON.IXBRL_TAGGING`, `ANNEX_II.G.COMPOSITION_DISCLOSURE`, `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW`, `ANNEX_II.G.CUSTODY`)
 
 ---
 

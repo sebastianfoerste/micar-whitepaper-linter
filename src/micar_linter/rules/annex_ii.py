@@ -94,15 +94,25 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
         severity=Severity.BLOCKER,
     ),
     Rule(
-        rule_id="ANNEX_II.G.COMPOSITION",
-        citation="Anhang II Teil G i.V.m. Art. 36 Abs. 1 MiCAR",
+        rule_id="ANNEX_II.G.COMPOSITION_DISCLOSURE",
+        citation="Anhang II Teil G i.V.m. Art. 36 MiCAR",
         section="reserve_of_assets",
-        label="Reserve composition and investment limits (Art. 36(1) MiCAR / EBA RTS)",
+        label="Reserve composition disclosure (Annex II Part G)",
         required_terms=("reserve", "composition", "deposit", "concentration"),
         required_terms_de=("reserve", "zusammensetzung", "einlagen", "konzentration"),
-        required_patterns=(r"(30\s*%|thirty\s*percent)",),
-        required_patterns_de=(r"(30\s*%|dreißig\s*prozent)",),
         min_words=60,
+        severity=Severity.BLOCKER,
+    ),
+    Rule(
+        # Disclosure completeness and substantive reserve compliance are separate
+        # questions. This rule carries the substantive floor and never concludes it
+        # from the text alone: it needs characterised facts about significance and
+        # the referenced currency, which only a reviewer can establish.
+        rule_id="ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
+        citation="Anhang II Teil G i.V.m. Art. 36 Abs. 4 Buchst. d MiCAR",
+        section="reserve_of_assets",
+        label="Minimum deposit floor for the reserve (Art. 36(4)(d) MiCAR) - requires characterised facts",
+        min_words=0,
         severity=Severity.BLOCKER,
     ),
     Rule(

@@ -1,0 +1,2811 @@
+{
+  "schema": "micar-whitepaper-linter.review-table",
+  "generated_at": "2026-09-01T11:52:51.867054+00:00",
+  "title": "Synthetic EuroStable ART White Paper",
+  "whitepaper_type": "art",
+  "source": {
+    "path": "examples/art-stablecoin.json",
+    "sha256": "c520a00ef8829fc4f4f607903c5a66b08b09a469ebe7b949e1e001c2ff881ae3"
+  },
+  "summary": {
+    "total": 18,
+    "pass": 14,
+    "review": 3,
+    "missing": 1,
+    "blockers": 4,
+    "export_gate": "blocked"
+  },
+  "delivery_block": {
+    "schema": "micar-whitepaper-linter.delivery-block.v1",
+    "status": "blocked",
+    "blocked_rule_ids": [
+      "COMMON.IXBRL_TAGGING",
+      "ANNEX_II.G.COMPOSITION_DISCLOSURE",
+      "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
+      "ANNEX_II.G.CUSTODY"
+    ],
+    "external_action_allowed": false,
+    "review_gate": "External filing, publication and notification are blocked until a qualified lawyer signs off and the deterministic CLI has been rerun against the remediated local draft."
+  },
+  "editor_draft_package": {
+    "schema": "micar-whitepaper-linter.editor-draft-package.v1",
+    "status": "draft_only",
+    "suggested_edit_count": 4,
+    "blocker_count": 4,
+    "formats": [
+      "json",
+      "markdown"
+    ],
+    "external_action_allowed": false,
+    "review_gate": "Suggested edits are local drafting aids and require lawyer review."
+  },
+  "review_table_economics": {
+    "schema": "micar-whitepaper-linter.review-table-economics.v1",
+    "row_count": 18,
+    "column_count": 12,
+    "estimated_cell_tasks": 216,
+    "route": "deterministic_cli",
+    "max_vault_documents": 100000,
+    "reset_strategy": "Each rule row and generated review column is evaluated from deterministic parser output and the local rule catalog.",
+    "llm_route": "none"
+  },
+  "control_profile": {
+    "schema": "micar-whitepaper-linter.review-control-profile.v1",
+    "mode": "deterministic_cli",
+    "external_action_allowed": false,
+    "route_summary": "Rule evaluation, coverage, remediation and review-table export are deterministic. No LLM route or external delivery route is present.",
+    "context_window_strategy": "18 rule row(s), each evaluated against deterministic parser output and the local rule catalog.",
+    "source_connectors": [
+      {
+        "key": "draft-whitepaper",
+        "label": "Draft white paper",
+        "status": "enabled",
+        "scope": "Synthetic EuroStable ART White Paper",
+        "gate": "Local file only. Source hash is included when a path is provided."
+      },
+      {
+        "key": "rule-catalog",
+        "label": "MiCAR rule catalog",
+        "status": "enabled",
+        "scope": "18 rule row(s) across art.",
+        "gate": "Rules are deterministic and versioned in source control."
+      },
+      {
+        "key": "source-anchors",
+        "label": "Source anchors",
+        "status": "enabled",
+        "scope": "18/18 row(s) include source anchors.",
+        "gate": "Citation and source anchor coverage must be checked by the reviewer."
+      },
+      {
+        "key": "notification-workflow",
+        "label": "Notification workflow",
+        "status": "blocked",
+        "scope": "BaFin or exchange-facing submission steps are outside the CLI.",
+        "gate": "External filing requires separate lawyer approval."
+      }
+    ],
+    "workflow_routes": [
+      {
+        "key": "rule-evaluation",
+        "label": "Rule evaluation",
+        "status": "ready",
+        "route": "deterministic_local",
+        "gate": "Automated pass does not equal legal sign-off."
+      },
+      {
+        "key": "remediation",
+        "label": "Remediation drafting",
+        "status": "blocked",
+        "route": "deterministic_local",
+        "gate": "Blockers must be cured before notification or publication reliance."
+      },
+      {
+        "key": "review-table-export",
+        "label": "Review table export",
+        "status": "review_required",
+        "route": "deterministic_local",
+        "gate": "Reviewer decisions remain pending in the exported table."
+      },
+      {
+        "key": "external-filing",
+        "label": "External filing",
+        "status": "blocked",
+        "route": "external_action",
+        "gate": "No external filing or delivery route is implemented."
+      }
+    ]
+  },
+  "prompt_improvement": {
+    "schema": "micar-whitepaper-linter.remediation-prompt-pack.v1",
+    "objective": "Turn deterministic rule findings into reviewer-controlled remediation instructions.",
+    "actor": "MiCAR white paper reviewer",
+    "jurisdiction": "EU MiCAR white paper disclosure review",
+    "source_hierarchy": [
+      "local white paper draft",
+      "deterministic rule catalog",
+      "source anchors",
+      "reviewer decision"
+    ],
+    "required_inputs": [
+      "white paper type",
+      "rule id and MiCAR citation",
+      "section label",
+      "finding status, blocker flag and issues",
+      "source anchor and draft hash when available"
+    ],
+    "output_format": [
+      "rule-specific remediation",
+      "missing evidence list",
+      "source anchor to verify",
+      "reviewer decision field",
+      "external filing gate"
+    ],
+    "review_gate": "Draft remediation only. The linter never files, notifies or publishes.",
+    "failure_conditions": [
+      "Do not invent facts or source anchors.",
+      "Do not mark a blocker cured before the deterministic linter is rerun.",
+      "Do not describe a notification, publication or exchange submission as approved."
+    ],
+    "suggested_prompt": "Role: MiCAR white paper reviewer.\nObjective: remediate deterministic findings for Synthetic EuroStable ART White Paper.\nWhite paper type: art.\nOpen blockers: COMMON.IXBRL_TAGGING, ANNEX_II.G.COMPOSITION_DISCLOSURE, ANNEX_II.G.DEPOSIT_FLOOR_REVIEW, ANNEX_II.G.CUSTODY.\nMissing rules: COMMON.IXBRL_TAGGING.\nSource anchors: 18/18 rule row(s).\nOutput: remediation by rule id, source anchor to verify, reviewer decision and filing gate.\nReview gate: draft only. Rerun the deterministic CLI before relying on any cure."
+  },
+  "rows": [
+    {
+      "row_id": "review-row-d5888dc07121542f",
+      "rule_id": "COMMON.SUMMARY",
+      "citation": "Art. 6 Abs. 7, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR",
+      "section": "summary",
+      "label": "Plain-language summary",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "blocker": false,
+      "word_count": 85,
+      "issues": [],
+      "remediation": "Keep disclosure under lawyer review before external use.",
+      "reviewer_decision": "pending_lawyer_confirmation",
+      "verification_state": "auto_passed",
+      "source_anchor": {
+        "section_key": "summary",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:summary:77a216d8936c9e11",
+        "section_length": 587
+      },
+      "anchor_verified": true,
+      "citation_coverage": "anchor_and_citation",
+      "export_gate": "review_required",
+      "playbook": {
+        "id": "art-summary",
+        "skill": "rule-review-playbook",
+        "rule_scope": [
+          "COMMON.SUMMARY"
+        ],
+        "citation": "Art. 6 Abs. 7, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR",
+        "severity": "BLOCKER",
+        "review_gate": "Qualified lawyer review required before external use.",
+        "priority": "standard_review",
+        "external_action_allowed": false
+      },
+      "word_suggested_edit": {
+        "schema": "micar-whitepaper-linter.word-suggested-edit.v1",
+        "action": "none",
+        "instruction": "No suggested edit. Preserve disclosure under lawyer review.",
+        "target_section": "summary",
+        "draft_only": true,
+        "external_action_allowed": false
+      },
+      "delivery_block": {
+        "status": "review_required",
+        "external_action_allowed": false,
+        "review_gate": "Lawyer sign-off and deterministic rerun required before external filing or publication."
+      },
+      "review_cells": [
+        {
+          "column_id": "rule_id",
+          "label": "Rule ID",
+          "value": "COMMON.SUMMARY",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation",
+          "label": "Citation",
+          "value": "Art. 6 Abs. 7, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "section",
+          "label": "Section",
+          "value": "summary",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "status",
+          "label": "Status",
+          "value": "pass",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "blocker",
+          "label": "Blocker",
+          "value": "false",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "word_count",
+          "label": "Word count",
+          "value": "85",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "remediation",
+          "label": "Remediation",
+          "value": "Keep disclosure under lawyer review before external use.",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "reviewer_decision",
+          "label": "Reviewer decision",
+          "value": "pending_lawyer_confirmation",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "verification_state",
+          "label": "Verification",
+          "value": "auto_passed",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "source_anchor",
+          "label": "Source anchor",
+          "value": "json:summary:77a216d8936c9e11",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation_coverage",
+          "label": "Citation coverage",
+          "value": "anchor_and_citation",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "export_gate",
+          "label": "Export gate",
+          "value": "review_required",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        }
+      ]
+    },
+    {
+      "row_id": "review-row-eddb098c430fd350",
+      "rule_id": "COMMON.RISK_WARNING",
+      "citation": "Art. 6 Abs. 5, Art. 19 Abs. 5, Art. 51 Abs. 5 MiCAR",
+      "section": "risk_warning",
+      "label": "Mandatory risk warning statement",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "blocker": false,
+      "word_count": 73,
+      "issues": [],
+      "remediation": "Keep disclosure under lawyer review before external use.",
+      "reviewer_decision": "pending_lawyer_confirmation",
+      "verification_state": "auto_passed",
+      "source_anchor": {
+        "section_key": "risk_warning",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:risk_warning:917509f1f5fd1c03",
+        "section_length": 419
+      },
+      "anchor_verified": true,
+      "citation_coverage": "anchor_and_citation",
+      "export_gate": "review_required",
+      "playbook": {
+        "id": "art-risk_warning",
+        "skill": "rule-review-playbook",
+        "rule_scope": [
+          "COMMON.RISK_WARNING"
+        ],
+        "citation": "Art. 6 Abs. 5, Art. 19 Abs. 5, Art. 51 Abs. 5 MiCAR",
+        "severity": "BLOCKER",
+        "review_gate": "Qualified lawyer review required before external use.",
+        "priority": "standard_review",
+        "external_action_allowed": false
+      },
+      "word_suggested_edit": {
+        "schema": "micar-whitepaper-linter.word-suggested-edit.v1",
+        "action": "none",
+        "instruction": "No suggested edit. Preserve disclosure under lawyer review.",
+        "target_section": "risk_warning",
+        "draft_only": true,
+        "external_action_allowed": false
+      },
+      "delivery_block": {
+        "status": "review_required",
+        "external_action_allowed": false,
+        "review_gate": "Lawyer sign-off and deterministic rerun required before external filing or publication."
+      },
+      "review_cells": [
+        {
+          "column_id": "rule_id",
+          "label": "Rule ID",
+          "value": "COMMON.RISK_WARNING",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation",
+          "label": "Citation",
+          "value": "Art. 6 Abs. 5, Art. 19 Abs. 5, Art. 51 Abs. 5 MiCAR",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "section",
+          "label": "Section",
+          "value": "risk_warning",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "status",
+          "label": "Status",
+          "value": "pass",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "blocker",
+          "label": "Blocker",
+          "value": "false",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "word_count",
+          "label": "Word count",
+          "value": "73",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "remediation",
+          "label": "Remediation",
+          "value": "Keep disclosure under lawyer review before external use.",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "reviewer_decision",
+          "label": "Reviewer decision",
+          "value": "pending_lawyer_confirmation",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "verification_state",
+          "label": "Verification",
+          "value": "auto_passed",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "source_anchor",
+          "label": "Source anchor",
+          "value": "json:risk_warning:917509f1f5fd1c03",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation_coverage",
+          "label": "Citation coverage",
+          "value": "anchor_and_citation",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "export_gate",
+          "label": "Export gate",
+          "value": "review_required",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        }
+      ]
+    },
+    {
+      "row_id": "review-row-a72638cf8d3bf1ec",
+      "rule_id": "COMMON.MANAGEMENT_STATEMENT",
+      "citation": "Art. 6 Abs. 6, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR",
+      "section": "management_statement",
+      "label": "Statement by the management body on completeness, fairness, and clarity",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "blocker": false,
+      "word_count": 60,
+      "issues": [],
+      "remediation": "Keep disclosure under lawyer review before external use.",
+      "reviewer_decision": "pending_lawyer_confirmation",
+      "verification_state": "auto_passed",
+      "source_anchor": {
+        "section_key": "management_statement",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:management_statement:41e81a6c1adf1447",
+        "section_length": 393
+      },
+      "anchor_verified": true,
+      "citation_coverage": "anchor_and_citation",
+      "export_gate": "review_required",
+      "playbook": {
+        "id": "art-management_statement",
+        "skill": "rule-review-playbook",
+        "rule_scope": [
+          "COMMON.MANAGEMENT_STATEMENT"
+        ],
+        "citation": "Art. 6 Abs. 6, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR",
+        "severity": "BLOCKER",
+        "review_gate": "Qualified lawyer review required before external use.",
+        "priority": "standard_review",
+        "external_action_allowed": false
+      },
+      "word_suggested_edit": {
+        "schema": "micar-whitepaper-linter.word-suggested-edit.v1",
+        "action": "none",
+        "instruction": "No suggested edit. Preserve disclosure under lawyer review.",
+        "target_section": "management_statement",
+        "draft_only": true,
+        "external_action_allowed": false
+      },
+      "delivery_block": {
+        "status": "review_required",
+        "external_action_allowed": false,
+        "review_gate": "Lawyer sign-off and deterministic rerun required before external filing or publication."
+      },
+      "review_cells": [
+        {
+          "column_id": "rule_id",
+          "label": "Rule ID",
+          "value": "COMMON.MANAGEMENT_STATEMENT",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation",
+          "label": "Citation",
+          "value": "Art. 6 Abs. 6, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "section",
+          "label": "Section",
+          "value": "management_statement",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "status",
+          "label": "Status",
+          "value": "pass",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "blocker",
+          "label": "Blocker",
+          "value": "false",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "word_count",
+          "label": "Word count",
+          "value": "60",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "remediation",
+          "label": "Remediation",
+          "value": "Keep disclosure under lawyer review before external use.",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "reviewer_decision",
+          "label": "Reviewer decision",
+          "value": "pending_lawyer_confirmation",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "verification_state",
+          "label": "Verification",
+          "value": "auto_passed",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "source_anchor",
+          "label": "Source anchor",
+          "value": "json:management_statement:41e81a6c1adf1447",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation_coverage",
+          "label": "Citation coverage",
+          "value": "anchor_and_citation",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "export_gate",
+          "label": "Export gate",
+          "value": "review_required",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        }
+      ]
+    },
+    {
+      "row_id": "review-row-ef8f2e5369cd39ba",
+      "rule_id": "COMMON.NOTIFICATION_DATE",
+      "citation": "Art. 8 Abs. 1, Art. 17, Art. 49 MiCAR",
+      "section": "notification_date",
+      "label": "Date of notification to the competent authority",
+      "severity": "MAJOR",
+      "status": "pass",
+      "blocker": false,
+      "word_count": 9,
+      "issues": [],
+      "remediation": "Keep disclosure under lawyer review before external use.",
+      "reviewer_decision": "pending_lawyer_confirmation",
+      "verification_state": "auto_passed",
+      "source_anchor": {
+        "section_key": "notification_date",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:notification_date:999fe7e5c1e73368",
+        "section_length": 71
+      },
+      "anchor_verified": true,
+      "citation_coverage": "anchor_and_citation",
+      "export_gate": "review_required",
+      "playbook": {
+        "id": "art-notification_date",
+        "skill": "rule-review-playbook",
+        "rule_scope": [
+          "COMMON.NOTIFICATION_DATE"
+        ],
+        "citation": "Art. 8 Abs. 1, Art. 17, Art. 49 MiCAR",
+        "severity": "MAJOR",
+        "review_gate": "Qualified lawyer review required before external use.",
+        "priority": "standard_review",
+        "external_action_allowed": false
+      },
+      "word_suggested_edit": {
+        "schema": "micar-whitepaper-linter.word-suggested-edit.v1",
+        "action": "none",
+        "instruction": "No suggested edit. Preserve disclosure under lawyer review.",
+        "target_section": "notification_date",
+        "draft_only": true,
+        "external_action_allowed": false
+      },
+      "delivery_block": {
+        "status": "review_required",
+        "external_action_allowed": false,
+        "review_gate": "Lawyer sign-off and deterministic rerun required before external filing or publication."
+      },
+      "review_cells": [
+        {
+          "column_id": "rule_id",
+          "label": "Rule ID",
+          "value": "COMMON.NOTIFICATION_DATE",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation",
+          "label": "Citation",
+          "value": "Art. 8 Abs. 1, Art. 17, Art. 49 MiCAR",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "section",
+          "label": "Section",
+          "value": "notification_date",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "status",
+          "label": "Status",
+          "value": "pass",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "blocker",
+          "label": "Blocker",
+          "value": "false",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "word_count",
+          "label": "Word count",
+          "value": "9",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "remediation",
+          "label": "Remediation",
+          "value": "Keep disclosure under lawyer review before external use.",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "reviewer_decision",
+          "label": "Reviewer decision",
+          "value": "pending_lawyer_confirmation",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "verification_state",
+          "label": "Verification",
+          "value": "auto_passed",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "source_anchor",
+          "label": "Source anchor",
+          "value": "json:notification_date:999fe7e5c1e73368",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation_coverage",
+          "label": "Citation coverage",
+          "value": "anchor_and_citation",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "export_gate",
+          "label": "Export gate",
+          "value": "review_required",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        }
+      ]
+    },
+    {
+      "row_id": "review-row-72f99650de663618",
+      "rule_id": "COMMON.LANGUAGE",
+      "citation": "Art. 6 Abs. 12, Art. 19 Abs. 11, Art. 51 Abs. 10 MiCAR",
+      "section": "language",
+      "label": "Language of the white paper (home Member State official language or customary in international finance)",
+      "severity": "MAJOR",
+      "status": "pass",
+      "blocker": false,
+      "word_count": 28,
+      "issues": [],
+      "remediation": "Keep disclosure under lawyer review before external use.",
+      "reviewer_decision": "pending_lawyer_confirmation",
+      "verification_state": "auto_passed",
+      "source_anchor": {
+        "section_key": "language",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:language:362dc54713ffa583",
+        "section_length": 178
+      },
+      "anchor_verified": true,
+      "citation_coverage": "anchor_and_citation",
+      "export_gate": "review_required",
+      "playbook": {
+        "id": "art-language",
+        "skill": "rule-review-playbook",
+        "rule_scope": [
+          "COMMON.LANGUAGE"
+        ],
+        "citation": "Art. 6 Abs. 12, Art. 19 Abs. 11, Art. 51 Abs. 10 MiCAR",
+        "severity": "MAJOR",
+        "review_gate": "Qualified lawyer review required before external use.",
+        "priority": "standard_review",
+        "external_action_allowed": false
+      },
+      "word_suggested_edit": {
+        "schema": "micar-whitepaper-linter.word-suggested-edit.v1",
+        "action": "none",
+        "instruction": "No suggested edit. Preserve disclosure under lawyer review.",
+        "target_section": "language",
+        "draft_only": true,
+        "external_action_allowed": false
+      },
+      "delivery_block": {
+        "status": "review_required",
+        "external_action_allowed": false,
+        "review_gate": "Lawyer sign-off and deterministic rerun required before external filing or publication."
+      },
+      "review_cells": [
+        {
+          "column_id": "rule_id",
+          "label": "Rule ID",
+          "value": "COMMON.LANGUAGE",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation",
+          "label": "Citation",
+          "value": "Art. 6 Abs. 12, Art. 19 Abs. 11, Art. 51 Abs. 10 MiCAR",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "section",
+          "label": "Section",
+          "value": "language",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "status",
+          "label": "Status",
+          "value": "pass",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "blocker",
+          "label": "Blocker",
+          "value": "false",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "word_count",
+          "label": "Word count",
+          "value": "28",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "remediation",
+          "label": "Remediation",
+          "value": "Keep disclosure under lawyer review before external use.",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "reviewer_decision",
+          "label": "Reviewer decision",
+          "value": "pending_lawyer_confirmation",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "verification_state",
+          "label": "Verification",
+          "value": "auto_passed",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "source_anchor",
+          "label": "Source anchor",
+          "value": "json:language:362dc54713ffa583",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation_coverage",
+          "label": "Citation coverage",
+          "value": "anchor_and_citation",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "export_gate",
+          "label": "Export gate",
+          "value": "review_required",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        }
+      ]
+    },
+    {
+      "row_id": "review-row-503e6e8ecd473dbc",
+      "rule_id": "COMMON.IXBRL_TAGGING",
+      "citation": "Art. 2 VO (EU) 2024/2984",
+      "section": "ixbrl_tagging",
+      "label": "Inline XBRL (iXBRL) compliance and ESMA metadata tagging",
+      "severity": "BLOCKER",
+      "status": "missing",
+      "blocker": true,
+      "word_count": 0,
+      "issues": [
+        "Draft format: notification requires XHTML with Inline XBRL tagging. This format cannot satisfy that requirement; the content checks still apply."
+      ],
+      "remediation": "Add the missing disclosure section and rerun the linter.",
+      "reviewer_decision": "remediation_required",
+      "verification_state": "missing_evidence",
+      "source_anchor": {
+        "section_key": "ixbrl_tagging",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:ixbrl_tagging:6320a902d08da530",
+        "section_length": 0
+      },
+      "anchor_verified": true,
+      "citation_coverage": "anchor_and_citation",
+      "export_gate": "blocked",
+      "playbook": {
+        "id": "art-ixbrl_tagging",
+        "skill": "rule-review-playbook",
+        "rule_scope": [
+          "COMMON.IXBRL_TAGGING"
+        ],
+        "citation": "Art. 2 VO (EU) 2024/2984",
+        "severity": "BLOCKER",
+        "review_gate": "Qualified lawyer review required before external use.",
+        "priority": "blocker",
+        "external_action_allowed": false
+      },
+      "word_suggested_edit": {
+        "schema": "micar-whitepaper-linter.word-suggested-edit.v1",
+        "action": "insert_section",
+        "instruction": "Add disclosure for Inline XBRL (iXBRL) compliance and ESMA metadata tagging and cite Art. 2 VO (EU) 2024/2984.",
+        "target_section": "ixbrl_tagging",
+        "draft_only": true,
+        "external_action_allowed": false
+      },
+      "delivery_block": {
+        "status": "blocked",
+        "external_action_allowed": false,
+        "review_gate": "Lawyer sign-off and deterministic rerun required before external filing or publication."
+      },
+      "review_cells": [
+        {
+          "column_id": "rule_id",
+          "label": "Rule ID",
+          "value": "COMMON.IXBRL_TAGGING",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation",
+          "label": "Citation",
+          "value": "Art. 2 VO (EU) 2024/2984",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "section",
+          "label": "Section",
+          "value": "ixbrl_tagging",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "status",
+          "label": "Status",
+          "value": "missing",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "blocker",
+          "label": "Blocker",
+          "value": "true",
+          "status": "blocked",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "word_count",
+          "label": "Word count",
+          "value": "0",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "remediation",
+          "label": "Remediation",
+          "value": "Add the missing disclosure section and rerun the linter.",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "reviewer_decision",
+          "label": "Reviewer decision",
+          "value": "remediation_required",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "verification_state",
+          "label": "Verification",
+          "value": "missing_evidence",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "source_anchor",
+          "label": "Source anchor",
+          "value": "json:ixbrl_tagging:6320a902d08da530",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation_coverage",
+          "label": "Citation coverage",
+          "value": "anchor_and_citation",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "export_gate",
+          "label": "Export gate",
+          "value": "blocked",
+          "status": "blocked",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        }
+      ]
+    },
+    {
+      "row_id": "review-row-8ca773d80acd1a9f",
+      "rule_id": "ANNEX_II.A",
+      "citation": "Anhang II Teil A MiCAR",
+      "section": "issuer",
+      "label": "Information about the issuer of the ART (legal form, governance, prudential profile)",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "blocker": false,
+      "word_count": 94,
+      "issues": [],
+      "remediation": "Keep disclosure under lawyer review before external use.",
+      "reviewer_decision": "pending_lawyer_confirmation",
+      "verification_state": "auto_passed",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:774aa124539a6b12",
+        "section_length": 638
+      },
+      "anchor_verified": true,
+      "citation_coverage": "anchor_and_citation",
+      "export_gate": "review_required",
+      "playbook": {
+        "id": "art-issuer",
+        "skill": "rule-review-playbook",
+        "rule_scope": [
+          "ANNEX_II.A"
+        ],
+        "citation": "Anhang II Teil A MiCAR",
+        "severity": "BLOCKER",
+        "review_gate": "Qualified lawyer review required before external use.",
+        "priority": "standard_review",
+        "external_action_allowed": false
+      },
+      "word_suggested_edit": {
+        "schema": "micar-whitepaper-linter.word-suggested-edit.v1",
+        "action": "none",
+        "instruction": "No suggested edit. Preserve disclosure under lawyer review.",
+        "target_section": "issuer",
+        "draft_only": true,
+        "external_action_allowed": false
+      },
+      "delivery_block": {
+        "status": "review_required",
+        "external_action_allowed": false,
+        "review_gate": "Lawyer sign-off and deterministic rerun required before external filing or publication."
+      },
+      "review_cells": [
+        {
+          "column_id": "rule_id",
+          "label": "Rule ID",
+          "value": "ANNEX_II.A",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation",
+          "label": "Citation",
+          "value": "Anhang II Teil A MiCAR",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "section",
+          "label": "Section",
+          "value": "issuer",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "status",
+          "label": "Status",
+          "value": "pass",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "blocker",
+          "label": "Blocker",
+          "value": "false",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "word_count",
+          "label": "Word count",
+          "value": "94",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "remediation",
+          "label": "Remediation",
+          "value": "Keep disclosure under lawyer review before external use.",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "reviewer_decision",
+          "label": "Reviewer decision",
+          "value": "pending_lawyer_confirmation",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "verification_state",
+          "label": "Verification",
+          "value": "auto_passed",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "source_anchor",
+          "label": "Source anchor",
+          "value": "json:issuer:774aa124539a6b12",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation_coverage",
+          "label": "Citation coverage",
+          "value": "anchor_and_citation",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "export_gate",
+          "label": "Export gate",
+          "value": "review_required",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        }
+      ]
+    },
+    {
+      "row_id": "review-row-f549bf2b44c8ecfc",
+      "rule_id": "ANNEX_II.B",
+      "citation": "Anhang II Teil B MiCAR",
+      "section": "art",
+      "label": "Information about the asset-referenced token (reference assets, stabilisation mechanism)",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "blocker": false,
+      "word_count": 95,
+      "issues": [],
+      "remediation": "Keep disclosure under lawyer review before external use.",
+      "reviewer_decision": "pending_lawyer_confirmation",
+      "verification_state": "auto_passed",
+      "source_anchor": {
+        "section_key": "art",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:art:7d113704646d32c8",
+        "section_length": 667
+      },
+      "anchor_verified": true,
+      "citation_coverage": "anchor_and_citation",
+      "export_gate": "review_required",
+      "playbook": {
+        "id": "art-art",
+        "skill": "rule-review-playbook",
+        "rule_scope": [
+          "ANNEX_II.B"
+        ],
+        "citation": "Anhang II Teil B MiCAR",
+        "severity": "BLOCKER",
+        "review_gate": "Qualified lawyer review required before external use.",
+        "priority": "standard_review",
+        "external_action_allowed": false
+      },
+      "word_suggested_edit": {
+        "schema": "micar-whitepaper-linter.word-suggested-edit.v1",
+        "action": "none",
+        "instruction": "No suggested edit. Preserve disclosure under lawyer review.",
+        "target_section": "art",
+        "draft_only": true,
+        "external_action_allowed": false
+      },
+      "delivery_block": {
+        "status": "review_required",
+        "external_action_allowed": false,
+        "review_gate": "Lawyer sign-off and deterministic rerun required before external filing or publication."
+      },
+      "review_cells": [
+        {
+          "column_id": "rule_id",
+          "label": "Rule ID",
+          "value": "ANNEX_II.B",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation",
+          "label": "Citation",
+          "value": "Anhang II Teil B MiCAR",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "section",
+          "label": "Section",
+          "value": "art",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "status",
+          "label": "Status",
+          "value": "pass",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "blocker",
+          "label": "Blocker",
+          "value": "false",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "word_count",
+          "label": "Word count",
+          "value": "95",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "remediation",
+          "label": "Remediation",
+          "value": "Keep disclosure under lawyer review before external use.",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "reviewer_decision",
+          "label": "Reviewer decision",
+          "value": "pending_lawyer_confirmation",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "verification_state",
+          "label": "Verification",
+          "value": "auto_passed",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "source_anchor",
+          "label": "Source anchor",
+          "value": "json:art:7d113704646d32c8",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation_coverage",
+          "label": "Citation coverage",
+          "value": "anchor_and_citation",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "export_gate",
+          "label": "Export gate",
+          "value": "review_required",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        }
+      ]
+    },
+    {
+      "row_id": "review-row-d24a4f64f26ccc6c",
+      "rule_id": "ANNEX_II.C",
+      "citation": "Anhang II Teil C MiCAR",
+      "section": "offer_or_admission",
+      "label": "Information about the offer to the public of the ART or its admission to trading",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "blocker": false,
+      "word_count": 77,
+      "issues": [],
+      "remediation": "Keep disclosure under lawyer review before external use.",
+      "reviewer_decision": "pending_lawyer_confirmation",
+      "verification_state": "auto_passed",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:8a5033d26187ac64",
+        "section_length": 569
+      },
+      "anchor_verified": true,
+      "citation_coverage": "anchor_and_citation",
+      "export_gate": "review_required",
+      "playbook": {
+        "id": "art-offer_or_admission",
+        "skill": "rule-review-playbook",
+        "rule_scope": [
+          "ANNEX_II.C"
+        ],
+        "citation": "Anhang II Teil C MiCAR",
+        "severity": "BLOCKER",
+        "review_gate": "Qualified lawyer review required before external use.",
+        "priority": "standard_review",
+        "external_action_allowed": false
+      },
+      "word_suggested_edit": {
+        "schema": "micar-whitepaper-linter.word-suggested-edit.v1",
+        "action": "none",
+        "instruction": "No suggested edit. Preserve disclosure under lawyer review.",
+        "target_section": "offer_or_admission",
+        "draft_only": true,
+        "external_action_allowed": false
+      },
+      "delivery_block": {
+        "status": "review_required",
+        "external_action_allowed": false,
+        "review_gate": "Lawyer sign-off and deterministic rerun required before external filing or publication."
+      },
+      "review_cells": [
+        {
+          "column_id": "rule_id",
+          "label": "Rule ID",
+          "value": "ANNEX_II.C",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation",
+          "label": "Citation",
+          "value": "Anhang II Teil C MiCAR",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "section",
+          "label": "Section",
+          "value": "offer_or_admission",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "status",
+          "label": "Status",
+          "value": "pass",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "blocker",
+          "label": "Blocker",
+          "value": "false",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "word_count",
+          "label": "Word count",
+          "value": "77",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "remediation",
+          "label": "Remediation",
+          "value": "Keep disclosure under lawyer review before external use.",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "reviewer_decision",
+          "label": "Reviewer decision",
+          "value": "pending_lawyer_confirmation",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "verification_state",
+          "label": "Verification",
+          "value": "auto_passed",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "source_anchor",
+          "label": "Source anchor",
+          "value": "json:offer_or_admission:8a5033d26187ac64",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation_coverage",
+          "label": "Citation coverage",
+          "value": "anchor_and_citation",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "export_gate",
+          "label": "Export gate",
+          "value": "review_required",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        }
+      ]
+    },
+    {
+      "row_id": "review-row-0a48c5420e75401a",
+      "rule_id": "ANNEX_II.D",
+      "citation": "Anhang II Teil D i.V.m. Art. 39 MiCAR",
+      "section": "rights_and_obligations",
+      "label": "Rights and obligations of holders (redemption right at par, complaints handling)",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "blocker": false,
+      "word_count": 94,
+      "issues": [],
+      "remediation": "Keep disclosure under lawyer review before external use.",
+      "reviewer_decision": "pending_lawyer_confirmation",
+      "verification_state": "auto_passed",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:fdbeb2b6e2baaaea",
+        "section_length": 584
+      },
+      "anchor_verified": true,
+      "citation_coverage": "anchor_and_citation",
+      "export_gate": "review_required",
+      "playbook": {
+        "id": "art-rights_and_obligations",
+        "skill": "rule-review-playbook",
+        "rule_scope": [
+          "ANNEX_II.D"
+        ],
+        "citation": "Anhang II Teil D i.V.m. Art. 39 MiCAR",
+        "severity": "BLOCKER",
+        "review_gate": "Qualified lawyer review required before external use.",
+        "priority": "standard_review",
+        "external_action_allowed": false
+      },
+      "word_suggested_edit": {
+        "schema": "micar-whitepaper-linter.word-suggested-edit.v1",
+        "action": "none",
+        "instruction": "No suggested edit. Preserve disclosure under lawyer review.",
+        "target_section": "rights_and_obligations",
+        "draft_only": true,
+        "external_action_allowed": false
+      },
+      "delivery_block": {
+        "status": "review_required",
+        "external_action_allowed": false,
+        "review_gate": "Lawyer sign-off and deterministic rerun required before external filing or publication."
+      },
+      "review_cells": [
+        {
+          "column_id": "rule_id",
+          "label": "Rule ID",
+          "value": "ANNEX_II.D",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation",
+          "label": "Citation",
+          "value": "Anhang II Teil D i.V.m. Art. 39 MiCAR",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "section",
+          "label": "Section",
+          "value": "rights_and_obligations",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "status",
+          "label": "Status",
+          "value": "pass",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "blocker",
+          "label": "Blocker",
+          "value": "false",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "word_count",
+          "label": "Word count",
+          "value": "94",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "remediation",
+          "label": "Remediation",
+          "value": "Keep disclosure under lawyer review before external use.",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "reviewer_decision",
+          "label": "Reviewer decision",
+          "value": "pending_lawyer_confirmation",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "verification_state",
+          "label": "Verification",
+          "value": "auto_passed",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "source_anchor",
+          "label": "Source anchor",
+          "value": "json:rights_and_obligations:fdbeb2b6e2baaaea",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation_coverage",
+          "label": "Citation coverage",
+          "value": "anchor_and_citation",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "export_gate",
+          "label": "Export gate",
+          "value": "review_required",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        }
+      ]
+    },
+    {
+      "row_id": "review-row-066604c48343b345",
+      "rule_id": "ANNEX_II.E",
+      "citation": "Anhang II Teil E MiCAR",
+      "section": "technology",
+      "label": "Information on the underlying technology (DLT, custody architecture, key management)",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "blocker": false,
+      "word_count": 77,
+      "issues": [],
+      "remediation": "Keep disclosure under lawyer review before external use.",
+      "reviewer_decision": "pending_lawyer_confirmation",
+      "verification_state": "auto_passed",
+      "source_anchor": {
+        "section_key": "technology",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:technology:3c1ac378d73a8b8a",
+        "section_length": 528
+      },
+      "anchor_verified": true,
+      "citation_coverage": "anchor_and_citation",
+      "export_gate": "review_required",
+      "playbook": {
+        "id": "art-technology",
+        "skill": "rule-review-playbook",
+        "rule_scope": [
+          "ANNEX_II.E"
+        ],
+        "citation": "Anhang II Teil E MiCAR",
+        "severity": "BLOCKER",
+        "review_gate": "Qualified lawyer review required before external use.",
+        "priority": "standard_review",
+        "external_action_allowed": false
+      },
+      "word_suggested_edit": {
+        "schema": "micar-whitepaper-linter.word-suggested-edit.v1",
+        "action": "none",
+        "instruction": "No suggested edit. Preserve disclosure under lawyer review.",
+        "target_section": "technology",
+        "draft_only": true,
+        "external_action_allowed": false
+      },
+      "delivery_block": {
+        "status": "review_required",
+        "external_action_allowed": false,
+        "review_gate": "Lawyer sign-off and deterministic rerun required before external filing or publication."
+      },
+      "review_cells": [
+        {
+          "column_id": "rule_id",
+          "label": "Rule ID",
+          "value": "ANNEX_II.E",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation",
+          "label": "Citation",
+          "value": "Anhang II Teil E MiCAR",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "section",
+          "label": "Section",
+          "value": "technology",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "status",
+          "label": "Status",
+          "value": "pass",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "blocker",
+          "label": "Blocker",
+          "value": "false",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "word_count",
+          "label": "Word count",
+          "value": "77",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "remediation",
+          "label": "Remediation",
+          "value": "Keep disclosure under lawyer review before external use.",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "reviewer_decision",
+          "label": "Reviewer decision",
+          "value": "pending_lawyer_confirmation",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "verification_state",
+          "label": "Verification",
+          "value": "auto_passed",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "source_anchor",
+          "label": "Source anchor",
+          "value": "json:technology:3c1ac378d73a8b8a",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation_coverage",
+          "label": "Citation coverage",
+          "value": "anchor_and_citation",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "export_gate",
+          "label": "Export gate",
+          "value": "review_required",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        }
+      ]
+    },
+    {
+      "row_id": "review-row-c61020306c869236",
+      "rule_id": "ANNEX_II.F",
+      "citation": "Anhang II Teil F MiCAR",
+      "section": "risks",
+      "label": "Risk factors specific to ARTs (de-pegging, reserve impairment, redemption suspension)",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "blocker": false,
+      "word_count": 157,
+      "issues": [],
+      "remediation": "Keep disclosure under lawyer review before external use.",
+      "reviewer_decision": "pending_lawyer_confirmation",
+      "verification_state": "auto_passed",
+      "source_anchor": {
+        "section_key": "risks",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:risks:fb6c82fce9769e1f",
+        "section_length": 1058
+      },
+      "anchor_verified": true,
+      "citation_coverage": "anchor_and_citation",
+      "export_gate": "review_required",
+      "playbook": {
+        "id": "art-risks",
+        "skill": "rule-review-playbook",
+        "rule_scope": [
+          "ANNEX_II.F"
+        ],
+        "citation": "Anhang II Teil F MiCAR",
+        "severity": "BLOCKER",
+        "review_gate": "Qualified lawyer review required before external use.",
+        "priority": "standard_review",
+        "external_action_allowed": false
+      },
+      "word_suggested_edit": {
+        "schema": "micar-whitepaper-linter.word-suggested-edit.v1",
+        "action": "none",
+        "instruction": "No suggested edit. Preserve disclosure under lawyer review.",
+        "target_section": "risks",
+        "draft_only": true,
+        "external_action_allowed": false
+      },
+      "delivery_block": {
+        "status": "review_required",
+        "external_action_allowed": false,
+        "review_gate": "Lawyer sign-off and deterministic rerun required before external filing or publication."
+      },
+      "review_cells": [
+        {
+          "column_id": "rule_id",
+          "label": "Rule ID",
+          "value": "ANNEX_II.F",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation",
+          "label": "Citation",
+          "value": "Anhang II Teil F MiCAR",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "section",
+          "label": "Section",
+          "value": "risks",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "status",
+          "label": "Status",
+          "value": "pass",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "blocker",
+          "label": "Blocker",
+          "value": "false",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "word_count",
+          "label": "Word count",
+          "value": "157",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "remediation",
+          "label": "Remediation",
+          "value": "Keep disclosure under lawyer review before external use.",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "reviewer_decision",
+          "label": "Reviewer decision",
+          "value": "pending_lawyer_confirmation",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "verification_state",
+          "label": "Verification",
+          "value": "auto_passed",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "source_anchor",
+          "label": "Source anchor",
+          "value": "json:risks:fb6c82fce9769e1f",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation_coverage",
+          "label": "Citation coverage",
+          "value": "anchor_and_citation",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "export_gate",
+          "label": "Export gate",
+          "value": "review_required",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        }
+      ]
+    },
+    {
+      "row_id": "review-row-04022fd6fe7dbc9e",
+      "rule_id": "ANNEX_II.G.COMPOSITION_DISCLOSURE",
+      "citation": "Anhang II Teil G i.V.m. Art. 36 MiCAR",
+      "section": "reserve_of_assets",
+      "label": "Reserve composition disclosure (Annex II Part G)",
+      "severity": "BLOCKER",
+      "status": "review",
+      "blocker": true,
+      "word_count": 173,
+      "issues": [
+        "Missing review terms: concentration."
+      ],
+      "remediation": "Cure blocker before any notification workflow continues.",
+      "reviewer_decision": "remediation_required",
+      "verification_state": "needs_verification",
+      "source_anchor": {
+        "section_key": "reserve_of_assets",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:reserve_of_assets:a25d2fd771629cd6",
+        "section_length": 1115
+      },
+      "anchor_verified": true,
+      "citation_coverage": "anchor_and_citation",
+      "export_gate": "blocked",
+      "playbook": {
+        "id": "art-reserve_of_assets",
+        "skill": "rule-review-playbook",
+        "rule_scope": [
+          "ANNEX_II.G.COMPOSITION_DISCLOSURE"
+        ],
+        "citation": "Anhang II Teil G i.V.m. Art. 36 MiCAR",
+        "severity": "BLOCKER",
+        "review_gate": "Qualified lawyer review required before external use.",
+        "priority": "blocker",
+        "external_action_allowed": false
+      },
+      "word_suggested_edit": {
+        "schema": "micar-whitepaper-linter.word-suggested-edit.v1",
+        "action": "insert_required_disclosure",
+        "instruction": "Cure blocker before any notification workflow continues.",
+        "target_section": "reserve_of_assets",
+        "draft_only": true,
+        "external_action_allowed": false
+      },
+      "delivery_block": {
+        "status": "blocked",
+        "external_action_allowed": false,
+        "review_gate": "Lawyer sign-off and deterministic rerun required before external filing or publication."
+      },
+      "review_cells": [
+        {
+          "column_id": "rule_id",
+          "label": "Rule ID",
+          "value": "ANNEX_II.G.COMPOSITION_DISCLOSURE",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation",
+          "label": "Citation",
+          "value": "Anhang II Teil G i.V.m. Art. 36 MiCAR",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "section",
+          "label": "Section",
+          "value": "reserve_of_assets",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "status",
+          "label": "Status",
+          "value": "review",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "blocker",
+          "label": "Blocker",
+          "value": "true",
+          "status": "blocked",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "word_count",
+          "label": "Word count",
+          "value": "173",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "remediation",
+          "label": "Remediation",
+          "value": "Cure blocker before any notification workflow continues.",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "reviewer_decision",
+          "label": "Reviewer decision",
+          "value": "remediation_required",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "verification_state",
+          "label": "Verification",
+          "value": "needs_verification",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "source_anchor",
+          "label": "Source anchor",
+          "value": "json:reserve_of_assets:a25d2fd771629cd6",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation_coverage",
+          "label": "Citation coverage",
+          "value": "anchor_and_citation",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "export_gate",
+          "label": "Export gate",
+          "value": "blocked",
+          "status": "blocked",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        }
+      ]
+    },
+    {
+      "row_id": "review-row-12581d2855048fe8",
+      "rule_id": "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
+      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 4 Buchst. d MiCAR",
+      "section": "reserve_of_assets",
+      "label": "Minimum deposit floor for the reserve (Art. 36(4)(d) MiCAR) - requires characterised facts",
+      "severity": "BLOCKER",
+      "status": "review",
+      "blocker": true,
+      "word_count": 0,
+      "issues": [
+        "Legal characterisation missing (references_official_currency, art_significant); the applicable minimum share cannot be determined. Human review required."
+      ],
+      "remediation": "Cure blocker before any notification workflow continues.",
+      "reviewer_decision": "remediation_required",
+      "verification_state": "needs_verification",
+      "source_anchor": {
+        "section_key": "reserve_of_assets",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:reserve_of_assets:d01e1e8f51c668a7",
+        "section_length": 1115
+      },
+      "anchor_verified": true,
+      "citation_coverage": "anchor_and_citation",
+      "export_gate": "blocked",
+      "playbook": {
+        "id": "art-reserve_of_assets",
+        "skill": "rule-review-playbook",
+        "rule_scope": [
+          "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW"
+        ],
+        "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 4 Buchst. d MiCAR",
+        "severity": "BLOCKER",
+        "review_gate": "Qualified lawyer review required before external use.",
+        "priority": "blocker",
+        "external_action_allowed": false
+      },
+      "word_suggested_edit": {
+        "schema": "micar-whitepaper-linter.word-suggested-edit.v1",
+        "action": "insert_required_disclosure",
+        "instruction": "Cure blocker before any notification workflow continues.",
+        "target_section": "reserve_of_assets",
+        "draft_only": true,
+        "external_action_allowed": false
+      },
+      "delivery_block": {
+        "status": "blocked",
+        "external_action_allowed": false,
+        "review_gate": "Lawyer sign-off and deterministic rerun required before external filing or publication."
+      },
+      "review_cells": [
+        {
+          "column_id": "rule_id",
+          "label": "Rule ID",
+          "value": "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation",
+          "label": "Citation",
+          "value": "Anhang II Teil G i.V.m. Art. 36 Abs. 4 Buchst. d MiCAR",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "section",
+          "label": "Section",
+          "value": "reserve_of_assets",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "status",
+          "label": "Status",
+          "value": "review",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "blocker",
+          "label": "Blocker",
+          "value": "true",
+          "status": "blocked",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "word_count",
+          "label": "Word count",
+          "value": "0",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "remediation",
+          "label": "Remediation",
+          "value": "Cure blocker before any notification workflow continues.",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "reviewer_decision",
+          "label": "Reviewer decision",
+          "value": "remediation_required",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "verification_state",
+          "label": "Verification",
+          "value": "needs_verification",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "source_anchor",
+          "label": "Source anchor",
+          "value": "json:reserve_of_assets:d01e1e8f51c668a7",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation_coverage",
+          "label": "Citation coverage",
+          "value": "anchor_and_citation",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "export_gate",
+          "label": "Export gate",
+          "value": "blocked",
+          "status": "blocked",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        }
+      ]
+    },
+    {
+      "row_id": "review-row-9e93716aa17467dc",
+      "rule_id": "ANNEX_II.G.CUSTODY",
+      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR",
+      "section": "reserve_of_assets",
+      "label": "Custody policy and custodian selection (Art. 36(2) MiCAR)",
+      "severity": "BLOCKER",
+      "status": "review",
+      "blocker": true,
+      "word_count": 173,
+      "issues": [
+        "Missing review terms: insolvency."
+      ],
+      "remediation": "Cure blocker before any notification workflow continues.",
+      "reviewer_decision": "remediation_required",
+      "verification_state": "needs_verification",
+      "source_anchor": {
+        "section_key": "reserve_of_assets",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:reserve_of_assets:96d35787e5627922",
+        "section_length": 1115
+      },
+      "anchor_verified": true,
+      "citation_coverage": "anchor_and_citation",
+      "export_gate": "blocked",
+      "playbook": {
+        "id": "art-reserve_of_assets",
+        "skill": "rule-review-playbook",
+        "rule_scope": [
+          "ANNEX_II.G.CUSTODY"
+        ],
+        "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR",
+        "severity": "BLOCKER",
+        "review_gate": "Qualified lawyer review required before external use.",
+        "priority": "blocker",
+        "external_action_allowed": false
+      },
+      "word_suggested_edit": {
+        "schema": "micar-whitepaper-linter.word-suggested-edit.v1",
+        "action": "insert_required_disclosure",
+        "instruction": "Cure blocker before any notification workflow continues.",
+        "target_section": "reserve_of_assets",
+        "draft_only": true,
+        "external_action_allowed": false
+      },
+      "delivery_block": {
+        "status": "blocked",
+        "external_action_allowed": false,
+        "review_gate": "Lawyer sign-off and deterministic rerun required before external filing or publication."
+      },
+      "review_cells": [
+        {
+          "column_id": "rule_id",
+          "label": "Rule ID",
+          "value": "ANNEX_II.G.CUSTODY",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation",
+          "label": "Citation",
+          "value": "Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "section",
+          "label": "Section",
+          "value": "reserve_of_assets",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "status",
+          "label": "Status",
+          "value": "review",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "blocker",
+          "label": "Blocker",
+          "value": "true",
+          "status": "blocked",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "word_count",
+          "label": "Word count",
+          "value": "173",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "remediation",
+          "label": "Remediation",
+          "value": "Cure blocker before any notification workflow continues.",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "reviewer_decision",
+          "label": "Reviewer decision",
+          "value": "remediation_required",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "verification_state",
+          "label": "Verification",
+          "value": "needs_verification",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "source_anchor",
+          "label": "Source anchor",
+          "value": "json:reserve_of_assets:96d35787e5627922",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation_coverage",
+          "label": "Citation coverage",
+          "value": "anchor_and_citation",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "export_gate",
+          "label": "Export gate",
+          "value": "blocked",
+          "status": "blocked",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        }
+      ]
+    },
+    {
+      "row_id": "review-row-541d00149b4fdbf7",
+      "rule_id": "ANNEX_II.G.VALUATION_AUDIT",
+      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR",
+      "section": "reserve_of_assets",
+      "label": "Valuation procedure and audit frequency (Art. 36(3) MiCAR)",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "blocker": false,
+      "word_count": 173,
+      "issues": [],
+      "remediation": "Keep disclosure under lawyer review before external use.",
+      "reviewer_decision": "pending_lawyer_confirmation",
+      "verification_state": "auto_passed",
+      "source_anchor": {
+        "section_key": "reserve_of_assets",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:reserve_of_assets:a4d139a663a2d182",
+        "section_length": 1115
+      },
+      "anchor_verified": true,
+      "citation_coverage": "anchor_and_citation",
+      "export_gate": "review_required",
+      "playbook": {
+        "id": "art-reserve_of_assets",
+        "skill": "rule-review-playbook",
+        "rule_scope": [
+          "ANNEX_II.G.VALUATION_AUDIT"
+        ],
+        "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR",
+        "severity": "BLOCKER",
+        "review_gate": "Qualified lawyer review required before external use.",
+        "priority": "standard_review",
+        "external_action_allowed": false
+      },
+      "word_suggested_edit": {
+        "schema": "micar-whitepaper-linter.word-suggested-edit.v1",
+        "action": "none",
+        "instruction": "No suggested edit. Preserve disclosure under lawyer review.",
+        "target_section": "reserve_of_assets",
+        "draft_only": true,
+        "external_action_allowed": false
+      },
+      "delivery_block": {
+        "status": "review_required",
+        "external_action_allowed": false,
+        "review_gate": "Lawyer sign-off and deterministic rerun required before external filing or publication."
+      },
+      "review_cells": [
+        {
+          "column_id": "rule_id",
+          "label": "Rule ID",
+          "value": "ANNEX_II.G.VALUATION_AUDIT",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation",
+          "label": "Citation",
+          "value": "Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "section",
+          "label": "Section",
+          "value": "reserve_of_assets",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "status",
+          "label": "Status",
+          "value": "pass",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "blocker",
+          "label": "Blocker",
+          "value": "false",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "word_count",
+          "label": "Word count",
+          "value": "173",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "remediation",
+          "label": "Remediation",
+          "value": "Keep disclosure under lawyer review before external use.",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "reviewer_decision",
+          "label": "Reviewer decision",
+          "value": "pending_lawyer_confirmation",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "verification_state",
+          "label": "Verification",
+          "value": "auto_passed",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "source_anchor",
+          "label": "Source anchor",
+          "value": "json:reserve_of_assets:a4d139a663a2d182",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation_coverage",
+          "label": "Citation coverage",
+          "value": "anchor_and_citation",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "export_gate",
+          "label": "Export gate",
+          "value": "review_required",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        }
+      ]
+    },
+    {
+      "row_id": "review-row-8bde41bd3e9d6789",
+      "rule_id": "ANNEX_II.H",
+      "citation": "Anhang II Teil H i.V.m. ESMA RTS on sustainability indicators",
+      "section": "environmental_impact",
+      "label": "Principal adverse environmental and climate-related impact of the consensus mechanism",
+      "severity": "MAJOR",
+      "status": "pass",
+      "blocker": false,
+      "word_count": 104,
+      "issues": [],
+      "remediation": "Keep disclosure under lawyer review before external use.",
+      "reviewer_decision": "pending_lawyer_confirmation",
+      "verification_state": "auto_passed",
+      "source_anchor": {
+        "section_key": "environmental_impact",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:environmental_impact:7ea892f342676666",
+        "section_length": 742
+      },
+      "anchor_verified": true,
+      "citation_coverage": "anchor_and_citation",
+      "export_gate": "review_required",
+      "playbook": {
+        "id": "art-environmental_impact",
+        "skill": "rule-review-playbook",
+        "rule_scope": [
+          "ANNEX_II.H"
+        ],
+        "citation": "Anhang II Teil H i.V.m. ESMA RTS on sustainability indicators",
+        "severity": "MAJOR",
+        "review_gate": "Qualified lawyer review required before external use.",
+        "priority": "standard_review",
+        "external_action_allowed": false
+      },
+      "word_suggested_edit": {
+        "schema": "micar-whitepaper-linter.word-suggested-edit.v1",
+        "action": "none",
+        "instruction": "No suggested edit. Preserve disclosure under lawyer review.",
+        "target_section": "environmental_impact",
+        "draft_only": true,
+        "external_action_allowed": false
+      },
+      "delivery_block": {
+        "status": "review_required",
+        "external_action_allowed": false,
+        "review_gate": "Lawyer sign-off and deterministic rerun required before external filing or publication."
+      },
+      "review_cells": [
+        {
+          "column_id": "rule_id",
+          "label": "Rule ID",
+          "value": "ANNEX_II.H",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation",
+          "label": "Citation",
+          "value": "Anhang II Teil H i.V.m. ESMA RTS on sustainability indicators",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "section",
+          "label": "Section",
+          "value": "environmental_impact",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "status",
+          "label": "Status",
+          "value": "pass",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "blocker",
+          "label": "Blocker",
+          "value": "false",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "word_count",
+          "label": "Word count",
+          "value": "104",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "remediation",
+          "label": "Remediation",
+          "value": "Keep disclosure under lawyer review before external use.",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "reviewer_decision",
+          "label": "Reviewer decision",
+          "value": "pending_lawyer_confirmation",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "verification_state",
+          "label": "Verification",
+          "value": "auto_passed",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "source_anchor",
+          "label": "Source anchor",
+          "value": "json:environmental_impact:7ea892f342676666",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation_coverage",
+          "label": "Citation coverage",
+          "value": "anchor_and_citation",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "export_gate",
+          "label": "Export gate",
+          "value": "review_required",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        }
+      ]
+    },
+    {
+      "row_id": "review-row-e6a3acc23127fe1c",
+      "rule_id": "ANNEX_II.I",
+      "citation": "Anhang II Teil I i.V.m. Art. 39 MiCAR",
+      "section": "redemption",
+      "label": "Redemption rights and procedure (timing, fees, suspension conditions)",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "blocker": false,
+      "word_count": 125,
+      "issues": [],
+      "remediation": "Keep disclosure under lawyer review before external use.",
+      "reviewer_decision": "pending_lawyer_confirmation",
+      "verification_state": "auto_passed",
+      "source_anchor": {
+        "section_key": "redemption",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:redemption:b068b69a32233498",
+        "section_length": 812
+      },
+      "anchor_verified": true,
+      "citation_coverage": "anchor_and_citation",
+      "export_gate": "review_required",
+      "playbook": {
+        "id": "art-redemption",
+        "skill": "rule-review-playbook",
+        "rule_scope": [
+          "ANNEX_II.I"
+        ],
+        "citation": "Anhang II Teil I i.V.m. Art. 39 MiCAR",
+        "severity": "BLOCKER",
+        "review_gate": "Qualified lawyer review required before external use.",
+        "priority": "standard_review",
+        "external_action_allowed": false
+      },
+      "word_suggested_edit": {
+        "schema": "micar-whitepaper-linter.word-suggested-edit.v1",
+        "action": "none",
+        "instruction": "No suggested edit. Preserve disclosure under lawyer review.",
+        "target_section": "redemption",
+        "draft_only": true,
+        "external_action_allowed": false
+      },
+      "delivery_block": {
+        "status": "review_required",
+        "external_action_allowed": false,
+        "review_gate": "Lawyer sign-off and deterministic rerun required before external filing or publication."
+      },
+      "review_cells": [
+        {
+          "column_id": "rule_id",
+          "label": "Rule ID",
+          "value": "ANNEX_II.I",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation",
+          "label": "Citation",
+          "value": "Anhang II Teil I i.V.m. Art. 39 MiCAR",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "section",
+          "label": "Section",
+          "value": "redemption",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "status",
+          "label": "Status",
+          "value": "pass",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "blocker",
+          "label": "Blocker",
+          "value": "false",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "word_count",
+          "label": "Word count",
+          "value": "125",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "remediation",
+          "label": "Remediation",
+          "value": "Keep disclosure under lawyer review before external use.",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "reviewer_decision",
+          "label": "Reviewer decision",
+          "value": "pending_lawyer_confirmation",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "verification_state",
+          "label": "Verification",
+          "value": "auto_passed",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "source_anchor",
+          "label": "Source anchor",
+          "value": "json:redemption:b068b69a32233498",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation_coverage",
+          "label": "Citation coverage",
+          "value": "anchor_and_citation",
+          "status": "complete",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "export_gate",
+          "label": "Export gate",
+          "value": "review_required",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        }
+      ]
+    }
+  ],
+  "warnings": [],
+  "review_notice": "Review table rows are deterministic linter outputs. Reviewer decisions remain pending until a qualified lawyer signs off.",
+  "digest": "ac54bbfcb9f48f64406d595f6ddd9773e14562789f1ef1d973b06f1ff6893421"
+}

@@ -4,7 +4,7 @@
 - **Regime/Type**: ART
 - **Source File**: examples/art-stablecoin.json
 - **SHA-256 Checksum**: `c520a00ef8829fc4f4f607903c5a66b08b09a469ebe7b949e1e001c2ff881ae3`
-- **Review Timestamp**: 2026-06-18 08:38:21
+- **Review Timestamp**: 2026-09-01 13:52:51
 
 ## Rule Compliance Checklist
 
@@ -15,14 +15,15 @@
 | `COMMON.MANAGEMENT_STATEMENT` | Art. 6 Abs. 6, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR | Statement by the management body on completeness, fairness, and clarity | BLOCKER | **PASS** | [x] |
 | `COMMON.NOTIFICATION_DATE` | Art. 8 Abs. 1, Art. 17, Art. 49 MiCAR | Date of notification to the competent authority | MAJOR | **PASS** | [x] |
 | `COMMON.LANGUAGE` | Art. 6 Abs. 12, Art. 19 Abs. 11, Art. 51 Abs. 10 MiCAR | Language of the white paper (home Member State official language or customary in international finance) | MAJOR | **PASS** | [x] |
-| `COMMON.IXBRL_TAGGING` | Art. 2 VO (EU) 2024/2984 | Inline XBRL (iXBRL) compliance and ESMA metadata tagging | BLOCKER | **PASS** | [x] |
+| `COMMON.IXBRL_TAGGING` | Art. 2 VO (EU) 2024/2984 | Inline XBRL (iXBRL) compliance and ESMA metadata tagging | BLOCKER | **MISSING** | [ ] |
 | `ANNEX_II.A` | Anhang II Teil A MiCAR | Information about the issuer of the ART (legal form, governance, prudential profile) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.B` | Anhang II Teil B MiCAR | Information about the asset-referenced token (reference assets, stabilisation mechanism) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.C` | Anhang II Teil C MiCAR | Information about the offer to the public of the ART or its admission to trading | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.D` | Anhang II Teil D i.V.m. Art. 39 MiCAR | Rights and obligations of holders (redemption right at par, complaints handling) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.E` | Anhang II Teil E MiCAR | Information on the underlying technology (DLT, custody architecture, key management) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.F` | Anhang II Teil F MiCAR | Risk factors specific to ARTs (de-pegging, reserve impairment, redemption suspension) | BLOCKER | **PASS** | [x] |
-| `ANNEX_II.G.COMPOSITION` | Anhang II Teil G i.V.m. Art. 36 Abs. 1 MiCAR | Reserve composition and investment limits (Art. 36(1) MiCAR / EBA RTS) | BLOCKER | **REVIEW** | [ ] |
+| `ANNEX_II.G.COMPOSITION_DISCLOSURE` | Anhang II Teil G i.V.m. Art. 36 MiCAR | Reserve composition disclosure (Annex II Part G) | BLOCKER | **REVIEW** | [ ] |
+| `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW` | Anhang II Teil G i.V.m. Art. 36 Abs. 4 Buchst. d MiCAR | Minimum deposit floor for the reserve (Art. 36(4)(d) MiCAR) - requires characterised facts | BLOCKER | **REVIEW** | [ ] |
 | `ANNEX_II.G.CUSTODY` | Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR | Custody policy and custodian selection (Art. 36(2) MiCAR) | BLOCKER | **REVIEW** | [ ] |
 | `ANNEX_II.G.VALUATION_AUDIT` | Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR | Valuation procedure and audit frequency (Art. 36(3) MiCAR) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.H` | Anhang II Teil H i.V.m. ESMA RTS on sustainability indicators | Principal adverse environmental and climate-related impact of the consensus mechanism | MAJOR | **PASS** | [x] |
@@ -30,10 +31,10 @@
 
 ## Summary of Findings
 
-- **Passed Checks**: 15
-- **Under Review**: 2
-- **Missing Sections**: 0
-- **BLOCKER Issues**: 2
+- **Passed Checks**: 14
+- **Under Review**: 3
+- **Missing Sections**: 1
+- **BLOCKER Issues**: 4
 
 > [!WARNING]
 > **BLOCKER issues are currently open.** The draft is not package-ready for an external review or filing workflow until the gaps are cured and a lawyer has signed off.

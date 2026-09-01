@@ -60,6 +60,9 @@ class Linter:
         if rule.rule_id == "COMMON.IXBRL_TAGGING":
             return _ixbrl_finding(rule, whitepaper)
 
+        if rule.rule_id == "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW":
+            return _deposit_floor_finding(rule, whitepaper)
+
         is_de = (whitepaper.language == "de")
 
         text = whitepaper.section(rule.section)
@@ -212,3 +215,58 @@ def _ixbrl_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     if issues:
         return Finding(rule=rule, status="review", word_count=0, issues=issues)
     return Finding(rule=rule, status="pass", word_count=0, issues=())
+
+
+def _deposit_floor_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """The substantive deposit floor is fact-dependent, so it never auto-passes.
+
+    Art. 36(4)(d) MiCAR sets a minimum share of the reserve that must be held as
+    deposits with credit institutions. Which share applies turns on facts the text
+    alone does not establish: whether the token references an official currency and
+    whether it has been classified as significant. Absent those characterisations
+    the rule reports `review` rather than guessing a threshold.
+    """
+    is_de = whitepaper.language == "de"
+    metadata = whitepaper.metadata
+    significant = metadata.get("art_significant")
+    references_currency = metadata.get("references_official_currency")
+
+    unknown: list[str] = []
+    if not isinstance(references_currency, bool):
+        unknown.append("references_official_currency")
+    if not isinstance(significant, bool):
+        unknown.append("art_significant")
+    if unknown:
+        msg = (
+            "Rechtliche Einordnung fehlt (" + ", ".join(unknown) + "); "
+            "die anwendbare Mindestquote kann nicht bestimmt werden. Pruefung durch "
+            "einen Juristen erforderlich."
+            if is_de
+            else "Legal characterisation missing (" + ", ".join(unknown) + "); the "
+            "applicable minimum share cannot be determined. Human review required."
+        )
+        return Finding(rule=rule, status="review", word_count=0, issues=(msg,))
+
+    if not references_currency:
+        msg = (
+            "Charakterisiert als nicht auf eine amtliche Waehrung referenzierend; "
+            "die Mindestquote nach Art. 36 Abs. 4 Buchst. d MiCAR ist zu bestaetigen."
+            if is_de
+            else "Characterised as not referencing an official currency; the minimum "
+            "share under Art. 36(4)(d) MiCAR must be confirmed by a reviewer."
+        )
+        return Finding(rule=rule, status="review", word_count=0, issues=(msg,))
+
+    threshold = 60 if significant else 30
+    text = whitepaper.section(rule.section)
+    if re.search(rf"{threshold}\s*%", text):
+        return Finding(rule=rule, status="pass", word_count=_count_words(text), issues=())
+
+    msg = (
+        f"Erwartete Mindestquote {threshold} % ist im Abschnitt nicht angegeben "
+        f"(signifikant={significant})."
+        if is_de
+        else f"Expected minimum share of {threshold}% is not stated in the section "
+        f"(significant={significant})."
+    )
+    return Finding(rule=rule, status="missing", word_count=_count_words(text), issues=(msg,))
