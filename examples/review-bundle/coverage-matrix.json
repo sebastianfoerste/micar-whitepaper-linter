@@ -1,14 +1,14 @@
 {
   "schema": "micar-whitepaper-linter.coverage-matrix.v1",
-  "generated_at": "2026-06-18T06:38:21.673676+00:00",
+  "generated_at": "2026-09-01T11:52:51.867054+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "summary": {
-    "total": 17,
-    "pass": 15,
-    "review": 2,
-    "missing": 0,
-    "blockers": 2
+    "total": 18,
+    "pass": 14,
+    "review": 3,
+    "missing": 1,
+    "blockers": 4
   },
   "coverage": [
     {
@@ -102,10 +102,10 @@
       "section": "ixbrl_tagging",
       "citation": "Art. 2 VO (EU) 2024/2984",
       "severity": "BLOCKER",
-      "status": "pass",
+      "status": "missing",
       "word_count": 0,
-      "blocker": false,
-      "next_action": "Keep disclosure under lawyer review before external use.",
+      "blocker": true,
+      "next_action": "Add the missing disclosure section and rerun the linter.",
       "source_anchor": {
         "section_key": "ixbrl_tagging",
         "parser_source_type": "json",
@@ -216,10 +216,10 @@
       }
     },
     {
-      "rule_id": "ANNEX_II.G.COMPOSITION",
+      "rule_id": "ANNEX_II.G.COMPOSITION_DISCLOSURE",
       "annex": "ANNEX_II",
       "section": "reserve_of_assets",
-      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 1 MiCAR",
+      "citation": "Anhang II Teil G i.V.m. Art. 36 MiCAR",
       "severity": "BLOCKER",
       "status": "review",
       "word_count": 173,
@@ -228,7 +228,24 @@
       "source_anchor": {
         "section_key": "reserve_of_assets",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:ee417c234e51d76c",
+        "stable_anchor_id": "json:reserve_of_assets:a25d2fd771629cd6",
+        "section_length": 1115
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
+      "annex": "ANNEX_II",
+      "section": "reserve_of_assets",
+      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 4 Buchst. d MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 0,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "reserve_of_assets",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:reserve_of_assets:d01e1e8f51c668a7",
         "section_length": 1115
       }
     },
@@ -302,10 +319,12 @@
     }
   ],
   "blockers": [
-    "ANNEX_II.G.COMPOSITION",
+    "COMMON.IXBRL_TAGGING",
+    "ANNEX_II.G.COMPOSITION_DISCLOSURE",
+    "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
     "ANNEX_II.G.CUSTODY"
   ],
   "warnings": [],
   "review_notice": "Coverage matrix is a deterministic disclosure checklist. It is not legal advice, a signature, a notification, or filing approval.",
-  "digest": "804aef64331420a65e9b799c77588d4dcd3486a5d7ea687e6153989d9496984f"
+  "digest": "2704b0f91f4f81a6c7084ebc8a27cd74aa3a19238b24052cf91e239650539575"
 }

@@ -58,22 +58,10 @@ class Linter:
     @staticmethod
     def _apply(rule: Rule, whitepaper: Whitepaper) -> Finding:
         if rule.rule_id == "COMMON.IXBRL_TAGGING":
-            source_file = str(whitepaper.metadata.get("source_file", ""))
-            if source_file.lower().endswith((".xhtml", ".html")):
-                tag_issues = whitepaper.metadata.get("ixbrl_issues", ())
-                if tag_issues:
-                    return Finding(
-                        rule=rule,
-                        status="review",
-                        word_count=0,
-                        issues=tuple(tag_issues),
-                    )
-            return Finding(
-                rule=rule,
-                status="pass",
-                word_count=0,
-                issues=(),
-            )
+            return _ixbrl_finding(rule, whitepaper)
+
+        if rule.rule_id == "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW":
+            return _deposit_floor_finding(rule, whitepaper)
 
         is_de = (whitepaper.language == "de")
 
@@ -191,3 +179,94 @@ def lint_whitepaper(whitepaper: Whitepaper) -> Report:
 
 def _count_words(text: str) -> int:
     return sum(1 for word in text.split() if word.strip())
+
+
+def _ixbrl_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """Format compliance fails closed.
+
+    Only a source that actually went through iXBRL validation can pass. A draft
+    format (JSON, DOCX, PDF, Markdown) cannot satisfy the notification format, so
+    it leaves the blocker open instead of reporting a pass it has not evidenced.
+    """
+    is_de = whitepaper.language == "de"
+    metadata = whitepaper.metadata
+    if not bool(metadata.get("ixbrl_validated", False)):
+        source_file = str(metadata.get("source_file", ""))
+        if source_file.lower().endswith((".xhtml", ".html")):
+            msg = (
+                "Inline-XBRL-Prüfung wurde für diese XHTML-Quelle nicht ausgeführt; "
+                "die Formatkonformität ist nicht nachgewiesen."
+                if is_de
+                else "Inline XBRL validation did not run for this XHTML source; "
+                "format compliance is unverified."
+            )
+        else:
+            msg = (
+                "Entwurfsformat: Die Notifizierung verlangt XHTML mit Inline-XBRL-Tagging. "
+                "Dieses Format kann die Anforderung nicht erfuellen; die inhaltlichen "
+                "Pruefungen gelten weiterhin."
+                if is_de
+                else "Draft format: notification requires XHTML with Inline XBRL tagging. "
+                "This format cannot satisfy that requirement; the content checks still apply."
+            )
+        return Finding(rule=rule, status="missing", word_count=0, issues=(msg,))
+
+    issues = tuple(metadata.get("ixbrl_issues", ()))
+    if issues:
+        return Finding(rule=rule, status="review", word_count=0, issues=issues)
+    return Finding(rule=rule, status="pass", word_count=0, issues=())
+
+
+def _deposit_floor_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """The substantive deposit floor is fact-dependent, so it never auto-passes.
+
+    Art. 36(4)(d) MiCAR sets a minimum share of the reserve that must be held as
+    deposits with credit institutions. Which share applies turns on facts the text
+    alone does not establish: whether the token references an official currency and
+    whether it has been classified as significant. Absent those characterisations
+    the rule reports `review` rather than guessing a threshold.
+    """
+    is_de = whitepaper.language == "de"
+    metadata = whitepaper.metadata
+    significant = metadata.get("art_significant")
+    references_currency = metadata.get("references_official_currency")
+
+    unknown: list[str] = []
+    if not isinstance(references_currency, bool):
+        unknown.append("references_official_currency")
+    if not isinstance(significant, bool):
+        unknown.append("art_significant")
+    if unknown:
+        msg = (
+            "Rechtliche Einordnung fehlt (" + ", ".join(unknown) + "); "
+            "die anwendbare Mindestquote kann nicht bestimmt werden. Pruefung durch "
+            "einen Juristen erforderlich."
+            if is_de
+            else "Legal characterisation missing (" + ", ".join(unknown) + "); the "
+            "applicable minimum share cannot be determined. Human review required."
+        )
+        return Finding(rule=rule, status="review", word_count=0, issues=(msg,))
+
+    if not references_currency:
+        msg = (
+            "Charakterisiert als nicht auf eine amtliche Waehrung referenzierend; "
+            "die Mindestquote nach Art. 36 Abs. 4 Buchst. d MiCAR ist zu bestaetigen."
+            if is_de
+            else "Characterised as not referencing an official currency; the minimum "
+            "share under Art. 36(4)(d) MiCAR must be confirmed by a reviewer."
+        )
+        return Finding(rule=rule, status="review", word_count=0, issues=(msg,))
+
+    threshold = 60 if significant else 30
+    text = whitepaper.section(rule.section)
+    if re.search(rf"{threshold}\s*%", text):
+        return Finding(rule=rule, status="pass", word_count=_count_words(text), issues=())
+
+    msg = (
+        f"Erwartete Mindestquote {threshold} % ist im Abschnitt nicht angegeben "
+        f"(signifikant={significant})."
+        if is_de
+        else f"Expected minimum share of {threshold}% is not stated in the section "
+        f"(significant={significant})."
+    )
+    return Finding(rule=rule, status="missing", word_count=_count_words(text), issues=(msg,))

@@ -4,30 +4,69 @@
   "whitepaper_type": "art",
   "status": "BLOCKED",
   "summary": {
-    "open_items": 2,
-    "blockers": 2,
-    "review_items": 2,
-    "missing_sections": 0
+    "open_items": 4,
+    "blockers": 4,
+    "review_items": 3,
+    "missing_sections": 1
   },
   "items": [
     {
-      "rule_id": "ANNEX_II.G.COMPOSITION",
-      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 1 MiCAR",
+      "rule_id": "COMMON.IXBRL_TAGGING",
+      "citation": "Art. 2 VO (EU) 2024/2984",
+      "section": "ixbrl_tagging",
+      "label": "Inline XBRL (iXBRL) compliance and ESMA metadata tagging",
+      "severity": "BLOCKER",
+      "status": "missing",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": true,
+      "issues": [
+        "Draft format: notification requires XHTML with Inline XBRL tagging. This format cannot satisfy that requirement; the content checks still apply."
+      ],
+      "next_action": "Add the missing disclosure section and rerun the linter.",
+      "source_anchor": {
+        "section_key": "ixbrl_tagging",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:ixbrl_tagging:6320a902d08da530",
+        "section_length": 0
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.G.COMPOSITION_DISCLOSURE",
+      "citation": "Anhang II Teil G i.V.m. Art. 36 MiCAR",
       "section": "reserve_of_assets",
-      "label": "Reserve composition and investment limits (Art. 36(1) MiCAR / EBA RTS)",
+      "label": "Reserve composition disclosure (Annex II Part G)",
       "severity": "BLOCKER",
       "status": "review",
       "owner_role": "Responsible lawyer",
       "missing_evidence": false,
       "issues": [
-        "Missing review terms: concentration.",
-        "Missing required pattern: '(30\\s*%|thirty\\s*percent)'."
+        "Missing review terms: concentration."
       ],
       "next_action": "Cure the blocker before any notification workflow continues.",
       "source_anchor": {
         "section_key": "reserve_of_assets",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:ee417c234e51d76c",
+        "stable_anchor_id": "json:reserve_of_assets:a25d2fd771629cd6",
+        "section_length": 1115
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
+      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 4 Buchst. d MiCAR",
+      "section": "reserve_of_assets",
+      "label": "Minimum deposit floor for the reserve (Art. 36(4)(d) MiCAR) - requires characterised facts",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "Legal characterisation missing (references_official_currency, art_significant); the applicable minimum share cannot be determined. Human review required."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "reserve_of_assets",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:reserve_of_assets:d01e1e8f51c668a7",
         "section_length": 1115
       }
     },
