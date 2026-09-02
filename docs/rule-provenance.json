@@ -2,10 +2,10 @@
   "schema": "micar-whitepaper-linter.rule-provenance.v1",
   "verified_on": "2026-07-28",
   "coverage": {
-    "ruleset_entries": 47,
-    "mapped_entries": 47,
+    "ruleset_entries": 48,
+    "mapped_entries": 48,
     "unmapped_entries": 0,
-    "unique_rule_ids": 35,
+    "unique_rule_ids": 36,
     "rulesets": 3,
     "official_sources": 2
   },
@@ -91,13 +91,13 @@
     },
     {
       "ruleset": "art",
-      "rule_id": "ANNEX_II.G.COMPOSITION",
-      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 1 MiCAR",
+      "rule_id": "ANNEX_II.G.COMPOSITION_DISCLOSURE",
+      "citation": "Anhang II Teil G i.V.m. Art. 36 MiCAR",
       "section": "reserve_of_assets",
-      "label": "Reserve composition and investment limits (Art. 36(1) MiCAR / EBA RTS)",
+      "label": "Reserve composition disclosure (Annex II Part G)",
       "severity": "BLOCKER",
       "source_id": "EU-2023-1114",
-      "rule_sha256": "df5cbe34d9bd8908c39d0ab73dcf8e9782d4ad0ecf699d8c7bd874541cf4339c"
+      "rule_sha256": "2651d5f2c20ae93ccdd84bfc482549d9a145c16495eb0b8e1cf31bf2318e841f"
     },
     {
       "ruleset": "art",
@@ -108,6 +108,16 @@
       "severity": "BLOCKER",
       "source_id": "EU-2023-1114",
       "rule_sha256": "76f7e128b86f297e331bd80a91732587358fe7f565596127034d4965a62b2426"
+    },
+    {
+      "ruleset": "art",
+      "rule_id": "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
+      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 4 Buchst. d MiCAR",
+      "section": "reserve_of_assets",
+      "label": "Minimum deposit floor for the reserve (Art. 36(4)(d) MiCAR) - requires characterised facts",
+      "severity": "BLOCKER",
+      "source_id": "EU-2023-1114",
+      "rule_sha256": "e2d234feded736690f1c8b83e96efe3d95b84f7399b523f559f53577cf63cd38"
     },
     {
       "ruleset": "art",
@@ -502,5 +512,5 @@
   ],
   "review_gate": "The ledger proves code-to-source-family coverage and rule integrity. A reviewer must still verify the current consolidated legal text and the substantive interpretation before reliance.",
   "external_actions_allowed": false,
-  "overall_digest": "3058d268506366c944f8c4d036e9cfc574590419d554bcc7ca2b906276fd8e39"
+  "overall_digest": "56e7420ff2bca7d9591ed06340cfc44225e56eec4a996b2cfdcea96beaa2a98a"
 }
