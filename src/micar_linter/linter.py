@@ -181,6 +181,19 @@ def _count_words(text: str) -> int:
     return sum(1 for word in text.split() if word.strip())
 
 
+_PERCENTAGE_PATTERN = re.compile(r"(?<![\d.,])(\d{1,3}(?:[.,]\d+)?)\s*%(?!\d)")
+
+
+def _percentage_candidates(text: str) -> tuple[str, ...]:
+    """Return unique percentage strings without interpreting their meaning."""
+    candidates: list[str] = []
+    for match in _PERCENTAGE_PATTERN.finditer(text):
+        candidate = f"{match.group(1)}%"
+        if candidate not in candidates:
+            candidates.append(candidate)
+    return tuple(candidates)
+
+
 def _ixbrl_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     """Format compliance fails closed.
 
@@ -220,16 +233,19 @@ def _ixbrl_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
 def _deposit_floor_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     """The substantive deposit floor is fact-dependent, so it never auto-passes.
 
-    Art. 36(4)(d) MiCAR sets a minimum share of the reserve that must be held as
-    deposits with credit institutions. Which share applies turns on facts the text
-    alone does not establish: whether the token references an official currency and
-    whether it has been classified as significant. Absent those characterisations
-    the rule reports `review` rather than guessing a threshold.
+    Art. 36(4)(d) MiCAR sets the 30 % candidate floor. Art. 45(7)(b) raises
+    the candidate floor to 60 % for significant ARTs and may apply to a
+    non-significant ART where a competent authority requires compliance under
+    Art. 35(4). Draft text and metadata cannot establish legal compliance, so
+    any disclosed percentage remains subject to lawyer review.
     """
     is_de = whitepaper.language == "de"
     metadata = whitepaper.metadata
     significant = metadata.get("art_significant")
     references_currency = metadata.get("references_official_currency")
+    authority_requires_45_7b = metadata.get("article_45_7b_required_by_authority")
+    text = whitepaper.section(rule.section)
+    words = _count_words(text)
 
     unknown: list[str] = []
     if not isinstance(references_currency, bool):
@@ -238,35 +254,81 @@ def _deposit_floor_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
         unknown.append("art_significant")
     if unknown:
         msg = (
-            "Rechtliche Einordnung fehlt (" + ", ".join(unknown) + "); "
-            "die anwendbare Mindestquote kann nicht bestimmt werden. Pruefung durch "
-            "einen Juristen erforderlich."
+            "Entwurfsangabe zur rechtlichen Einordnung fehlt oder ist ungueltig ("
+            + ", ".join(unknown)
+            + "); die anwendbare Mindestquote kann nicht bestimmt werden. Die "
+            "Angabe bleibt bis zur Bestaetigung durch einen Juristen offen."
             if is_de
-            else "Legal characterisation missing (" + ", ".join(unknown) + "); the "
-            "applicable minimum share cannot be determined. Human review required."
+            else "Draft characterisation assertion missing or invalid ("
+            + ", ".join(unknown)
+            + "); the applicable minimum share cannot be determined. The assertion "
+            "remains pending lawyer confirmation."
         )
-        return Finding(rule=rule, status="review", word_count=0, issues=(msg,))
+        return Finding(rule=rule, status="review", word_count=words, issues=(msg,))
 
     if not references_currency:
         msg = (
-            "Charakterisiert als nicht auf eine amtliche Waehrung referenzierend; "
-            "die Mindestquote nach Art. 36 Abs. 4 Buchst. d MiCAR ist zu bestaetigen."
+            "Die Entwurfsangabe lautet, dass der Token nicht auf eine amtliche "
+            "Waehrung referenziert. Anwendbarkeit und rechtliche Einordnung muessen "
+            "durch einen Juristen bestaetigt werden."
             if is_de
-            else "Characterised as not referencing an official currency; the minimum "
-            "share under Art. 36(4)(d) MiCAR must be confirmed by a reviewer."
+            else "The draft asserts that the token does not reference an official "
+            "currency. Applicability and legal characterisation require lawyer "
+            "confirmation."
         )
-        return Finding(rule=rule, status="review", word_count=0, issues=(msg,))
+        return Finding(rule=rule, status="review", word_count=words, issues=(msg,))
 
-    threshold = 60 if significant else 30
-    text = whitepaper.section(rule.section)
-    if re.search(rf"{threshold}\s*%", text):
-        return Finding(rule=rule, status="pass", word_count=_count_words(text), issues=())
+    if significant:
+        threshold = 60
+        basis = "Art. 45 Abs. 7 Buchst. b MiCAR" if is_de else "Art. 45(7)(b) MiCAR"
+    else:
+        if not isinstance(authority_requires_45_7b, bool):
+            msg = (
+                "Die Entwurfsangabe article_45_7b_required_by_authority fehlt oder "
+                "ist ungueltig. Bei einem nicht signifikanten ART ist durch einen "
+                "Juristen zu pruefen, ob die zustaendige Behoerde die Anforderung "
+                "nach Art. 45 Abs. 7 Buchst. b gemaess Art. 35 Abs. 4 MiCAR angeordnet "
+                "hat."
+                if is_de
+                else "Draft characterisation assertion "
+                "article_45_7b_required_by_authority is missing or invalid. For a "
+                "non-significant ART, a lawyer must confirm whether the competent "
+                "authority required compliance with Art. 45(7)(b) under Art. 35(4) "
+                "MiCAR."
+            )
+            return Finding(rule=rule, status="review", word_count=words, issues=(msg,))
+        if authority_requires_45_7b:
+            threshold = 60
+            basis = (
+                "Art. 35 Abs. 4 i.V.m. Art. 45 Abs. 7 Buchst. b MiCAR"
+                if is_de
+                else "Arts. 35(4) and 45(7)(b) MiCAR"
+            )
+        else:
+            threshold = 30
+            basis = "Art. 36 Abs. 4 Buchst. d MiCAR" if is_de else "Art. 36(4)(d) MiCAR"
+
+    candidates = _percentage_candidates(text)
+    if candidates:
+        listed = ", ".join(candidates)
+        msg = (
+            f"Prozentangabe(n) im Entwurf erkannt: {listed}. Die Entwurfsangaben "
+            f"weisen auf eine Mindestquote von {threshold} % ({basis}) hin. Ein Jurist "
+            "muss Anwendbarkeit, Aussagekontext und Erfuellung bestaetigen."
+            if is_de
+            else f"Draft percentage candidate(s) detected: {listed}. The draft "
+            f"characterisation indicates a {threshold}% candidate floor ({basis}). "
+            "A lawyer must confirm applicability, statement context, and compliance."
+        )
+        return Finding(rule=rule, status="review", word_count=words, issues=(msg,))
 
     msg = (
-        f"Erwartete Mindestquote {threshold} % ist im Abschnitt nicht angegeben "
-        f"(signifikant={significant})."
+        f"Keine Prozentangabe zur Einlagenquote erkannt. Die Entwurfsangaben weisen "
+        f"auf eine Mindestquote von {threshold} % ({basis}) hin. Juristische Pruefung "
+        "der Anwendbarkeit bleibt erforderlich."
         if is_de
-        else f"Expected minimum share of {threshold}% is not stated in the section "
-        f"(significant={significant})."
+        else "No deposit-share percentage was detected. The draft characterisation "
+        f"indicates a {threshold}% candidate floor ({basis}). Lawyer confirmation "
+        "of applicability remains required."
     )
-    return Finding(rule=rule, status="missing", word_count=_count_words(text), issues=(msg,))
+    return Finding(rule=rule, status="missing", word_count=words, issues=(msg,))

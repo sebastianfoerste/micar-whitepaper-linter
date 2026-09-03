@@ -46,28 +46,28 @@
       "source_anchor": {
         "section_key": "reserve_of_assets",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:a25d2fd771629cd6",
-        "section_length": 1115
+        "stable_anchor_id": "json:reserve_of_assets:1debbb0bbd6ebf3b",
+        "section_length": 1231
       }
     },
     {
       "rule_id": "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
-      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 4 Buchst. d MiCAR",
+      "citation": "Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d und Art. 45 Abs. 7 Buchst. b MiCAR",
       "section": "reserve_of_assets",
-      "label": "Minimum deposit floor for the reserve (Art. 36(4)(d) MiCAR) - requires characterised facts",
+      "label": "Minimum deposit floor for the reserve (Arts. 35(4), 36(4)(d) and 45(7)(b) MiCAR) - lawyer review required",
       "severity": "BLOCKER",
       "status": "review",
       "owner_role": "Responsible lawyer",
       "missing_evidence": false,
       "issues": [
-        "Legal characterisation missing (references_official_currency, art_significant); the applicable minimum share cannot be determined. Human review required."
+        "Draft percentage candidate(s) detected: 30%. The draft characterisation indicates a 30% candidate floor (Art. 36(4)(d) MiCAR). A lawyer must confirm applicability, statement context, and compliance."
       ],
       "next_action": "Cure the blocker before any notification workflow continues.",
       "source_anchor": {
         "section_key": "reserve_of_assets",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:d01e1e8f51c668a7",
-        "section_length": 1115
+        "stable_anchor_id": "json:reserve_of_assets:bf883585b0801dab",
+        "section_length": 1231
       }
     },
     {
@@ -86,8 +86,8 @@
       "source_anchor": {
         "section_key": "reserve_of_assets",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:96d35787e5627922",
-        "section_length": 1115
+        "stable_anchor_id": "json:reserve_of_assets:547764610b35b011",
+        "section_length": 1231
       }
     }
   ],

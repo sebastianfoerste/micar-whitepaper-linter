@@ -105,13 +105,18 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
     ),
     Rule(
         # Disclosure completeness and substantive reserve compliance are separate
-        # questions. This rule carries the substantive floor and never concludes it
-        # from the text alone: it needs characterised facts about significance and
-        # the referenced currency, which only a reviewer can establish.
+        # questions. This rule surfaces candidate floors for lawyer review and never
+        # concludes compliance from draft-controlled text or metadata.
         rule_id="ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
-        citation="Anhang II Teil G i.V.m. Art. 36 Abs. 4 Buchst. d MiCAR",
+        citation=(
+            "Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 "
+            "Buchst. d und Art. 45 Abs. 7 Buchst. b MiCAR"
+        ),
         section="reserve_of_assets",
-        label="Minimum deposit floor for the reserve (Art. 36(4)(d) MiCAR) - requires characterised facts",
+        label=(
+            "Minimum deposit floor for the reserve (Arts. 35(4), 36(4)(d) "
+            "and 45(7)(b) MiCAR) - lawyer review required"
+        ),
         min_words=0,
         severity=Severity.BLOCKER,
     ),

@@ -36,5 +36,6 @@ uv run --extra dev ruff check src tests
 - **German Language Rules**: Validated in `tests/test_german.py`.
 - **iXBRL XHTML Parsing**: Validated in `tests/test_ixbrl.py`.
 - **Regime Rules**: Validated in `tests/test_rules.py` (verifies checks for Annex I, II, and III).
+- **ART Reserve Floor**: Validated in `tests/test_reserve_rules.py` across draft characterisation combinations, malformed values, percentage formats, misleading contexts and the invariant that the rule never returns `PASS`.
 - **Format Parsers**: Validated in `tests/test_markdown.py` and `tests/test_document.py` (DOCX, Markdown).
 - **Reviewer Artifacts**: Validated in `tests/test_artifact_manifest.py`, `tests/test_remediation.py`, and CLI tests for manifest, remediation, audit-log, and write-failure behavior.

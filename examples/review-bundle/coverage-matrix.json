@@ -1,6 +1,6 @@
 {
   "schema": "micar-whitepaper-linter.coverage-matrix.v1",
-  "generated_at": "2026-09-01T11:52:51.867054+00:00",
+  "generated_at": "2026-09-03T06:19:02.058135+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "summary": {
@@ -222,31 +222,31 @@
       "citation": "Anhang II Teil G i.V.m. Art. 36 MiCAR",
       "severity": "BLOCKER",
       "status": "review",
-      "word_count": 173,
+      "word_count": 192,
       "blocker": true,
       "next_action": "Cure blocker before any notification workflow continues.",
       "source_anchor": {
         "section_key": "reserve_of_assets",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:a25d2fd771629cd6",
-        "section_length": 1115
+        "stable_anchor_id": "json:reserve_of_assets:1debbb0bbd6ebf3b",
+        "section_length": 1231
       }
     },
     {
       "rule_id": "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
       "annex": "ANNEX_II",
       "section": "reserve_of_assets",
-      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 4 Buchst. d MiCAR",
+      "citation": "Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d und Art. 45 Abs. 7 Buchst. b MiCAR",
       "severity": "BLOCKER",
       "status": "review",
-      "word_count": 0,
+      "word_count": 192,
       "blocker": true,
       "next_action": "Cure blocker before any notification workflow continues.",
       "source_anchor": {
         "section_key": "reserve_of_assets",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:d01e1e8f51c668a7",
-        "section_length": 1115
+        "stable_anchor_id": "json:reserve_of_assets:bf883585b0801dab",
+        "section_length": 1231
       }
     },
     {
@@ -256,14 +256,14 @@
       "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR",
       "severity": "BLOCKER",
       "status": "review",
-      "word_count": 173,
+      "word_count": 192,
       "blocker": true,
       "next_action": "Cure blocker before any notification workflow continues.",
       "source_anchor": {
         "section_key": "reserve_of_assets",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:96d35787e5627922",
-        "section_length": 1115
+        "stable_anchor_id": "json:reserve_of_assets:547764610b35b011",
+        "section_length": 1231
       }
     },
     {
@@ -273,14 +273,14 @@
       "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR",
       "severity": "BLOCKER",
       "status": "pass",
-      "word_count": 173,
+      "word_count": 192,
       "blocker": false,
       "next_action": "Keep disclosure under lawyer review before external use.",
       "source_anchor": {
         "section_key": "reserve_of_assets",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:a4d139a663a2d182",
-        "section_length": 1115
+        "stable_anchor_id": "json:reserve_of_assets:5852d30038a35798",
+        "section_length": 1231
       }
     },
     {
@@ -326,5 +326,5 @@
   ],
   "warnings": [],
   "review_notice": "Coverage matrix is a deterministic disclosure checklist. It is not legal advice, a signature, a notification, or filing approval.",
-  "digest": "2704b0f91f4f81a6c7084ebc8a27cd74aa3a19238b24052cf91e239650539575"
+  "digest": "0bd126ba3de284525eb77b61911782333d33e853a2cb1a6359d1122935f2f6ca"
 }

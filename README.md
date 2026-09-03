@@ -85,6 +85,8 @@ MiCAR white-paper requirements can be encoded as deterministic, cited and testab
 
 The tool preserves legal judgment. It flags candidate disclosure gaps and produces draft review artifacts. It does not decide whether a white paper is lawful or complete.
 
+The reserve-floor check extracts percentage candidates and identifies the potentially applicable threshold under Articles 35(4), 36(4)(d) and 45(7)(b) MiCAR from draft characterisation fields. It never returns `PASS`: applicability and any legal conclusion remain subject to lawyer confirmation.
+
 ## Tech stack
 
 Python, Hatchling, uv and pytest.
