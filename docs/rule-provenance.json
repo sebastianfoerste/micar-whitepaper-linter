@@ -112,12 +112,12 @@
     {
       "ruleset": "art",
       "rule_id": "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
-      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 4 Buchst. d MiCAR",
+      "citation": "Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d, Art. 45 Abs. 3 und Art. 45 Abs. 7 Buchst. b MiCAR",
       "section": "reserve_of_assets",
-      "label": "Minimum deposit floor for the reserve (Art. 36(4)(d) MiCAR) - requires characterised facts",
+      "label": "Candidate deposit floor for the reserve (30 % under Art. 36(4)(d); 60 % under Art. 45(7)(b) for significant ARTs, or for non-significant ARTs via Arts. 35(4) and 45(3) MiCAR) - lawyer review required",
       "severity": "BLOCKER",
       "source_id": "EU-2023-1114",
-      "rule_sha256": "e2d234feded736690f1c8b83e96efe3d95b84f7399b523f559f53577cf63cd38"
+      "rule_sha256": "956a882773bc65d5ba0358a79d29687638da9b21955b6287fc623d93dda7ed2b"
     },
     {
       "ruleset": "art",
@@ -512,5 +512,5 @@
   ],
   "review_gate": "The ledger proves code-to-source-family coverage and rule integrity. A reviewer must still verify the current consolidated legal text and the substantive interpretation before reliance.",
   "external_actions_allowed": false,
-  "overall_digest": "56e7420ff2bca7d9591ed06340cfc44225e56eec4a996b2cfdcea96beaa2a98a"
+  "overall_digest": "972a0b8c97c3d6eefac1876cb8ee367c7246521768e3691b9a8c8f9f86d0ac87"
 }
