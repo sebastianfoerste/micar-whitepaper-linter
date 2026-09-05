@@ -3,8 +3,8 @@
 - **Document Title**: Synthetic EuroStable ART White Paper
 - **Regime/Type**: ART
 - **Source File**: examples/art-stablecoin.json
-- **SHA-256 Checksum**: `c520a00ef8829fc4f4f607903c5a66b08b09a469ebe7b949e1e001c2ff881ae3`
-- **Review Timestamp**: 2026-09-01 13:52:51
+- **SHA-256 Checksum**: `85d5a5fbc71f75eef322fa558403e10cb001471e3a11c72d51dcfdf4a0374585`
+- **Review Timestamp**: 2026-09-05 10:56:24
 
 ## Rule Compliance Checklist
 
@@ -23,7 +23,7 @@
 | `ANNEX_II.E` | Anhang II Teil E MiCAR | Information on the underlying technology (DLT, custody architecture, key management) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.F` | Anhang II Teil F MiCAR | Risk factors specific to ARTs (de-pegging, reserve impairment, redemption suspension) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.G.COMPOSITION_DISCLOSURE` | Anhang II Teil G i.V.m. Art. 36 MiCAR | Reserve composition disclosure (Annex II Part G) | BLOCKER | **REVIEW** | [ ] |
-| `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW` | Anhang II Teil G i.V.m. Art. 36 Abs. 4 Buchst. d MiCAR | Minimum deposit floor for the reserve (Art. 36(4)(d) MiCAR) - requires characterised facts | BLOCKER | **REVIEW** | [ ] |
+| `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW` | Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d, Art. 45 Abs. 3 und Art. 45 Abs. 7 Buchst. b MiCAR | Candidate deposit floor for the reserve (30 % under Art. 36(4)(d); 60 % under Art. 45(7)(b) for significant ARTs, or for non-significant ARTs via Arts. 35(4) and 45(3) MiCAR) - lawyer review required | BLOCKER | **REVIEW** | [ ] |
 | `ANNEX_II.G.CUSTODY` | Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR | Custody policy and custodian selection (Art. 36(2) MiCAR) | BLOCKER | **REVIEW** | [ ] |
 | `ANNEX_II.G.VALUATION_AUDIT` | Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR | Valuation procedure and audit frequency (Art. 36(3) MiCAR) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.H` | Anhang II Teil H i.V.m. ESMA RTS on sustainability indicators | Principal adverse environmental and climate-related impact of the consensus mechanism | MAJOR | **PASS** | [x] |

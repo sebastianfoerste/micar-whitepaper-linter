@@ -105,13 +105,22 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
     ),
     Rule(
         # Disclosure completeness and substantive reserve compliance are separate
-        # questions. This rule carries the substantive floor and never concludes it
-        # from the text alone: it needs characterised facts about significance and
-        # the referenced currency, which only a reviewer can establish.
+        # questions. This rule surfaces candidate floors for lawyer review and never
+        # concludes compliance from draft-controlled text or metadata.
+        # Art. 45(7)(b) binds EBA's RTS, not the issuer. A non-significant ART
+        # reaches the 60 % figure only through Art. 35(4) extending Art. 45(3)
+        # (EBA/RTS/2024/10, final report para. 23), so Art. 45(3) is the hinge.
         rule_id="ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
-        citation="Anhang II Teil G i.V.m. Art. 36 Abs. 4 Buchst. d MiCAR",
+        citation=(
+            "Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d, "
+            "Art. 45 Abs. 3 und Art. 45 Abs. 7 Buchst. b MiCAR"
+        ),
         section="reserve_of_assets",
-        label="Minimum deposit floor for the reserve (Art. 36(4)(d) MiCAR) - requires characterised facts",
+        label=(
+            "Candidate deposit floor for the reserve (30 % under Art. 36(4)(d); "
+            "60 % under Art. 45(7)(b) for significant ARTs, or for non-significant "
+            "ARTs via Arts. 35(4) and 45(3) MiCAR) - lawyer review required"
+        ),
         min_words=0,
         severity=Severity.BLOCKER,
     ),

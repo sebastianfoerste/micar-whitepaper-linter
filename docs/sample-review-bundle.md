@@ -79,22 +79,22 @@ Pass: 14  |  Review: 3  |  Missing: 1  |  Blockers: 4
 
 [REVIEW] [BLOCKER] ANNEX_II.G.COMPOSITION_DISCLOSURE  Reserve composition disclosure (Annex II Part G)
            Cite:  Anhang II Teil G i.V.m. Art. 36 MiCAR
-           Section: 'reserve_of_assets'  (173 words)
+           Section: 'reserve_of_assets'  (192 words)
            -  Missing review terms: concentration.
 
-[REVIEW] [BLOCKER] ANNEX_II.G.DEPOSIT_FLOOR_REVIEW  Minimum deposit floor for the reserve (Art. 36(4)(d) MiCAR) - requires characterised facts
-           Cite:  Anhang II Teil G i.V.m. Art. 36 Abs. 4 Buchst. d MiCAR
-           Section: 'reserve_of_assets'  (0 words)
-           -  Legal characterisation missing (references_official_currency, art_significant); the applicable minimum share cannot be determined. Human review required.
+[REVIEW] [BLOCKER] ANNEX_II.G.DEPOSIT_FLOOR_REVIEW  Candidate deposit floor for the reserve (30 % under Art. 36(4)(d); 60 % under Art. 45(7)(b) for significant ARTs, or for non-significant ARTs via Arts. 35(4) and 45(3) MiCAR) - lawyer review required
+           Cite:  Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d, Art. 45 Abs. 3 und Art. 45 Abs. 7 Buchst. b MiCAR
+           Section: 'reserve_of_assets'  (192 words)
+           -  Draft percentage candidate(s) detected: 30%. The draft characterisation indicates a 30% candidate floor (Art. 36(4)(d) MiCAR). A lawyer must confirm applicability, statement context, and compliance.
 
 [REVIEW] [BLOCKER] ANNEX_II.G.CUSTODY  Custody policy and custodian selection (Art. 36(2) MiCAR)
            Cite:  Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR
-           Section: 'reserve_of_assets'  (173 words)
+           Section: 'reserve_of_assets'  (192 words)
            -  Missing review terms: insolvency.
 
 [PASS  ] [BLOCKER] ANNEX_II.G.VALUATION_AUDIT  Valuation procedure and audit frequency (Art. 36(3) MiCAR)
            Cite:  Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR
-           Section: 'reserve_of_assets'  (173 words)
+           Section: 'reserve_of_assets'  (192 words)
 
 [PASS  ] [MAJOR  ] ANNEX_II.H  Principal adverse environmental and climate-related impact of the consensus mechanism
            Cite:  Anhang II Teil H i.V.m. ESMA RTS on sustainability indicators
@@ -127,7 +127,7 @@ The compliance review check was run via the following command:
 ```bash
 make review-bundle
 ```
-All 48 unit tests pass successfully when run via:
+All 146 unit tests pass successfully when run via:
 ```bash
 make test
 ```

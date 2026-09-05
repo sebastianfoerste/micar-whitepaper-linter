@@ -42,3 +42,12 @@ This document details the functional features implemented in the MiCAR Whitepape
   - `src/micar_linter/cli.py`
   - `tests/test_review_table.py`
 - **Status**: Fully Implemented. The output includes review economics, local source coverage, review cells, suggested-edit metadata, review bundle exports, `review-table.md` and blocked filing gates.
+
+## 6. Fail-closed ART reserve-floor review
+
+- **Description**: Extracts bounded percentage candidates from the reserve disclosure and identifies a candidate threshold under Articles 35(4), 36(4)(d), 45(3) and 45(7)(b) MiCAR. The rule always retains lawyer review and has no automatic `PASS` path.
+- **Related Files**:
+  - `src/micar_linter/linter.py`
+  - `src/micar_linter/rules/annex_ii.py`
+  - `tests/test_reserve_rules.py`
+- **Status**: Fully implemented as a fail-closed review gate. Draft reviewer-name and reviewer-date fields are ignored.

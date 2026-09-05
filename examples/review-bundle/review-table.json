@@ -1,11 +1,11 @@
 {
   "schema": "micar-whitepaper-linter.review-table",
-  "generated_at": "2026-09-01T11:52:51.867054+00:00",
+  "generated_at": "2026-09-05T08:56:24.628912+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "source": {
     "path": "examples/art-stablecoin.json",
-    "sha256": "c520a00ef8829fc4f4f607903c5a66b08b09a469ebe7b949e1e001c2ff881ae3"
+    "sha256": "85d5a5fbc71f75eef322fa558403e10cb001471e3a11c72d51dcfdf4a0374585"
   },
   "summary": {
     "total": 18,
@@ -1925,7 +1925,7 @@
       "severity": "BLOCKER",
       "status": "review",
       "blocker": true,
-      "word_count": 173,
+      "word_count": 192,
       "issues": [
         "Missing review terms: concentration."
       ],
@@ -1935,8 +1935,8 @@
       "source_anchor": {
         "section_key": "reserve_of_assets",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:a25d2fd771629cd6",
-        "section_length": 1115
+        "stable_anchor_id": "json:reserve_of_assets:1debbb0bbd6ebf3b",
+        "section_length": 1231
       },
       "anchor_verified": true,
       "citation_coverage": "anchor_and_citation",
@@ -2010,7 +2010,7 @@
         {
           "column_id": "word_count",
           "label": "Word count",
-          "value": "173",
+          "value": "192",
           "status": "needs_review",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2042,7 +2042,7 @@
         {
           "column_id": "source_anchor",
           "label": "Source anchor",
-          "value": "json:reserve_of_assets:a25d2fd771629cd6",
+          "value": "json:reserve_of_assets:1debbb0bbd6ebf3b",
           "status": "needs_review",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2068,15 +2068,15 @@
     {
       "row_id": "review-row-12581d2855048fe8",
       "rule_id": "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
-      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 4 Buchst. d MiCAR",
+      "citation": "Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d, Art. 45 Abs. 3 und Art. 45 Abs. 7 Buchst. b MiCAR",
       "section": "reserve_of_assets",
-      "label": "Minimum deposit floor for the reserve (Art. 36(4)(d) MiCAR) - requires characterised facts",
+      "label": "Candidate deposit floor for the reserve (30 % under Art. 36(4)(d); 60 % under Art. 45(7)(b) for significant ARTs, or for non-significant ARTs via Arts. 35(4) and 45(3) MiCAR) - lawyer review required",
       "severity": "BLOCKER",
       "status": "review",
       "blocker": true,
-      "word_count": 0,
+      "word_count": 192,
       "issues": [
-        "Legal characterisation missing (references_official_currency, art_significant); the applicable minimum share cannot be determined. Human review required."
+        "Draft percentage candidate(s) detected: 30%. The draft characterisation indicates a 30% candidate floor (Art. 36(4)(d) MiCAR). A lawyer must confirm applicability, statement context, and compliance."
       ],
       "remediation": "Cure blocker before any notification workflow continues.",
       "reviewer_decision": "remediation_required",
@@ -2084,8 +2084,8 @@
       "source_anchor": {
         "section_key": "reserve_of_assets",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:d01e1e8f51c668a7",
-        "section_length": 1115
+        "stable_anchor_id": "json:reserve_of_assets:bf883585b0801dab",
+        "section_length": 1231
       },
       "anchor_verified": true,
       "citation_coverage": "anchor_and_citation",
@@ -2096,7 +2096,7 @@
         "rule_scope": [
           "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW"
         ],
-        "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 4 Buchst. d MiCAR",
+        "citation": "Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d, Art. 45 Abs. 3 und Art. 45 Abs. 7 Buchst. b MiCAR",
         "severity": "BLOCKER",
         "review_gate": "Qualified lawyer review required before external use.",
         "priority": "blocker",
@@ -2127,7 +2127,7 @@
         {
           "column_id": "citation",
           "label": "Citation",
-          "value": "Anhang II Teil G i.V.m. Art. 36 Abs. 4 Buchst. d MiCAR",
+          "value": "Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d, Art. 45 Abs. 3 und Art. 45 Abs. 7 Buchst. b MiCAR",
           "status": "needs_review",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2159,7 +2159,7 @@
         {
           "column_id": "word_count",
           "label": "Word count",
-          "value": "0",
+          "value": "192",
           "status": "needs_review",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2191,7 +2191,7 @@
         {
           "column_id": "source_anchor",
           "label": "Source anchor",
-          "value": "json:reserve_of_assets:d01e1e8f51c668a7",
+          "value": "json:reserve_of_assets:bf883585b0801dab",
           "status": "needs_review",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2223,7 +2223,7 @@
       "severity": "BLOCKER",
       "status": "review",
       "blocker": true,
-      "word_count": 173,
+      "word_count": 192,
       "issues": [
         "Missing review terms: insolvency."
       ],
@@ -2233,8 +2233,8 @@
       "source_anchor": {
         "section_key": "reserve_of_assets",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:96d35787e5627922",
-        "section_length": 1115
+        "stable_anchor_id": "json:reserve_of_assets:547764610b35b011",
+        "section_length": 1231
       },
       "anchor_verified": true,
       "citation_coverage": "anchor_and_citation",
@@ -2308,7 +2308,7 @@
         {
           "column_id": "word_count",
           "label": "Word count",
-          "value": "173",
+          "value": "192",
           "status": "needs_review",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2340,7 +2340,7 @@
         {
           "column_id": "source_anchor",
           "label": "Source anchor",
-          "value": "json:reserve_of_assets:96d35787e5627922",
+          "value": "json:reserve_of_assets:547764610b35b011",
           "status": "needs_review",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2372,7 +2372,7 @@
       "severity": "BLOCKER",
       "status": "pass",
       "blocker": false,
-      "word_count": 173,
+      "word_count": 192,
       "issues": [],
       "remediation": "Keep disclosure under lawyer review before external use.",
       "reviewer_decision": "pending_lawyer_confirmation",
@@ -2380,8 +2380,8 @@
       "source_anchor": {
         "section_key": "reserve_of_assets",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:a4d139a663a2d182",
-        "section_length": 1115
+        "stable_anchor_id": "json:reserve_of_assets:5852d30038a35798",
+        "section_length": 1231
       },
       "anchor_verified": true,
       "citation_coverage": "anchor_and_citation",
@@ -2455,7 +2455,7 @@
         {
           "column_id": "word_count",
           "label": "Word count",
-          "value": "173",
+          "value": "192",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2487,7 +2487,7 @@
         {
           "column_id": "source_anchor",
           "label": "Source anchor",
-          "value": "json:reserve_of_assets:a4d139a663a2d182",
+          "value": "json:reserve_of_assets:5852d30038a35798",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2807,5 +2807,5 @@
   ],
   "warnings": [],
   "review_notice": "Review table rows are deterministic linter outputs. Reviewer decisions remain pending until a qualified lawyer signs off.",
-  "digest": "ac54bbfcb9f48f64406d595f6ddd9773e14562789f1ef1d973b06f1ff6893421"
+  "digest": "6d0afbe17e67e35bc5f7aca367bd6cec9546dbf801bbf233e27ea5f0bb31408d"
 }

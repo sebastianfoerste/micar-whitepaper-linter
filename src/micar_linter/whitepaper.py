@@ -67,7 +67,12 @@ def load_whitepaper(path: Path) -> Whitepaper:
     raise SystemExit(f"Unsupported file format '{suffix}'. Expected: .json, .pdf, .docx, .xhtml, .html, .md")
 
 
-_RESERVED_METADATA_KEYS = ("ixbrl_validated", "ixbrl_issues")
+_RESERVED_METADATA_KEYS = (
+    "ixbrl_validated",
+    "ixbrl_issues",
+    "reserve_characterisation_reviewed_by",
+    "reserve_characterisation_reviewed_on",
+)
 
 
 def _load_json(path: Path) -> Whitepaper:

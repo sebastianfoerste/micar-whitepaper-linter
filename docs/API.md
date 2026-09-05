@@ -23,6 +23,18 @@ Supported options:
 
 Input format is detected from the file extension by `load_whitepaper`. JSON, XHTML and DOCX are supported when the required optional parser dependencies are installed.
 
+### Reserve-floor characterisation
+
+For ART JSON drafts, the reserve-floor check reads three nullable, draft-supplied assertions:
+
+- `references_official_currency`
+- `art_significant`
+- `article_45_7b_required_by_authority`
+
+Each value must be a JSON boolean. Missing, null or malformed values produce `REVIEW`. The third assertion is used only for a non-significant ART that references an official currency. A determined candidate threshold with no percentage evidence produces `MISSING`; any extracted percentage produces `REVIEW`. The check never returns `PASS` and never decides whether the draft meets a threshold.
+
+The reserved fields `reserve_characterisation_reviewed_by` and `reserve_characterisation_reviewed_on` are ignored. Draft input cannot supply trusted reviewer identity or approval. Generated reports label all characterisation fields as draft assertions pending lawyer confirmation.
+
 ## Reviewer Artifacts
 
 ```bash
