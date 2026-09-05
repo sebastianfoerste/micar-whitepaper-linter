@@ -1,6 +1,6 @@
 {
   "schema": "micar-whitepaper-linter.coverage-matrix.v1",
-  "generated_at": "2026-09-03T06:19:02.058135+00:00",
+  "generated_at": "2026-09-05T08:56:24.628912+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "summary": {
@@ -236,7 +236,7 @@
       "rule_id": "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
       "annex": "ANNEX_II",
       "section": "reserve_of_assets",
-      "citation": "Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d und Art. 45 Abs. 7 Buchst. b MiCAR",
+      "citation": "Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d, Art. 45 Abs. 3 und Art. 45 Abs. 7 Buchst. b MiCAR",
       "severity": "BLOCKER",
       "status": "review",
       "word_count": 192,
@@ -326,5 +326,5 @@
   ],
   "warnings": [],
   "review_notice": "Coverage matrix is a deterministic disclosure checklist. It is not legal advice, a signature, a notification, or filing approval.",
-  "digest": "0bd126ba3de284525eb77b61911782333d33e853a2cb1a6359d1122935f2f6ca"
+  "digest": "39aaa42847926f5ddbb22e68bd86816a6f30e324e895c69760ce7f86b78b5564"
 }

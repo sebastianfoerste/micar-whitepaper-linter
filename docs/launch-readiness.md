@@ -72,7 +72,7 @@ Use synthetic white paper drafts only. Do not upload confidential issuer drafts,
 
 This is a screening tool supervised by a practising lawyer. It should help reviewers catch recurring structural gaps. It should not certify MiCAR compliance, replace source review or produce final legal advice.
 
-The ART reserve-floor rule is deliberately fail-closed. It extracts percentage candidates and routes applicability under Articles 35(4), 36(4)(d) and 45(7)(b) MiCAR to lawyer review. Draft assertions about currency reference, significance or an authority requirement cannot create an automatic legal `PASS`.
+The ART reserve-floor rule is deliberately fail-closed. It extracts percentage candidates and routes applicability under Articles 35(4), 36(4)(d), 45(3) and 45(7)(b) MiCAR to lawyer review. Draft assertions about currency reference, significance or an authority requirement cannot create an automatic legal `PASS`.
 
 ## Good evaluator route
 

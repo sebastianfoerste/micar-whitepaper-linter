@@ -1,6 +1,6 @@
 {
   "schema": "micar-whitepaper-linter.review-table",
-  "generated_at": "2026-09-03T06:19:02.058135+00:00",
+  "generated_at": "2026-09-05T08:56:24.628912+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "source": {
@@ -2068,9 +2068,9 @@
     {
       "row_id": "review-row-12581d2855048fe8",
       "rule_id": "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
-      "citation": "Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d und Art. 45 Abs. 7 Buchst. b MiCAR",
+      "citation": "Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d, Art. 45 Abs. 3 und Art. 45 Abs. 7 Buchst. b MiCAR",
       "section": "reserve_of_assets",
-      "label": "Minimum deposit floor for the reserve (Arts. 35(4), 36(4)(d) and 45(7)(b) MiCAR) - lawyer review required",
+      "label": "Candidate deposit floor for the reserve (30 % under Art. 36(4)(d); 60 % under Art. 45(7)(b) for significant ARTs, or for non-significant ARTs via Arts. 35(4) and 45(3) MiCAR) - lawyer review required",
       "severity": "BLOCKER",
       "status": "review",
       "blocker": true,
@@ -2096,7 +2096,7 @@
         "rule_scope": [
           "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW"
         ],
-        "citation": "Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d und Art. 45 Abs. 7 Buchst. b MiCAR",
+        "citation": "Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d, Art. 45 Abs. 3 und Art. 45 Abs. 7 Buchst. b MiCAR",
         "severity": "BLOCKER",
         "review_gate": "Qualified lawyer review required before external use.",
         "priority": "blocker",
@@ -2127,7 +2127,7 @@
         {
           "column_id": "citation",
           "label": "Citation",
-          "value": "Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d und Art. 45 Abs. 7 Buchst. b MiCAR",
+          "value": "Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d, Art. 45 Abs. 3 und Art. 45 Abs. 7 Buchst. b MiCAR",
           "status": "needs_review",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2807,5 +2807,5 @@
   ],
   "warnings": [],
   "review_notice": "Review table rows are deterministic linter outputs. Reviewer decisions remain pending until a qualified lawyer signs off.",
-  "digest": "70da46b8bd01b6e9e49ff918632cbea2c5334e0bb0edfd47c9b95a4e5155d2a6"
+  "digest": "6d0afbe17e67e35bc5f7aca367bd6cec9546dbf801bbf233e27ea5f0bb31408d"
 }

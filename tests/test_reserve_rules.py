@@ -1,7 +1,7 @@
 """Reserve disclosure and the substantive deposit floor are separate questions.
 
 Disclosure completeness is checked against Annex II Part G. The minimum deposit
-share under Articles 35(4), 36(4)(d), and 45(7)(b) MiCAR depends on legal facts
+share under Articles 35(4), 36(4)(d), 45(3) and 45(7)(b) MiCAR depends on legal facts
 that draft text and metadata cannot establish. The substantive rule never passes
 automatically.
 """
@@ -132,6 +132,19 @@ def test_malformed_authority_characterisation_yields_review(tmp_path: Path, valu
     assert "article_45_7b_required_by_authority" in finding.issues[0]
 
 
+def test_missing_authority_flag_message_names_the_article_35_4_chain(tmp_path: Path):
+    """Art. 45(7)(b) binds EBA's RTS, so the message must route through Art. 45(3)."""
+    finding = _floor(
+        tmp_path,
+        references_official_currency=True,
+        art_significant=False,
+    )
+    assert finding.status == "review"
+    assert "Art. 35(4)" in finding.issues[0]
+    assert "Art. 45(3)" in finding.issues[0]
+    assert "Art. 45(7)(b)" in finding.issues[0]
+
+
 def test_non_significant_art_uses_thirty_percent_candidate_floor(tmp_path: Path):
     finding = _floor(
         tmp_path,
@@ -156,7 +169,7 @@ def test_authority_required_article_45_uses_sixty_percent_candidate_floor(
     )
     assert finding.status == "review"
     assert "60% candidate floor" in finding.issues[0]
-    assert "Arts. 35(4) and 45(7)(b)" in finding.issues[0]
+    assert "Arts. 35(4), 45(3) and 45(7)(b)" in finding.issues[0]
 
 
 def test_significant_art_identifies_sixty_percent_candidate_floor(tmp_path: Path):
@@ -300,3 +313,14 @@ def test_generated_sample_artifacts_never_mark_floor_as_pass():
     sample_report = (repository / "reports/sample-art-pass.txt").read_text(encoding="utf-8")
     floor_line = next(line for line in sample_report.splitlines() if FLOOR in line)
     assert floor_line.startswith("[REVIEW]")
+
+
+def test_floor_rule_citation_names_every_link_in_the_chain():
+    rule = next(rule for ruleset in RULESETS.values() for rule in ruleset if rule.rule_id == FLOOR)
+    for provision in (
+        "Art. 35 Abs. 4",
+        "Art. 36 Abs. 4 Buchst. d",
+        "Art. 45 Abs. 3",
+        "Art. 45 Abs. 7 Buchst. b",
+    ):
+        assert provision in rule.citation

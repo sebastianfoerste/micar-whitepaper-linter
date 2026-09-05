@@ -35,11 +35,7 @@ class Report:
 
     @property
     def blockers(self) -> tuple[Finding, ...]:
-        return tuple(
-            f
-            for f in self.findings
-            if not f.passed and f.rule.severity is Severity.BLOCKER
-        )
+        return tuple(f for f in self.findings if not f.passed and f.rule.severity is Severity.BLOCKER)
 
     @property
     def is_clean(self) -> bool:
@@ -63,7 +59,7 @@ class Linter:
         if rule.rule_id == "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW":
             return _deposit_floor_finding(rule, whitepaper)
 
-        is_de = (whitepaper.language == "de")
+        is_de = whitepaper.language == "de"
 
         text = whitepaper.section(rule.section)
         word_count = _count_words(text)
@@ -86,24 +82,18 @@ class Linter:
                     f"Abschnitt ist zu kurz: {word_count} Wörter, mindestens {rule.min_words} erwartet."
                 )
             else:
-                issues.append(
-                    f"Section is thin: {word_count} words, expected at least {rule.min_words}."
-                )
+                issues.append(f"Section is thin: {word_count} words, expected at least {rule.min_words}.")
 
         # Bilingual required terms
         req_terms = rule.required_terms_de if (is_de and rule.required_terms_de) else rule.required_terms
-        missing_terms = [
-            term for term in req_terms if term.lower() not in normalized
-        ]
+        missing_terms = [term for term in req_terms if term.lower() not in normalized]
         if missing_terms:
             prefix = "Fehlende Begriffe: " if is_de else "Missing review terms: "
             issues.append(prefix + ", ".join(missing_terms) + ".")
 
         # Bilingual required regex patterns
         req_patterns = (
-            rule.required_patterns_de
-            if (is_de and rule.required_patterns_de)
-            else rule.required_patterns
+            rule.required_patterns_de if (is_de and rule.required_patterns_de) else rule.required_patterns
         )
         for pattern in req_patterns:
             try:
@@ -233,11 +223,14 @@ def _ixbrl_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
 def _deposit_floor_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     """The substantive deposit floor is fact-dependent, so it never auto-passes.
 
-    Art. 36(4)(d) MiCAR sets the 30 % candidate floor. Art. 45(7)(b) raises
-    the candidate floor to 60 % for significant ARTs and may apply to a
-    non-significant ART where a competent authority requires compliance under
-    Art. 35(4). Draft text and metadata cannot establish legal compliance, so
-    any disclosed percentage remains subject to lawyer review.
+    Art. 36(4)(d) MiCAR sets the 30 % candidate floor. Art. 45(7)(b) sets the
+    60 % candidate floor for significant ARTs. Both figures bind EBA's
+    regulatory technical standards, not the issuer directly. A non-significant
+    ART reaches the 60 % figure only where the competent authority extends
+    Art. 45(3) to it under Art. 35(4); Art. 45(7)(b) then specifies the content
+    of that Art. 45(3) policy (EBA/RTS/2024/10, final report para. 23). Draft
+    text and metadata cannot establish legal compliance, so any disclosed
+    percentage remains subject to lawyer review.
     """
     is_de = whitepaper.language == "de"
     metadata = whitepaper.metadata
@@ -286,23 +279,23 @@ def _deposit_floor_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
             msg = (
                 "Die Entwurfsangabe article_45_7b_required_by_authority fehlt oder "
                 "ist ungueltig. Bei einem nicht signifikanten ART ist durch einen "
-                "Juristen zu pruefen, ob die zustaendige Behoerde die Anforderung "
-                "nach Art. 45 Abs. 7 Buchst. b gemaess Art. 35 Abs. 4 MiCAR angeordnet "
-                "hat."
+                "Juristen zu pruefen, ob die zustaendige Behoerde nach Art. 35 Abs. 4 "
+                "MiCAR die Einhaltung von Art. 45 Abs. 3 angeordnet hat; erst dann "
+                "greift die Mindestquote nach Art. 45 Abs. 7 Buchst. b."
                 if is_de
                 else "Draft characterisation assertion "
                 "article_45_7b_required_by_authority is missing or invalid. For a "
                 "non-significant ART, a lawyer must confirm whether the competent "
-                "authority required compliance with Art. 45(7)(b) under Art. 35(4) "
-                "MiCAR."
+                "authority has extended Art. 45(3) to the issuer under Art. 35(4) "
+                "MiCAR; only then does the Art. 45(7)(b) floor apply."
             )
             return Finding(rule=rule, status="review", word_count=words, issues=(msg,))
         if authority_requires_45_7b:
             threshold = 60
             basis = (
-                "Art. 35 Abs. 4 i.V.m. Art. 45 Abs. 7 Buchst. b MiCAR"
+                "Art. 35 Abs. 4 i.V.m. Art. 45 Abs. 3 und Abs. 7 Buchst. b MiCAR"
                 if is_de
-                else "Arts. 35(4) and 45(7)(b) MiCAR"
+                else "Arts. 35(4), 45(3) and 45(7)(b) MiCAR"
             )
         else:
             threshold = 30

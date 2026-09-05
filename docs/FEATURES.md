@@ -45,7 +45,7 @@ This document details the functional features implemented in the MiCAR Whitepape
 
 ## 6. Fail-closed ART reserve-floor review
 
-- **Description**: Extracts bounded percentage candidates from the reserve disclosure and identifies a candidate threshold under Articles 35(4), 36(4)(d) and 45(7)(b) MiCAR. The rule always retains lawyer review and has no automatic `PASS` path.
+- **Description**: Extracts bounded percentage candidates from the reserve disclosure and identifies a candidate threshold under Articles 35(4), 36(4)(d), 45(3) and 45(7)(b) MiCAR. The rule always retains lawyer review and has no automatic `PASS` path.
 - **Related Files**:
   - `src/micar_linter/linter.py`
   - `src/micar_linter/rules/annex_ii.py`
