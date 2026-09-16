@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "micar-whitepaper-linter"
-version = "0.1.0"
+version = "0.2.0"
 description = "Deterministic first-pass linter for MiCAR crypto-asset white paper drafts."
 readme = "README.md"
 license = { file = "LICENSE" }

@@ -116,7 +116,7 @@ import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v0.28.2/full/pyodi
 const pyodide = await loadPyodide();
 $("status").textContent = "Installing linter…";
 await pyodide.loadPackage("micropip");
-const wheelUrl = new URL("micar_whitepaper_linter-0.1.0-py3-none-any.whl", location.href).href;
+const wheelUrl = new URL("micar_whitepaper_linter-0.2.0-py3-none-any.whl", location.href).href;
 await pyodide.runPythonAsync(`
 import micropip
 await micropip.install("${wheelUrl}")
