@@ -2,6 +2,12 @@
 
 The testing suite verifies rules logic, document parsers, and CLI options.
 
+The full `make check` gate also requires Node.js 22 or later for the browser's dependency-free JavaScript tests. Run `make playground-check` for those checks alone. The Python bridge tests compare browser JSON/text payloads with CLI output for all bundled examples, retain the review gates, and verify draft cleanup after failure.
+
+The playground examples are generated from `examples/`. After changing a canonical example, run `make playground-samples`; the Python suite rejects stale bundled examples. The prebuilt Python wheel has a separate source-parity test.
+
+For browser checks, serve `docs/` over HTTP and open `/playground/`. Exercise each example, search and status filters, section navigation, malformed JSON, edits during/after a run, import and export, and runtime failure/retry. Check both the two-column desktop view and the stacked mobile view. Use synthetic data only.
+
 ---
 
 ## Testing Tools
