@@ -1,8 +1,8 @@
 UV ?= uv
 
-.PHONY: check install demo lint test smoke review-bundle rule-proof rule-proof-check rule-impact
+.PHONY: check install demo lint test smoke review-bundle playground-check playground-samples rule-proof rule-proof-check rule-impact
 
-check: lint test smoke review-bundle rule-proof-check
+check: lint test smoke review-bundle playground-check rule-proof-check
 
 install:
 	$(UV) sync --extra dev
@@ -22,6 +22,14 @@ smoke:
 review-bundle:
 	$(UV) run --extra dev python -m micar_linter examples/art-stablecoin.json \
 		--review-bundle-dir dist/review-bundle
+
+playground-check:
+	node --check docs/playground/app.mjs
+	node --check docs/playground/runtime.mjs
+	node --test tests/playground/*.test.mjs
+
+playground-samples:
+	$(UV) run python scripts/build_playground_samples.py
 
 rule-proof:
 	$(UV) run --extra dev micar-rule-proof --output docs/rule-provenance.json

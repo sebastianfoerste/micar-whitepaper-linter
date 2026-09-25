@@ -1,6 +1,6 @@
 """MiCAR Whitepaper Linter - deterministic first-pass screening for MiCAR white papers."""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 from micar_linter.linter import Linter, lint_whitepaper
 from micar_linter.rules.base import Finding, Rule, Severity

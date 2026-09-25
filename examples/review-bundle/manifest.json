@@ -22,7 +22,7 @@
   "outputs": [
     {
       "path": "dist/review-bundle/compliance-checklist.md",
-      "sha256": "e8fe49e42674b7a4194990d80136dd53fa5b752557a37c3d39c6117702d80b9f",
+      "sha256": "cb7ae87bfefdfd404fe30f1cb3ef591e27884416fb75c57332b71cbbceb3194f",
       "role": "compliance_checklist"
     },
     {
@@ -32,17 +32,17 @@
     },
     {
       "path": "dist/review-bundle/coverage-matrix.json",
-      "sha256": "2d2e934ddca8c05bd710e98b61fff3f6334cc9efa2f8ffd49ce1ed63764fbed6",
+      "sha256": "07598e421f8948d392ece82f35bff471c6a36e8c20aa4aa3d5f3bb0cb892e2a1",
       "role": "coverage_matrix"
     },
     {
       "path": "dist/review-bundle/review-table.json",
-      "sha256": "689d7d673841a8dc936927e1a51e19f26ad5feb50c8294cce9d7d091e584991c",
+      "sha256": "e2702afa800e0befce15ecb5a9b89e3eb37c0457dbe5b88479ebf94a0b64b35a",
       "role": "review_table_json"
     },
     {
       "path": "dist/review-bundle/review-table.md",
-      "sha256": "8075881860769c278696747eb59357b33d0748399c8f9923d50585e8dadf781e",
+      "sha256": "9666c277834069b6e96f74f1ce7390e88c057c192f4ffc96e030bb07eda0ab6d",
       "role": "review_table_markdown"
     },
     {
@@ -64,6 +64,6 @@
     "notice": "Automated linter output requires substantive lawyer review before external use."
   },
   "review_notice": "Manifest proves local artifact integrity only. It is not a legal opinion, signature, notification, or filing approval.",
-  "overall_digest": "abadbe3e824b5cca86f36a860cac2d98589efef32a65eb14ce6b347ea4e51f60",
+  "overall_digest": "bc44b403eaf762d8a5980d82221f1eab11392f8f939f173bc44b341c9b47bef2",
   "bundle_schema": "micar-whitepaper-linter.review-bundle.v1"
 }

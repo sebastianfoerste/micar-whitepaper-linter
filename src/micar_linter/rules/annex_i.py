@@ -2,11 +2,15 @@
 
 Reference: Anhang I VO (EU) 2023/1114 i.V.m. Art. 6 MiCAR.
 
-Annex I is structured as Parts A through J. Each Part bundles point-level
+Annex I is structured as Parts A through I. Each Part bundles point-level
 disclosure requirements. The rules below are scaffolded at the Part level;
 point-level granularity (e.g. Annex I, Part D, point 5) is left as a
 deliberate extension point - those interpretive calls are the practising
 lawyer's contribution and are tracked in the project issues.
+
+ANNEX_I.J covers the sustainability disclosure under Art. 6(1), first
+subparagraph, point (j) MiCAR, which the template in Implementing Regulation
+(EU) 2024/2984 places in Part J.
 """
 
 from __future__ import annotations
@@ -105,7 +109,10 @@ ANNEX_I_RULES: tuple[Rule, ...] = (
     ),
     Rule(
         rule_id="ANNEX_I.J",
-        citation="Anhang I Teil J MiCAR i.V.m. ESMA RTS on sustainability indicators",
+        citation=(
+            "Art. 6 Abs. 1 UAbs. 1 Buchst. j MiCAR i.V.m. Art. 4 VO (EU) 2025/422; "
+            "Anhang Tabelle 2 Teil J VO (EU) 2024/2984"
+        ),
         section="environmental_impact",
         label="Principal adverse environmental and climate-related impact of the consensus mechanism",
         required_terms=("consensus", "energy", "climate", "environmental"),

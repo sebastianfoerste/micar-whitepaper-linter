@@ -4,23 +4,23 @@ Whitepaper type: ART
 Pass: 14  |  Review: 3  |  Missing: 1  |  Blockers: 4
 
 [PASS  ] [BLOCKER] COMMON.SUMMARY  Plain-language summary
-           Cite:  Art. 6 Abs. 7, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR
+           Cite:  Art. 6 Abs. 7, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR
            Section: 'summary'  (85 words)
 
 [PASS  ] [BLOCKER] COMMON.RISK_WARNING  Mandatory risk warning statement
-           Cite:  Art. 6 Abs. 5, Art. 19 Abs. 5, Art. 51 Abs. 5 MiCAR
+           Cite:  Art. 6 Abs. 5, Art. 19 Abs. 4, Art. 51 Abs. 4 MiCAR
            Section: 'risk_warning'  (73 words)
 
 [PASS  ] [BLOCKER] COMMON.MANAGEMENT_STATEMENT  Statement by the management body on completeness, fairness, and clarity
-           Cite:  Art. 6 Abs. 6, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR
+           Cite:  Art. 6 Abs. 6, Art. 19 Abs. 5, Art. 51 Abs. 5 MiCAR
            Section: 'management_statement'  (60 words)
 
 [PASS  ] [MAJOR  ] COMMON.NOTIFICATION_DATE  Date of notification to the competent authority
-           Cite:  Art. 8 Abs. 1, Art. 17, Art. 49 MiCAR
+           Cite:  Art. 6 Abs. 8, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR
            Section: 'notification_date'  (9 words)
 
 [PASS  ] [MAJOR  ] COMMON.LANGUAGE  Language of the white paper (home Member State official language or customary in international finance)
-           Cite:  Art. 6 Abs. 12, Art. 19 Abs. 11, Art. 51 Abs. 10 MiCAR
+           Cite:  Art. 6 Abs. 9, Art. 19 Abs. 8, Art. 51 Abs. 8 MiCAR
            Section: 'language'  (28 words)
 
 [MISS  ] [BLOCKER] COMMON.IXBRL_TAGGING  Inline XBRL (iXBRL) compliance and ESMA metadata tagging
@@ -72,13 +72,13 @@ Pass: 14  |  Review: 3  |  Missing: 1  |  Blockers: 4
            Section: 'reserve_of_assets'  (192 words)
 
 [PASS  ] [MAJOR  ] ANNEX_II.H  Principal adverse environmental and climate-related impact of the consensus mechanism
-           Cite:  Anhang II Teil H i.V.m. ESMA RTS on sustainability indicators
+           Cite:  Art. 19 Abs. 1 UAbs. 1 Buchst. h MiCAR i.V.m. Art. 4 VO (EU) 2025/422; Anhang Tabelle 3 Teil H VO (EU) 2024/2984
            Section: 'environmental_impact'  (104 words)
 
 [PASS  ] [BLOCKER] ANNEX_II.I  Redemption rights and procedure (timing, fees, suspension conditions)
-           Cite:  Anhang II Teil I i.V.m. Art. 39 MiCAR
+           Cite:  Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 MiCAR
            Section: 'redemption'  (125 words)
 
 ==============================================================================
-First-pass screening only. The draft is not package-ready. The MiCAR notification under Art. 8 / 17 / 49 MiCAR should not enter an external review or filing workflow until BLOCKER items are cured and a lawyer has signed off.
+First-pass screening only. The draft is not package-ready. The white paper notification or submission for approval (Art. 8 Abs. 1, Art. 16 Abs. 2 UAbs. 2, Art. 17 Abs. 1 Buchst. a, Art. 18 Abs. 2 Buchst. k, Art. 51 Abs. 11 MiCAR) should not enter an external review or filing workflow until BLOCKER items are cured and a lawyer has signed off.
 This tool is not legal advice.

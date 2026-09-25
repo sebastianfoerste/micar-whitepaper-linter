@@ -153,7 +153,7 @@
     {
       "row_id": "review-row-d5888dc07121542f",
       "rule_id": "COMMON.SUMMARY",
-      "citation": "Art. 6 Abs. 7, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR",
+      "citation": "Art. 6 Abs. 7, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR",
       "section": "summary",
       "label": "Plain-language summary",
       "severity": "BLOCKER",
@@ -179,7 +179,7 @@
         "rule_scope": [
           "COMMON.SUMMARY"
         ],
-        "citation": "Art. 6 Abs. 7, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR",
+        "citation": "Art. 6 Abs. 7, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR",
         "severity": "BLOCKER",
         "review_gate": "Qualified lawyer review required before external use.",
         "priority": "standard_review",
@@ -210,7 +210,7 @@
         {
           "column_id": "citation",
           "label": "Citation",
-          "value": "Art. 6 Abs. 7, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR",
+          "value": "Art. 6 Abs. 7, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -300,7 +300,7 @@
     {
       "row_id": "review-row-eddb098c430fd350",
       "rule_id": "COMMON.RISK_WARNING",
-      "citation": "Art. 6 Abs. 5, Art. 19 Abs. 5, Art. 51 Abs. 5 MiCAR",
+      "citation": "Art. 6 Abs. 5, Art. 19 Abs. 4, Art. 51 Abs. 4 MiCAR",
       "section": "risk_warning",
       "label": "Mandatory risk warning statement",
       "severity": "BLOCKER",
@@ -326,7 +326,7 @@
         "rule_scope": [
           "COMMON.RISK_WARNING"
         ],
-        "citation": "Art. 6 Abs. 5, Art. 19 Abs. 5, Art. 51 Abs. 5 MiCAR",
+        "citation": "Art. 6 Abs. 5, Art. 19 Abs. 4, Art. 51 Abs. 4 MiCAR",
         "severity": "BLOCKER",
         "review_gate": "Qualified lawyer review required before external use.",
         "priority": "standard_review",
@@ -357,7 +357,7 @@
         {
           "column_id": "citation",
           "label": "Citation",
-          "value": "Art. 6 Abs. 5, Art. 19 Abs. 5, Art. 51 Abs. 5 MiCAR",
+          "value": "Art. 6 Abs. 5, Art. 19 Abs. 4, Art. 51 Abs. 4 MiCAR",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -447,7 +447,7 @@
     {
       "row_id": "review-row-a72638cf8d3bf1ec",
       "rule_id": "COMMON.MANAGEMENT_STATEMENT",
-      "citation": "Art. 6 Abs. 6, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR",
+      "citation": "Art. 6 Abs. 6, Art. 19 Abs. 5, Art. 51 Abs. 5 MiCAR",
       "section": "management_statement",
       "label": "Statement by the management body on completeness, fairness, and clarity",
       "severity": "BLOCKER",
@@ -473,7 +473,7 @@
         "rule_scope": [
           "COMMON.MANAGEMENT_STATEMENT"
         ],
-        "citation": "Art. 6 Abs. 6, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR",
+        "citation": "Art. 6 Abs. 6, Art. 19 Abs. 5, Art. 51 Abs. 5 MiCAR",
         "severity": "BLOCKER",
         "review_gate": "Qualified lawyer review required before external use.",
         "priority": "standard_review",
@@ -504,7 +504,7 @@
         {
           "column_id": "citation",
           "label": "Citation",
-          "value": "Art. 6 Abs. 6, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR",
+          "value": "Art. 6 Abs. 6, Art. 19 Abs. 5, Art. 51 Abs. 5 MiCAR",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -594,7 +594,7 @@
     {
       "row_id": "review-row-ef8f2e5369cd39ba",
       "rule_id": "COMMON.NOTIFICATION_DATE",
-      "citation": "Art. 8 Abs. 1, Art. 17, Art. 49 MiCAR",
+      "citation": "Art. 6 Abs. 8, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR",
       "section": "notification_date",
       "label": "Date of notification to the competent authority",
       "severity": "MAJOR",
@@ -620,7 +620,7 @@
         "rule_scope": [
           "COMMON.NOTIFICATION_DATE"
         ],
-        "citation": "Art. 8 Abs. 1, Art. 17, Art. 49 MiCAR",
+        "citation": "Art. 6 Abs. 8, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR",
         "severity": "MAJOR",
         "review_gate": "Qualified lawyer review required before external use.",
         "priority": "standard_review",
@@ -651,7 +651,7 @@
         {
           "column_id": "citation",
           "label": "Citation",
-          "value": "Art. 8 Abs. 1, Art. 17, Art. 49 MiCAR",
+          "value": "Art. 6 Abs. 8, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -741,7 +741,7 @@
     {
       "row_id": "review-row-72f99650de663618",
       "rule_id": "COMMON.LANGUAGE",
-      "citation": "Art. 6 Abs. 12, Art. 19 Abs. 11, Art. 51 Abs. 10 MiCAR",
+      "citation": "Art. 6 Abs. 9, Art. 19 Abs. 8, Art. 51 Abs. 8 MiCAR",
       "section": "language",
       "label": "Language of the white paper (home Member State official language or customary in international finance)",
       "severity": "MAJOR",
@@ -767,7 +767,7 @@
         "rule_scope": [
           "COMMON.LANGUAGE"
         ],
-        "citation": "Art. 6 Abs. 12, Art. 19 Abs. 11, Art. 51 Abs. 10 MiCAR",
+        "citation": "Art. 6 Abs. 9, Art. 19 Abs. 8, Art. 51 Abs. 8 MiCAR",
         "severity": "MAJOR",
         "review_gate": "Qualified lawyer review required before external use.",
         "priority": "standard_review",
@@ -798,7 +798,7 @@
         {
           "column_id": "citation",
           "label": "Citation",
-          "value": "Art. 6 Abs. 12, Art. 19 Abs. 11, Art. 51 Abs. 10 MiCAR",
+          "value": "Art. 6 Abs. 9, Art. 19 Abs. 8, Art. 51 Abs. 8 MiCAR",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2513,7 +2513,7 @@
     {
       "row_id": "review-row-8bde41bd3e9d6789",
       "rule_id": "ANNEX_II.H",
-      "citation": "Anhang II Teil H i.V.m. ESMA RTS on sustainability indicators",
+      "citation": "Art. 19 Abs. 1 UAbs. 1 Buchst. h MiCAR i.V.m. Art. 4 VO (EU) 2025/422; Anhang Tabelle 3 Teil H VO (EU) 2024/2984",
       "section": "environmental_impact",
       "label": "Principal adverse environmental and climate-related impact of the consensus mechanism",
       "severity": "MAJOR",
@@ -2539,7 +2539,7 @@
         "rule_scope": [
           "ANNEX_II.H"
         ],
-        "citation": "Anhang II Teil H i.V.m. ESMA RTS on sustainability indicators",
+        "citation": "Art. 19 Abs. 1 UAbs. 1 Buchst. h MiCAR i.V.m. Art. 4 VO (EU) 2025/422; Anhang Tabelle 3 Teil H VO (EU) 2024/2984",
         "severity": "MAJOR",
         "review_gate": "Qualified lawyer review required before external use.",
         "priority": "standard_review",
@@ -2570,7 +2570,7 @@
         {
           "column_id": "citation",
           "label": "Citation",
-          "value": "Anhang II Teil H i.V.m. ESMA RTS on sustainability indicators",
+          "value": "Art. 19 Abs. 1 UAbs. 1 Buchst. h MiCAR i.V.m. Art. 4 VO (EU) 2025/422; Anhang Tabelle 3 Teil H VO (EU) 2024/2984",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2660,7 +2660,7 @@
     {
       "row_id": "review-row-e6a3acc23127fe1c",
       "rule_id": "ANNEX_II.I",
-      "citation": "Anhang II Teil I i.V.m. Art. 39 MiCAR",
+      "citation": "Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 MiCAR",
       "section": "redemption",
       "label": "Redemption rights and procedure (timing, fees, suspension conditions)",
       "severity": "BLOCKER",
@@ -2686,7 +2686,7 @@
         "rule_scope": [
           "ANNEX_II.I"
         ],
-        "citation": "Anhang II Teil I i.V.m. Art. 39 MiCAR",
+        "citation": "Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 MiCAR",
         "severity": "BLOCKER",
         "review_gate": "Qualified lawyer review required before external use.",
         "priority": "standard_review",
@@ -2717,7 +2717,7 @@
         {
           "column_id": "citation",
           "label": "Citation",
-          "value": "Anhang II Teil I i.V.m. Art. 39 MiCAR",
+          "value": "Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 MiCAR",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2807,5 +2807,5 @@
   ],
   "warnings": [],
   "review_notice": "Review table rows are deterministic linter outputs. Reviewer decisions remain pending until a qualified lawyer signs off.",
-  "digest": "6d0afbe17e67e35bc5f7aca367bd6cec9546dbf801bbf233e27ea5f0bb31408d"
+  "digest": "1f7ffd09901647463f6c9f7373846d116778c31d143c5af44926de15b6e3f288"
 }

@@ -19,7 +19,7 @@
 <text x="97.6" y="198" fill="#d29922" font-size="14" xml:space="preserve">[BLOCKER] </text>
 <text x="181.6" y="198" fill="#f0f6fc" font-size="14" font-weight="700" xml:space="preserve">COMMON.RISK_WARNING</text>
 <text x="22.0" y="220" fill="#8b949e" font-size="14" xml:space="preserve">   cite: </text>
-<text x="97.6" y="220" fill="#58a6ff" font-size="14" xml:space="preserve">Art. 6 Abs. 5, Art. 19 Abs. 5, Art. 51 Abs. 5 MiCAR</text>
+<text x="97.6" y="220" fill="#58a6ff" font-size="14" xml:space="preserve">Art. 6 Abs. 5, Art. 19 Abs. 4, Art. 51 Abs. 4 MiCAR</text>
 <text x="22.0" y="242" fill="#8b949e" font-size="14" xml:space="preserve">   section 'risk_warning' (0 words) — empty or absent</text>
 <text x="22.0" y="264" fill="#c9d1d9" font-size="14" xml:space="preserve"></text>
 <text x="22.0" y="286" fill="#d29922" font-size="14" xml:space="preserve">[REVIEW] </text>
@@ -28,5 +28,5 @@
 <text x="22.0" y="308" fill="#8b949e" font-size="14" xml:space="preserve">   cite: </text>
 <text x="97.6" y="308" fill="#58a6ff" font-size="14" xml:space="preserve">Anhang II Teil A MiCAR</text>
 <text x="22.0" y="330" fill="#c9d1d9" font-size="14" xml:space="preserve"></text>
-<text x="22.0" y="352" fill="#8b949e" font-size="14" xml:space="preserve">13 blockers must clear before the Art. 8 notification.</text>
+<text x="22.0" y="352" fill="#8b949e" font-size="14" xml:space="preserve">13 blockers must clear before notification or approval.</text>
 </svg>

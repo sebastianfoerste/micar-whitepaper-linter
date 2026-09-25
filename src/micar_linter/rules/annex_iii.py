@@ -4,7 +4,7 @@ Reference: Anhang III VO (EU) 2023/1114 i.V.m. Art. 51 MiCAR.
 
 EMT issuance is reserved for credit institutions or authorised e-money
 institutions (Art. 48(1) MiCAR). The white paper must describe the e-money
-licensing chain, the par-value redemption right (Art. 49(3) MiCAR), and the
+licensing chain, the par-value redemption right (Art. 49(4) MiCAR), and the
 safeguarding arrangements under the EMD2 regime (referenced via Art. 54
 MiCAR).
 
@@ -61,7 +61,7 @@ ANNEX_III_RULES: tuple[Rule, ...] = (
     ),
     Rule(
         rule_id="ANNEX_III.D",
-        citation="Anhang III Teil D i.V.m. Art. 49 Abs. 3 MiCAR",
+        citation="Anhang III Teil D i.V.m. Art. 49 Abs. 4, Art. 50 Abs. 1 MiCAR",
         section="rights_and_obligations",
         label="Rights and obligations of holders (redemption at par value, no interest)",
         required_terms=("rights", "redemption", "at par", "no interest", "holder"),
@@ -105,7 +105,10 @@ ANNEX_III_RULES: tuple[Rule, ...] = (
     ),
     Rule(
         rule_id="ANNEX_III.G",
-        citation="Anhang III Teil G i.V.m. ESMA RTS on sustainability indicators",
+        citation=(
+            "Art. 51 Abs. 1 Buchst. g MiCAR i.V.m. Art. 4 VO (EU) 2025/422; "
+            "Anhang Tabelle 4 Teil G VO (EU) 2024/2984"
+        ),
         section="environmental_impact",
         label="Principal adverse environmental and climate-related impact of the consensus mechanism",
         required_terms=("consensus", "energy", "climate", "environmental"),
