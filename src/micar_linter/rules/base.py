@@ -10,9 +10,10 @@ class Severity(IntEnum):
     """Three-tier severity tied to the consequence under MiCAR.
 
     BLOCKER: required disclosure is absent. The white paper cannot be notified
-             under Art. 8 / Art. 17 / Art. 49 MiCAR until this is cured.
+             or submitted for approval (Art. 8(1), 16(2) second subpara.,
+             17(1)(a), 18(2)(k), 51(11) MiCAR) until this is cured.
     MAJOR:   required disclosure is present but materially incomplete or
-             likely to mislead under Art. 6(1) / 19(1) / 51(1) MiCAR.
+             likely to mislead under Art. 6(2) / 19(2) / 51(2) MiCAR.
     MINOR:   drafting gap that should be cured before publication but does
              not gate notification.
     """

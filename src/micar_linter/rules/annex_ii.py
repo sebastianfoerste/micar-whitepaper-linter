@@ -146,7 +146,10 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
     ),
     Rule(
         rule_id="ANNEX_II.H",
-        citation="Anhang II Teil H i.V.m. ESMA RTS on sustainability indicators",
+        citation=(
+            "Art. 19 Abs. 1 UAbs. 1 Buchst. h MiCAR i.V.m. Art. 4 VO (EU) 2025/422; "
+            "Anhang Tabelle 3 Teil H VO (EU) 2024/2984"
+        ),
         section="environmental_impact",
         label="Principal adverse environmental and climate-related impact of the consensus mechanism",
         required_terms=("consensus", "energy", "climate", "environmental"),
@@ -156,7 +159,7 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
     ),
     Rule(
         rule_id="ANNEX_II.I",
-        citation="Anhang II Teil I i.V.m. Art. 39 MiCAR",
+        citation="Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 MiCAR",
         section="redemption",
         label="Redemption rights and procedure (timing, fees, suspension conditions)",
         required_terms=("redemption", "at par", "procedure", "timing", "fees", "suspension"),
