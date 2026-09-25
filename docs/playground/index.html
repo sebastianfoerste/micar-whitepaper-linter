@@ -3,144 +3,77 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Check a MiCAR crypto-asset white paper draft against Annex I in your browser. Deterministic rules, pinpoint citations, nothing you paste leaves the page. Not legal advice.">
+<meta name="description" content="Check a MiCAR crypto-asset white paper draft with cited Annex checks in your browser. Deterministic rules, pinpoint citations, nothing you paste leaves the page. Not legal advice.">
 <link rel="canonical" href="https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="micar-whitepaper-linter">
 <meta property="og:url" content="https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/">
 <meta property="og:title" content="MiCAR Whitepaper Linter: run it in your browser">
-<meta property="og:description" content="Check a MiCAR crypto-asset white paper draft against Annex I in your browser. Deterministic rules, pinpoint citations, nothing you paste leaves the page. Not legal advice.">
+<meta property="og:description" content="Check a MiCAR crypto-asset white paper draft with cited Annex checks in your browser. Deterministic rules, pinpoint citations, nothing you paste leaves the page. Not legal advice.">
 <meta property="og:image" content="https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Terminal output showing pass, review and missing findings with pinpoint MiCAR citations.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="MiCAR Whitepaper Linter: run it in your browser">
-<meta name="twitter:description" content="Check a MiCAR crypto-asset white paper draft against Annex I in your browser. Deterministic rules, pinpoint citations, nothing you paste leaves the page. Not legal advice.">
+<meta name="twitter:description" content="Check a MiCAR crypto-asset white paper draft with cited Annex checks in your browser. Deterministic rules, pinpoint citations, nothing you paste leaves the page. Not legal advice.">
 <meta name="twitter:image" content="https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/og.png">
 <title>MiCAR Whitepaper Linter: Playground</title>
-<style>
-  :root { color-scheme: dark; }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: #0d1117; color: #e6edf3; font: 15px/1.5 -apple-system, "Segoe UI", sans-serif; }
-  header { padding: 24px 28px 8px; }
-  h1 { font-size: 20px; margin: 0 0 4px; }
-  header p { color: #8b949e; margin: 0; font-size: 14px; }
-  header a { color: #79c0ff; text-decoration: none; }
-  .bar { display: flex; gap: 10px; align-items: center; padding: 14px 28px; flex-wrap: wrap; }
-  button { background: #21262d; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; padding: 7px 16px; font-size: 14px; cursor: pointer; }
-  button:hover { background: #30363d; }
-  button.primary { background: #238636; border-color: #2ea043; font-weight: 600; }
-  button.primary:disabled { background: #21262d; color: #8b949e; cursor: wait; }
-  #status { color: #8b949e; font-size: 13px; }
-  main { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 0 28px 28px; }
-  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
-  textarea, #out { width: 100%; height: 65vh; background: #010409; border: 1px solid #30363d; border-radius: 8px; padding: 14px; font: 12.5px/1.6 "SF Mono", Menlo, Consolas, monospace; color: #e6edf3; }
-  textarea { resize: vertical; }
-  #out { overflow: auto; white-space: pre-wrap; margin: 0; }
-  .pass { color: #3fb950; } .review { color: #d29922; } .miss { color: #f85149; } .cite { color: #79c0ff; } .dim { color: #8b949e; }
-  footer { padding: 0 28px 24px; color: #8b949e; font-size: 12.5px; }
-</style>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<header>
-  <h1>MiCAR Whitepaper Linter: Playground</h1>
-  <p>Deterministic Annex checks with pinpoint MiCAR citations, running entirely in your browser via Pyodide. Nothing you paste leaves this page.
-     Repo: <a href="https://github.com/sebastianfoerste/micar-whitepaper-linter">sebastianfoerste/micar-whitepaper-linter</a></p>
+<a class="skip-link" href="#workspace">Skip to draft</a>
+<header class="site-header">
+  <a class="brand" href="./" aria-label="MiCAR Whitepaper Linter home"><span class="brand-mark" aria-hidden="true">M<span>✓</span></span><span>MiCAR <strong>Whitepaper Linter</strong></span></a>
+  <nav aria-label="Resources"><span class="local-badge"><span aria-hidden="true">●</span> Runs in your browser</span><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter">View source <span aria-hidden="true">↗</span></a></nav>
 </header>
-<div class="bar">
-  <button class="primary" id="lint" disabled>Lint whitepaper</button>
-  <button id="load-incomplete">Load incomplete draft</button>
-  <button id="load-complete">Load complete draft</button>
-  <span id="status">Loading Python runtime (~10s on first visit)…</span>
-</div>
 <main>
-  <textarea id="input" spellcheck="false" aria-label="Whitepaper draft JSON"></textarea>
-  <pre id="out"><span class="dim">Output appears here. Findings are staged pass / review / missing, as a first pass for lawyer review. They are not a legal conclusion.</span></pre>
+  <section class="intro" aria-labelledby="page-title">
+    <div><p class="eyebrow">THE WHITE PAPER WORKBENCH</p><h1 id="page-title">A clearer first pass.<br><span>A focused legal review.</span></h1><p class="intro-copy">Find missing disclosures and review points in your draft.<br class="desktop-break"> Every finding comes with a rule, a citation and the section to inspect.</p></div>
+    <aside class="scope-note"><span class="note-label">BUILT FOR REVIEW</span><p>Deterministic checks.<br>Human judgment.</p><span>Pass means a check matched. Substantive legal review is always required.</span></aside>
+  </section>
+  <ol class="steps" aria-label="Review workflow"><li><span>01</span> Load a draft</li><li><span>02</span> Run the checks</li><li><span>03</span> Review &amp; export</li></ol>
+
+  <div class="workspace" id="workspace">
+    <section class="panel draft-panel" aria-labelledby="draft-heading">
+      <div class="panel-heading"><div><span class="eyebrow">INPUT</span><h2 id="draft-heading">Your draft</h2></div><span class="file-badge">JSON</span></div>
+      <div class="draft-controls">
+        <label for="example">Start with a synthetic example</label>
+        <div class="example-row"><select id="example"><option value="incomplete">Incomplete ART draft</option><option value="other">Annex I · Other crypto-asset</option><option value="art">Annex II · Asset-referenced token</option><option value="emt">Annex III · E-money token</option></select><button id="load-example" disabled>Load</button></div>
+        <div class="import-row"><button id="import" class="text-button">↑ Import JSON</button><span>Local file · up to 1 MB</span><input type="file" id="file" accept=".json,application/json" hidden></div>
+        <p id="sample-error" class="error" role="alert" hidden></p>
+      </div>
+      <div class="editor-heading"><label for="input">Draft JSON</label><button class="text-button" id="format">Format JSON</button></div>
+      <textarea id="input" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="draft-help input-error" placeholder='{"title": "My draft", "type": "other", "sections": {}}'></textarea>
+      <div class="editor-meta"><span id="regime">Select a draft type</span><span id="size">0 KB</span></div>
+      <p id="input-error" class="error" role="alert" hidden></p>
+      <div class="run-area"><button class="primary" id="lint" disabled>Run checks <span aria-hidden="true">↗</span></button><span class="shortcut">⌘ / Ctrl + Enter</span></div>
+      <div class="runtime"><span class="status-dot" id="status-dot" aria-hidden="true"></span><span id="status" role="status">Preparing the rule engine…</span><button id="retry" class="text-button" hidden>Retry</button></div>
+      <p class="draft-help" id="draft-help">Your draft stays in this tab and is cleared when you close it. The runtime downloads on first use. Use synthetic or public material in this demo.</p>
+      <button id="download-draft" class="text-button save-draft">↓ Save draft JSON</button>
+    </section>
+
+    <section class="panel results-panel" aria-labelledby="results-heading" aria-busy="false">
+      <div class="panel-heading"><div><span class="eyebrow">OUTPUT</span><h2 id="results-heading">Review findings</h2></div><span class="file-badge" id="result-state">Awaiting checks</span></div>
+      <div id="empty" class="empty-state"><div class="document-icon" aria-hidden="true"><span></span><span></span><span></span><b>✓</b></div><h3>Your review starts here</h3><p>Load an example or import a JSON draft,<br>then run the checks to see what needs attention.</p><div class="legend"><span class="badge missing">Missing</span><span class="badge review">Review</span><span class="badge pass">Pass</span></div><p class="empty-footnote">Cited findings. No language model in the checking path.</p></div>
+      <div id="results" hidden>
+        <div class="report-heading"><h3 id="report-title"></h3><p id="report-regime"></p></div>
+        <p id="stale" class="notice" role="status" hidden>Draft changed. Run checks again to refresh these findings and enable export.</p>
+        <div class="metrics" aria-label="Report summary"><div><span id="count-blockers">0</span><label>Open blockers</label></div><div><span id="count-missing">0</span><label>Missing</label></div><div><span id="count-review">0</span><label>Review</label></div><div><span id="count-pass">0</span><label>Pass</label></div></div>
+        <p class="review-boundary" id="review-boundary"></p>
+        <div id="warnings" class="notice" hidden></div>
+        <div class="finding-toolbar"><div class="filters" role="group" aria-label="Filter findings"><button data-filter="open" aria-pressed="true">Open items</button><button data-filter="missing" aria-pressed="false">Missing</button><button data-filter="review" aria-pressed="false">Review</button><button data-filter="pass" aria-pressed="false">Pass</button><button data-filter="all" aria-pressed="false">All</button></div><label for="search" class="sr-only">Search findings, citations or sections</label><input id="search" type="search" placeholder="Search findings, citations or sections…"></div>
+        <p id="visible-count" class="visible-count" role="status"></p>
+        <div id="findings" class="findings"></div>
+        <div class="export-bar"><span>Take the review with you</span><div><button id="export-json" disabled>↓ JSON report</button><button id="export-text" disabled>↓ Text report</button></div></div>
+      </div>
+      <p id="run-error" class="error" role="alert" hidden></p>
+    </section>
+  </div>
+  <section class="explainer" aria-label="How to read the findings"><div><span class="badge missing">Missing</span><p>The section is empty or absent, or a required element was not found. The iXBRL check always shows Missing here because a JSON draft cannot meet the notification format.</p></div><div><span class="badge review">Review</span><p>A check needs attention or human assessment. Inspect its reasons and source text.</p></div><div><span class="badge pass">Pass</span><p>The automated check matched. Accuracy, completeness and legal sufficiency still need review.</p></div></section>
 </main>
-<footer>Synthetic examples only. Not legal advice. MIT-licensed. MiCAR = Regulation (EU) 2023/1114.</footer>
-
-<script id="sample-incomplete" type="application/json">
-{
-  "title": "Incomplete Synthetic EuroStable ART Draft",
-  "type": "art",
-  "sections": {
-    "summary": "EuroStable is a token.",
-    "risk_warning": "",
-    "management_statement": "Signed.",
-    "notification_date": "TBD.",
-    "language": "English.",
-    "issuer": "Synthetic EuroStable AG, fictional demo issuer.",
-    "art": "EuroStable is a stablecoin.",
-    "offer_or_admission": "",
-    "rights_and_obligations": "Holders have rights.",
-    "technology": "Built on a blockchain.",
-    "risks": "There are risks.",
-    "reserve_of_assets": "Reserve is held.",
-    "environmental_impact": "",
-    "redemption": ""
-  }
-}
-</script>
-
-<script type="module">
-const $ = (id) => document.getElementById(id);
-const sampleIncomplete = $("sample-incomplete").textContent.trim();
-$("input").value = sampleIncomplete;
-$("load-incomplete").onclick = () => { $("input").value = sampleIncomplete; };
-
-let sampleComplete = null;
-$("load-complete").onclick = async () => {
-  if (!sampleComplete) {
-    try {
-      const r = await fetch("https://raw.githubusercontent.com/sebastianfoerste/micar-whitepaper-linter/main/examples/art-stablecoin.json");
-      sampleComplete = await r.text();
-    } catch { sampleComplete = sampleIncomplete; }
-  }
-  $("input").value = sampleComplete;
-};
-
-function colorize(text) {
-  const esc = text.replace(/&/g, "&amp;").replace(/</g, "&lt;");
-  return esc.split("\n").map((line) => {
-    if (line.includes("[MISS")) return `<span class="miss">${line}</span>`;
-    if (line.includes("[REVIEW]")) return `<span class="review">${line}</span>`;
-    if (line.includes("[PASS")) return `<span class="pass">${line}</span>`;
-    if (line.trimStart().startsWith("Cite:")) return `<span class="cite">${line}</span>`;
-    if (line.trimStart().startsWith("-") || line.trimStart().startsWith("Section:")) return `<span class="dim">${line}</span>`;
-    return line;
-  }).join("\n");
-}
-
-import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v0.28.2/full/pyodide.mjs";
-const pyodide = await loadPyodide();
-$("status").textContent = "Installing linter…";
-await pyodide.loadPackage("micropip");
-const wheelUrl = new URL("micar_whitepaper_linter-0.2.0-py3-none-any.whl", location.href).href;
-await pyodide.runPythonAsync(`
-import micropip
-await micropip.install("${wheelUrl}")
-`);
-$("status").textContent = "Ready. Runs locally. No data leaves the browser.";
-$("lint").disabled = false;
-
-$("lint").onclick = () => {
-  const out = $("out");
-  try { JSON.parse($("input").value); }
-  catch (e) { out.innerHTML = `<span class="miss">Input is not valid JSON: ${String(e).replace(/</g, "&lt;")}</span>`; return; }
-  pyodide.globals.set("draft_text", $("input").value);
-  const result = pyodide.runPython(`
-import io, contextlib
-from pathlib import Path
-from micar_linter import cli
-Path("/tmp/wp.json").write_text(draft_text, encoding="utf-8")
-buf = io.StringIO()
-with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-    code = cli.main(["/tmp/wp.json"])
-buf.getvalue() + f"\\n(exit code with --strict would be {1 if 'Blockers: 0' not in buf.getvalue() else 0})"
-`);
-  out.innerHTML = colorize(result);
-};
-</script>
+<footer><span>MiCAR Whitepaper Linter <span class="footer-dot">·</span> Open source, MIT license</span><span>First-pass screening · Not legal advice <a href="https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng">Read MiCAR ↗</a></span></footer>
+<noscript><p class="error">JavaScript is required for the browser checks. You can also use the Python CLI linked under View source.</p></noscript>
+<script type="module" src="app.mjs" data-wheel="micar_whitepaper_linter-0.2.0-py3-none-any.whl"></script>
 </body>
 </html>
