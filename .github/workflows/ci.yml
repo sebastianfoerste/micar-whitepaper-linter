@@ -21,6 +21,8 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: ruff check .
       - run: pytest -q
+      - name: Check the rule provenance ledger
+        run: micar-rule-proof --check docs/rule-provenance.json
       - uses: actions/setup-node@v4
         with:
           node-version: '22'

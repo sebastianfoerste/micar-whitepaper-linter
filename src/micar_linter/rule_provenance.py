@@ -13,7 +13,7 @@ from micar_linter.rules import RULESETS
 
 SCHEMA = "micar-whitepaper-linter.rule-provenance.v1"
 IMPACT_SCHEMA = "micar-whitepaper-linter.rule-change-impact.v1"
-VERIFIED_ON = "2026-07-28"
+VERIFIED_ON = "2026-09-25"
 
 OFFICIAL_SOURCES = {
     "EU-2023-1114": {
@@ -35,6 +35,25 @@ OFFICIAL_SOURCES = {
         "role": "Forms, formats, templates, and Inline XBRL tagging",
         "verified_on": VERIFIED_ON,
     },
+    "EU-2025-422": {
+        "identifier": "Commission Delegated Regulation (EU) 2025/422",
+        "celex": "32025R0422",
+        "title": "Regulatory technical standards on crypto-asset sustainability indicators",
+        "official_url": (
+            "https://eur-lex.europa.eu/legal-content/EN/TXT/"
+            "?uri=CELEX%3A32025R0422"
+        ),
+        "role": "Climate and environment-related adverse impact disclosures",
+        "verified_on": VERIFIED_ON,
+    },
+}
+
+# The sustainability rules rest on MiCAR but take their content from the RTS
+# and their Part letter from the ITS template, so both are recorded alongside.
+SUPPORTING_SOURCES = {
+    "ANNEX_I.J": ("EU-2024-2984", "EU-2025-422"),
+    "ANNEX_II.H": ("EU-2024-2984", "EU-2025-422"),
+    "ANNEX_III.G": ("EU-2024-2984", "EU-2025-422"),
 }
 
 
@@ -55,7 +74,8 @@ def build_rule_provenance_manifest() -> dict[str, Any]:
     for whitepaper_type, rules in sorted(RULESETS.items(), key=lambda item: item[0].value):
         for rule in rules:
             source_id = _source_id(rule.rule_id)
-            if source_id not in OFFICIAL_SOURCES:
+            supporting = list(SUPPORTING_SOURCES.get(rule.rule_id, ()))
+            if not {source_id, *supporting} <= OFFICIAL_SOURCES.keys():
                 unmapped.append(f"{whitepaper_type.value}:{rule.rule_id}")
                 continue
             rule_payload = {
@@ -71,6 +91,7 @@ def build_rule_provenance_manifest() -> dict[str, Any]:
                     "label": rule.label,
                     "severity": rule.severity.label,
                     "source_id": source_id,
+                    "supporting_source_ids": supporting,
                     "rule_sha256": _canonical_sha256(rule_payload),
                 }
             )
@@ -112,12 +133,13 @@ def build_rule_change_impact(
 
     if current is None:
         current = build_rule_provenance_manifest()
+    # Ledgers written before supporting sources existed recorded none.
     previous_entries = {
-        (entry["ruleset"], entry["rule_id"]): entry
+        (entry["ruleset"], entry["rule_id"]): {"supporting_source_ids": [], **entry}
         for entry in previous.get("entries", [])
     }
     current_entries = {
-        (entry["ruleset"], entry["rule_id"]): entry
+        (entry["ruleset"], entry["rule_id"]): {"supporting_source_ids": [], **entry}
         for entry in current.get("entries", [])
     }
     added = [
@@ -144,6 +166,7 @@ def build_rule_change_impact(
         "label",
         "severity",
         "source_id",
+        "supporting_source_ids",
         "rule_sha256",
     )
     changed = []
@@ -174,7 +197,7 @@ def build_rule_change_impact(
         for entry in changed
     )
     source_mapping_changed = any(
-        "source_id" in entry["changed_fields"] or "citation" in entry["changed_fields"]
+        {"source_id", "supporting_source_ids", "citation"} & set(entry["changed_fields"])
         for entry in changed
     )
     if removed or blocker_touched or source_mapping_changed:

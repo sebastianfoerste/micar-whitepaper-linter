@@ -95,8 +95,11 @@ The reserve-floor check extracts percentage candidates and identifies the potent
 
 [`docs/rule-provenance.json`](docs/rule-provenance.json) binds every shipped
 ruleset entry to its official EU source family and a SHA-256 digest of the exact
-rule configuration. `make check` rebuilds the ledger and fails if a rule is
-unmapped or the committed proof has drifted. The ledger records source-family
+rule configuration. The sustainability rules also record their supporting
+instruments: Delegated Regulation (EU) 2025/422 for the content and the
+Implementing Regulation (EU) 2024/2984 template for the Part. `make check` and
+CI rebuild the ledger and fail if a rule is unmapped or the committed proof has
+drifted. The ledger records source-family
 coverage and code integrity. Substantive legal interpretation and current-law
 verification remain lawyer review tasks.
 

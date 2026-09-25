@@ -1,3 +1,4 @@
+import re
 from copy import deepcopy
 
 import pytest
@@ -78,3 +79,47 @@ def test_rule_change_impact_blocks_changed_blocker_rule():
     assert impact["summary"]["source_mapping_changed"] is True
     assert impact["changed"][0]["rule_id"] == blocker["rule_id"]
     assert impact["external_actions_allowed"] is False
+
+
+def test_sustainability_rules_record_the_rts_and_template_sources():
+    manifest = build_rule_provenance_manifest()
+    sustainability = [
+        entry
+        for entry in manifest["entries"]
+        if entry["rule_id"] in {"ANNEX_I.J", "ANNEX_II.H", "ANNEX_III.G"}
+    ]
+
+    assert len(sustainability) == 3
+    for entry in sustainability:
+        assert entry["source_id"] == "EU-2023-1114"
+        assert entry["supporting_source_ids"] == ["EU-2024-2984", "EU-2025-422"]
+
+
+def test_every_regulation_named_in_a_citation_is_a_recorded_source():
+    for entry in build_rule_provenance_manifest()["entries"]:
+        recorded = {entry["source_id"], *entry["supporting_source_ids"]}
+        for year, number in re.findall(r"VO \(EU\) (\d{4})/(\d+)", entry["citation"]):
+            assert f"EU-{year}-{number}" in recorded, (entry["rule_id"], year, number)
+
+
+def test_rule_change_impact_blocks_supporting_source_remapping():
+    previous = build_rule_provenance_manifest()
+    current = deepcopy(previous)
+    entry = next(entry for entry in current["entries"] if entry["supporting_source_ids"])
+    entry["supporting_source_ids"] = []
+
+    impact = build_rule_change_impact(previous, current)
+
+    assert impact["status"] == "BLOCKED_PENDING_LEGAL_REVIEW"
+    assert impact["summary"]["source_mapping_changed"] is True
+    assert impact["changed"][0]["changed_fields"] == ["supporting_source_ids"]
+
+
+def test_rule_change_impact_reads_older_ledgers_as_having_no_supporting_sources():
+    current = build_rule_provenance_manifest()
+    previous = deepcopy(current)
+    for entry in previous["entries"]:
+        if not entry["supporting_source_ids"]:
+            del entry["supporting_source_ids"]
+
+    assert build_rule_change_impact(previous, current)["status"] == "STABLE"
