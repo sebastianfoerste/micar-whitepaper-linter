@@ -36,26 +36,27 @@
 
   <div class="workspace" id="workspace">
     <section class="panel draft-panel" aria-labelledby="draft-heading">
-      <div class="panel-heading"><div><span class="eyebrow">INPUT</span><h2 id="draft-heading">Your draft</h2></div><span class="file-badge">JSON</span></div>
+      <div class="panel-heading"><div><span class="eyebrow">INPUT</span><h2 id="draft-heading">Your draft</h2></div><span class="file-badge" id="format-badge">JSON</span></div>
       <div class="draft-controls">
         <label for="example">Start with a synthetic example</label>
-        <div class="example-row"><select id="example"><option value="incomplete">Incomplete ART draft</option><option value="other">Annex I · Other crypto-asset</option><option value="art">Annex II · Asset-referenced token</option><option value="emt">Annex III · E-money token</option></select><button id="load-example" disabled>Load</button></div>
-        <div class="import-row"><button id="import" class="text-button">↑ Import JSON</button><span>Local file · up to 1 MB</span><input type="file" id="file" accept=".json,application/json" hidden></div>
+        <div class="example-row"><select id="example"><option value="incomplete">Incomplete ART draft</option><option value="other">Annex I · Other crypto-asset</option><option value="art">Annex II · Asset-referenced token</option><option value="emt">Annex III · E-money token</option><option value="numbered">XHTML · Annex I in the numbered-field layout</option></select><button id="load-example" disabled>Load</button></div>
+        <div class="import-row"><button id="import" class="text-button">↑ Import JSON or XHTML</button><span>Local file · JSON up to 1 MB, XHTML up to 4 MB</span><input type="file" id="file" accept=".json,.xhtml,.html,.htm,application/json,application/xhtml+xml,text/html" hidden></div>
+        <div class="regime-row" id="regime-row" hidden><label for="regime-select">Regime of this XHTML file</label><select id="regime-select" aria-describedby="regime-help"><option value="">Choose the regime…</option><option value="other">Annex I · Other crypto-assets</option><option value="art">Annex II · Asset-referenced tokens</option><option value="emt">Annex III · E-money tokens</option></select><p id="regime-help">You choose the regime. It is never inferred from the text.</p></div>
         <p id="sample-error" class="error" role="alert" hidden></p>
       </div>
-      <div class="editor-heading"><label for="input">Draft JSON</label><button class="text-button" id="format">Format JSON</button></div>
+      <div class="editor-heading"><label for="input">Draft source</label><button class="text-button" id="format">Format JSON</button></div>
       <textarea id="input" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="draft-help input-error" placeholder='{"title": "My draft", "type": "other", "sections": {}}'></textarea>
       <div class="editor-meta"><span id="regime">Select a draft type</span><span id="size">0 KB</span></div>
       <p id="input-error" class="error" role="alert" hidden></p>
       <div class="run-area"><button class="primary" id="lint" disabled>Run checks <span aria-hidden="true">↗</span></button><span class="shortcut">⌘ / Ctrl + Enter</span></div>
       <div class="runtime"><span class="status-dot" id="status-dot" aria-hidden="true"></span><span id="status" role="status">Preparing the rule engine…</span><button id="retry" class="text-button" hidden>Retry</button></div>
       <p class="draft-help" id="draft-help">Your draft stays in this tab and is cleared when you close it. The runtime downloads on first use. Use synthetic or public material in this demo.</p>
-      <button id="download-draft" class="text-button save-draft">↓ Save draft JSON</button>
+      <button id="download-draft" class="text-button save-draft">↓ Save draft</button>
     </section>
 
     <section class="panel results-panel" aria-labelledby="results-heading" aria-busy="false">
       <div class="panel-heading"><div><span class="eyebrow">OUTPUT</span><h2 id="results-heading">Review findings</h2></div><span class="file-badge" id="result-state">Awaiting checks</span></div>
-      <div id="empty" class="empty-state"><div class="document-icon" aria-hidden="true"><span></span><span></span><span></span><b>✓</b></div><h3>Your review starts here</h3><p>Load an example or import a JSON draft,<br>then run the checks to see what needs attention.</p><div class="legend"><span class="badge missing">Missing</span><span class="badge review">Review</span><span class="badge pass">Pass</span></div><p class="empty-footnote">Cited findings. No language model in the checking path.</p></div>
+      <div id="empty" class="empty-state"><div class="document-icon" aria-hidden="true"><span></span><span></span><span></span><b>✓</b></div><h3>Your review starts here</h3><p>Load an example or import a JSON or XHTML draft,<br>then run the checks to see what needs attention.</p><div class="legend"><span class="badge missing">Missing</span><span class="badge review">Review</span><span class="badge pass">Pass</span></div><p class="empty-footnote">Cited findings. No language model in the checking path.</p></div>
       <div id="results" hidden>
         <div class="report-heading"><h3 id="report-title"></h3><p id="report-regime"></p></div>
         <p id="stale" class="notice" role="status" hidden>Draft changed. Run checks again to refresh these findings and enable export.</p>
@@ -63,14 +64,15 @@
         <p class="review-boundary" id="review-boundary"></p>
         <div id="warnings" class="notice" hidden></div>
         <div class="finding-toolbar"><div class="filters" role="group" aria-label="Filter findings"><button data-filter="open" aria-pressed="true">Open items</button><button data-filter="missing" aria-pressed="false">Missing</button><button data-filter="review" aria-pressed="false">Review</button><button data-filter="pass" aria-pressed="false">Pass</button><button data-filter="all" aria-pressed="false">All</button></div><label for="search" class="sr-only">Search findings, citations or sections</label><input id="search" type="search" placeholder="Search findings, citations or sections…"></div>
-        <p id="visible-count" class="visible-count" role="status"></p>
+        <div class="list-meta"><p id="visible-count" class="visible-count" role="status"></p><button id="toggle-all" class="text-button" aria-pressed="false">Expand all</button></div>
         <div id="findings" class="findings"></div>
         <div class="export-bar"><span>Take the review with you</span><div><button id="export-json" disabled>↓ JSON report</button><button id="export-text" disabled>↓ Text report</button></div></div>
       </div>
       <p id="run-error" class="error" role="alert" hidden></p>
     </section>
   </div>
-  <section class="explainer" aria-label="How to read the findings"><div><span class="badge missing">Missing</span><p>The section is empty or absent, or a required element was not found. The iXBRL check always shows Missing here because a JSON draft cannot meet the notification format.</p></div><div><span class="badge review">Review</span><p>A check needs attention or human assessment. Inspect its reasons and source text.</p></div><div><span class="badge pass">Pass</span><p>The automated check matched. Accuracy, completeness and legal sufficiency still need review.</p></div></section>
+  <section class="explainer" aria-label="How to read the findings"><div><span class="badge missing">Missing</span><p>The section is empty or absent, or a required element was not found. For a JSON draft the iXBRL check always shows Missing, because JSON cannot meet the notification format.</p></div><div><span class="badge review">Review</span><p>A check needs attention or human assessment. Inspect its reasons and source text. For an XHTML draft the iXBRL check always shows Review: it tests the format and the taxonomy namespace, and leaves tag completeness to a validator.</p></div><div><span class="badge pass">Pass</span><p>The automated check matched. Accuracy, completeness and legal sufficiency still need review.</p></div></section>
+  <section class="basis" aria-labelledby="basis-heading"><h2 id="basis-heading">What the checks rest on</h2><p>The rules encode the text of MiCAR and the white-paper format rules. They are regression-tested against the synthetic drafts offered above. A separate pilot ran a different detector with <span id="basis-controls">15</span> Annex I and Article 6 controls over <span id="basis-documents">10</span> public Title II white papers from ESMA's interim register. Its <span id="basis-cells">150</span> results await human review (<span id="basis-reviewed">0</span> reviewed), so this page claims no accuracy rate. <a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/tree/main/studies/2026-07-title-ii-annex-i-whitepaper-study">Read the study and its limitations ↗</a></p></section>
 </main>
 <footer><span>MiCAR Whitepaper Linter <span class="footer-dot">·</span> Open source, MIT license</span><span>First-pass screening · Not legal advice <a href="https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng">Read MiCAR ↗</a></span></footer>
 <noscript><p class="error">JavaScript is required for the browser checks. You can also use the Python CLI linked under View source.</p></noscript>

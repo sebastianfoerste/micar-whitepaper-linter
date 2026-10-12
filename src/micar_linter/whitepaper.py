@@ -56,20 +56,24 @@ class Whitepaper:
         return "de" if de_count > en_count else "en"
 
 
-def load_whitepaper(path: Path) -> Whitepaper:
-    """Load and validate a white paper JSON, PDF, DOCX, Markdown, or XHTML file."""
+def load_whitepaper(path: Path, whitepaper_type: WhitepaperType | None = None) -> Whitepaper:
+    """Load and validate a white paper JSON, PDF, DOCX, Markdown, or XHTML file.
+
+    whitepaper_type states the regime for document formats. A JSON draft carries its own "type".
+    """
     suffix = path.suffix.lower()
 
     if suffix == ".json":
         return _load_json(path)
     if suffix in (".pdf", ".docx", ".xhtml", ".html", ".md"):
-        return _load_document(path, suffix)
+        return _load_document(path, suffix, whitepaper_type)
     raise SystemExit(f"Unsupported file format '{suffix}'. Expected: .json, .pdf, .docx, .xhtml, .html, .md")
 
 
 _RESERVED_METADATA_KEYS = (
     "ixbrl_validated",
     "ixbrl_issues",
+    "extraction_notes",
     "reserve_characterisation_reviewed_by",
     "reserve_characterisation_reviewed_on",
 )
@@ -98,10 +102,7 @@ def _load_json(path: Path) -> Whitepaper:
             + ", ".join(t.value for t in WhitepaperType)
         ) from exc
 
-    sections = {
-        str(k): (v if isinstance(v, str) else str(v))
-        for k, v in data["sections"].items()
-    }
+    sections = {str(k): (v if isinstance(v, str) else str(v)) for k, v in data["sections"].items()}
     metadata = {
         k: v
         for k, v in data.items()
@@ -118,12 +119,13 @@ def _load_json(path: Path) -> Whitepaper:
     )
 
 
-def _load_document(path: Path, suffix: str) -> Whitepaper:
+def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | None) -> Whitepaper:
     if not path.exists():
         raise SystemExit(f"File not found: {path}")
 
     ixbrl_issues = []
     ixbrl_validated = False
+    extraction_notes: tuple[str, ...] = ()
     try:
         if suffix == ".pdf":
             from micar_linter.document import load_from_pdf
@@ -139,9 +141,25 @@ def _load_document(path: Path, suffix: str) -> Whitepaper:
             sections = load_from_markdown(path)
         else:
             from micar_linter.ixbrl import validate_ixbrl
+            from micar_linter.numbered_fields import (
+                extract_numbered_fields,
+                is_numbered_layout,
+                sections_from_numbered_fields,
+            )
             from micar_linter.xhtml_parser import load_from_xhtml
 
-            sections = load_from_xhtml(path)
+            fields = extract_numbered_fields(path)
+            if is_numbered_layout(fields):
+                # The template wording names every regime ("not an asset-referenced token"),
+                # so the regime of a numbered white paper is never inferred from its text.
+                if whitepaper_type is None:
+                    raise SystemExit(
+                        f"{path.name} uses the numbered fields of Implementing Regulation (EU) 2024/2984. "
+                        "State the regime explicitly: other, art or emt."
+                    )
+                sections, extraction_notes = sections_from_numbered_fields(fields, whitepaper_type)
+            else:
+                sections = load_from_xhtml(path)
             ixbrl_issues = validate_ixbrl(path)
             ixbrl_validated = True
     except SystemExit:
@@ -152,7 +170,9 @@ def _load_document(path: Path, suffix: str) -> Whitepaper:
     full_text = "\n".join(sections.values()).lower()
     art_markers = ("asset-referenced", "stabilisation mechanism", "reserve of assets")
     emt_markers = ("e-money token", "referenced currency", "safeguarding of funds")
-    if any(marker in full_text for marker in art_markers):
+    if whitepaper_type is not None:
+        wp_type = whitepaper_type
+    elif any(marker in full_text for marker in art_markers):
         wp_type = WhitepaperType.ART
     elif any(marker in full_text for marker in emt_markers):
         wp_type = WhitepaperType.EMT
@@ -174,6 +194,7 @@ def _load_document(path: Path, suffix: str) -> Whitepaper:
         "source_file": str(path),
         "ixbrl_validated": ixbrl_validated,
         "ixbrl_issues": tuple(ixbrl_issues),
+        "extraction_notes": extraction_notes,
     }
 
     return Whitepaper(

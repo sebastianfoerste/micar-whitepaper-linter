@@ -6,6 +6,25 @@ export const REGIMES = {
   emt: "Annex III · E-money tokens",
 };
 
+// Notified XHTML white papers run to a few megabytes once fonts and images are inlined.
+export const MAX_XHTML_BYTES = 4 * 1024 * 1024;
+export const FORMATS = { json: "JSON", xhtml: "XHTML" };
+
+// A draft that opens with markup is XHTML; anything else has to be JSON.
+export function draftFormat(text) {
+  return text.trimStart().startsWith("<") ? "xhtml" : "json";
+}
+
+// Returns the format and the regime the draft itself states. An XHTML draft states none:
+// the user chooses it, because template wording names every regime.
+export function validateDraft(text) {
+  if (draftFormat(text) === "json") return { format: "json", regime: parseDraft(text).type.toLowerCase() };
+  if (new TextEncoder().encode(text).length > MAX_XHTML_BYTES) {
+    throw new Error("This playground accepts XHTML drafts up to 4 MB. Use the CLI for larger files.");
+  }
+  return { format: "xhtml", regime: null };
+}
+
 export function parseDraft(text) {
   if (new TextEncoder().encode(text).length > MAX_BYTES) {
     throw new Error("This playground accepts JSON drafts up to 1 MB. Use the CLI for larger files.");
@@ -30,12 +49,18 @@ export function parseDraft(text) {
   return draft;
 }
 
+// Display only: exports keep the engine's citation strings unchanged.
+export function displayCitation(citation) {
+  // TODO(human): render the engine's German-style citation in the English house style.
+  return citation;
+}
+
 export function selectFindings(findings, filter = "open", search = "") {
   const query = search.trim().toLowerCase();
   const statusOrder = { missing: 0, review: 1, pass: 2 };
   return findings.filter(f => {
     const matches = filter === "all" || (filter === "open" ? f.status !== "pass" : f.status === filter);
-    return matches && [f.rule_id, f.label, f.citation, f.section, f.severity, ...f.issues]
+    return matches && [f.rule_id, f.label, f.citation, displayCitation(f.citation), f.section, f.severity, ...f.issues]
       .join(" ").toLowerCase().includes(query);
   }).sort((a, b) => {
     const aBlocker = a.status !== "pass" && a.severity === "BLOCKER";

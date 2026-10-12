@@ -28,7 +28,7 @@ from micar_linter.review_table import (
     render_review_table,
     render_review_table_comparison,
 )
-from micar_linter.whitepaper import load_whitepaper
+from micar_linter.whitepaper import WhitepaperType, load_whitepaper
 from micar_linter.workspace import build_whitepaper_workspace, render_whitepaper_workspace
 
 
@@ -52,6 +52,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--json",
         action="store_true",
         help="Emit machine-readable JSON instead of text.",
+    )
+    parser.add_argument(
+        "--type",
+        choices=[item.value for item in WhitepaperType],
+        help=(
+            "Regime of a single PDF, DOCX, Markdown or XHTML draft. Required for white papers "
+            "in the numbered-field layout; a JSON draft states its own type."
+        ),
     )
     parser.add_argument(
         "--strict",
@@ -200,7 +208,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.path.is_dir():
         return _run_batch(args)
 
-    whitepaper = load_whitepaper(args.path)
+    whitepaper = load_whitepaper(args.path, WhitepaperType(args.type) if args.type else None)
     if args.lang != "auto":
         whitepaper.metadata["language"] = args.lang
 

@@ -1,10 +1,16 @@
-import { MAX_BYTES, REGIMES, formatDraft, parseDraft, reportIsCurrent, sectionSelection, selectFindings } from "./model.mjs";
+import { FORMATS, MAX_BYTES, MAX_XHTML_BYTES, REGIMES, displayCitation, draftFormat, formatDraft, parseDraft, reportIsCurrent,
+  sectionSelection, selectFindings, validateDraft } from "./model.mjs";
 
 const $ = id => document.getElementById(id);
 const input = $("input");
-let worker, timer, ready = false, busy = false, samples;
-let report = null, reportText = "", checkedText = "", pendingText = "", requestId = 0;
-let filter = "open", modified = false;
+let worker, timer, ready = false, busy = false, samples, markupReady = false;
+let report = null, reportText = "", checkedKey = "", checkedFormat = "json", pendingKey = "", pendingFormat = "json", requestId = 0;
+let filter = "open", modified = false, expanded = false, draftName = "";
+
+// An XHTML draft is checked under the regime the user chose, so the choice is part of what was checked.
+const chosenRegime = () => draftFormat(input.value) === "xhtml" ? $("regime-select").value : "";
+const draftKey = () => `${chosenRegime()}\n${input.value}`;
+const isCurrent = () => reportIsCurrent(report, checkedKey, draftKey());
 
 function showError(id, message = "") {
   $(id).textContent = message;
@@ -14,11 +20,15 @@ function showError(id, message = "") {
 function syncDraft() {
   const size = new TextEncoder().encode(input.value).length;
   $("size").textContent = `${(size / 1024).toFixed(1)} KB`;
+  const format = draftFormat(input.value);
+  $("format-badge").textContent = FORMATS[format];
+  $("regime-row").hidden = format !== "xhtml";
+  $("format").disabled = format !== "json";
   try {
-    const draft = parseDraft(input.value);
-    $("regime").textContent = REGIMES[draft.type.toLowerCase()];
+    const draft = validateDraft(input.value);
+    $("regime").textContent = REGIMES[draft.regime ?? chosenRegime()] ?? "Choose the regime of this file";
   } catch { $("regime").textContent = "Draft structure needs attention"; }
-  const current = reportIsCurrent(report, checkedText, input.value);
+  const current = isCurrent();
   $("stale").hidden = !report || current;
   $("export-json").disabled = !current || busy;
   $("export-text").disabled = !current || busy;
@@ -37,9 +47,11 @@ input.addEventListener("input", () => {
   syncDraft();
 });
 
-function replaceDraft(text) {
+function replaceDraft(text, name = "", regime = "") {
   if (input.value && modified && !window.confirm("Replace this edited draft? Save a copy first if you need to keep it.")) return;
   input.value = text;
+  draftName = name;
+  $("regime-select").value = regime;
   modified = false;
   showError("input-error");
   showError("sample-error");
@@ -54,20 +66,27 @@ async function loadSamples() {
     if (!response.ok) throw new Error();
     samples = await response.json();
     for (const key of ["incomplete", "other", "art", "emt"]) parseDraft(JSON.stringify(samples[key]));
+    const markup = await fetch("sample-numbered.xhtml");
+    if (!markup.ok) throw new Error();
+    samples.numbered = await markup.text();
     if (!input.value) replaceDraft(JSON.stringify(samples.incomplete, null, 2));
     $("load-example").disabled = false;
     showError("sample-error");
   } catch {
     samples = null;
     $("load-example").disabled = false;
-    showError("sample-error", "Examples could not load. Press Load to retry, or import or paste a JSON draft.");
+    showError("sample-error", "Examples could not load. Press Load to retry, or import or paste a draft.");
   }
 }
 
 $("load-example").onclick = async () => {
   if (!samples) await loadSamples();
-  if (samples) replaceDraft(JSON.stringify(samples[$("example").value], null, 2));
+  if (!samples) return;
+  const sample = samples[$("example").value];
+  if (typeof sample === "string") replaceDraft(sample, "synthetic-numbered-draft.xhtml", "other");
+  else replaceDraft(JSON.stringify(sample, null, 2));
 };
+$("regime-select").onchange = () => { showError("input-error"); syncDraft(); };
 $("import").onclick = () => $("file").click();
 $("file").onchange = async event => {
   const file = event.target.files[0];
@@ -75,15 +94,18 @@ $("file").onchange = async event => {
   if (!file) return;
   const before = input.value;
   try {
-    if (file.size > MAX_BYTES) throw new Error("The file exceeds the 1 MB playground limit. Use the CLI for larger files.");
+    const markup = /\.(xhtml|html?)$/i.test(file.name);
+    if (file.size > (markup ? MAX_XHTML_BYTES : MAX_BYTES)) {
+      throw new Error(`The file exceeds the ${markup ? "4 MB XHTML" : "1 MB JSON"} playground limit. Use the CLI for larger files.`);
+    }
     // file.text() would silently swap invalid bytes (e.g. a Windows-1252 export) for U+FFFD.
     let text;
     try { text = new TextDecoder("utf-8", { fatal: true }).decode(await file.arrayBuffer()); }
-    catch { throw new Error("The file is not valid UTF-8. Save it as UTF-8 JSON and import it again."); }
-    parseDraft(text);
+    catch { throw new Error("The file is not valid UTF-8. Save it as UTF-8 and import it again."); }
+    if (validateDraft(text).format !== (markup ? "xhtml" : "json")) throw new Error("The file content does not match its extension.");
     if (input.value !== before) throw new Error("The draft changed while the file was opening. Import the file again when you are ready.");
-    replaceDraft(text);
-  } catch (error) { showError("input-error", error.message || "The file could not be read. Try a UTF-8 JSON file."); }
+    replaceDraft(text, file.name);
+  } catch (error) { showError("input-error", error.message || "The file could not be read. Try a UTF-8 JSON or XHTML file."); }
 };
 
 $("format").onclick = () => {
@@ -115,6 +137,7 @@ function startRuntime() {
   clearTimeout(timer);
   ready = false;
   busy = false;
+  markupReady = false;
   $("retry").hidden = true;
   $("status-dot").className = "status-dot";
   $("status").textContent = "Loading Python runtime…";
@@ -151,7 +174,9 @@ function startRuntime() {
         busy = false;
         report = data.report;
         reportText = data.text;
-        checkedText = pendingText;
+        checkedKey = pendingKey;
+        checkedFormat = pendingFormat;
+        markupReady ||= pendingFormat === "xhtml";
         renderReport();
         syncDraft();
       }
@@ -165,7 +190,8 @@ function runChecks() {
   if (!ready || busy) return;
   showError("input-error");
   showError("run-error");
-  try { parseDraft(input.value); }
+  let draft;
+  try { draft = validateDraft(input.value); }
   catch (error) {
     showError("input-error", error.message);
     input.setAttribute("aria-invalid", "true");
@@ -173,12 +199,20 @@ function runChecks() {
     return;
   }
   input.removeAttribute("aria-invalid");
+  if (draft.format === "xhtml" && !chosenRegime()) {
+    showError("input-error", "Choose the regime of this XHTML file. It is not inferred from the text.");
+    $("regime-select").focus();
+    return;
+  }
   busy = true;
-  pendingText = input.value;
+  pendingKey = draftKey();
+  pendingFormat = draft.format;
   requestId += 1;
   syncDraft();
-  timer = setTimeout(() => runtimeFailed("The check timed out. Retry the engine and run the checks again."), 30000);
-  worker.postMessage({ type: "lint", id: requestId, text: pendingText });
+  // The first XHTML check also downloads the XML parser.
+  timer = setTimeout(() => runtimeFailed("The check timed out. Retry the engine and run the checks again."),
+    draft.format === "xhtml" && !markupReady ? 120000 : 30000);
+  worker.postMessage({ type: "lint", id: requestId, text: input.value, format: draft.format, regime: chosenRegime(), name: draftName });
 }
 $("lint").onclick = runChecks;
 $("retry").onclick = startRuntime;
@@ -226,7 +260,7 @@ function wrappedOffset(textarea, index) {
 
 // Selects the section in the draft as written; only a worker result may mark text as checked.
 function locateSection(section) {
-  if (!reportIsCurrent(report, checkedText, input.value)) return;
+  if (!isCurrent()) return;
   const selection = sectionSelection(input.value, section);
   if (!selection) {
     showError("input-error", `Section "${section}" is absent. Add it inside the sections object.`);
@@ -249,22 +283,24 @@ function renderFindings() {
   if (!findings.length) container.append(node("p", "no-findings", "No findings match this view. Try another filter or search."));
   findings.forEach((finding, index) => {
     const details = node("details", "finding");
-    details.open = index === 0;
+    details.open = expanded || index === 0;
     const summary = node("summary");
     summary.append(node("span", `badge ${finding.status}`, finding.status === "missing" ? "Missing" : finding.status === "review" ? "Review" : "Pass"));
     const heading = node("div");
-    heading.append(node("span", "finding-label", finding.label), node("span", "finding-id", finding.rule_id));
+    // The citation sits in the collapsed row so the legal basis can be scanned without opening each finding.
+    heading.append(node("span", "finding-label", finding.label), node("span", "finding-citation", displayCitation(finding.citation)),
+      node("span", "finding-id", finding.rule_id));
     summary.append(heading);
     const body = node("div", "finding-body");
-    body.append(node("p", "citation", finding.citation));
     const issues = node("ul");
     for (const issue of finding.issues) issues.append(node("li", "", issue));
     if (!finding.issues.length) issues.append(node("li", "", "Automated check matched. Verify the disclosure in substance."));
     body.append(issues, node("p", "finding-meta", `${finding.severity} severity · ${finding.word_count} words · ${finding.section}`));
     // iXBRL is a file-format check; adding a JSON section cannot satisfy it.
-    if (finding.rule_id !== "COMMON.IXBRL_TAGGING") {
+    // Section navigation reads JSON keys; an XHTML draft has none to select.
+    if (finding.rule_id !== "COMMON.IXBRL_TAGGING" && checkedFormat === "json") {
       const source = node("button", "text-button source-button", `Inspect section: ${finding.section} ↗`);
-      source.disabled = !reportIsCurrent(report, checkedText, input.value);
+      source.disabled = !isCurrent();
       source.onclick = () => locateSection(finding.section);
       body.append(source);
     }
@@ -281,6 +317,12 @@ document.querySelectorAll("[data-filter]").forEach(button => {
   };
 });
 $("search").oninput = renderFindings;
+$("toggle-all").onclick = () => {
+  expanded = !expanded;
+  $("toggle-all").textContent = expanded ? "Collapse all" : "Expand all";
+  $("toggle-all").setAttribute("aria-pressed", String(expanded));
+  renderFindings();
+};
 
 function download(text, filename, type) {
   const url = URL.createObjectURL(new Blob([text], { type }));
@@ -292,12 +334,14 @@ function download(text, filename, type) {
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-$("download-draft").onclick = () => download(input.value, "whitepaper-draft.json", "application/json");
+$("download-draft").onclick = () => draftFormat(input.value) === "xhtml"
+  ? download(input.value, "whitepaper-draft.xhtml", "application/xhtml+xml")
+  : download(input.value, "whitepaper-draft.json", "application/json");
 $("export-json").onclick = () => {
-  if (!busy && reportIsCurrent(report, checkedText, input.value)) download(JSON.stringify(report, null, 2), "micar-review.json", "application/json");
+  if (!busy && isCurrent()) download(JSON.stringify(report, null, 2), "micar-review.json", "application/json");
 };
 $("export-text").onclick = () => {
-  if (!busy && reportIsCurrent(report, checkedText, input.value)) download(reportText, "micar-review.txt", "text/plain;charset=utf-8");
+  if (!busy && isCurrent()) download(reportText, "micar-review.txt", "text/plain;charset=utf-8");
 };
 window.addEventListener("beforeunload", event => {
   if (modified) { event.preventDefault(); event.returnValue = ""; }
