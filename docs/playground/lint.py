@@ -23,7 +23,8 @@ def lint_draft(draft_text: str, draft_format: str = "json", regime: str = "", na
         report = lint_whitepaper(whitepaper)
         return json.dumps({"report": json.loads(render_json(report)), "text": render_text(report)})
     except SystemExit as exc:
-        # Loader refusals are written for the user ("State the regime explicitly"); tracebacks never leave the worker.
+        # Loader refusals are written for the user ("State the regime explicitly");
+        # tracebacks never leave the worker.
         return json.dumps({"error": str(exc).replace(f"{WORKDIR}/", "")})
     finally:
         path.unlink(missing_ok=True)
