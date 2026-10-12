@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { MAX_BYTES, formatDraft, parseDraft, reportIsCurrent, sectionSelection, selectFindings } from "../../docs/playground/model.mjs";
+import { MAX_BYTES, MAX_XHTML_BYTES, displayCitation, draftFormat, validateDraft, formatDraft, parseDraft, reportIsCurrent, sectionSelection, selectFindings } from "../../docs/playground/model.mjs";
 
 const valid = { type: "art", sections: { summary: "A synthetic draft." } };
 const parse = data => parseDraft(JSON.stringify(data));
@@ -100,4 +100,42 @@ test("formatting changes whitespace only", () => {
     "}",
   ].join("\n"));
   assert.throws(() => formatDraft("{"), /valid JSON/);
+});
+
+const repoFile = path => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
+
+test("a draft that opens with markup is XHTML and states no regime of its own", () => {
+  const xhtml = repoFile("docs/playground/sample-numbered.xhtml");
+  assert.equal(draftFormat(xhtml), "xhtml");
+  assert.equal(draftFormat(`\n  ${xhtml}`), "xhtml");
+  assert.deepEqual(validateDraft(xhtml), { format: "xhtml", regime: null });
+  assert.equal(draftFormat(JSON.stringify(valid)), "json");
+  assert.deepEqual(validateDraft(JSON.stringify({ ...valid, type: "ART" })), { format: "json", regime: "art" });
+  assert.throws(() => validateDraft("not a draft"), /valid JSON/);
+  assert.throws(() => validateDraft(`<html>${" ".repeat(MAX_XHTML_BYTES)}</html>`), /up to 4 MB/);
+});
+
+test("display citations never alter a pinpoint", () => {
+  const citations = [
+    "Art. 6 Abs. 5, Art. 19 Abs. 4, Art. 51 Abs. 4 MiCAR",
+    "Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d, Art. 45 Abs. 3 und Art. 45 Abs. 7 Buchst. b MiCAR",
+    "Art. 6 Abs. 1 UAbs. 1 Buchst. j MiCAR i.V.m. Art. 4 VO (EU) 2025/422; Anhang Tabelle 2 Teil J VO (EU) 2024/2984",
+    "Art. 54 MiCAR i.V.m. Art. 7 EMD2 (Richtlinie 2009/110/EG)",
+  ];
+  for (const citation of citations) {
+    assert.deepEqual(displayCitation(citation).match(/\d+/g), citation.match(/\d+/g));
+  }
+});
+
+test("the evidence note states the committed study figures", () => {
+  const study = "studies/2026-07-title-ii-annex-i-whitepaper-study";
+  const findings = JSON.parse(repoFile(`${study}/findings-pseudonymous.json`));
+  const review = JSON.parse(repoFile(`${study}/human-review-summary.json`));
+  const page = repoFile("docs/playground/index.html");
+  const stated = id => Number(page.match(new RegExp(`id="basis-${id}">(\\d+)<`))[1]);
+  assert.equal(stated("documents"), findings.summary.documents_reviewed);
+  assert.equal(stated("controls"), findings.summary.rules_checked_per_document);
+  assert.equal(stated("cells"), review.rows_total);
+  assert.equal(stated("reviewed"), review.rows_completed);
+  assert.equal(Object.keys(JSON.parse(repoFile("docs/playground/samples.json"))).length, 4);
 });
