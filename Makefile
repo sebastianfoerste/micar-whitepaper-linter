@@ -1,8 +1,8 @@
 UV ?= uv
 
-.PHONY: check install demo lint test smoke review-bundle template-check template-export
+.PHONY: check install demo lint test smoke review-bundle playground-check playground-samples template-check template-export
 
-check: lint test smoke review-bundle template-check
+check: lint test smoke review-bundle playground-check template-check
 
 install:
 	$(UV) sync --extra dev
@@ -22,6 +22,14 @@ smoke:
 review-bundle:
 	$(UV) run --extra dev python -m micar_linter examples/art-stablecoin.json \
 		--review-bundle-dir dist/review-bundle
+
+playground-check:
+	node --check docs/playground/app.mjs
+	node --check docs/playground/runtime.mjs
+	node --test tests/playground/*.test.mjs
+
+playground-samples:
+	$(UV) run python scripts/build_playground_samples.py
 
 template-check:
 	python3 scripts/check_whitepaper_starter.py

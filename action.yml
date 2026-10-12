@@ -1,8 +1,5 @@
 name: 'MiCAR Whitepaper Lint'
-description: >-
-  Deterministic first-pass lint of a MiCAR crypto-asset whitepaper draft.
-  Pinpoint citations to MiCAR articles and annexes, blocker-gated exit code.
-  Not legal advice.
+description: 'Deterministic first-pass lint for MiCAR whitepaper drafts with pinpoint Annex citations. Not legal advice.'
 author: 'Sebastian Förste'
 branding:
   icon: 'check-square'

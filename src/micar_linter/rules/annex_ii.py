@@ -94,15 +94,34 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
         severity=Severity.BLOCKER,
     ),
     Rule(
-        rule_id="ANNEX_II.G.COMPOSITION",
-        citation="Anhang II Teil G i.V.m. Art. 36 Abs. 1 MiCAR",
+        rule_id="ANNEX_II.G.COMPOSITION_DISCLOSURE",
+        citation="Anhang II Teil G i.V.m. Art. 36 MiCAR",
         section="reserve_of_assets",
-        label="Reserve composition and investment limits (Art. 36(1) MiCAR / EBA RTS)",
+        label="Reserve composition disclosure (Annex II Part G)",
         required_terms=("reserve", "composition", "deposit", "concentration"),
         required_terms_de=("reserve", "zusammensetzung", "einlagen", "konzentration"),
-        required_patterns=(r"(30\s*%|thirty\s*percent)",),
-        required_patterns_de=(r"(30\s*%|dreißig\s*prozent)",),
         min_words=60,
+        severity=Severity.BLOCKER,
+    ),
+    Rule(
+        # Disclosure completeness and substantive reserve compliance are separate
+        # questions. This rule surfaces candidate floors for lawyer review and never
+        # concludes compliance from draft-controlled text or metadata.
+        # Art. 45(7)(b) binds EBA's RTS, not the issuer. A non-significant ART
+        # reaches the 60 % figure only through Art. 35(4) extending Art. 45(3)
+        # (EBA/RTS/2024/10, final report para. 23), so Art. 45(3) is the hinge.
+        rule_id="ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
+        citation=(
+            "Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d, "
+            "Art. 45 Abs. 3 und Art. 45 Abs. 7 Buchst. b MiCAR"
+        ),
+        section="reserve_of_assets",
+        label=(
+            "Candidate deposit floor for the reserve (30 % under Art. 36(4)(d); "
+            "60 % under Art. 45(7)(b) for significant ARTs, or for non-significant "
+            "ARTs via Arts. 35(4) and 45(3) MiCAR) - lawyer review required"
+        ),
+        min_words=0,
         severity=Severity.BLOCKER,
     ),
     Rule(
@@ -127,7 +146,10 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
     ),
     Rule(
         rule_id="ANNEX_II.H",
-        citation="Anhang II Teil H i.V.m. ESMA RTS on sustainability indicators",
+        citation=(
+            "Art. 19 Abs. 1 UAbs. 1 Buchst. h MiCAR i.V.m. Art. 4 VO (EU) 2025/422; "
+            "Anhang Tabelle 3 Teil H VO (EU) 2024/2984"
+        ),
         section="environmental_impact",
         label="Principal adverse environmental and climate-related impact of the consensus mechanism",
         required_terms=("consensus", "energy", "climate", "environmental"),
@@ -137,7 +159,7 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
     ),
     Rule(
         rule_id="ANNEX_II.I",
-        citation="Anhang II Teil I i.V.m. Art. 39 MiCAR",
+        citation="Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 MiCAR",
         section="redemption",
         label="Redemption rights and procedure (timing, fees, suspension conditions)",
         required_terms=("redemption", "at par", "procedure", "timing", "fees", "suspension"),

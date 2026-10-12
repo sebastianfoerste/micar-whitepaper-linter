@@ -47,9 +47,11 @@ def render_text(report: Report) -> str:
         lines.append("All required disclosures present. Lawyer review still required.")
     else:
         lines.append(
-            "First-pass screening only. The draft is not package-ready. The "
-            "MiCAR notification under Art. 8 / 17 / 49 MiCAR should not enter an external review "
-            "or filing workflow until BLOCKER items are cured and a lawyer has signed off."
+            "First-pass screening only. The draft is not package-ready. The white paper "
+            "notification or submission for approval (Art. 8 Abs. 1, Art. 16 Abs. 2 UAbs. 2, "
+            "Art. 17 Abs. 1 Buchst. a, Art. 18 Abs. 2 Buchst. k, Art. 51 Abs. 11 MiCAR) should not "
+            "enter an external review or filing workflow until BLOCKER items are cured and a lawyer "
+            "has signed off."
         )
     lines.append("This tool is not legal advice.")
     return "\n".join(lines)

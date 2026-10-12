@@ -1,9 +1,9 @@
 """Cross-cutting disclosures that apply to every MiCAR white paper.
 
-Art. 6(1), Art. 19(1), and Art. 51(1) MiCAR each require the white paper to be
-fair, clear, and not misleading. The summary, the date of notification, the
-required risk warning, and the management-body statement are mandated for all
-three regimes (Art. 6(5)-(6), Art. 19(5)-(6), Art. 51(5)-(6) MiCAR).
+Art. 6(2), Art. 19(2) and Art. 51(2) MiCAR each require the white paper to be
+fair, clear and not misleading. The risk warning, the management-body statement,
+the summary and the date of notification are mandated for all three regimes
+(Art. 6(5) to (8), Art. 19(4) to (7), Art. 51(4) to (7) MiCAR).
 
 These checks run before the Annex-specific ruleset.
 """
@@ -15,7 +15,7 @@ from micar_linter.rules.base import Rule, Severity
 COMMON_RULES: tuple[Rule, ...] = (
     Rule(
         rule_id="COMMON.SUMMARY",
-        citation="Art. 6 Abs. 7, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR",
+        citation="Art. 6 Abs. 7, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR",
         section="summary",
         label="Plain-language summary",
         required_terms=("summary", "key information"),
@@ -25,7 +25,7 @@ COMMON_RULES: tuple[Rule, ...] = (
     ),
     Rule(
         rule_id="COMMON.RISK_WARNING",
-        citation="Art. 6 Abs. 5, Art. 19 Abs. 5, Art. 51 Abs. 5 MiCAR",
+        citation="Art. 6 Abs. 5, Art. 19 Abs. 4, Art. 51 Abs. 4 MiCAR",
         section="risk_warning",
         label="Mandatory risk warning statement",
         required_terms=("risk", "value", "loss"),
@@ -35,7 +35,7 @@ COMMON_RULES: tuple[Rule, ...] = (
     ),
     Rule(
         rule_id="COMMON.MANAGEMENT_STATEMENT",
-        citation="Art. 6 Abs. 6, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR",
+        citation="Art. 6 Abs. 6, Art. 19 Abs. 5, Art. 51 Abs. 5 MiCAR",
         section="management_statement",
         label="Statement by the management body on completeness, fairness, and clarity",
         required_terms=("management body", "complies", "fair", "clear", "not misleading"),
@@ -45,7 +45,7 @@ COMMON_RULES: tuple[Rule, ...] = (
     ),
     Rule(
         rule_id="COMMON.NOTIFICATION_DATE",
-        citation="Art. 8 Abs. 1, Art. 17, Art. 49 MiCAR",
+        citation="Art. 6 Abs. 8, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR",
         section="notification_date",
         label="Date of notification to the competent authority",
         required_terms=("date",),
@@ -55,7 +55,7 @@ COMMON_RULES: tuple[Rule, ...] = (
     ),
     Rule(
         rule_id="COMMON.LANGUAGE",
-        citation="Art. 6 Abs. 12, Art. 19 Abs. 11, Art. 51 Abs. 10 MiCAR",
+        citation="Art. 6 Abs. 9, Art. 19 Abs. 8, Art. 51 Abs. 8 MiCAR",
         section="language",
         label=(
             "Language of the white paper "
