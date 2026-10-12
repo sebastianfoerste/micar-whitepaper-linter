@@ -30,7 +30,7 @@ Ensure you run commands using `uv` or inside your virtual environment:
 ---
 
 ## 4. Coding Conventions
-- **Regulatory Rules**: centralize all rules in [src/micar_linter/rules/](file:///Users/sebastian/Developer/micar-whitepaper-linter/src/micar_linter/rules/). All rules must inherit from `BaseRule`.
+- **Regulatory Rules**: centralize all rules in [src/micar_linter/rules/](src/micar_linter/rules/). All rules must inherit from `BaseRule`.
 - **Fail Closed**: Compliance checks must fail closed on missing sections.
 
 ---

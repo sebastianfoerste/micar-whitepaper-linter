@@ -12,7 +12,7 @@ For browser checks, serve `docs/` over HTTP and open `/playground/`. Exercise ea
 
 ## Testing Tools
 
-1. **Unit Tests**: Powered by `pytest` (configured in [pyproject.toml](file:///Users/sebastian/Developer/micar-whitepaper-linter/pyproject.toml)).
+1. **Unit Tests**: Powered by `pytest` (configured in [pyproject.toml](../pyproject.toml)).
 2. **Formatting & Linting**: Handled by `ruff`.
 
 ---

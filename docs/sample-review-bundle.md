@@ -9,12 +9,12 @@ This document provides a **sample compliance review bundle** showing the outputs
 
 ## Generated Review Artifacts
 
-The following review artifacts have been generated in the [examples/review-bundle/](file:///Users/sebastian/Developer/micar-whitepaper-linter/examples/review-bundle/) directory:
+The following review artifacts have been generated in the [examples/review-bundle/](../examples/review-bundle/) directory:
 
-1. **[compliance-checklist.md](file:///Users/sebastian/Developer/micar-whitepaper-linter/examples/review-bundle/compliance-checklist.md)**: A markdown checklist mapping the white paper's sections against specific MiCAR articles (e.g., Art. 6, 19, 51, and Annex II), with automated pass/review/fail determinations and a lawyer sign-off block.
-2. **[remediation-checklist.json](file:///Users/sebastian/Developer/micar-whitepaper-linter/examples/review-bundle/remediation-checklist.json)**: A machine-readable JSON object mapping failed checks to specific remediation steps, citations, and severities.
-3. **[coverage-matrix.json](file:///Users/sebastian/Developer/micar-whitepaper-linter/examples/review-bundle/coverage-matrix.json)**: A detailed JSON matrix mapping individual sections to word counts, rule IDs, and specific text matches/missing phrases.
-4. **[manifest.json](file:///Users/sebastian/Developer/micar-whitepaper-linter/examples/review-bundle/manifest.json)**: A manifest recording document metadata (title, type, checksums, and linter version).
+1. **[compliance-checklist.md](../examples/review-bundle/compliance-checklist.md)**: A markdown checklist mapping the white paper's sections against specific MiCAR articles (e.g., Art. 6, 19, 51, and Annex II), with automated pass/review/fail determinations and a lawyer sign-off block.
+2. **[remediation-checklist.json](../examples/review-bundle/remediation-checklist.json)**: A machine-readable JSON object mapping failed checks to specific remediation steps, citations, and severities.
+3. **[coverage-matrix.json](../examples/review-bundle/coverage-matrix.json)**: A detailed JSON matrix mapping individual sections to word counts, rule IDs, and specific text matches/missing phrases.
+4. **[manifest.json](../examples/review-bundle/manifest.json)**: A manifest recording document metadata (title, type, checksums, and linter version).
 
 ---
 
