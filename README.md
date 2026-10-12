@@ -112,9 +112,8 @@ Run `micar-lint <draft> --workspace-output workspace.json --collaboration-bundle
 
 Part of a portfolio of deterministic, review-gated EU-regulation tools:
 
-- [eu-ai-act-classifier](https://github.com/sebastianfoerste/eu-ai-act-classifier) — EU AI Act risk-tier classifier with cited obligations.
-- [dora-third-party-register-and-resilience-workbench](https://github.com/sebastianfoerste/dora-third-party-register-and-resilience-workbench) — DORA ICT third-party register and resilience workbench.
-- [eu-financial-reg-horizon-scanner](https://github.com/sebastianfoerste/eu-financial-reg-horizon-scanner) — Review-gated EU financial-regulation horizon scanner.
+- [eu-ai-act-classifier](https://github.com/sebastianfoerste/eu-ai-act-classifier) — EU AI Act risk-tier classifier with cited obligations and a browser playground.
+- [dpa-and-data-transfer-review](https://github.com/sebastianfoerste/dpa-and-data-transfer-review) — GDPR Art. 28 and Chapter V transfer checks with a visible review state.
 - [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template) — Starter repo that lints a whitepaper draft in CI using this tool.
 
 Curated index of EU financial-regulation primary sources and tools: [awesome-eu-fintech-regulation](https://github.com/sebastianfoerste/awesome-eu-fintech-regulation).
