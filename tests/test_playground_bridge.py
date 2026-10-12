@@ -8,7 +8,7 @@ import pytest
 
 from micar_linter.linter import lint_whitepaper
 from micar_linter.report import render_json, render_text
-from micar_linter.whitepaper import load_whitepaper
+from micar_linter.whitepaper import WhitepaperType, load_whitepaper
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -16,20 +16,39 @@ ROOT = Path(__file__).resolve().parents[1]
 @pytest.fixture
 def bridge(tmp_path, monkeypatch):
     lint = runpy.run_path(str(ROOT / "docs/playground/lint.py"))["lint_draft"]
-    path = tmp_path / "draft.json"
-    monkeypatch.setitem(lint.__globals__, "Path", lambda _: path)
-    return lint, path
+    workdir = tmp_path / "work"
+    monkeypatch.setitem(lint.__globals__, "WORKDIR", workdir)
+    return lint, workdir
 
 
-@pytest.mark.parametrize("filename", ["incomplete.json", "art-stablecoin.json", "other-crypto-asset.json", "emt-token.json"])
+@pytest.mark.parametrize(
+    "filename", ["incomplete.json", "art-stablecoin.json", "other-crypto-asset.json", "emt-token.json"]
+)
 def test_browser_reports_match_cli_reports(bridge, filename):
-    lint, path = bridge
+    lint, workdir = bridge
     source = ROOT / "examples" / filename
     result = json.loads(lint(source.read_text()))
     expected = lint_whitepaper(load_whitepaper(source))
     assert result["report"] == json.loads(render_json(expected))
     assert result["text"] == render_text(expected)
-    assert not path.exists()
+    assert not list(workdir.iterdir())
+
+
+def test_browser_xhtml_report_matches_cli_report_for_the_stated_regime(bridge):
+    lint, workdir = bridge
+    source = ROOT / "examples" / "numbered-other-draft.xhtml"
+    result = json.loads(lint(source.read_text(), "xhtml", "other", "../../numbered-other-draft.xhtml"))
+    expected = lint_whitepaper(load_whitepaper(source, WhitepaperType.OTHER))
+    assert result["report"] == json.loads(render_json(expected))
+    assert result["report"]["title"] == "Numbered Other Draft"
+    assert not list(workdir.iterdir())
+
+
+def test_browser_never_infers_the_regime_of_an_xhtml_draft(bridge):
+    lint, _ = bridge
+    source = ROOT / "examples" / "numbered-other-draft.xhtml"
+    with pytest.raises(ValueError):
+        lint(source.read_text(), "xhtml", "", "draft.xhtml")
 
 
 def test_browser_retains_lawyer_review_and_ignores_draft_authored_validation(bridge):
@@ -43,12 +62,12 @@ def test_browser_retains_lawyer_review_and_ignores_draft_authored_validation(bri
 
 
 def test_browser_cleans_up_draft_after_parser_failure(bridge):
-    lint, path = bridge
-    with pytest.raises(SystemExit):
-        lint('{"sections": null}')
-    assert not path.exists()
+    lint, workdir = bridge
+    assert "sections" in json.loads(lint('{"sections": null}'))["error"]
+    assert not list(workdir.iterdir())
 
 
 def test_bundled_samples_match_canonical_examples():
     builder = runpy.run_path(str(ROOT / "scripts/build_playground_samples.py"))
     assert (ROOT / "docs/playground/samples.json").read_text() == builder["build_samples"]()
+    assert (ROOT / "docs/playground/sample-numbered.xhtml").read_text() == builder["build_xhtml_sample"]()

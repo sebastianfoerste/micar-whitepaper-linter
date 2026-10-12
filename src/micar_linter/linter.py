@@ -150,7 +150,7 @@ def lint_whitepaper(whitepaper: Whitepaper) -> Report:
 
     # Check for unrecognized/misspelled sections
     valid_sections = {rule.section for rule in rules}
-    warnings: list[str] = []
+    warnings: list[str] = list(whitepaper.metadata.get("extraction_notes", ()))
     for section_name in whitepaper.sections:
         if section_name not in valid_sections:
             warnings.append(

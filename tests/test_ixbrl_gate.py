@@ -1,13 +1,14 @@
 """The iXBRL format gate must fail closed.
 
-A blocker-severity rule may only report `pass` when the document actually went
-through Inline XBRL validation. Draft formats leave the blocker open.
+Draft formats leave the blocker open. A tagged XHTML file stays under review,
+because the taxonomy's existence and value assertions are not evaluated.
 """
 
 from pathlib import Path
 
 import pytest
 
+from micar_linter.ixbrl import COMPLETENESS_NOTE
 from micar_linter.linter import Linter
 from micar_linter.rules import RULESETS
 from micar_linter.whitepaper import load_whitepaper
@@ -17,15 +18,10 @@ EXAMPLES = Path(__file__).resolve().parents[1] / "examples"
 VALID_IXBRL = """<?xml version="1.0" encoding="UTF-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml"
       xmlns:ix="http://www.xbrl.org/2013/inlineXBRL"
-      xmlns:mica="http://example.org/mica">
+      xmlns:mica="https://www.esma.europa.eu/taxonomy/2025-03-31/mica/">
   <body>
-    <p><ix:nonNumeric name="mica:IssuerLegalName">Example Issuer SA</ix:nonNumeric></p>
-    <p><ix:nonNumeric name="mica:WhitepaperTitle">Example</ix:nonNumeric></p>
-    <p><ix:nonNumeric name="mica:CryptoAssetSymbol">EXA</ix:nonNumeric></p>
-    <p><ix:nonNumeric name="mica:CryptoAssetType">other</ix:nonNumeric></p>
-    <p><ix:nonNumeric name="mica:ConsensusMechanism">PoS</ix:nonNumeric></p>
-    <p><ix:nonNumeric name="mica:RiskWarningStatement">Risk warning.</ix:nonNumeric></p>
-    <p><ix:nonNumeric name="mica:ManagementBodyDeclaration">Declaration.</ix:nonNumeric></p>
+    <p><ix:nonNumeric name="mica:DateOfNotificationForOtherTokenWhitePaper">2026-03-02</ix:nonNumeric></p>
+    <p><ix:nonNumeric name="mica:StatementAboutPotentialRisks">Risk statement.</ix:nonNumeric></p>
   </body>
 </html>
 """
@@ -62,10 +58,10 @@ def _write(tmp_path: Path, name: str, body: str) -> Path:
     return path
 
 
-def test_valid_ixbrl_xhtml_passes(tmp_path: Path):
+def test_tagged_xhtml_stays_under_review_because_completeness_is_not_checked(tmp_path: Path):
     finding = _ixbrl_finding(_write(tmp_path, "ok.xhtml", VALID_IXBRL))
-    assert finding.status == "pass"
-    assert finding.issues == ()
+    assert finding.status == "review"
+    assert finding.issues == (COMPLETENESS_NOTE,)
 
 
 @pytest.mark.parametrize(
