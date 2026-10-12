@@ -1,8 +1,8 @@
 UV ?= uv
 
-.PHONY: check install demo lint test smoke review-bundle playground-check playground-samples
+.PHONY: check install demo lint test smoke review-bundle playground-check playground-samples template-check template-export
 
-check: lint test smoke review-bundle playground-check
+check: lint test smoke review-bundle playground-check template-check
 
 install:
 	$(UV) sync --extra dev
@@ -30,3 +30,9 @@ playground-check:
 
 playground-samples:
 	$(UV) run python scripts/build_playground_samples.py
+
+template-check:
+	python3 scripts/check_whitepaper_starter.py
+
+template-export:
+	scripts/export-whitepaper-starter.sh

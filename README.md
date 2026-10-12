@@ -60,6 +60,8 @@ Inputs: `whitepaper` (path to a JSON/XHTML/DOCX draft), `strict` (default `true`
 
 Fastest start: the [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template) repo ships this workflow preconfigured — click **Use this template**.
 
+The canonical template source now lives at `templates/whitepaper-starter` in this repository. The existing public template repository remains the release surface. Run `make template-check` to validate its JSON and workflow contract, then `make template-export` to prepare a local path-export branch for human review. The export command never pushes.
+
 ## Reviewer Route
 
 For a short proof review, follow this path:
