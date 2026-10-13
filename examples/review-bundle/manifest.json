@@ -1,9 +1,9 @@
 {
   "schema": "micar-whitepaper-linter.artifact-manifest.v1",
-  "generated_at": "2026-10-13T13:44:00.191768+00:00",
+  "generated_at": "2026-10-13T13:44:18.766379+00:00",
   "source": {
     "path": "examples/art-stablecoin.json",
-    "sha256": "dd4be462c6d96393e87505c9ba80fa1026b10cacfc2ae0a64236012caba975aa"
+    "sha256": "6cc7f0253a115a956fd4af80ac77c77ff8699cc6e914ed98a782375d4599209d"
   },
   "report": {
     "title": "Synthetic EuroStable ART White Paper",
@@ -22,32 +22,32 @@
   "outputs": [
     {
       "path": "dist/review-bundle/compliance-checklist.md",
-      "sha256": "29b16105fc3de880503cc986815e31a8737c61d7b3ad5407984069d954cece7d",
+      "sha256": "b4df2deedeac55085d92a7579f462e7d5b3692446f5801ee013d10076b25281a",
       "role": "compliance_checklist"
     },
     {
       "path": "dist/review-bundle/remediation-checklist.json",
-      "sha256": "29ad00f7a57eebd71aed651c98d6c15a37c8d26b6deb75794787fc88a367e6ee",
+      "sha256": "ac4ce6eb37e4f013d4984d8949bfb7d3eaeb25a44ecad418219e4a61f854a8ac",
       "role": "remediation_checklist"
     },
     {
       "path": "dist/review-bundle/coverage-matrix.json",
-      "sha256": "6995150eeb6bd1b92e7ad36f3d3427215385f2c572b27493855856cc2feaf87e",
+      "sha256": "8b842eef5498b8704007e515bf100c711c38195f9757f99bff9503fba0b317a0",
       "role": "coverage_matrix"
     },
     {
       "path": "dist/review-bundle/review-table.json",
-      "sha256": "36af7ead9be65f53c4468a36d6bd1fa0e80951bb667c1f75d115885fd2e87710",
+      "sha256": "81c9f7cf0f4187f8ca045195825d63dca1f595481132c2e59b28b3da4b66c105",
       "role": "review_table_json"
     },
     {
       "path": "dist/review-bundle/review-table.md",
-      "sha256": "1fbf9fae05498790b47b82ad6acab3df2f07ae221066bb2620e09d0fc70d4ba9",
+      "sha256": "374b407441cda8795d6072f43ae76f24eb3be8abe20673c57c4f333183d3827d",
       "role": "review_table_markdown"
     },
     {
       "path": "dist/review-bundle/reviewer-signoff.md",
-      "sha256": "d18a58a2472788b5cdcf642446a93bfedc0c72585684a48c8b099966c25079b2",
+      "sha256": "4f5a1cbc41ef9e1d54cf8f675c6fcdca4717c3b2f7e4642fcc7c82acaafdda01",
       "role": "lawyer_signoff"
     }
   ],
@@ -64,6 +64,6 @@
     "notice": "Automated linter output requires substantive lawyer review before external use."
   },
   "review_notice": "Manifest proves local artifact integrity only. It is not a legal opinion, signature, notification, or filing approval.",
-  "overall_digest": "62e37cd347708daf36f46c93e3f5c62ee828d5167a447e78a79e0ce0707af0b6",
+  "overall_digest": "448bf9a49e598c8aa3774cbd177c0a12485e464c91cecbcccdba6da45e092479",
   "bundle_schema": "micar-whitepaper-linter.review-bundle.v1"
 }

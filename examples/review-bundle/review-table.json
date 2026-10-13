@@ -1,11 +1,11 @@
 {
   "schema": "micar-whitepaper-linter.review-table",
-  "generated_at": "2026-10-13T13:44:00.191768+00:00",
+  "generated_at": "2026-10-13T13:44:18.766379+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "source": {
     "path": "examples/art-stablecoin.json",
-    "sha256": "dd4be462c6d96393e87505c9ba80fa1026b10cacfc2ae0a64236012caba975aa"
+    "sha256": "6cc7f0253a115a956fd4af80ac77c77ff8699cc6e914ed98a782375d4599209d"
   },
   "summary": {
     "total": 18,
@@ -1925,7 +1925,7 @@
       "severity": "BLOCKER",
       "status": "review",
       "blocker": true,
-      "word_count": 192,
+      "word_count": 213,
       "issues": [
         "Missing review terms: concentration."
       ],
@@ -1935,8 +1935,8 @@
       "source_anchor": {
         "section_key": "reserve_of_assets",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:1debbb0bbd6ebf3b",
-        "section_length": 1231
+        "stable_anchor_id": "json:reserve_of_assets:c7798b85b6b95193",
+        "section_length": 1390
       },
       "anchor_verified": true,
       "citation_coverage": "anchor_and_citation",
@@ -2010,7 +2010,7 @@
         {
           "column_id": "word_count",
           "label": "Word count",
-          "value": "192",
+          "value": "213",
           "status": "needs_review",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2042,7 +2042,7 @@
         {
           "column_id": "source_anchor",
           "label": "Source anchor",
-          "value": "json:reserve_of_assets:1debbb0bbd6ebf3b",
+          "value": "json:reserve_of_assets:c7798b85b6b95193",
           "status": "needs_review",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2074,7 +2074,7 @@
       "severity": "BLOCKER",
       "status": "review",
       "blocker": true,
-      "word_count": 192,
+      "word_count": 213,
       "issues": [
         "Draft percentage candidate(s) detected: 30%. The draft characterisation indicates a 30% candidate floor (Art. 36(4)(d) MiCAR). A lawyer must confirm applicability, statement context, and compliance."
       ],
@@ -2084,8 +2084,8 @@
       "source_anchor": {
         "section_key": "reserve_of_assets",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:bf883585b0801dab",
-        "section_length": 1231
+        "stable_anchor_id": "json:reserve_of_assets:fbacdf33ac5b1230",
+        "section_length": 1390
       },
       "anchor_verified": true,
       "citation_coverage": "anchor_and_citation",
@@ -2159,7 +2159,7 @@
         {
           "column_id": "word_count",
           "label": "Word count",
-          "value": "192",
+          "value": "213",
           "status": "needs_review",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2191,7 +2191,7 @@
         {
           "column_id": "source_anchor",
           "label": "Source anchor",
-          "value": "json:reserve_of_assets:bf883585b0801dab",
+          "value": "json:reserve_of_assets:fbacdf33ac5b1230",
           "status": "needs_review",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2219,11 +2219,11 @@
       "rule_id": "ANNEX_II.G.CUSTODY",
       "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR",
       "section": "reserve_of_assets",
-      "label": "Custody policy and custodian selection (Art. 36(2) MiCAR)",
+      "label": "Custody policy and custodian selection (Art. 37 MiCAR; legal segregation under Art. 36(2))",
       "severity": "BLOCKER",
       "status": "review",
       "blocker": true,
-      "word_count": 192,
+      "word_count": 213,
       "issues": [
         "Missing review terms: insolvency."
       ],
@@ -2233,8 +2233,8 @@
       "source_anchor": {
         "section_key": "reserve_of_assets",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:547764610b35b011",
-        "section_length": 1231
+        "stable_anchor_id": "json:reserve_of_assets:d604af70738b9ae3",
+        "section_length": 1390
       },
       "anchor_verified": true,
       "citation_coverage": "anchor_and_citation",
@@ -2308,7 +2308,7 @@
         {
           "column_id": "word_count",
           "label": "Word count",
-          "value": "192",
+          "value": "213",
           "status": "needs_review",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2340,7 +2340,7 @@
         {
           "column_id": "source_anchor",
           "label": "Source anchor",
-          "value": "json:reserve_of_assets:547764610b35b011",
+          "value": "json:reserve_of_assets:d604af70738b9ae3",
           "status": "needs_review",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2366,13 +2366,13 @@
     {
       "row_id": "review-row-541d00149b4fdbf7",
       "rule_id": "ANNEX_II.G.VALUATION_AUDIT",
-      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR",
+      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 7, 9, 11 und 12 MiCAR",
       "section": "reserve_of_assets",
-      "label": "Valuation procedure and audit frequency (Art. 36(3) MiCAR)",
+      "label": "Valuation of the reserve at market prices (Art. 36(7), (11) and (12) MiCAR) and independent audit every six months (Art. 36(9) MiCAR)",
       "severity": "BLOCKER",
       "status": "pass",
       "blocker": false,
-      "word_count": 192,
+      "word_count": 213,
       "issues": [],
       "remediation": "Keep disclosure under lawyer review before external use.",
       "reviewer_decision": "pending_lawyer_confirmation",
@@ -2380,8 +2380,8 @@
       "source_anchor": {
         "section_key": "reserve_of_assets",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:5852d30038a35798",
-        "section_length": 1231
+        "stable_anchor_id": "json:reserve_of_assets:7a12ddab039c5d3b",
+        "section_length": 1390
       },
       "anchor_verified": true,
       "citation_coverage": "anchor_and_citation",
@@ -2392,7 +2392,7 @@
         "rule_scope": [
           "ANNEX_II.G.VALUATION_AUDIT"
         ],
-        "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR",
+        "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 7, 9, 11 und 12 MiCAR",
         "severity": "BLOCKER",
         "review_gate": "Qualified lawyer review required before external use.",
         "priority": "standard_review",
@@ -2423,7 +2423,7 @@
         {
           "column_id": "citation",
           "label": "Citation",
-          "value": "Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR",
+          "value": "Anhang II Teil G i.V.m. Art. 36 Abs. 7, 9, 11 und 12 MiCAR",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2455,7 +2455,7 @@
         {
           "column_id": "word_count",
           "label": "Word count",
-          "value": "192",
+          "value": "213",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2487,7 +2487,7 @@
         {
           "column_id": "source_anchor",
           "label": "Source anchor",
-          "value": "json:reserve_of_assets:5852d30038a35798",
+          "value": "json:reserve_of_assets:7a12ddab039c5d3b",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2807,5 +2807,5 @@
   ],
   "warnings": [],
   "review_notice": "Review table rows are deterministic linter outputs. Reviewer decisions remain pending until a qualified lawyer signs off.",
-  "digest": "13eba41dcbaa4eee3dab827c117bd52be54821e016e77e21b531a93a7097224c"
+  "digest": "a7558099626d6d00cc8245d6248ba4cabee63bb73a53b88a7c8ca6faff0127d7"
 }

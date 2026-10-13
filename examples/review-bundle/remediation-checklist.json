@@ -46,8 +46,8 @@
       "source_anchor": {
         "section_key": "reserve_of_assets",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:1debbb0bbd6ebf3b",
-        "section_length": 1231
+        "stable_anchor_id": "json:reserve_of_assets:c7798b85b6b95193",
+        "section_length": 1390
       }
     },
     {
@@ -66,15 +66,15 @@
       "source_anchor": {
         "section_key": "reserve_of_assets",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:bf883585b0801dab",
-        "section_length": 1231
+        "stable_anchor_id": "json:reserve_of_assets:fbacdf33ac5b1230",
+        "section_length": 1390
       }
     },
     {
       "rule_id": "ANNEX_II.G.CUSTODY",
       "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR",
       "section": "reserve_of_assets",
-      "label": "Custody policy and custodian selection (Art. 36(2) MiCAR)",
+      "label": "Custody policy and custodian selection (Art. 37 MiCAR; legal segregation under Art. 36(2))",
       "severity": "BLOCKER",
       "status": "review",
       "owner_role": "Responsible lawyer",
@@ -86,8 +86,8 @@
       "source_anchor": {
         "section_key": "reserve_of_assets",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:547764610b35b011",
-        "section_length": 1231
+        "stable_anchor_id": "json:reserve_of_assets:d604af70738b9ae3",
+        "section_length": 1390
       }
     }
   ],

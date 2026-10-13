@@ -79,22 +79,22 @@ Pass: 14  |  Review: 3  |  Missing: 1  |  Blockers: 4
 
 [REVIEW] [BLOCKER] ANNEX_II.G.COMPOSITION_DISCLOSURE  Reserve composition disclosure (Annex II Part G)
            Cite:  Anhang II Teil G i.V.m. Art. 36 MiCAR
-           Section: 'reserve_of_assets'  (192 words)
+           Section: 'reserve_of_assets'  (213 words)
            -  Missing review terms: concentration.
 
 [REVIEW] [BLOCKER] ANNEX_II.G.DEPOSIT_FLOOR_REVIEW  Candidate deposit floor for the reserve (30 % under Art. 36(4)(d); 60 % under Art. 45(7)(b) for significant ARTs, or for non-significant ARTs via Arts. 35(4) and 45(3) MiCAR) - lawyer review required
            Cite:  Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d, Art. 45 Abs. 3 und Art. 45 Abs. 7 Buchst. b MiCAR
-           Section: 'reserve_of_assets'  (192 words)
+           Section: 'reserve_of_assets'  (213 words)
            -  Draft percentage candidate(s) detected: 30%. The draft characterisation indicates a 30% candidate floor (Art. 36(4)(d) MiCAR). A lawyer must confirm applicability, statement context, and compliance.
 
-[REVIEW] [BLOCKER] ANNEX_II.G.CUSTODY  Custody policy and custodian selection (Art. 36(2) MiCAR)
+[REVIEW] [BLOCKER] ANNEX_II.G.CUSTODY  Custody policy and custodian selection (Art. 37 MiCAR; legal segregation under Art. 36(2))
            Cite:  Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR
-           Section: 'reserve_of_assets'  (192 words)
+           Section: 'reserve_of_assets'  (213 words)
            -  Missing review terms: insolvency.
 
-[PASS  ] [BLOCKER] ANNEX_II.G.VALUATION_AUDIT  Valuation procedure and audit frequency (Art. 36(3) MiCAR)
-           Cite:  Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR
-           Section: 'reserve_of_assets'  (192 words)
+[PASS  ] [BLOCKER] ANNEX_II.G.VALUATION_AUDIT  Valuation of the reserve at market prices (Art. 36(7), (11) and (12) MiCAR) and independent audit every six months (Art. 36(9) MiCAR)
+           Cite:  Anhang II Teil G i.V.m. Art. 36 Abs. 7, 9, 11 und 12 MiCAR
+           Section: 'reserve_of_assets'  (213 words)
 
 [PASS  ] [MAJOR  ] ANNEX_II.H  Principal adverse environmental and climate-related impact of the consensus mechanism
            Cite:  Art. 19 Abs. 1 UAbs. 1 Buchst. h MiCAR i.V.m. Art. 4 VO (EU) 2025/422; Anhang Tabelle 3 Teil H VO (EU) 2024/2984

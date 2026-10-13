@@ -1,8 +1,10 @@
-"""ART redemption rules follow Art. 39 MiCAR.
+"""ART redemption and reserve-valuation rules follow Art. 36 and Art. 39 MiCAR.
 
 Redemption "at par" is the e-money token rule (Art. 49(4) MiCAR). An ART issuer
 redeems by paying funds equivalent to the market value of the referenced assets or by
-delivering those assets (Art. 39(2) MiCAR).
+delivering those assets (Art. 39(2) MiCAR). Valuation of the reserve sits in Art. 36(7),
+(11) and (12), the six-monthly independent audit in Art. 36(9); Art. 36(3) is
+operational segregation.
 """
 
 from pathlib import Path
@@ -94,8 +96,20 @@ def test_german_redemption_rule_uses_ruecktausch_and_marktwert():
     assert "rücktausch" in _rule("ANNEX_II.D").required_terms_de
 
 
+def test_valuation_audit_rule_cites_the_valuation_and_audit_paragraphs():
+    rule = _rule("ANNEX_II.G.VALUATION_AUDIT")
+    assert rule.citation == "Anhang II Teil G i.V.m. Art. 36 Abs. 7, 9, 11 und 12 MiCAR"
+    assert "Abs. 3" not in rule.citation
+    assert "36(3)" not in rule.label
+    assert "Art. 36(9)" in rule.label
+
+
+def test_custody_label_cites_article_37():
+    assert "Art. 37" in _rule("ANNEX_II.G.CUSTODY").label
+
+
 def test_art_example_passes_the_redemption_rules():
     report = lint_whitepaper(load_whitepaper(ROOT / "examples" / "art-stablecoin.json"))
     indexed = {f.rule.rule_id: f for f in report.findings}
-    for rule_id in ("ANNEX_II.D", "ANNEX_II.I"):
+    for rule_id in ("ANNEX_II.D", "ANNEX_II.I", "ANNEX_II.G.VALUATION_AUDIT"):
         assert indexed[rule_id].status == "pass", (rule_id, indexed[rule_id].issues)

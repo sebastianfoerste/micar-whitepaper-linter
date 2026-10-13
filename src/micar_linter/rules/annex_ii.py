@@ -134,17 +134,22 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
         rule_id="ANNEX_II.G.CUSTODY",
         citation="Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR",
         section="reserve_of_assets",
-        label="Custody policy and custodian selection (Art. 36(2) MiCAR)",
+        label="Custody policy and custodian selection (Art. 37 MiCAR; legal segregation under Art. 36(2))",
         required_terms=("custody", "custodian", "segregation", "insolvency"),
         required_terms_de=("verwahrung", "verwahrstelle", "trennung", "insolvenz"),
         min_words=60,
         severity=Severity.BLOCKER,
     ),
     Rule(
+        # Art. 36(3) MiCAR is operational segregation. Valuation at market prices sits
+        # in Art. 36(7), (11) and (12); the six-monthly independent audit in Art. 36(9).
         rule_id="ANNEX_II.G.VALUATION_AUDIT",
-        citation="Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR",
+        citation="Anhang II Teil G i.V.m. Art. 36 Abs. 7, 9, 11 und 12 MiCAR",
         section="reserve_of_assets",
-        label="Valuation procedure and audit frequency (Art. 36(3) MiCAR)",
+        label=(
+            "Valuation of the reserve at market prices (Art. 36(7), (11) and (12) MiCAR) "
+            "and independent audit every six months (Art. 36(9) MiCAR)"
+        ),
         required_terms=("valuation", "audit"),
         required_terms_de=("bewertung", "prüfung"),
         min_words=50,
