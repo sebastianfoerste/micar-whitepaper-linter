@@ -48,12 +48,18 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
         severity=Severity.BLOCKER,
     ),
     Rule(
+        # "At par" is the e-money token rule (Art. 49(4) MiCAR). An ART carries a
+        # permanent right of redemption (Art. 39(1)); Part D, points 9 and 13, ask how
+        # that right is enforced and treated in insolvency, point 12 for complaints.
         rule_id="ANNEX_II.D",
         citation="Anhang II Teil D i.V.m. Art. 39 MiCAR",
         section="rights_and_obligations",
-        label="Rights and obligations of holders (redemption right at par, complaints handling)",
-        required_terms=("rights", "redemption", "at par", "complaints", "holder"),
-        required_terms_de=("rechte", "rückzahlung", "zu par", "beschwerden", "inhaber"),
+        label=(
+            "Rights and obligations of holders (permanent right of redemption and its "
+            "treatment in insolvency, complaints handling)"
+        ),
+        required_terms=("rights", "redemption", "insolvency", "complaints", "holder"),
+        required_terms_de=("rechte", "rücktausch", "insolvenz", "beschwerden", "inhaber"),
         min_words=80,
         severity=Severity.BLOCKER,
     ),
@@ -158,12 +164,25 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
         severity=Severity.MAJOR,
     ),
     Rule(
+        # Art. 39(2) MiCAR: the issuer redeems by paying funds equivalent to the market
+        # value of the referenced assets or by delivering those assets. Where it accepted
+        # payment in funds in an official currency, it must always offer redemption in
+        # funds in that currency. A delivery-only policy still states its valuation basis
+        # (Art. 39(2)(c)), so a missing "market value" term is a review prompt, not a
+        # conclusion. No fee: Art. 39(3). Liquidity fees and suspension of redemptions
+        # arise only under the recovery plan or by the authority (Art. 46(1), (4)).
         rule_id="ANNEX_II.I",
-        citation="Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 MiCAR",
+        citation=(
+            "Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 Abs. 2 und 3, "
+            "Art. 46 MiCAR"
+        ),
         section="redemption",
-        label="Redemption rights and procedure (timing, fees, suspension conditions)",
-        required_terms=("redemption", "at par", "procedure", "timing", "fees", "suspension"),
-        required_terms_de=("rücknahme", "zu par", "verfahren", "zeitplan", "gebühren", "aussetzung"),
+        label=(
+            "Redemption policy (funds equal to the market value of the referenced assets or "
+            "delivery of those assets; procedure, timing, fees, suspension conditions)"
+        ),
+        required_terms=("redemption", "market value", "procedure", "timing", "fees", "suspension"),
+        required_terms_de=("rücktausch", "marktwert", "verfahren", "zeitplan", "gebühren", "aussetzung"),
         min_words=100,
         severity=Severity.BLOCKER,
     ),

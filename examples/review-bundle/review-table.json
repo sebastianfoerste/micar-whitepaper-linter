@@ -1,11 +1,11 @@
 {
   "schema": "micar-whitepaper-linter.review-table",
-  "generated_at": "2026-09-05T08:56:24.628912+00:00",
+  "generated_at": "2026-10-13T13:44:00.191768+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "source": {
     "path": "examples/art-stablecoin.json",
-    "sha256": "85d5a5fbc71f75eef322fa558403e10cb001471e3a11c72d51dcfdf4a0374585"
+    "sha256": "dd4be462c6d96393e87505c9ba80fa1026b10cacfc2ae0a64236012caba975aa"
   },
   "summary": {
     "total": 18,
@@ -167,8 +167,8 @@
       "source_anchor": {
         "section_key": "summary",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:summary:77a216d8936c9e11",
-        "section_length": 587
+        "stable_anchor_id": "json:summary:8b6f820f3edd8eca",
+        "section_length": 593
       },
       "anchor_verified": true,
       "citation_coverage": "anchor_and_citation",
@@ -274,7 +274,7 @@
         {
           "column_id": "source_anchor",
           "label": "Source anchor",
-          "value": "json:summary:77a216d8936c9e11",
+          "value": "json:summary:8b6f820f3edd8eca",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -1480,11 +1480,11 @@
       "rule_id": "ANNEX_II.D",
       "citation": "Anhang II Teil D i.V.m. Art. 39 MiCAR",
       "section": "rights_and_obligations",
-      "label": "Rights and obligations of holders (redemption right at par, complaints handling)",
+      "label": "Rights and obligations of holders (permanent right of redemption and its treatment in insolvency, complaints handling)",
       "severity": "BLOCKER",
       "status": "pass",
       "blocker": false,
-      "word_count": 94,
+      "word_count": 142,
       "issues": [],
       "remediation": "Keep disclosure under lawyer review before external use.",
       "reviewer_decision": "pending_lawyer_confirmation",
@@ -1492,8 +1492,8 @@
       "source_anchor": {
         "section_key": "rights_and_obligations",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:rights_and_obligations:fdbeb2b6e2baaaea",
-        "section_length": 584
+        "stable_anchor_id": "json:rights_and_obligations:e0188fde75b828c9",
+        "section_length": 865
       },
       "anchor_verified": true,
       "citation_coverage": "anchor_and_citation",
@@ -1567,7 +1567,7 @@
         {
           "column_id": "word_count",
           "label": "Word count",
-          "value": "94",
+          "value": "142",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -1599,7 +1599,7 @@
         {
           "column_id": "source_anchor",
           "label": "Source anchor",
-          "value": "json:rights_and_obligations:fdbeb2b6e2baaaea",
+          "value": "json:rights_and_obligations:e0188fde75b828c9",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -1778,7 +1778,7 @@
       "severity": "BLOCKER",
       "status": "pass",
       "blocker": false,
-      "word_count": 157,
+      "word_count": 176,
       "issues": [],
       "remediation": "Keep disclosure under lawyer review before external use.",
       "reviewer_decision": "pending_lawyer_confirmation",
@@ -1786,8 +1786,8 @@
       "source_anchor": {
         "section_key": "risks",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:risks:fb6c82fce9769e1f",
-        "section_length": 1058
+        "stable_anchor_id": "json:risks:e3515f9e25a650ca",
+        "section_length": 1153
       },
       "anchor_verified": true,
       "citation_coverage": "anchor_and_citation",
@@ -1861,7 +1861,7 @@
         {
           "column_id": "word_count",
           "label": "Word count",
-          "value": "157",
+          "value": "176",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -1893,7 +1893,7 @@
         {
           "column_id": "source_anchor",
           "label": "Source anchor",
-          "value": "json:risks:fb6c82fce9769e1f",
+          "value": "json:risks:e3515f9e25a650ca",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2660,13 +2660,13 @@
     {
       "row_id": "review-row-e6a3acc23127fe1c",
       "rule_id": "ANNEX_II.I",
-      "citation": "Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 MiCAR",
+      "citation": "Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 Abs. 2 und 3, Art. 46 MiCAR",
       "section": "redemption",
-      "label": "Redemption rights and procedure (timing, fees, suspension conditions)",
+      "label": "Redemption policy (funds equal to the market value of the referenced assets or delivery of those assets; procedure, timing, fees, suspension conditions)",
       "severity": "BLOCKER",
       "status": "pass",
       "blocker": false,
-      "word_count": 125,
+      "word_count": 169,
       "issues": [],
       "remediation": "Keep disclosure under lawyer review before external use.",
       "reviewer_decision": "pending_lawyer_confirmation",
@@ -2674,8 +2674,8 @@
       "source_anchor": {
         "section_key": "redemption",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:redemption:b068b69a32233498",
-        "section_length": 812
+        "stable_anchor_id": "json:redemption:8b5f20ce2ad708d0",
+        "section_length": 1098
       },
       "anchor_verified": true,
       "citation_coverage": "anchor_and_citation",
@@ -2686,7 +2686,7 @@
         "rule_scope": [
           "ANNEX_II.I"
         ],
-        "citation": "Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 MiCAR",
+        "citation": "Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 Abs. 2 und 3, Art. 46 MiCAR",
         "severity": "BLOCKER",
         "review_gate": "Qualified lawyer review required before external use.",
         "priority": "standard_review",
@@ -2717,7 +2717,7 @@
         {
           "column_id": "citation",
           "label": "Citation",
-          "value": "Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 MiCAR",
+          "value": "Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 Abs. 2 und 3, Art. 46 MiCAR",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2749,7 +2749,7 @@
         {
           "column_id": "word_count",
           "label": "Word count",
-          "value": "125",
+          "value": "169",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2781,7 +2781,7 @@
         {
           "column_id": "source_anchor",
           "label": "Source anchor",
-          "value": "json:redemption:b068b69a32233498",
+          "value": "json:redemption:8b5f20ce2ad708d0",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2807,5 +2807,5 @@
   ],
   "warnings": [],
   "review_notice": "Review table rows are deterministic linter outputs. Reviewer decisions remain pending until a qualified lawyer signs off.",
-  "digest": "1f7ffd09901647463f6c9f7373846d116778c31d143c5af44926de15b6e3f288"
+  "digest": "13eba41dcbaa4eee3dab827c117bd52be54821e016e77e21b531a93a7097224c"
 }

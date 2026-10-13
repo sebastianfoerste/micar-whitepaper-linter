@@ -3,8 +3,8 @@
 - **Document Title**: Synthetic EuroStable ART White Paper
 - **Regime/Type**: ART
 - **Source File**: examples/art-stablecoin.json
-- **SHA-256 Checksum**: `85d5a5fbc71f75eef322fa558403e10cb001471e3a11c72d51dcfdf4a0374585`
-- **Review Timestamp**: 2026-09-05 10:56:24
+- **SHA-256 Checksum**: `dd4be462c6d96393e87505c9ba80fa1026b10cacfc2ae0a64236012caba975aa`
+- **Review Timestamp**: 2026-10-13 13:44:00
 
 ## Rule Compliance Checklist
 
@@ -19,7 +19,7 @@
 | `ANNEX_II.A` | Anhang II Teil A MiCAR | Information about the issuer of the ART (legal form, governance, prudential profile) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.B` | Anhang II Teil B MiCAR | Information about the asset-referenced token (reference assets, stabilisation mechanism) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.C` | Anhang II Teil C MiCAR | Information about the offer to the public of the ART or its admission to trading | BLOCKER | **PASS** | [x] |
-| `ANNEX_II.D` | Anhang II Teil D i.V.m. Art. 39 MiCAR | Rights and obligations of holders (redemption right at par, complaints handling) | BLOCKER | **PASS** | [x] |
+| `ANNEX_II.D` | Anhang II Teil D i.V.m. Art. 39 MiCAR | Rights and obligations of holders (permanent right of redemption and its treatment in insolvency, complaints handling) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.E` | Anhang II Teil E MiCAR | Information on the underlying technology (DLT, custody architecture, key management) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.F` | Anhang II Teil F MiCAR | Risk factors specific to ARTs (de-pegging, reserve impairment, redemption suspension) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.G.COMPOSITION_DISCLOSURE` | Anhang II Teil G i.V.m. Art. 36 MiCAR | Reserve composition disclosure (Annex II Part G) | BLOCKER | **REVIEW** | [ ] |
@@ -27,7 +27,7 @@
 | `ANNEX_II.G.CUSTODY` | Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR | Custody policy and custodian selection (Art. 36(2) MiCAR) | BLOCKER | **REVIEW** | [ ] |
 | `ANNEX_II.G.VALUATION_AUDIT` | Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR | Valuation procedure and audit frequency (Art. 36(3) MiCAR) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.H` | Art. 19 Abs. 1 UAbs. 1 Buchst. h MiCAR i.V.m. Art. 4 VO (EU) 2025/422; Anhang Tabelle 3 Teil H VO (EU) 2024/2984 | Principal adverse environmental and climate-related impact of the consensus mechanism | MAJOR | **PASS** | [x] |
-| `ANNEX_II.I` | Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 MiCAR | Redemption rights and procedure (timing, fees, suspension conditions) | BLOCKER | **PASS** | [x] |
+| `ANNEX_II.I` | Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 Abs. 2 und 3, Art. 46 MiCAR | Redemption policy (funds equal to the market value of the referenced assets or delivery of those assets; procedure, timing, fees, suspension conditions) | BLOCKER | **PASS** | [x] |
 
 ## Summary of Findings
 

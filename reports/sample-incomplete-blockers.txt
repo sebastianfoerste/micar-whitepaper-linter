@@ -54,11 +54,11 @@ Pass: 0  |  Review: 13  |  Missing: 5  |  Blockers: 15
            Section: 'offer_or_admission'  (0 words)
            -  Section is empty or absent.
 
-[REVIEW] [BLOCKER] ANNEX_II.D  Rights and obligations of holders (redemption right at par, complaints handling)
+[REVIEW] [BLOCKER] ANNEX_II.D  Rights and obligations of holders (permanent right of redemption and its treatment in insolvency, complaints handling)
            Cite:  Anhang II Teil D i.V.m. Art. 39 MiCAR
            Section: 'rights_and_obligations'  (3 words)
            -  Section is thin: 3 words, expected at least 80.
-           -  Missing review terms: redemption, at par, complaints.
+           -  Missing review terms: redemption, insolvency, complaints.
 
 [REVIEW] [BLOCKER] ANNEX_II.E  Information on the underlying technology (DLT, custody architecture, key management)
            Cite:  Anhang II Teil E MiCAR
@@ -100,8 +100,8 @@ Pass: 0  |  Review: 13  |  Missing: 5  |  Blockers: 15
            Section: 'environmental_impact'  (0 words)
            -  Section is empty or absent.
 
-[MISS  ] [BLOCKER] ANNEX_II.I  Redemption rights and procedure (timing, fees, suspension conditions)
-           Cite:  Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 MiCAR
+[MISS  ] [BLOCKER] ANNEX_II.I  Redemption policy (funds equal to the market value of the referenced assets or delivery of those assets; procedure, timing, fees, suspension conditions)
+           Cite:  Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 Abs. 2 und 3, Art. 46 MiCAR
            Section: 'redemption'  (0 words)
            -  Section is empty or absent.
 

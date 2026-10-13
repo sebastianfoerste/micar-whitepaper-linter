@@ -40,9 +40,9 @@ Pass: 14  |  Review: 3  |  Missing: 1  |  Blockers: 4
            Cite:  Anhang II Teil C MiCAR
            Section: 'offer_or_admission'  (77 words)
 
-[PASS  ] [BLOCKER] ANNEX_II.D  Rights and obligations of holders (redemption right at par, complaints handling)
+[PASS  ] [BLOCKER] ANNEX_II.D  Rights and obligations of holders (permanent right of redemption and its treatment in insolvency, complaints handling)
            Cite:  Anhang II Teil D i.V.m. Art. 39 MiCAR
-           Section: 'rights_and_obligations'  (94 words)
+           Section: 'rights_and_obligations'  (142 words)
 
 [PASS  ] [BLOCKER] ANNEX_II.E  Information on the underlying technology (DLT, custody architecture, key management)
            Cite:  Anhang II Teil E MiCAR
@@ -50,7 +50,7 @@ Pass: 14  |  Review: 3  |  Missing: 1  |  Blockers: 4
 
 [PASS  ] [BLOCKER] ANNEX_II.F  Risk factors specific to ARTs (de-pegging, reserve impairment, redemption suspension)
            Cite:  Anhang II Teil F MiCAR
-           Section: 'risks'  (157 words)
+           Section: 'risks'  (176 words)
 
 [REVIEW] [BLOCKER] ANNEX_II.G.COMPOSITION_DISCLOSURE  Reserve composition disclosure (Annex II Part G)
            Cite:  Anhang II Teil G i.V.m. Art. 36 MiCAR
@@ -75,9 +75,9 @@ Pass: 14  |  Review: 3  |  Missing: 1  |  Blockers: 4
            Cite:  Art. 19 Abs. 1 UAbs. 1 Buchst. h MiCAR i.V.m. Art. 4 VO (EU) 2025/422; Anhang Tabelle 3 Teil H VO (EU) 2024/2984
            Section: 'environmental_impact'  (104 words)
 
-[PASS  ] [BLOCKER] ANNEX_II.I  Redemption rights and procedure (timing, fees, suspension conditions)
-           Cite:  Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 MiCAR
-           Section: 'redemption'  (125 words)
+[PASS  ] [BLOCKER] ANNEX_II.I  Redemption policy (funds equal to the market value of the referenced assets or delivery of those assets; procedure, timing, fees, suspension conditions)
+           Cite:  Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 Abs. 2 und 3, Art. 46 MiCAR
+           Section: 'redemption'  (169 words)
 
 ==============================================================================
 First-pass screening only. The draft is not package-ready. The white paper notification or submission for approval (Art. 8 Abs. 1, Art. 16 Abs. 2 UAbs. 2, Art. 17 Abs. 1 Buchst. a, Art. 18 Abs. 2 Buchst. k, Art. 51 Abs. 11 MiCAR) should not enter an external review or filing workflow until BLOCKER items are cured and a lawyer has signed off.
