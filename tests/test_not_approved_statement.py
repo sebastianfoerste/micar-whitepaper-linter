@@ -61,6 +61,14 @@ def test_title_ii_statement_passes_for_each_person_art_6_3_names(subject: str):
     assert finding.rule.citation == "Art. 6 Abs. 3 MiCAR"
 
 
+def test_title_ii_statement_naming_another_person_is_referred_to_review():
+    # Art. 6(3) MiCAR allows only the offeror, the person seeking admission to trading or
+    # the operator of the trading platform; Table 2 field 02 of 2024/2984 prints all three.
+    finding = _finding(WhitepaperType.OTHER, TITLE_II, {"not_approved_statement": _statement("The issuer")})
+    assert finding.status == "review"
+    assert any("operator of the trading platform" in issue for issue in finding.issues)
+
+
 def test_emt_statement_passes_when_it_names_the_issuer():
     finding = _finding(WhitepaperType.EMT, EMT, {"not_approved_statement": _statement("The issuer")})
     assert finding.status == "pass", finding.issues

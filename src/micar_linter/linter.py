@@ -230,12 +230,28 @@ def _not_approved_statement_finding(rule: Rule, whitepaper: Whitepaper) -> Findi
     return None
 
 
+# Art. 6(3), second subparagraph, MiCAR: the statement names the offeror, the person seeking
+# admission to trading or the operator of the trading platform (Table 2 field 02 of
+# Implementing Regulation (EU) 2024/2984 prints all three sentences).
+_TITLE_II_RESPONSIBILITY_CLAUSE = "of the crypto-asset is solely responsible"
+_TITLE_II_RESPONSIBLE_PERSON = re.compile(
+    r"\b(?:offeror|person seeking admission to trading|operator of the trading platform) "
+    + _TITLE_II_RESPONSIBILITY_CLAUSE
+)
 _AT_PAR = re.compile(r"\bat\s+par\b")
 _MARKTWERT = re.compile(r"\bmarktwert")
 
 
 def _rule_specific_issues(rule: Rule, normalized: str, is_de: bool) -> list[str]:
     """Issues a rule needs beyond its terms and patterns; normalized is lowercase, one line."""
+    if rule.rule_id == "ANNEX_I.NOT_APPROVED_STATEMENT" and not is_de:
+        names_clause = _TITLE_II_RESPONSIBILITY_CLAUSE in normalized
+        if names_clause and not _TITLE_II_RESPONSIBLE_PERSON.search(normalized):
+            return [
+                "Art. 6(3) MiCAR names the offeror, the person seeking admission to trading or the "
+                "operator of the trading platform as solely responsible; the statement names "
+                "someone else."
+            ]
     if rule.rule_id == "ANNEX_II.I":
         if is_de and not _MARKTWERT.search(normalized):
             return [
