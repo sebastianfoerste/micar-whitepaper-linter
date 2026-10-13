@@ -9,7 +9,10 @@ from pathlib import Path
 # Word boundaries are used to avoid false positives.
 SECTION_PATTERNS = {
     # The Art. 6(3) / Art. 51(3) statement, labelled as in Implementing Regulation (EU) 2024/2984.
-    "not_approved_statement": [r"\bstatement\s+in\s+accordance\s+with\s+article\s+(?:6|51)\s*\(3\)"],
+    "not_approved_statement": [
+        r"\bstatement\s+in\s+accordance\s+with\s+art(?:icle|\.)\s*(?:6|51)\s*\(3\)",
+        r"\berklärung\s+gemäß\s+art(?:ikel|\.)\s*(?:6|51)\s+abs(?:atz|\.)\s*3\b",
+    ],
     "summary": [r"\bsummary\b", r"\bzusammenfassung\w*", r"\bplain-language\s+summary\b", r"\bkey\s+information\b"],
     "risk_warning": [r"\brisk\s+warning\b", r"\bwarnhinweis\w*", r"\bmandatory\s+warning\b"],
     "management_statement": [r"\bmanagement\s+body\b", r"\bleitungsorgan\w*", r"\bmanagement\s+statement\b", r"\bstatement\b.*\bmanagement\b"],
@@ -31,6 +34,42 @@ SECTION_PATTERNS = {
     "redemption": [r"\bredemption\b", r"\brücknahme\w*", r"\brücktausch\w*", r"\bredemption\s+right\b"],
     "safeguarding": [r"\bsafeguarding\b", r"\babsicherung\w*", r"\bsicherung\w*.*\bgelder\w*"],
 }
+
+
+# Art. 6(3) and Art. 51(3) MiCAR put the statement on the first page without a heading of
+# its own, so a paragraph that opens with it is routed by its content. The German opening
+# is a routing heuristic only; the rule does not treat it as verified statutory wording.
+_STATEMENT_START = re.compile(
+    r"^\W*(?:this\s+crypto-asset\s+white\s+paper\s+has\s+not\s+been\s+approved"
+    r"|dieses\s+kryptowerte-whitepaper\s+wurde\s+von\s+keiner)\b",
+    re.IGNORECASE,
+)
+# The statement closes with the sentence on who is solely responsible for the content.
+_STATEMENT_CLOSE = re.compile(r"\b(?:responsible|verantwortung)\b[^.]*\.", re.IGNORECASE)
+_STATEMENT_MAX_LINES = 8
+
+
+def is_statement_start(text: str) -> bool:
+    """True where a line or paragraph opens with the Art. 6(3) / Art. 51(3) statement."""
+    return bool(_STATEMENT_START.match(text))
+
+
+def statement_extent(lines: list[str], start: int) -> int:
+    """Index after the last line of the statement that opens at lines[start].
+
+    A wrapped statement in a PDF or a hard-wrapped Markdown file spans several lines. Its
+    continuation lines often contain words such as "crypto-asset" or "offeror" that the
+    heading heuristics would otherwise read as new section headings.
+    """
+    collected: list[str] = []
+    end = min(len(lines), start + _STATEMENT_MAX_LINES)
+    for index in range(start, end):
+        if index > start and lines[index].lstrip().startswith("#"):
+            return index
+        collected.append(lines[index])
+        if _STATEMENT_CLOSE.search(" ".join(collected)):
+            return index + 1
+    return end
 
 
 def match_heading_to_section(heading: str) -> list[str]:
@@ -57,10 +96,15 @@ def load_from_docx(path: Path) -> dict[str, str]:
     doc = docx.Document(path)
     sections: dict[str, list[str]] = {}
     current_keys = []
+    paragraphs = [(para, para.text.strip()) for para in doc.paragraphs if para.text.strip()]
+    texts = [text for _, text in paragraphs]
+    statement_end = 0
 
-    for para in doc.paragraphs:
-        text = para.text.strip()
-        if not text:
+    for index, (para, text) in enumerate(paragraphs):
+        if index < statement_end or is_statement_start(text):
+            if index >= statement_end:
+                statement_end = statement_extent(texts, index)
+            sections.setdefault("not_approved_statement", []).append(text)
             continue
 
         is_heading = (
@@ -100,10 +144,14 @@ def load_from_pdf(path: Path) -> dict[str, str]:
 
     sections: dict[str, list[str]] = {}
     current_keys = []
+    lines = [line.strip() for line in full_text_lines if line.strip()]
+    statement_end = 0
 
-    for line in full_text_lines:
-        line_clean = line.strip()
-        if not line_clean:
+    for index, line_clean in enumerate(lines):
+        if index < statement_end or is_statement_start(line_clean):
+            if index >= statement_end:
+                statement_end = statement_extent(lines, index)
+            sections.setdefault("not_approved_statement", []).append(line_clean)
             continue
 
         # Heuristics for PDF line headings
@@ -134,10 +182,14 @@ def load_from_markdown(path: Path) -> dict[str, str]:
 
     sections: dict[str, list[str]] = {}
     current_keys = []
+    lines = [line.strip() for line in content.splitlines() if line.strip()]
+    statement_end = 0
 
-    for line in content.splitlines():
-        line_clean = line.strip()
-        if not line_clean:
+    for index, line_clean in enumerate(lines):
+        if index < statement_end or is_statement_start(line_clean):
+            if index >= statement_end:
+                statement_end = statement_extent(lines, index)
+            sections.setdefault("not_approved_statement", []).append(line_clean)
             continue
 
         # Detect Markdown headings (e.g. # Heading 1, ## Heading 2)

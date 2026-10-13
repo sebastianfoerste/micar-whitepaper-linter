@@ -14,11 +14,7 @@ Point-level extensions are the practitioner's contribution.
 
 from __future__ import annotations
 
-from micar_linter.rules.annex_i import (
-    NOT_APPROVED_STATEMENT_DE,
-    NOT_APPROVED_STATEMENT_EN,
-    SOLE_RESPONSIBILITY_DE,
-)
+from micar_linter.rules.annex_i import NOT_APPROVED_STATEMENT_EN, NOT_APPROVED_STATEMENT_LABEL
 from micar_linter.rules.base import Rule, Severity
 
 ANNEX_III_RULES: tuple[Rule, ...] = (
@@ -28,13 +24,12 @@ ANNEX_III_RULES: tuple[Rule, ...] = (
         rule_id="ANNEX_III.NOT_APPROVED_STATEMENT",
         citation="Art. 51 Abs. 3 MiCAR",
         section="not_approved_statement",
-        label="First-page statement that no competent authority has approved the white paper",
+        label=NOT_APPROVED_STATEMENT_LABEL,
         required_terms=(
             NOT_APPROVED_STATEMENT_EN,
             "the issuer of the crypto-asset is solely responsible for the content of this "
             "crypto-asset white paper",
         ),
-        required_terms_de=(NOT_APPROVED_STATEMENT_DE, SOLE_RESPONSIBILITY_DE),
         min_words=0,
         severity=Severity.BLOCKER,
     ),
