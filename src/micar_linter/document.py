@@ -8,6 +8,8 @@ from pathlib import Path
 # Common patterns (in English and German) matching whitepaper section headings.
 # Word boundaries are used to avoid false positives.
 SECTION_PATTERNS = {
+    # The Art. 6(3) / Art. 51(3) statement, labelled as in Implementing Regulation (EU) 2024/2984.
+    "not_approved_statement": [r"\bstatement\s+in\s+accordance\s+with\s+article\s+(?:6|51)\s*\(3\)"],
     "summary": [r"\bsummary\b", r"\bzusammenfassung\w*", r"\bplain-language\s+summary\b", r"\bkey\s+information\b"],
     "risk_warning": [r"\brisk\s+warning\b", r"\bwarnhinweis\w*", r"\bmandatory\s+warning\b"],
     "management_statement": [r"\bmanagement\s+body\b", r"\bleitungsorgan\w*", r"\bmanagement\s+statement\b", r"\bstatement\b.*\bmanagement\b"],

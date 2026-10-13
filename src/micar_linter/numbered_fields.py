@@ -75,10 +75,13 @@ _PART_SECTIONS: dict[WhitepaperType, dict[str, tuple[str, ...]]] = {
 }
 
 # Leading fields -> section key. Table 2 numbers them 00 to 10; Tables 3 and 4 print
-# I.00 to I.07 and I.00 to I.08, which _field_id reduces to the two digits.
+# I.00 to I.07 and I.00 to I.08, which _field_id reduces to the two digits. Field 02 of
+# Table 2 and I.02 of Table 4 hold the Art. 6(3) and Art. 51(3) statement; I.02 of
+# Table 3 is the Art. 19(4) warning, because an ART white paper is approved.
 _SUMMARY_SECTIONS: dict[WhitepaperType, dict[str, tuple[str, ...]]] = {
     WhitepaperType.OTHER: {
         "01": ("notification_date",),
+        "02": ("not_approved_statement",),
         "03": ("management_statement",),
         "04": ("risk_warning",),
         "05": ("risk_warning",),
@@ -99,6 +102,7 @@ _SUMMARY_SECTIONS: dict[WhitepaperType, dict[str, tuple[str, ...]]] = {
     },
     WhitepaperType.EMT: {
         "01": ("notification_date",),
+        "02": ("not_approved_statement",),
         "03": ("management_statement",),
         "04": ("risk_warning",),
         "05": ("summary",),
