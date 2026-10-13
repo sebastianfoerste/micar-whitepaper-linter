@@ -189,9 +189,10 @@ def _collapse_whitespace(text: str) -> str:
 
 
 # Art. 6(3) and Art. 51(3) MiCAR prescribe the first-page statement word for word. The
-# English wording is checked against the Official Journal text. The German wording has not
-# been checked against the German Official Journal text, so a German draft is referred to
-# review and never passes.
+# English wording was checked against the EUR-Lex text of Art. 6(3) and 51(3) MiCAR as
+# mirrored in legalize-dev/legalize-eu (CELEX 32023R1114). The German wording has not been
+# checked against the German Official Journal text, so a German draft is referred to review
+# and never passes.
 NOT_APPROVED_STATEMENT_RULE_IDS = frozenset(
     {"ANNEX_I.NOT_APPROVED_STATEMENT", "ANNEX_III.NOT_APPROVED_STATEMENT"}
 )

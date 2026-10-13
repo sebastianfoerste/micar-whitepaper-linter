@@ -3,9 +3,12 @@
 The English fixture text is the statement as Art. 6(3) and Art. 51(3) MiCAR word it,
 and as Table 2 field 02 and Table 4 field I.02 of the Annex to Implementing Regulation
 (EU) 2024/2984 print it ("Predefined alphanumerical text"). Source read: the EUR-Lex
-texts CELEX 32023R1114 and 32024R2984 as mirrored in legalize-dev/legalize-eu. An ART
-white paper is approved (Art. 17(1)(a), 21(1) MiCAR), so Art. 19 MiCAR has no such
-statement and the ART ruleset carries no such rule.
+texts CELEX 32023R1114 and 32024R2984 as mirrored in legalize-dev/legalize-eu. Art. 19 MiCAR
+prescribes no such statement for an ART white paper (Table 3 field I.02 of 2024/2984
+holds the Art. 19(4) warning instead), so the ART ruleset carries no such rule. That is
+not because every ART white paper is approved: that of an authorised issuer is deemed
+approved (Art. 21(1)) and that of a credit institution is approved (Art. 17(1)(a)), but an
+issuer exempt under Art. 16(2) only notifies it.
 
 The German wording has not been checked against the German Official Journal text. German
 drafts are therefore referred to review and never pass; the German sentence below is only

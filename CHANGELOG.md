@@ -17,7 +17,7 @@ Citations and statements below were checked against the EUR-Lex texts of Regulat
 
 ### Added
 
-- `ANNEX_I.NOT_APPROVED_STATEMENT` (Art. 6(3) MiCAR) and `ANNEX_III.NOT_APPROVED_STATEMENT` (Art. 51(3) MiCAR) check the English first-page statement that no competent authority has approved the white paper, and fail closed when it is absent. A statement without a heading is routed by its content. First-page placement is not checked. German drafts are referred to review until the German wording is checked against the Official Journal. ART white papers are approved (Art. 17(1)(a), 21(1) MiCAR), so the ART ruleset has no such rule.
+- `ANNEX_I.NOT_APPROVED_STATEMENT` (Art. 6(3) MiCAR) and `ANNEX_III.NOT_APPROVED_STATEMENT` (Art. 51(3) MiCAR) check the English first-page statement that no competent authority has approved the white paper, and fail closed when it is absent. A statement without a heading is routed by its content. First-page placement is not checked. German drafts are referred to review until the German wording is checked against the Official Journal. The ART ruleset has no such rule because Art. 19 MiCAR prescribes no such statement (Table 3 field I.02 of Implementing Regulation (EU) 2024/2984 holds the Art. 19(4) warning instead). The white paper of an authorised ART issuer is deemed approved (Art. 21(1) MiCAR) and that of a credit institution is approved (Art. 17(1)(a)), but an issuer exempt under Art. 16(2) only notifies it.
 - `studies/2026-07-title-ii-annex-i-whitepaper-study/scripts/build_review_matrix.py` builds the human-review sheets from the detector output.
 
 ### Changed

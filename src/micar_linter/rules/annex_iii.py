@@ -19,8 +19,12 @@ from micar_linter.rules.base import Rule, Severity
 
 ANNEX_III_RULES: tuple[Rule, ...] = (
     Rule(
-        # Art. 51(3) MiCAR: the same first-page statement, naming the issuer. An ART
-        # white paper is approved (Art. 17(1), 21(1) MiCAR), so Annex II has no counterpart.
+        # Art. 51(3) MiCAR: the same first-page statement, naming the issuer. Art. 19 MiCAR
+        # prescribes no such statement for an ART white paper, so Annex II has no
+        # counterpart: Table 3 field I.02 of Implementing Regulation (EU) 2024/2984 holds
+        # the Art. 19(4) warning instead. Approval is not the reason: the white paper of an
+        # authorised issuer is deemed approved (Art. 21(1)) and that of a credit institution
+        # is approved (Art. 17(1)(a)), but an issuer exempt under Art. 16(2) only notifies it.
         rule_id="ANNEX_III.NOT_APPROVED_STATEMENT",
         citation="Art. 51 Abs. 3 MiCAR",
         section="not_approved_statement",
