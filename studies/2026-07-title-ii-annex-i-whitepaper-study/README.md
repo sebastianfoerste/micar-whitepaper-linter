@@ -51,6 +51,14 @@ uv run micar-study-report \
 
 ## Validate against human labels
 
+The two review sheets are built from `findings-pseudonymous.json`, so their rule IDs match the detector output. Rebuild them after a detector run with:
+
+```bash
+python3 studies/2026-07-title-ii-annex-i-whitepaper-study/scripts/build_review_matrix.py
+```
+
+The script carries over reviewer cells that are already filled and stops if a filled cell no longer matches a document-rule pair. As of this commit no cell has been reviewed.
+
 Complete `human-review-matrix.csv` under `review-protocol.md`, then run:
 
 ```bash
