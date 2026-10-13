@@ -67,7 +67,7 @@ Pass: 14  |  Review: 3  |  Missing: 1  |  Blockers: 4
            Section: 'reserve_of_assets'  (213 words)
            -  Missing review terms: insolvency.
 
-[PASS  ] [BLOCKER] ANNEX_II.G.VALUATION_AUDIT  Reserve valuation and audit disclosure (keyword check only; compliance with Art. 36(7), (9), (11) and (12) MiCAR not checked)
+[PASS  ] [BLOCKER] ANNEX_II.G.VALUATION_AUDIT  Reserve valuation and audit disclosure (keyword check only; compliance with Art. 36(7), (9), (11) and (12) MiCAR not checked; the audit keyword is an internal interpretation, not an Annex II item: Art. 36(9) requires the audit and Art. 30(2) the publication of the audit report)
            Cite:  Anhang II Teil G i.V.m. Art. 36 Abs. 7, 9, 11 und 12 MiCAR
            Section: 'reserve_of_assets'  (213 words)
 

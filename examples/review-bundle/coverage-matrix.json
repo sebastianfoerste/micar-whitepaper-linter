@@ -1,6 +1,6 @@
 {
   "schema": "micar-whitepaper-linter.coverage-matrix.v1",
-  "generated_at": "2026-10-13T17:40:57.494411+00:00",
+  "generated_at": "2026-10-13T19:19:24.620267+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "summary": {
@@ -326,5 +326,5 @@
   ],
   "warnings": [],
   "review_notice": "Coverage matrix is a deterministic disclosure checklist. It is not legal advice, a signature, a notification, or filing approval.",
-  "digest": "22180db5ae19be74d8c9eda1b3aac05c365ffd9f7c0605eaac78408651e2e876"
+  "digest": "0678be4aa17d4b9f9ee356e70807b336ea02d0804b80884d7b0fea363f8513ef"
 }

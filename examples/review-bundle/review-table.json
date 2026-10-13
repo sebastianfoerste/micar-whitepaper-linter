@@ -1,6 +1,6 @@
 {
   "schema": "micar-whitepaper-linter.review-table",
-  "generated_at": "2026-10-13T17:40:57.494411+00:00",
+  "generated_at": "2026-10-13T19:19:24.620267+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "source": {
@@ -2368,7 +2368,7 @@
       "rule_id": "ANNEX_II.G.VALUATION_AUDIT",
       "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 7, 9, 11 und 12 MiCAR",
       "section": "reserve_of_assets",
-      "label": "Reserve valuation and audit disclosure (keyword check only; compliance with Art. 36(7), (9), (11) and (12) MiCAR not checked)",
+      "label": "Reserve valuation and audit disclosure (keyword check only; compliance with Art. 36(7), (9), (11) and (12) MiCAR not checked; the audit keyword is an internal interpretation, not an Annex II item: Art. 36(9) requires the audit and Art. 30(2) the publication of the audit report)",
       "severity": "BLOCKER",
       "status": "pass",
       "blocker": false,
@@ -2807,5 +2807,5 @@
   ],
   "warnings": [],
   "review_notice": "Review table rows are deterministic linter outputs. Reviewer decisions remain pending until a qualified lawyer signs off.",
-  "digest": "c720827e178315bb8442e7b7f7ad5c1203e7c20b9dcd868fd30c0908af6ab998"
+  "digest": "6e96d19fb97f3531dd4f878be5e0fb428b232ae371aaaaf5ad74cfe080ee7af5"
 }

@@ -144,15 +144,20 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
         # Art. 36(3) MiCAR is operational segregation. Valuation at market prices sits
         # in Art. 36(7), (11) and (12); the six-monthly independent audit in Art. 36(9).
         # The rule only finds the two terms, so the label must not claim that the market
-        # price basis or the audit interval was checked. Annex II Part G has no audit item
-        # and Art. 36(9) binds the issuer, so BLOCKER severity for "audit" is an internal
-        # interpretation awaiting lawyer review.
+        # price basis or the audit interval was checked. Neither Annex II Part G nor Part G
+        # of Table 3 of Implementing Regulation (EU) 2024/2984 has an audit item: Art. 36(9)
+        # requires the issuer to mandate the audit, and Art. 30(2) and 36(10) govern the
+        # publication of its results. Requiring "audit" in the white paper, at BLOCKER
+        # severity, is therefore an internal interpretation awaiting lawyer review, and the
+        # label says so to every reader of the report.
         rule_id="ANNEX_II.G.VALUATION_AUDIT",
         citation="Anhang II Teil G i.V.m. Art. 36 Abs. 7, 9, 11 und 12 MiCAR",
         section="reserve_of_assets",
         label=(
             "Reserve valuation and audit disclosure (keyword check only; compliance with "
-            "Art. 36(7), (9), (11) and (12) MiCAR not checked)"
+            "Art. 36(7), (9), (11) and (12) MiCAR not checked; the audit keyword is an "
+            "internal interpretation, not an Annex II item: Art. 36(9) requires the audit and "
+            "Art. 30(2) the publication of the audit report)"
         ),
         required_terms=("valuation", "audit"),
         required_terms_de=("bewertung", "prüfung"),

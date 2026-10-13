@@ -173,6 +173,15 @@ def test_valuation_audit_label_does_not_claim_the_standards_were_checked():
     assert "not checked" in finding.rule.label
 
 
+def test_valuation_audit_label_marks_the_audit_keyword_as_an_internal_interpretation():
+    # Neither Annex II Part G nor Table 3 Part G of 2024/2984 lists an audit item. Art. 36(9)
+    # requires the audit and Art. 30(2) the publication of the audit report.
+    label = _rule("ANNEX_II.G.VALUATION_AUDIT").label
+    assert "internal interpretation, not an Annex II item" in label
+    assert "Art. 36(9) requires the audit" in label
+    assert "Art. 30(2)" in label
+
+
 def test_art_example_passes_the_redemption_rules():
     report = lint_whitepaper(load_whitepaper(ROOT / "examples" / "art-stablecoin.json"))
     indexed = {f.rule.rule_id: f for f in report.findings}

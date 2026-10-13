@@ -4,7 +4,7 @@
 - **Regime/Type**: ART
 - **Source File**: examples/art-stablecoin.json
 - **SHA-256 Checksum**: `6cc7f0253a115a956fd4af80ac77c77ff8699cc6e914ed98a782375d4599209d`
-- **Review Timestamp**: 2026-10-13 17:40:57
+- **Review Timestamp**: 2026-10-13 19:19:24
 
 ## Rule Compliance Checklist
 
@@ -25,7 +25,7 @@
 | `ANNEX_II.G.COMPOSITION_DISCLOSURE` | Anhang II Teil G i.V.m. Art. 36 MiCAR | Reserve composition disclosure (Annex II Part G) | BLOCKER | **REVIEW** | [ ] |
 | `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW` | Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d, Art. 45 Abs. 3 und Art. 45 Abs. 7 Buchst. b MiCAR | Candidate deposit floor for the reserve (30 % under Art. 36(4)(d); 60 % under Art. 45(7)(b) for significant ARTs, or for non-significant ARTs via Arts. 35(4) and 45(3) MiCAR) - lawyer review required | BLOCKER | **REVIEW** | [ ] |
 | `ANNEX_II.G.CUSTODY` | Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR | Custody policy and custodian selection (Art. 37 MiCAR; legal segregation under Art. 36(2)) | BLOCKER | **REVIEW** | [ ] |
-| `ANNEX_II.G.VALUATION_AUDIT` | Anhang II Teil G i.V.m. Art. 36 Abs. 7, 9, 11 und 12 MiCAR | Reserve valuation and audit disclosure (keyword check only; compliance with Art. 36(7), (9), (11) and (12) MiCAR not checked) | BLOCKER | **PASS** | [x] |
+| `ANNEX_II.G.VALUATION_AUDIT` | Anhang II Teil G i.V.m. Art. 36 Abs. 7, 9, 11 und 12 MiCAR | Reserve valuation and audit disclosure (keyword check only; compliance with Art. 36(7), (9), (11) and (12) MiCAR not checked; the audit keyword is an internal interpretation, not an Annex II item: Art. 36(9) requires the audit and Art. 30(2) the publication of the audit report) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.H` | Art. 19 Abs. 1 UAbs. 1 Buchst. h MiCAR i.V.m. Art. 4 VO (EU) 2025/422; Anhang Tabelle 3 Teil H VO (EU) 2024/2984 | Principal adverse environmental and climate-related impact of the consensus mechanism | MAJOR | **PASS** | [x] |
 | `ANNEX_II.I` | Anhang II Teil C Nr. 8, Teil D Nr. 9, 14, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 Abs. 2 und 3, Art. 46 MiCAR | Redemption policy (funds equal to the market value of the referenced assets or delivery of those assets; procedure, timing, fees, suspension conditions) | BLOCKER | **PASS** | [x] |
 

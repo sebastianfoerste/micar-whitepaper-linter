@@ -89,7 +89,7 @@ Pass: 0  |  Review: 13  |  Missing: 5  |  Blockers: 15
            -  Section is thin: 3 words, expected at least 60.
            -  Missing review terms: custody, custodian, segregation, insolvency.
 
-[REVIEW] [BLOCKER] ANNEX_II.G.VALUATION_AUDIT  Reserve valuation and audit disclosure (keyword check only; compliance with Art. 36(7), (9), (11) and (12) MiCAR not checked)
+[REVIEW] [BLOCKER] ANNEX_II.G.VALUATION_AUDIT  Reserve valuation and audit disclosure (keyword check only; compliance with Art. 36(7), (9), (11) and (12) MiCAR not checked; the audit keyword is an internal interpretation, not an Annex II item: Art. 36(9) requires the audit and Art. 30(2) the publication of the audit report)
            Cite:  Anhang II Teil G i.V.m. Art. 36 Abs. 7, 9, 11 und 12 MiCAR
            Section: 'reserve_of_assets'  (3 words)
            -  Section is thin: 3 words, expected at least 50.

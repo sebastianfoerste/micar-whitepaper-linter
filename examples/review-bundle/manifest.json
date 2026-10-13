@@ -1,6 +1,6 @@
 {
   "schema": "micar-whitepaper-linter.artifact-manifest.v1",
-  "generated_at": "2026-10-13T17:40:57.494411+00:00",
+  "generated_at": "2026-10-13T19:19:24.620267+00:00",
   "source": {
     "path": "examples/art-stablecoin.json",
     "sha256": "6cc7f0253a115a956fd4af80ac77c77ff8699cc6e914ed98a782375d4599209d"
@@ -22,7 +22,7 @@
   "outputs": [
     {
       "path": "dist/review-bundle/compliance-checklist.md",
-      "sha256": "b9fb3f714d7c38149e60bde591664ede9daae4fd12b00cd87585441a6ff6b522",
+      "sha256": "10f0630eb4c4812d395b2be92d769dcb58fe58eea1f077e2591ebf7dd6614944",
       "role": "compliance_checklist"
     },
     {
@@ -32,12 +32,12 @@
     },
     {
       "path": "dist/review-bundle/coverage-matrix.json",
-      "sha256": "39fdc1b865b4e11c2865dc453081aed402745614d945e880934e73ccd949be99",
+      "sha256": "2a8bbfdf545ba986578786dcb34719d307909061a015f5f845f7d4506cd98bbb",
       "role": "coverage_matrix"
     },
     {
       "path": "dist/review-bundle/review-table.json",
-      "sha256": "277b35eac1e7966500341cce2337bc057b273e5c6edfbe96675e4908d1b5d10f",
+      "sha256": "ac959ab951ca47d55f06debc943faa51b12397ebd3e8efb46d087265b117b857",
       "role": "review_table_json"
     },
     {
@@ -47,7 +47,7 @@
     },
     {
       "path": "dist/review-bundle/reviewer-signoff.md",
-      "sha256": "8bcd4d6a5909290959c3b681a5afcd37ba3e60718514560ceefbc7343807bd38",
+      "sha256": "342862d4830f9818c4685d591720963b02a5ff38e318cf176c4f1d98bdbfbb0e",
       "role": "lawyer_signoff"
     }
   ],
@@ -64,6 +64,6 @@
     "notice": "Automated linter output requires substantive lawyer review before external use."
   },
   "review_notice": "Manifest proves local artifact integrity only. It is not a legal opinion, signature, notification, or filing approval.",
-  "overall_digest": "d63f38801d2ff6747e8e35711c1ca56185a02a3217d957bb7dc7bb81cdf0a56a",
+  "overall_digest": "39b40a27c8175d01acee82a4d82defb00999e84f3bbeb74bdc765d72f83f5585",
   "bundle_schema": "micar-whitepaper-linter.review-bundle.v1"
 }
