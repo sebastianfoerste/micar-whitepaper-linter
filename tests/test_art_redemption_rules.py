@@ -43,7 +43,9 @@ def _rule(rule_id: str):
 
 
 def _finding(rule_id: str, section: str, text: str, **metadata):
-    whitepaper = Whitepaper(title="ART test", type=WhitepaperType.ART, sections={section: text}, metadata=metadata)
+    whitepaper = Whitepaper(
+        title="ART test", type=WhitepaperType.ART, sections={section: text}, metadata=metadata
+    )
     return next(f for f in Linter(RULESETS[WhitepaperType.ART]).lint(whitepaper) if f.rule.rule_id == rule_id)
 
 
@@ -183,7 +185,9 @@ def test_starter_template_cites_the_art_provisions_for_its_art_type():
     # asked for "the redemption right at par under Art. 39".
     import json
 
-    starter = json.loads((ROOT / "templates" / "whitepaper-starter" / "whitepaper.json").read_text(encoding="utf-8"))
+    starter = json.loads(
+        (ROOT / "templates" / "whitepaper-starter" / "whitepaper.json").read_text(encoding="utf-8")
+    )
     assert starter["type"] == "art"
     text = " ".join(starter["sections"].values())
     assert "at par" not in text

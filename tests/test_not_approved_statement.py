@@ -250,7 +250,9 @@ def test_abbreviated_and_german_headings_route_to_the_statement(tmp_path: Path, 
 
 def test_german_first_paragraph_is_routed_and_referred_to_review(tmp_path: Path):
     path = tmp_path / "entwurf.md"
-    path.write_text(f"{GERMAN_ROUTING_FIXTURE}\n\n# Zusammenfassung\nDie wesentlichen Informationen.\n", encoding="utf-8")
+    path.write_text(
+        f"{GERMAN_ROUTING_FIXTURE}\n\n# Zusammenfassung\nDie wesentlichen Informationen.\n", encoding="utf-8"
+    )
     whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
     statement = next(f for f in lint_whitepaper(whitepaper).findings if f.rule.rule_id == TITLE_II)
     assert statement.status == "review"
@@ -295,7 +297,9 @@ def test_docx_statement_paragraph_without_heading_passes(tmp_path: Path):
 def test_xhtml_statement_paragraph_without_heading_is_routed(tmp_path: Path):
     path = tmp_path / "draft.xhtml"
     path.write_text(
-        "<html><body><p>" + _statement("The offeror") + "</p><h1>Summary</h1><p>Key information.</p></body></html>",
+        "<html><body><p>"
+        + _statement("The offeror")
+        + "</p><h1>Summary</h1><p>Key information.</p></body></html>",
         encoding="utf-8",
     )
     whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
