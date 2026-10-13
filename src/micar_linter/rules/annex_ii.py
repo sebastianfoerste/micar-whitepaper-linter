@@ -93,7 +93,7 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
             "liquidität",
             "operativ",
             "de-peg",
-            "rücknahme",
+            "rücktausch",
             "reserve",
         ),
         min_words=150,
@@ -143,12 +143,16 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
     Rule(
         # Art. 36(3) MiCAR is operational segregation. Valuation at market prices sits
         # in Art. 36(7), (11) and (12); the six-monthly independent audit in Art. 36(9).
+        # The rule only finds the two terms, so the label must not claim that the market
+        # price basis or the audit interval was checked. Annex II Part G has no audit item
+        # and Art. 36(9) binds the issuer, so BLOCKER severity for "audit" is an internal
+        # interpretation awaiting lawyer review.
         rule_id="ANNEX_II.G.VALUATION_AUDIT",
         citation="Anhang II Teil G i.V.m. Art. 36 Abs. 7, 9, 11 und 12 MiCAR",
         section="reserve_of_assets",
         label=(
-            "Valuation of the reserve at market prices (Art. 36(7), (11) and (12) MiCAR) "
-            "and independent audit every six months (Art. 36(9) MiCAR)"
+            "Reserve valuation and audit disclosure (keyword check only; compliance with "
+            "Art. 36(7), (9), (11) and (12) MiCAR not checked)"
         ),
         required_terms=("valuation", "audit"),
         required_terms_de=("bewertung", "prüfung"),
@@ -169,25 +173,29 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
         severity=Severity.MAJOR,
     ),
     Rule(
-        # Art. 39(2) MiCAR: the issuer redeems by paying funds equivalent to the market
-        # value of the referenced assets or by delivering those assets. Where it accepted
-        # payment in funds in an official currency, it must always offer redemption in
-        # funds in that currency. A delivery-only policy still states its valuation basis
-        # (Art. 39(2)(c)), so a missing "market value" term is a review prompt, not a
-        # conclusion. No fee: Art. 39(3). Liquidity fees and suspension of redemptions
-        # arise only under the recovery plan or by the authority (Art. 46(1), (4)).
+        # Art. 39(2) MiCAR: the issuer redeems either by paying funds, other than e-money,
+        # equivalent to the market value of the referenced assets or by delivering those
+        # assets; either basis satisfies the pattern. Where it accepted payment in funds in an
+        # official currency, it must always offer redemption in funds in that currency. No
+        # fee: Art. 39(3), without prejudice to Art. 46. Liquidity fees, daily limits and
+        # suspension of redemptions are recovery options in the recovery plan (Art. 46(1));
+        # the competent authority may require their implementation (Art. 46(3)) and may then
+        # temporarily suspend redemption (Art. 46(4)). The German pattern covers the market
+        # value basis only: the German wording of the delivery alternative is not yet verified.
         rule_id="ANNEX_II.I",
         citation=(
-            "Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 Abs. 2 und 3, "
-            "Art. 46 MiCAR"
+            "Anhang II Teil C Nr. 8, Teil D Nr. 9, 14, 15 und 16, Teil G Nr. 3 i.V.m. "
+            "Art. 39 Abs. 2 und 3, Art. 46 MiCAR"
         ),
         section="redemption",
         label=(
             "Redemption policy (funds equal to the market value of the referenced assets or "
             "delivery of those assets; procedure, timing, fees, suspension conditions)"
         ),
-        required_terms=("redemption", "market value", "procedure", "timing", "fees", "suspension"),
-        required_terms_de=("rücktausch", "marktwert", "verfahren", "zeitplan", "gebühren", "aussetzung"),
+        required_terms=("redemption", "procedure", "timing", "fees", "suspension"),
+        required_terms_de=("rücktausch", "verfahren", "zeitplan", "gebühren", "aussetzung"),
+        required_patterns=(r"\bmarket\s+value\b|\bdeliver(?:y|ing|s|ed)?\b[^.]{0,60}\bassets\b",),
+        required_patterns_de=(r"\bmarktwert",),
         min_words=100,
         severity=Severity.BLOCKER,
     ),

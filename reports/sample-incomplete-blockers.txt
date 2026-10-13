@@ -89,7 +89,7 @@ Pass: 0  |  Review: 13  |  Missing: 5  |  Blockers: 15
            -  Section is thin: 3 words, expected at least 60.
            -  Missing review terms: custody, custodian, segregation, insolvency.
 
-[REVIEW] [BLOCKER] ANNEX_II.G.VALUATION_AUDIT  Valuation of the reserve at market prices (Art. 36(7), (11) and (12) MiCAR) and independent audit every six months (Art. 36(9) MiCAR)
+[REVIEW] [BLOCKER] ANNEX_II.G.VALUATION_AUDIT  Reserve valuation and audit disclosure (keyword check only; compliance with Art. 36(7), (9), (11) and (12) MiCAR not checked)
            Cite:  Anhang II Teil G i.V.m. Art. 36 Abs. 7, 9, 11 und 12 MiCAR
            Section: 'reserve_of_assets'  (3 words)
            -  Section is thin: 3 words, expected at least 50.
@@ -101,7 +101,7 @@ Pass: 0  |  Review: 13  |  Missing: 5  |  Blockers: 15
            -  Section is empty or absent.
 
 [MISS  ] [BLOCKER] ANNEX_II.I  Redemption policy (funds equal to the market value of the referenced assets or delivery of those assets; procedure, timing, fees, suspension conditions)
-           Cite:  Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 Abs. 2 und 3, Art. 46 MiCAR
+           Cite:  Anhang II Teil C Nr. 8, Teil D Nr. 9, 14, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 Abs. 2 und 3, Art. 46 MiCAR
            Section: 'redemption'  (0 words)
            -  Section is empty or absent.
 

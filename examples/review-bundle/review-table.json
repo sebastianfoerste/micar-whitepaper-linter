@@ -1,6 +1,6 @@
 {
   "schema": "micar-whitepaper-linter.review-table",
-  "generated_at": "2026-10-13T13:44:18.766379+00:00",
+  "generated_at": "2026-10-13T17:40:57.494411+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "source": {
@@ -2368,7 +2368,7 @@
       "rule_id": "ANNEX_II.G.VALUATION_AUDIT",
       "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 7, 9, 11 und 12 MiCAR",
       "section": "reserve_of_assets",
-      "label": "Valuation of the reserve at market prices (Art. 36(7), (11) and (12) MiCAR) and independent audit every six months (Art. 36(9) MiCAR)",
+      "label": "Reserve valuation and audit disclosure (keyword check only; compliance with Art. 36(7), (9), (11) and (12) MiCAR not checked)",
       "severity": "BLOCKER",
       "status": "pass",
       "blocker": false,
@@ -2660,7 +2660,7 @@
     {
       "row_id": "review-row-e6a3acc23127fe1c",
       "rule_id": "ANNEX_II.I",
-      "citation": "Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 Abs. 2 und 3, Art. 46 MiCAR",
+      "citation": "Anhang II Teil C Nr. 8, Teil D Nr. 9, 14, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 Abs. 2 und 3, Art. 46 MiCAR",
       "section": "redemption",
       "label": "Redemption policy (funds equal to the market value of the referenced assets or delivery of those assets; procedure, timing, fees, suspension conditions)",
       "severity": "BLOCKER",
@@ -2686,7 +2686,7 @@
         "rule_scope": [
           "ANNEX_II.I"
         ],
-        "citation": "Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 Abs. 2 und 3, Art. 46 MiCAR",
+        "citation": "Anhang II Teil C Nr. 8, Teil D Nr. 9, 14, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 Abs. 2 und 3, Art. 46 MiCAR",
         "severity": "BLOCKER",
         "review_gate": "Qualified lawyer review required before external use.",
         "priority": "standard_review",
@@ -2717,7 +2717,7 @@
         {
           "column_id": "citation",
           "label": "Citation",
-          "value": "Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 Abs. 2 und 3, Art. 46 MiCAR",
+          "value": "Anhang II Teil C Nr. 8, Teil D Nr. 9, 14, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 Abs. 2 und 3, Art. 46 MiCAR",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2807,5 +2807,5 @@
   ],
   "warnings": [],
   "review_notice": "Review table rows are deterministic linter outputs. Reviewer decisions remain pending until a qualified lawyer signs off.",
-  "digest": "a7558099626d6d00cc8245d6248ba4cabee63bb73a53b88a7c8ca6faff0127d7"
+  "digest": "c720827e178315bb8442e7b7f7ad5c1203e7c20b9dcd868fd30c0908af6ab998"
 }

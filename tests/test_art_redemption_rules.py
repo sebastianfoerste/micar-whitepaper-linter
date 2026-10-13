@@ -4,7 +4,12 @@ Redemption "at par" is the e-money token rule (Art. 49(4) MiCAR). An ART issuer
 redeems by paying funds equivalent to the market value of the referenced assets or by
 delivering those assets (Art. 39(2) MiCAR). Valuation of the reserve sits in Art. 36(7),
 (11) and (12), the six-monthly independent audit in Art. 36(9); Art. 36(3) is
-operational segregation.
+operational segregation. English fixtures follow the EUR-Lex text (CELEX 32023R1114,
+mirrored in legalize-dev/legalize-eu).
+
+The German keywords "Rücktausch" and "Marktwert" follow the German text of Art. 39 MiCAR
+as reproduced on springlex.eu and gesetze.legal in web search results; they have not been
+checked against the German Official Journal text.
 """
 
 from pathlib import Path
@@ -63,16 +68,26 @@ def test_market_value_redemption_passes_the_redemption_rule():
 def test_redemption_at_par_without_market_value_is_referred_to_review():
     text = REDEMPTION.replace(
         "equivalent to the market value of the assets referenced by the tokens held", "at par"
-    )
+    ).replace("Holders cannot choose delivery of the referenced assets instead. ", "")
     finding = _finding("ANNEX_II.I", "redemption", text)
     assert finding.status == "review"
-    assert any("market value" in issue for issue in finding.issues)
+    assert any("market" in issue for issue in finding.issues)
 
 
-def test_redemption_rule_cites_article_39_2_and_3_and_article_46():
-    citation = _rule("ANNEX_II.I").citation
-    assert "Art. 39 Abs. 2 und 3" in citation
-    assert "Art. 46" in citation
+def test_delivery_only_redemption_passes_the_redemption_rule():
+    # Art. 39(2) MiCAR, second option: redemption by delivering the referenced assets.
+    text = (
+        "The redemption right is exercisable against the issuer at any time. Upon request, the issuer "
+        "redeems by delivering the assets referenced by the tokens held to a custody account named by "
+        "the holder. The procedure requires a redemption request through the issuer's portal and the "
+        "timing of settlement is two business days. Redemption is not subject to fees. Liquidity fees "
+        "and the suspension of redemptions are available only as recovery options under the recovery "
+        "plan, and the competent authority may temporarily suspend redemption. The issuer accepted "
+        "payment only in referenced assets and not in funds denominated in an official currency. "
+        "Settlement is complete when the referenced assets are credited to the holder's account."
+    )
+    finding = _finding("ANNEX_II.I", "redemption", text)
+    assert finding.status == "pass", finding.issues
 
 
 def test_rights_rule_asks_for_treatment_in_insolvency():
@@ -89,23 +104,71 @@ def test_rights_rule_asks_for_treatment_in_insolvency():
     assert passing.status == "pass", passing.issues
 
 
-def test_german_redemption_rule_uses_ruecktausch_and_marktwert():
-    rule = _rule("ANNEX_II.I")
-    assert "rücktausch" in rule.required_terms_de
-    assert "marktwert" in rule.required_terms_de
-    assert "rücktausch" in _rule("ANNEX_II.D").required_terms_de
+GERMAN_RIGHTS = (
+    "Die Inhaber haben gegenüber dem Emittenten folgende Rechte: ein jederzeitiges Recht auf "
+    "Rücktausch, das Recht, Beschwerden über das Beschwerdeverfahren des Emittenten einzureichen, "
+    "und Informationen darüber, wie diese Rechte im Fall eines Insolvenzverfahrens behandelt werden. "
+) * 3
+
+GERMAN_REDEMPTION = (
+    "Auf Verlangen eines Inhabers erfolgt der Rücktausch durch Zahlung eines Geldbetrags, der kein "
+    "E-Geld ist und dem Marktwert der Vermögenswerte entspricht, auf die sich die gehaltenen Token "
+    "beziehen. Das Verfahren beginnt mit einem Antrag über das Kundenportal des Emittenten. Der "
+    "Zeitplan sieht die Abwicklung innerhalb eines Geschäftstages vor. Für den Rücktausch werden "
+    "keine Gebühren erhoben. Liquiditätsgebühren und eine Aussetzung des Rücktauschs kommen nur als "
+    "Sanierungsmaßnahmen nach dem Sanierungsplan in Betracht; die zuständige Behörde kann den "
+    "Rücktausch vorübergehend aussetzen. Der Emittent hat Zahlungen in Euro angenommen und bietet "
+    "den Rücktausch stets in Euro an. Die Abwicklung erfolgt per Überweisung auf ein geprüftes Konto "
+    "des Inhabers. Weitere Einzelheiten enthält die Rücktauschstrategie des Emittenten."
+)
 
 
-def test_valuation_audit_rule_cites_the_valuation_and_audit_paragraphs():
+def test_german_rights_section_with_ruecktausch_passes():
+    finding = _finding("ANNEX_II.D", "rights_and_obligations", GERMAN_RIGHTS, language="de")
+    assert finding.status == "pass", finding.issues
+
+
+def test_german_redemption_section_with_marktwert_passes():
+    finding = _finding("ANNEX_II.I", "redemption", GERMAN_REDEMPTION, language="de")
+    assert finding.status == "pass", finding.issues
+
+
+def test_german_redemption_zu_par_without_marktwert_is_referred_to_review():
+    text = GERMAN_REDEMPTION.replace(
+        "dem Marktwert der Vermögenswerte entspricht, auf die sich die gehaltenen Token beziehen",
+        "zu par erfolgt",
+    )
+    finding = _finding("ANNEX_II.I", "redemption", text, language="de")
+    assert finding.status == "review"
+    assert any("marktwert" in issue for issue in finding.issues)
+
+
+def test_german_art_risks_accept_ruecktausch():
+    text = (
+        "Es bestehen Markt-, Kredit-, Liquiditäts- und operative Risiken. Der Token kann seine "
+        "Bindung verlieren (De-Peg). Ein Rücktausch kann verzögert sein, wenn die Reserve "
+        "beeinträchtigt ist. "
+    ) * 8
+    finding = _finding("ANNEX_II.F", "risks", text, language="de")
+    assert finding.status == "pass", finding.issues
+
+
+def test_no_art_rule_cites_operational_segregation_for_valuation():
+    # Regression: Art. 36(3) MiCAR (operational segregation) was cited for valuation and audit.
     rule = _rule("ANNEX_II.G.VALUATION_AUDIT")
-    assert rule.citation == "Anhang II Teil G i.V.m. Art. 36 Abs. 7, 9, 11 und 12 MiCAR"
-    assert "Abs. 3" not in rule.citation
-    assert "36(3)" not in rule.label
-    assert "Art. 36(9)" in rule.label
+    assert "Abs. 3" not in rule.citation and "36(3)" not in rule.label
 
 
-def test_custody_label_cites_article_37():
-    assert "Art. 37" in _rule("ANNEX_II.G.CUSTODY").label
+def test_valuation_audit_label_does_not_claim_the_standards_were_checked():
+    # The rule finds the words only. Amortised cost (excluded by Art. 36(12), third
+    # subparagraph) and an annual internal audit still pass, so the label must say so.
+    text = (
+        "The valuation of the reserve uses the amortised cost method. An internal audit of the "
+        "reserve takes place annually and its results are reported to the management body. "
+    ) * 3
+    finding = _finding("ANNEX_II.G.VALUATION_AUDIT", "reserve_of_assets", text)
+    assert finding.status == "pass"
+    assert "not checked" in finding.rule.label
 
 
 def test_art_example_passes_the_redemption_rules():

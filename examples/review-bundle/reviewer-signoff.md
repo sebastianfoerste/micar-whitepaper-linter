@@ -5,7 +5,7 @@ It does not certify a white paper, approve a notification or replace legal revie
 
 - Document title: Synthetic EuroStable ART White Paper
 - White paper type: art
-- Generated at: 2026-10-13T13:44:18.766379+00:00
+- Generated at: 2026-10-13T17:40:57.494411+00:00
 - Automated status: Blocked
 - Open blocker count: 4
 
