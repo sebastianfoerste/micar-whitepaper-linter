@@ -68,10 +68,18 @@ def test_leading_fields_of_tables_3_and_4_do_not_collide_with_part_i(tmp_path: P
         f"<tr><td>{number}</td><td>{label}</td><td>{content}</td></tr>"
         for number, label, content in [
             ("I.01", "Date of notification", "2026-03-02"),
-            ("I.06", "Right of redemption", "The holders of asset-referenced tokens have a right of redemption at any time."),
+            (
+                "I.06",
+                "Right of redemption",
+                "The holders of asset-referenced tokens have a right of redemption at any time.",
+            ),
             ("A.1", "Statutory name", "Example Issuer AG"),
             ("B.14", "Language or languages of the crypto-asset white paper", "German"),
-            ("D.1", "Holder's rights and obligations", "Redemption in funds equal to the market value of the referenced assets."),
+            (
+                "D.1",
+                "Holder's rights and obligations",
+                "Redemption in funds equal to the market value of the referenced assets.",
+            ),
             ("G.1", "Description of the reserve of assets", "Bank deposits and government bonds."),
         ]
     )
