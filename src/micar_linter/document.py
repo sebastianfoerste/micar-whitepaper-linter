@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from pathlib import Path
 
 # Common patterns (in English and German) matching whitepaper section headings.
@@ -44,9 +45,13 @@ _STATEMENT_START = re.compile(
     r"|dieses\s+kryptowerte-whitepaper\s+wurde\s+von\s+keiner)\b",
     re.IGNORECASE,
 )
-# The statement closes with the sentence on who is solely responsible for the content.
-_STATEMENT_CLOSE = re.compile(r"\b(?:responsible|verantwortung)\b[^.]*\.", re.IGNORECASE)
-_STATEMENT_MAX_LINES = 8
+# The statement has two sentences: the one opening above, then the one naming who is solely
+# responsible for the content. Each is about 20 words in Art. 6(3) and Art. 51(3).
+_RESPONSIBILITY = re.compile(r"\b(?:responsib|verantwort)\w*", re.IGNORECASE)
+_SENTENCE_END = re.compile(r"[.!?](?=\s|$)")
+_STATEMENT_MAX_LINES = 12
+_SENTENCE_MAX_WORDS = 30
+_HEADING_MAX_WORDS = 12
 
 
 def is_statement_start(text: str) -> bool:
@@ -54,22 +59,68 @@ def is_statement_start(text: str) -> bool:
     return bool(_STATEMENT_START.match(text))
 
 
-def statement_extent(lines: list[str], start: int) -> int:
+def looks_like_heading(text: str) -> bool:
+    """True for a Markdown heading, or a short line without closing punctuation that names a section."""
+    stripped = text.strip()
+    if stripped.startswith("#"):
+        return True
+    if not stripped or len(stripped.split()) > _HEADING_MAX_WORDS or stripped[-1] in ".,;:!?":
+        return False
+    return bool(match_heading_to_section(stripped))
+
+
+def statement_extent(lines: list[str], start: int, is_heading: Callable[[int], bool] | None = None) -> int:
     """Index after the last line of the statement that opens at lines[start].
 
-    A wrapped statement in a PDF or a hard-wrapped Markdown file spans several lines. Its
-    continuation lines often contain words such as "crypto-asset" or "offeror" that the
-    heading heuristics would otherwise read as new section headings.
+    A wrapped statement in a PDF or a hard-wrapped Markdown file spans several lines, and
+    its continuation lines often contain words such as "crypto-asset" or "offeror" that the
+    heading heuristics would otherwise read as new section headings. The statement ends
+    with its opening sentence, or with the next sentence where that one is short and says
+    who is responsible. It never runs past a heading, so an incomplete or reworded
+    statement cannot swallow the sections that follow it.
+
+    is_heading(index) reports a heading the loader knows for certain, such as a DOCX
+    paragraph in a Heading style.
     """
-    collected: list[str] = []
-    end = min(len(lines), start + _STATEMENT_MAX_LINES)
-    for index in range(start, end):
-        if index > start and lines[index].lstrip().startswith("#"):
-            return index
-        collected.append(lines[index])
-        if _STATEMENT_CLOSE.search(" ".join(collected)):
-            return index + 1
-    return end
+    window = lines[start : start + _STATEMENT_MAX_LINES]
+    text = " ".join(window)
+    line_ends: list[int] = []
+    offset = 0
+    for line in window:
+        line_ends.append(offset + len(line))
+        offset += len(line) + 1
+
+    def firm_heading(i: int) -> bool:
+        return window[i].lstrip().startswith("#") or (is_heading is not None and is_heading(start + i))
+
+    def line_at(position: int) -> int:
+        return next(i for i, line_end in enumerate(line_ends) if line_end >= position)
+
+    # Continuation lines of the opening sentence never name a section, so a line that ends
+    # inside it and looks like a heading means the sentence was cut short. The line where
+    # the sentence ends may already start the next one ("Union. The offeror"), so it is
+    # not read as a heading.
+    first = _SENTENCE_END.search(text)
+    first_end = first.end() if first else len(text) + 1
+    for i in range(1, len(window)):
+        if line_ends[i] < first_end and (looks_like_heading(window[i]) or firm_heading(i)):
+            return start + i
+    if first is None:
+        return start + 1
+    last = line_at(first_end)
+
+    # The responsibility sentence of a narrow PDF column can look like a heading
+    # ("The offeror of the crypto-asset is solely"), so only firm headings end it early.
+    second = _SENTENCE_END.search(text, first_end)
+    if second is None:
+        return start + last + 1
+    sentence = text[first_end : second.end()]
+    if len(sentence.split()) > _SENTENCE_MAX_WORDS or not _RESPONSIBILITY.search(sentence):
+        return start + last + 1
+    closing = line_at(second.end())
+    if any(firm_heading(i) for i in range(last + 1, closing + 1)):
+        return start + last + 1
+    return start + closing + 1
 
 
 def match_heading_to_section(heading: str) -> list[str]:
@@ -103,7 +154,9 @@ def load_from_docx(path: Path) -> dict[str, str]:
     for index, (para, text) in enumerate(paragraphs):
         if index < statement_end or is_statement_start(text):
             if index >= statement_end:
-                statement_end = statement_extent(texts, index)
+                statement_end = statement_extent(
+                    texts, index, lambda i: paragraphs[i][0].style.name.startswith("Heading")
+                )
             sections.setdefault("not_approved_statement", []).append(text)
             continue
 

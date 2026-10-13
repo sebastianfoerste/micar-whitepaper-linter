@@ -305,3 +305,108 @@ def test_xhtml_statement_paragraph_without_heading_is_routed(tmp_path: Path):
     whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
     assert APPROVAL in whitepaper.section("not_approved_statement")
     assert "not been approved" not in whitepaper.section("summary")
+
+
+# Regression: an incomplete statement swallowed the sections that followed it, so a draft
+# that has a summary and a risk warning got MISSING blockers for both.
+SUMMARY_BODY = " ".join(["The summary gives key information about the offer and the token."] * 15)
+RISK_BODY = "The crypto-asset may lose its value in part or in full."
+
+
+def _sections_after_incomplete_statement(whitepaper):
+    findings = {f.rule.rule_id: f for f in lint_whitepaper(whitepaper).findings}
+    assert findings["COMMON.SUMMARY"].status == "pass", findings["COMMON.SUMMARY"].issues
+    assert findings["COMMON.RISK_WARNING"].status != "missing"
+    assert findings[TITLE_II].status == "review"
+    assert "key information" not in whitepaper.section("not_approved_statement")
+
+
+def test_incomplete_docx_statement_does_not_swallow_the_next_sections(tmp_path: Path):
+    path = tmp_path / "draft.docx"
+    document = docx.Document()
+    document.add_paragraph(APPROVAL)
+    document.add_heading("Summary", level=1)
+    document.add_paragraph(SUMMARY_BODY)
+    document.add_heading("Risk warning", level=1)
+    document.add_paragraph(RISK_BODY)
+    document.save(path)
+    _sections_after_incomplete_statement(load_whitepaper(path, WhitepaperType.OTHER))
+
+
+def test_docx_heading_ends_the_statement_even_before_a_responsibility_sentence(tmp_path: Path):
+    path = tmp_path / "draft.docx"
+    document = docx.Document()
+    document.add_paragraph(APPROVAL)
+    document.add_heading("Summary", level=1)
+    document.add_paragraph("The issuer is responsible for the token. " + SUMMARY_BODY)
+    document.save(path)
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    assert whitepaper.section("not_approved_statement") == APPROVAL
+    assert whitepaper.section("summary").startswith("Summary")
+
+
+def test_incomplete_markdown_statement_does_not_swallow_the_next_sections(tmp_path: Path):
+    path = tmp_path / "draft.md"
+    path.write_text(
+        f"{APPROVAL}\n\nSummary\n{SUMMARY_BODY}\n\n# Summary\n{SUMMARY_BODY}\n\n# Risk warning\n{RISK_BODY}\n",
+        encoding="utf-8",
+    )
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    assert whitepaper.section("not_approved_statement") == APPROVAL
+    _sections_after_incomplete_statement(whitepaper)
+
+
+def _pdf_whitepaper(mock_reader_cls, tmp_path: Path, text: str):
+    page = MagicMock()
+    page.extract_text.return_value = text
+    mock_reader_cls.return_value = MagicMock(pages=[page])
+    path = tmp_path / "draft.pdf"
+    path.write_bytes(b"%PDF-1.4")
+    return load_whitepaper(path, WhitepaperType.OTHER)
+
+
+@patch("pypdf.PdfReader")
+def test_incomplete_pdf_statement_does_not_swallow_the_next_sections(mock_reader_cls, tmp_path: Path):
+    whitepaper = _pdf_whitepaper(
+        mock_reader_cls,
+        tmp_path,
+        "This crypto-asset white paper has not been approved by any competent authority in any\n"
+        "Member State of the European Union.\n"
+        f"Summary\n{SUMMARY_BODY}\nRisk warning\n{RISK_BODY}\n",
+    )
+    _sections_after_incomplete_statement(whitepaper)
+
+
+@patch("pypdf.PdfReader")
+def test_pdf_statement_cut_off_mid_sentence_ends_at_the_heading(mock_reader_cls, tmp_path: Path):
+    whitepaper = _pdf_whitepaper(
+        mock_reader_cls,
+        tmp_path,
+        "This crypto-asset white paper has not been approved\n"
+        f"Summary\n{SUMMARY_BODY}\nRisk warning\n{RISK_BODY}\n",
+    )
+    assert (
+        whitepaper.section("not_approved_statement") == "This crypto-asset white paper has not been approved"
+    )
+    _sections_after_incomplete_statement(whitepaper)
+
+
+@patch("pypdf.PdfReader")
+def test_statement_wrapped_in_a_narrow_pdf_column_passes(mock_reader_cls, tmp_path: Path):
+    # "State of the European Union. The offeror" and "of the crypto-asset is solely
+    # responsible" are short and name sections, so a heading check alone would cut the
+    # statement off.
+    whitepaper = _pdf_whitepaper(
+        mock_reader_cls,
+        tmp_path,
+        "This crypto-asset white paper has not been approved\n"
+        "by any competent authority in any Member\n"
+        "State of the European Union. The offeror\n"
+        "of the crypto-asset is solely responsible\n"
+        "for the content of this crypto-asset\n"
+        "white paper.\n"
+        f"Summary\n{SUMMARY_BODY}\n",
+    )
+    statement = next(f for f in lint_whitepaper(whitepaper).findings if f.rule.rule_id == TITLE_II)
+    assert statement.status == "pass", statement.issues
+    assert whitepaper.section("summary").startswith("Summary")
