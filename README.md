@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/sebastianfoerste/micar-whitepaper-linter/actions/workflows/ci.yml/badge.svg)](https://github.com/sebastianfoerste/micar-whitepaper-linter/actions/workflows/ci.yml)
 
-The MiCAR Whitepaper Linter is a deterministic Python tool for reviewing draft crypto-asset white papers under MiCAR. It maps Annex requirements into code check classes and produces cited review artifacts over synthetic examples.
+The MiCAR Whitepaper Linter is a deterministic Python tool for a first pass over draft crypto-asset white papers under MiCAR. For each required disclosure it checks that the section exists, is not too thin and contains the expected keywords, and it reports the result with a pinpoint citation. A few checks are structural (the iXBRL format and namespaces) or always route an item to a lawyer (the ART deposit floor), and the English wording of the Art. 6(3) and Art. 51(3) statement is matched word for word. The linter does not otherwise compare text with prescribed statutory wording, and it does not judge whether a disclosure is accurate, complete or adequate.
 
 **[Try it live in your browser](https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/)**. The full linter runs client-side via Pyodide. Nothing you paste leaves the page.
 
@@ -10,19 +10,21 @@ The browser workbench accepts JSON drafts up to 1 MB and XHTML white papers up t
 
 For local preview, run `python3 -m http.server 8765 --bind 127.0.0.1 --directory docs` and open `http://127.0.0.1:8765/playground/`. The first runtime load needs an internet connection. The app does not persist drafts in browser storage.
 
-![Linter output: pass/review/missing findings with pinpoint MiCAR citations](docs/demo.svg)
+![Terminal capture of `make demo`: the first findings for the synthetic incomplete ART draft, with pass/review/missing status, severity and citation](docs/demo.png)
+
+*Rendered from the real output of `make demo` on `examples/incomplete.json`; the capture shows the first 45 of 111 output lines (the full report is in `reports/sample-incomplete-blockers.txt`).*
 
 ## Real-world study: MiCAR Title II white papers
 
 This repository now includes a reproducible pilot study over publicly available Title II crypto-asset white papers listed in ESMA's MiCA register.
 
-The study runs deterministic Annex I checks over a reproducible convenience sample and publishes machine-flagged candidate gaps, exact document hashes, extraction metadata, limitations, and a 150-cell human-review matrix. The candidate flags are not reviewed legal findings.
+The study runs deterministic Annex I checks over a reproducible convenience sample and publishes machine-flagged candidate gaps, exact document hashes, extraction metadata and limitations. It also contains a human-review matrix of 150 document-rule cells, but no cell has been reviewed yet (0 of 150). The study therefore reports no precision, recall or prevalence figures, and the candidate flags are not reviewed legal findings.
 
 Read the study report and validation protocol:
 
 - `studies/2026-07-title-ii-annex-i-whitepaper-study/findings-summary.md`
 - `studies/2026-07-title-ii-annex-i-whitepaper-study/review-protocol.md`
-- `studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-matrix.csv`
+- `studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-matrix.csv` (review template; 0 of 150 cells completed)
 
 Raw white papers are not committed. Study outputs are deterministic first-pass research artifacts and are not legal advice.
 
@@ -84,7 +86,7 @@ This route keeps the human-review boundary visible while showing the determinist
 
 ## Core features
 
-- Deterministic regulatory audits for MiCAR Annex I, II and III.
+- Deterministic first-pass checks for the disclosures required by MiCAR Annex I, II and III (keywords, minimum length and structure, not legal review).
 - JSON, XHTML and DOCX parsing.
 - Rules-as-code severity engine.
 - JSON reports for automated checks.
@@ -93,9 +95,9 @@ This route keeps the human-review boundary visible while showing the determinist
 - Review table export: adds rule-by-rule rows with blocker status, citations, remediation, reviewer decision state and bundle export eligibility.
 - Workspace export: `--workspace-output <path>` writes a local batch vault, conditional review table and reusable review playbook. Open blockers keep filing and external-review readiness disabled.
 
-## Verified behavior
+## What the checks establish
 
-MiCAR white-paper requirements can be encoded as deterministic, cited and testable rules. Annex selection is explicit, rule IDs are stable, unmatched disclosure patterns produce cited candidate flags, severity is tested, and JSON outputs can be used by review workflows without hiding the legal basis.
+A pass means that the section exists, meets the minimum length and contains the rule's keywords. It does not mean that the disclosure is correct, complete or compliant. Annex selection is explicit, rule IDs are stable, unmatched keywords produce cited candidate flags, severity is tested, and JSON outputs can be used by review workflows without hiding the legal basis.
 
 The tool preserves legal judgment. It flags candidate disclosure gaps and produces draft review artifacts. It does not decide whether a white paper is lawful or complete.
 
