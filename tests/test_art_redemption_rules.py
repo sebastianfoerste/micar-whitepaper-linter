@@ -176,3 +176,16 @@ def test_art_example_passes_the_redemption_rules():
     indexed = {f.rule.rule_id: f for f in report.findings}
     for rule_id in ("ANNEX_II.D", "ANNEX_II.I", "ANNEX_II.G.VALUATION_AUDIT"):
         assert indexed[rule_id].status == "pass", (rule_id, indexed[rule_id].issues)
+
+
+def test_starter_template_cites_the_art_provisions_for_its_art_type():
+    # Regression: the "art" starter cited Title II provisions (Art. 6, Art. 8(1)) and
+    # asked for "the redemption right at par under Art. 39".
+    import json
+
+    starter = json.loads((ROOT / "templates" / "whitepaper-starter" / "whitepaper.json").read_text(encoding="utf-8"))
+    assert starter["type"] == "art"
+    text = " ".join(starter["sections"].values())
+    assert "at par" not in text
+    assert "Art. 6 Abs." not in text and "Art. 8 Abs." not in text
+    assert "Art. 39 Abs. 2" in starter["sections"]["redemption"]
