@@ -9,7 +9,9 @@ mirrored in legalize-dev/legalize-eu).
 
 The German keywords "Rücktausch" and "Marktwert" follow the German text of Art. 39 MiCAR
 as reproduced on springlex.eu and gesetze.legal in web search results; they have not been
-checked against the German Official Journal text.
+checked against the German Official Journal text. Until they are, the German checks also
+accept "Rücknahme" and "Rückzahlung", the terms used before 1.2.0, and a German policy that
+redeems only by delivering the referenced assets is referred to review with a note.
 """
 
 from pathlib import Path
@@ -68,12 +70,32 @@ def test_market_value_redemption_passes_the_redemption_rule():
 
 
 def test_redemption_at_par_without_market_value_is_referred_to_review():
+    # The fixture keeps "Holders cannot choose delivery of the referenced assets": a negated
+    # mention of delivery must not count as the Art. 39(2) delivery basis.
     text = REDEMPTION.replace(
         "equivalent to the market value of the assets referenced by the tokens held", "at par"
-    ).replace("Holders cannot choose delivery of the referenced assets instead. ", "")
+    )
     finding = _finding("ANNEX_II.I", "redemption", text)
     assert finding.status == "review"
     assert any("market" in issue for issue in finding.issues)
+    assert any("Art. 49(4)" in issue and "Art. 39(2)" in issue for issue in finding.issues)
+
+
+def test_negated_market_value_mention_is_not_a_redemption_basis():
+    text = REDEMPTION.replace(
+        "equivalent to the market value of the assets referenced by the tokens held",
+        "at par. No market value redemption is offered",
+    )
+    finding = _finding("ANNEX_II.I", "redemption", text)
+    assert finding.status == "review"
+
+
+def test_at_par_in_an_art_redemption_section_is_referred_to_review():
+    # Even next to the market value basis, "at par" in an ART redemption policy names the
+    # e-money token rule (Art. 49(4) MiCAR), so a human checks which basis applies.
+    finding = _finding("ANNEX_II.I", "redemption", REDEMPTION + " Redemption is also offered at par.")
+    assert finding.status == "review"
+    assert any("Art. 49(4)" in issue for issue in finding.issues)
 
 
 def test_delivery_only_redemption_passes_the_redemption_rule():
@@ -145,6 +167,28 @@ def test_german_redemption_zu_par_without_marktwert_is_referred_to_review():
     assert any("marktwert" in issue for issue in finding.issues)
 
 
+def test_german_checks_still_accept_ruecknahme_until_the_term_is_verified():
+    rights = GERMAN_RIGHTS.replace("Rücktausch", "Rücknahme")
+    assert _finding("ANNEX_II.D", "rights_and_obligations", rights, language="de").status == "pass"
+    redemption = GERMAN_REDEMPTION.replace("Rücktausch", "Rücknahme")
+    finding = _finding("ANNEX_II.I", "redemption", redemption, language="de")
+    assert finding.status == "pass", finding.issues
+
+
+def test_german_delivery_only_redemption_is_referred_to_review_with_a_note():
+    # Art. 39(2) MiCAR allows redemption by delivering the referenced assets. Its German
+    # wording is not verified, so the German check cannot recognise it and says so.
+    text = GERMAN_REDEMPTION.replace(
+        "durch Zahlung eines Geldbetrags, der kein E-Geld ist und dem Marktwert der Vermögenswerte "
+        "entspricht, auf die sich die gehaltenen Token beziehen",
+        "durch Übertragung der Vermögenswerte, auf die sich die gehaltenen Token beziehen",
+    )
+    assert "marktwert" not in text.lower()
+    finding = _finding("ANNEX_II.I", "redemption", text, language="de")
+    assert finding.status == "review"
+    assert any("nur durch Übertragung" in issue and "manuell" in issue for issue in finding.issues)
+
+
 def test_german_art_risks_accept_ruecktausch():
     text = (
         "Es bestehen Markt-, Kredit-, Liquiditäts- und operative Risiken. Der Token kann seine "
@@ -153,6 +197,8 @@ def test_german_art_risks_accept_ruecktausch():
     ) * 8
     finding = _finding("ANNEX_II.F", "risks", text, language="de")
     assert finding.status == "pass", finding.issues
+    older = _finding("ANNEX_II.F", "risks", text.replace("Rücktausch", "Rücknahme"), language="de")
+    assert older.status == "pass", older.issues
 
 
 def test_no_art_rule_cites_operational_segregation_for_valuation():

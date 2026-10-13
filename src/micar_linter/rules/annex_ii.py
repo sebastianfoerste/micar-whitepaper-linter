@@ -16,6 +16,23 @@ from __future__ import annotations
 
 from micar_linter.rules.base import Rule, Severity
 
+# German redemption term. "Rücktausch" follows reproductions of the German Art. 39 MiCAR in
+# web search results; it has not been checked against the German Official Journal text.
+# Until it is, the terms used before 1.2.0 ("Rücknahme", "Rückzahlung") are accepted too, so
+# no German draft fails on an unverified keyword change.
+_REDEMPTION_DE = r"rücktausch|rücknahme|rückzahlung"
+
+# Art. 39(2) MiCAR: the issuer redeems "either by paying an amount in funds, other than
+# electronic money, equivalent to the market value of the assets referenced by the
+# asset-referenced token held or by delivering the assets referenced by the token". The
+# pattern asks for the affirmative wording of either basis, so that "Holders cannot choose
+# delivery of the referenced assets" or "No market value redemption is offered" does not
+# satisfy it.
+_ART_REDEMPTION_BASIS = (
+    r"\bmarket\s+value\s+of\s+the\s+(?:referenced\s+)?assets\b"
+    r"|\bby\s+deliver(?:ing|y\s+of)\s+(?:(?:the|those)\s+)?(?:referenced\s+)?assets\b"
+)
+
 ANNEX_II_RULES: tuple[Rule, ...] = (
     Rule(
         rule_id="ANNEX_II.A",
@@ -59,7 +76,8 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
             "treatment in insolvency, complaints handling)"
         ),
         required_terms=("rights", "redemption", "insolvency", "complaints", "holder"),
-        required_terms_de=("rechte", "rücktausch", "insolvenz", "beschwerden", "inhaber"),
+        required_terms_de=("rechte", "insolvenz", "beschwerden", "inhaber"),
+        required_patterns_de=(_REDEMPTION_DE,),
         min_words=80,
         severity=Severity.BLOCKER,
     ),
@@ -93,9 +111,9 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
             "liquidität",
             "operativ",
             "de-peg",
-            "rücktausch",
             "reserve",
         ),
+        required_patterns_de=(_REDEMPTION_DE,),
         min_words=150,
         severity=Severity.BLOCKER,
     ),
@@ -186,7 +204,10 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
         # suspension of redemptions are recovery options in the recovery plan (Art. 46(1));
         # the competent authority may require their implementation (Art. 46(3)) and may then
         # temporarily suspend redemption (Art. 46(4)). The German pattern covers the market
-        # value basis only: the German wording of the delivery alternative is not yet verified.
+        # value basis only: the German wording of the delivery alternative is not yet verified,
+        # so a German delivery-only policy is referred to review with a note
+        # (linter._rule_specific_issues). "At par" in an English ART redemption section is
+        # referred to review too, because it names the e-money token rule (Art. 49(4)).
         rule_id="ANNEX_II.I",
         citation=(
             "Anhang II Teil C Nr. 8, Teil D Nr. 9, 14, 15 und 16, Teil G Nr. 3 i.V.m. "
@@ -198,9 +219,9 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
             "delivery of those assets; procedure, timing, fees, suspension conditions)"
         ),
         required_terms=("redemption", "procedure", "timing", "fees", "suspension"),
-        required_terms_de=("rücktausch", "verfahren", "zeitplan", "gebühren", "aussetzung"),
-        required_patterns=(r"\bmarket\s+value\b|\bdeliver(?:y|ing|s|ed)?\b[^.]{0,60}\bassets\b",),
-        required_patterns_de=(r"\bmarktwert",),
+        required_terms_de=("verfahren", "zeitplan", "gebühren", "aussetzung"),
+        required_patterns=(_ART_REDEMPTION_BASIS,),
+        required_patterns_de=(_REDEMPTION_DE, r"\bmarktwert"),
         min_words=100,
         severity=Severity.BLOCKER,
     ),

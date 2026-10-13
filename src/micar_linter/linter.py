@@ -147,6 +147,8 @@ class Linter:
                 )
                 issues.append(msg)
 
+        issues.extend(_rule_specific_issues(rule, normalized, is_de))
+
         status = "review" if issues else "pass"
         return Finding(rule=rule, status=status, word_count=word_count, issues=tuple(issues))
 
@@ -226,6 +228,30 @@ def _not_approved_statement_finding(rule: Rule, whitepaper: Whitepaper) -> Findi
         )
         return Finding(rule=rule, status="review", word_count=words, issues=(msg,))
     return None
+
+
+_AT_PAR = re.compile(r"\bat\s+par\b")
+_MARKTWERT = re.compile(r"\bmarktwert")
+
+
+def _rule_specific_issues(rule: Rule, normalized: str, is_de: bool) -> list[str]:
+    """Issues a rule needs beyond its terms and patterns; normalized is lowercase, one line."""
+    if rule.rule_id == "ANNEX_II.I":
+        if is_de and not _MARKTWERT.search(normalized):
+            return [
+                "Kein Rücktausch zum Marktwert erkannt (Art. 39 Abs. 2 MiCAR). Ein Rücktausch nur "
+                "durch Übertragung der Vermögenswerte, auf die sich der Token bezieht, wird in "
+                "deutschen Entwürfen noch nicht erkannt, weil der deutsche Wortlaut dieser "
+                "Alternative nicht geprüft ist. Bitte manuell prüfen."
+            ]
+        if not is_de and _AT_PAR.search(normalized):
+            return [
+                "The section mentions redemption at par. Redemption at par value is the e-money "
+                "token rule (Art. 49(4) MiCAR); an ART issuer redeems in funds equivalent to the "
+                "market value of the referenced assets or by delivering those assets "
+                "(Art. 39(2) MiCAR). Check which basis the policy states."
+            ]
+    return []
 
 
 _PERCENTAGE_PATTERN = re.compile(r"(?<![\d.,])(\d{1,3}(?:[.,]\d+)?)\s*%(?!\d)")
