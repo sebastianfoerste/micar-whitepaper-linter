@@ -127,7 +127,7 @@ The compliance review check was run via the following command:
 ```bash
 make review-bundle
 ```
-All 146 unit tests pass successfully when run via:
+194 tests pass and 1 is skipped (it needs the local study cache) when run via:
 ```bash
 make test
 ```
