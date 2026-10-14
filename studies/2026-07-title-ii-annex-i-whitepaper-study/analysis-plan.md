@@ -122,7 +122,7 @@ All intervals are two-sided 95%.
 - **S3 and S4:** `uncertain` counted as `missing`, then as `present`, to bound the result.
 - **S5:** the stricter readings recorded in notes under `codebook.md` P4 and the [OJ check] items (for example Art. 6(6) element (iii), or the business address under Part A item 8), where the notes allow it.
 - **Inter-rater agreement, if double-reviewed:** raw agreement; Cohen's kappa on present/missing and on all labels; PABAK or Gwet's AC1. State which cells were double-reviewed.
-- Results are computed by tooling from the committed label files (`micar-review-summary`, which writes `human-review-summary.json`, schema v2) and rendered from its JSON output (`micar-review-render`); no figure is typed by hand. Per-document and per-offeror counts go only to the file named by `--internal-out`, which git ignores.
+- Results are computed by tooling from the committed label files (`micar-review-summary`, which writes `human-review-summary.json`, schema v2) and rendered from its JSON output (`micar-review-render`); no figure is typed by hand. The per-document and per-offeror count tables, and the per-rule table of S1, go only to the file named by `--internal-out`, which git ignores; the summary publishes per-rule counts for the primary set only. The published sets still imply WP-007's document-level counts (S1 minus the primary set) and the pooled counts of the documents S2(b) drops (the primary set minus S2(b)).
 
 ## 11. Reporting rules
 
