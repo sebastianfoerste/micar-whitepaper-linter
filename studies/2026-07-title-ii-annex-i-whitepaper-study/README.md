@@ -76,6 +76,8 @@ uv run micar-review-sheets \
 
 Each reviewer labels only their own blinded sheet (`human-review-r1.csv`, and `human-review-r2.csv` for a second reviewer) under `review-protocol.md` and `codebook.md`. While labelling, reviewers do not open `human-review-matrix.csv`, `findings-pseudonymous.*` or `findings-summary.md`.
 
+Start labelling only after the commit that adopts `codebook.md` and `analysis-plan.md` with the pending sheets (`analysis-plan.md`, step 0.10). From then on, pass the adoption date recorded in `codebook.md` as `--not-before YYYY-MM-DD` to `micar-review-workbook` and to every `micar-review-merge` command below, so that a label dated before the pre-registration is refused. Without it, the earliest accepted date is the day the findings were generated (2026-07-06).
+
 A reviewer can enter labels in the CSV directly, or in a workbook generated from it. The workbook commands need the optional `review` extra (openpyxl):
 
 ```bash
@@ -84,9 +86,9 @@ uv run --extra review micar-review-workbook \
   --reviewer r1
 ```
 
-This writes `human-review-r1.xlsx` into the study directory (`--out` writes it elsewhere). Workbook row N is line N of the CSV, in the sheet's recorded order. The workbook carries no detector outcome, and it never fills a label: values come from the reviewer's own CSV, so a new sheet gives a workbook with every label pending. Only the review columns can be edited:
+This writes `human-review-r1.xlsx` into the study directory (`--out` writes it elsewhere). Workbook row N holds the CSV's record N, in the sheet's recorded order (row 1 is the header in both). The workbook carries no detector outcome, and it never fills a label: values come from the reviewer's own CSV, so a new sheet gives a workbook with every label pending. Only the review columns can be edited:
 
-- `human_label`: dropdown of the codebook's labels;
+- `human_label`: dropdown of the labels of `review-protocol.md` (refined in `codebook.md`, section 3). Typed labels must be lower case, exactly as listed;
 - `reviewer_id`: only the reviewer's own ID;
 - `reviewed_at`: only a date;
 - `source_pinpoint` and `review_note`: free text.
@@ -111,21 +113,24 @@ uv run --extra review micar-review-merge import \
   --workbook studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-r1.xlsx
 ```
 
+A reviewer who started in the CSV can generate the workbook from it and continue there. The workbook records which CSV it was generated from, so the import replaces that CSV's values without `--replace`. If the CSV already holds review content and changed after the workbook was generated, the import refuses, because it would discard those changes.
+
 The import validates every row:
 
-- the label is one of the codebook's labels;
+- the label is one of the labels of `review-protocol.md` (refined in `codebook.md`, section 3);
 - `reviewer_id` is the sheet's reviewer;
-- `reviewed_at` is an ISO 8601 date (`YYYY-MM-DD`), not before the findings were generated and not after today;
+- `reviewed_at` is an ISO 8601 date (`YYYY-MM-DD`), not before the findings were generated (or the `--not-before` date) and not after today;
 - `present` and `missing` carry a `source_pinpoint`;
 - `not_applicable`, `uncertain` and `extraction_failure` carry a `review_note`.
 
 It writes nothing and lists the offending rows when it refuses:
 
 - exit 1: a cell is pending or invalid;
-- exit 3: the workbook's cells or row order differ from the generated sheet, or the findings file or the sheets no longer match `human-review-sheets.json`;
-- exit 5: the CSV already holds different labels. `--replace` overwrites them.
+- exit 2: a usage or input error, for example openpyxl is not installed or `--not-before` is before the findings date;
+- exit 3: the workbook's cells or row order differ from the generated sheet, the workbook was generated for another reviewer or sheet, or the findings file or the sheets no longer match `human-review-sheets.json`;
+- exit 5: the CSV already holds different labels and changed after the workbook was generated. `--replace` overwrites them.
 
-Commit each reviewer's labelled sheet on its own, before the merge.
+Commit each reviewer's labelled sheet on its own, before the merge. This repository is public. Do not push labelled sheets, the adjudication file or the merged matrix until `analysis-plan.md` section 11 is decided and the conflicts check and the legal review under `review-protocol.md` (Publication gate, item 6) are done.
 
 ## Validate against human labels
 
@@ -140,10 +145,10 @@ The merge validates the sheet of every reviewer recorded in `human-review-sheets
 
 With a second reviewer, the merge first compares the sheets. Cells with the same label from both reviewers take that label, with `reviewer_id` `r1+r2`. If any labels differ, the merge writes those cells to `human-review-disagreements.csv` (git-ignored; reviewer columns, no detector outcome) and exits 4 without writing the matrix. Then:
 
-1. Copy the report to `human-review-adjudication.csv`.
-2. For every row, fill `final_label`, `adjudicated_by`, `adjudicated_at`, `adjudication_reason`, and `final_pinpoint` where the final label is `present` or `missing`. `adjudicated_by` is both reviewers by consensus (`r1+r2`) or a third person (for example `r3`). One of the two reviewers alone is refused (`analysis-plan.md`, section 6).
+1. Copy the report to `human-review-adjudication.csv`. Edit it in a text editor, or in LibreOffice with a comma separator and the columns imported as text; a spreadsheet that saves semicolons or reformats dates makes the merge refuse the file.
+2. For every row, fill `final_label`, `adjudicated_by`, `adjudicated_at`, `adjudication_reason`, and `final_pinpoint` where the final label is `present` or `missing`. `adjudicated_by` is both reviewers by consensus (`r1+r2`) or a third person (for example `r3`); one of the two reviewers alone is refused. These are the two routes of the draft `analysis-plan.md`, section 6, which is not yet adopted.
 3. Run the merge again with `--adjudication studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-adjudication.csv`.
-4. Commit the adjudication file with the merged matrix.
+4. Commit the adjudication file with the merged matrix. This repository is public. Do not push labelled sheets, the adjudication file or the merged matrix until `analysis-plan.md` section 11 is decided and the conflicts check and the legal review under `review-protocol.md` (Publication gate, item 6) are done.
 
 The adjudication file is refused (exit 4) while a row is pending or invalid, or when it is stale because a sheet changed after the report was copied.
 
