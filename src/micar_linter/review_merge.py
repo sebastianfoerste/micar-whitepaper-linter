@@ -13,8 +13,9 @@
   two or more reviewers, compare the labels, write a disagreement report and require an
   adjudication file for every disagreement. Then write the final labels into
   ``human-review-matrix.csv`` next to the detector outcomes, rewrite ``human-review-summary.json``
-  with ``micar-review-summary --require-complete``, and re-check that the summary, the sheets and
-  the generation record are consistent.
+  with ``micar-review-summary --require-complete`` (schema v2: intervals, sensitivity analyses and,
+  with two reviewers, their agreement), and re-check that the summary, the sheets and the
+  generation record are consistent.
 
 Every step refuses while any cell is pending or invalid and lists the offending rows. A row is
 valid when its label is in the vocabulary of ``review_validation.LABEL_ORDER``, its reviewer_id is
@@ -76,7 +77,7 @@ from micar_linter.review_validation import (
     LABEL_ORDER,
     LABEL_REQUIRED_FIELDS,
     PENDING_LABEL,
-    summarize_rows,
+    summarize_matrix,
 )
 
 SUMMARY_FILENAME = "human-review-summary.json"
@@ -539,15 +540,27 @@ def merge_matrix(
     if current_matrix != new_matrix:
         study.matrix_path.write_text(new_matrix, encoding="utf-8", newline="")
     status = review_validation.main(
-        ["--matrix", str(study.matrix_path), "--out", str(study.summary_path), "--require-complete"]
+        [
+            "--matrix",
+            str(study.matrix_path),
+            "--out",
+            str(study.summary_path),
+            "--study-dir",
+            str(study.directory),
+            "--require-complete",
+        ]
     )
-    summary = json.loads(study.summary_path.read_text(encoding="utf-8"))
     consistency = check_review_sheets(study.outputs, study.directory)
-    with study.matrix_path.open(newline="", encoding="utf-8") as handle:
-        if summarize_rows(csv.DictReader(handle)) != summary:
-            consistency.append(f"{SUMMARY_FILENAME} does not match {MATRIX_FILENAME}")
     if status != 0:
         consistency.append(f"micar-review-summary --require-complete exited {status}")
+    summary: dict[str, Any] = {}
+    try:
+        summary = json.loads(study.summary_path.read_text(encoding="utf-8"))
+        # Parsed values are compared, so 0 and 0.0 count as equal.
+        if summarize_matrix(study.matrix_path, study.directory) != summary:
+            consistency.append(f"{SUMMARY_FILENAME} does not match {MATRIX_FILENAME}")
+    except (OSError, ValueError) as exc:
+        consistency.append(f"cannot recompute {SUMMARY_FILENAME} from {MATRIX_FILENAME}: {exc}")
     if consistency:
         raise MergeRefused(EXIT_IDENTITY, "the merged study files are inconsistent", consistency)
     return MergeResult(

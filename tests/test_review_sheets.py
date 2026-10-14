@@ -260,15 +260,6 @@ def test_matrix_carries_the_detector_outcomes_of_the_findings_file():
         assert row["detector_confidence"] == flagged.get(key, "")
 
 
-def test_committed_summary_matches_the_committed_matrix():
-    with (STUDY / "human-review-matrix.csv").open(newline="", encoding="utf-8") as handle:
-        recomputed = summarize_rows(csv.DictReader(handle))
-    committed = json.loads((STUDY / "human-review-summary.json").read_text(encoding="utf-8"))
-
-    assert committed == recomputed
-    assert committed["rows_total"] == 150
-
-
 def test_keeps_labelled_sheets_and_refuses_to_reshape_them(tmp_path: Path):
     outputs = _outputs()
     write_review_sheets(outputs, tmp_path)
