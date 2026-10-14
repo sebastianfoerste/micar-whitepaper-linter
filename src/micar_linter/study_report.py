@@ -24,7 +24,8 @@ ESMA_PAGE_LAST_UPDATE = "3 July 2026"
 
 def render_study_report(payload: dict[str, Any]) -> str:
     summary = payload["summary"]
-    reviewed = summary["documents_reviewed"]
+    processed = documents_processed(summary)
+    cells = processed * len(payload.get("rules", []))
     potential_gaps = summary["potential_gaps"]
     high_confidence = summary["high_confidence_gaps"]
     review_status = payload.get("human_review_status", "pending_review")
@@ -61,8 +62,8 @@ def render_study_report(payload: dict[str, Any]) -> str:
         "",
         "## Sample",
         "",
-        f"- Documents reviewed: {reviewed}",
-        f"- Target sample size: {payload.get('sample_target', reviewed)}",
+        f"- Documents processed: {processed}",
+        f"- Target sample size: {payload.get('sample_target', processed)}",
         f"- Documents excluded before or during batch processing: {summary['documents_excluded']}",
         "- Scope: Title II crypto-assets other than asset-referenced tokens and e-money tokens.",
         "- Public identifiers: WP-001 style study IDs only.",
@@ -132,9 +133,12 @@ def render_study_report(payload: dict[str, Any]) -> str:
             "",
             "## Human validation gate",
             "",
-            "The 150 document-rule cells are listed in `human-review-matrix.csv`. No precision, recall, "
-            "false-positive, or false-negative claim is made until qualified reviewers label every cell "
-            "under `review-protocol.md` and `micar-review-summary --require-complete` exits successfully.",
+            f"Reviewers label the {cells} document-rule cells in blinded per-reviewer sheets "
+            "(for example `human-review-r1.csv`) that omit detector outcomes. The outcomes are merged into "
+            "`human-review-matrix.csv` only after the independent labels are recorded. No precision, "
+            "recall, false-positive, or false-negative claim is made until qualified reviewers label "
+            "every cell under `review-protocol.md` and `micar-review-summary --require-complete` exits "
+            "successfully.",
             "",
             "Document byte hashes and extraction metadata are recorded in `document-provenance.json`.",
             "",
@@ -151,7 +155,8 @@ def render_study_report(payload: dict[str, Any]) -> str:
                 "| --- | ---: |",
             ]
         )
-        for item in frequent[:10]:
+        # Every flagged rule is listed; a truncated table hid the Article 6 rows.
+        for item in frequent:
             lines.append(f"| `{item['rule_id']}` | {item['count']} |")
     else:
         lines.append("No candidate gaps were flagged.")
@@ -244,6 +249,17 @@ def render_study_report(payload: dict[str, Any]) -> str:
         ]
     )
     return "\n".join(lines)
+
+
+def documents_processed(summary: dict[str, Any]) -> int:
+    """Processed-document count from a v2 summary, or from the v1 ``documents_reviewed`` key.
+
+    Findings schema v1 named the count ``documents_reviewed`` although no human review is
+    implied; v2 renames it. Committed v1 files are left unchanged so that their digests hold.
+    """
+    if "documents_processed" in summary:
+        return int(summary["documents_processed"])
+    return int(summary["documents_reviewed"])
 
 
 def _example_findings(payload: dict[str, Any]) -> list[tuple[dict[str, Any], dict[str, Any]]]:
