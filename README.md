@@ -1,10 +1,51 @@
 # MiCAR Whitepaper Linter
 
 [![CI](https://github.com/sebastianfoerste/micar-whitepaper-linter/actions/workflows/ci.yml/badge.svg)](https://github.com/sebastianfoerste/micar-whitepaper-linter/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python >=3.13](https://img.shields.io/badge/python-%3E%3D3.13-blue.svg)](pyproject.toml)
 
-The MiCAR Whitepaper Linter is a deterministic Python tool for reviewing draft crypto-asset white papers under MiCAR. It maps Annex requirements into code check classes and produces cited review artifacts over synthetic examples.
+**Flag missing and thin disclosures in draft MiCAR white papers before substantive legal review, using deterministic Annex I, II and III checks with pinpoint citations.**
 
-**[Try it live in your browser](https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/)**. The full linter runs client-side via Pyodide. Nothing you paste leaves the page.
+<!--
+  Screenshot/GIF placeholder — to be added.
+  Replace the note below with a screenshot or GIF of a real run (for example `make demo`
+  in a terminal, or a GitHub Action job log), stored under docs/ with descriptive alt text.
+-->
+> **Screenshot/GIF placeholder — to be added**
+
+## Who it's for
+
+- **Lawyers and compliance teams** reviewing a MiCAR white paper draft who want a cited first-pass list of candidate disclosure gaps before the substantive legal review.
+- **Teams drafting a white paper in a Git repository** who want every push checked in CI.
+
+Rule sets cover all three white paper regimes under MiCAR (Regulation (EU) 2023/1114): crypto-assets other than ARTs and EMTs (Annex I), asset-referenced tokens (Annex II) and e-money tokens (Annex III). It is a screening tool, not a sign-off: whether a white paper is lawful or complete remains a lawyer's judgment. Not legal advice.
+
+## Try it now
+
+- **GitHub Action:** add `sebastianfoerste/micar-whitepaper-linter@v1` to a workflow in the repository that holds your draft. Findings and their citations appear in the job log, and by default (`strict: 'true'`) the job fails while BLOCKER-severity findings are open. See [Use as a GitHub Action](#use-as-a-github-action) for the snippet and inputs, or start from the [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template) repo, which ships the workflow preconfigured.
+- **Local CLI:** follow the [Quick start](#quick-start) below. The core linter runs locally and does not require external LLM or network processing.
+
+## Quick start
+
+Requires Python 3.13+, uv and make. From a clone of this repository:
+
+```bash
+make install   # uv sync --extra dev
+make demo      # lint examples/incomplete.json, a synthetic ART draft with open blockers
+uv run micar-lint examples/incomplete.json --review-bundle-dir /tmp/micar-incomplete-review-bundle
+```
+
+The last command also writes a review bundle to `/tmp/micar-incomplete-review-bundle`: compliance and remediation checklists, a coverage matrix, a review table, a reviewer sign-off record and an artifact manifest.
+
+To check your own draft, pass its path to `uv run micar-lint` instead of an example file:
+
+- A JSON draft states its regime in its `type` field. For an XHTML or DOCX draft, add `--type other|art|emt`; the numbered-field XHTML layout requires it.
+- `--strict` exits with status 1 while any BLOCKER finding is open.
+- `--json` prints machine-readable JSON instead of text.
+
+## Browser workbench (local preview)
+
+The repository includes a browser workbench in `docs/playground/`. The full linter runs client-side via Pyodide. Nothing you paste leaves the page.
 
 The browser workbench accepts JSON drafts up to 1 MB and XHTML white papers up to 4 MB, includes synthetic examples for all three regimes, and presents searchable findings with citations and section navigation. Download the current report as JSON or text, or save a copy of the draft. Editing a checked draft marks the previous results as stale and disables report export until the checks run again. Python runs in a web worker so the editor stays responsive.
 
@@ -28,16 +69,10 @@ Raw white papers are not committed. Study outputs are deterministic first-pass r
 
 ## Run it
 
+Installation, the demo and a review bundle are covered in the [Quick start](#quick-start). Run the test suite with:
+
 ```bash
-make install
 make test
-make demo
-```
-
-Generate a review bundle from synthetic data:
-
-```bash
-uv run --extra dev python -m micar_linter examples/incomplete.json --review-bundle-dir /tmp/micar-incomplete-review-bundle
 ```
 
 Check an XHTML white paper in the numbered-field layout of Implementing Regulation (EU) 2024/2984 ("A.1 Name", "A.2 Legal form"). State the regime, because it is not inferred from the text of such a file:
