@@ -3,9 +3,12 @@
 ``micar-review-render`` reads only the summary JSON written by ``micar-review-summary``; no figure
 is typed by hand. It renders, in the wording templates of ``analysis-plan.md`` section 11:
 
-- the study results block: the results paragraph, a table of the primary analysis and the
-  sensitivity analyses (S1 is reported with equal prominence, analysis-plan.md section 5) and the
-  disclosures of section 11;
+- the study results block: the results paragraph, which gives S1 (the full set with WP-007) in a
+  sentence of the same form as the primary result (equal prominence, analysis-plan.md section 5);
+  a table of the primary and the sensitivity analyses with N evaluable and the count of each
+  excluded label (section 7); a table of the Wilson, Clopper-Pearson and document-cluster bootstrap
+  intervals of the primary set and S1, with the dropped replicates and the "unstable" mark of
+  section 9; S2(a), S5, and the disclosures of section 11;
 - the profile README line;
 - the CV or application sentence.
 
@@ -62,8 +65,15 @@ _ANY_BEGIN = re.compile(r"<!-- micar-review-render:begin")
 # Words the rendered text must never use (analysis-plan.md section 11).
 _FORBIDDEN = re.compile(r"\bvalidat|\baccura|\bcompliance rate|\bprevalence estimate", re.IGNORECASE)
 TABLE_HEADER = (
-    "| Analysis | Documents | Cells | Evaluable | TP | FP | FN | TN | Precision (95% CI) | Recall (95% CI) |"
+    "| Analysis | Documents | Cells | Evaluable | Uncertain | Not applicable | Extraction failure "
+    "| TP | FP | FN | TN | Precision (95% CI) | Recall (95% CI) |"
 )
+TABLE_RULE = "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |"
+INTERVAL_HEADER = (
+    "| Analysis | Metric | Estimate | Wilson | Clopper-Pearson | Document-cluster bootstrap | Headline |"
+)
+INTERVAL_RULE = "| --- | --- | ---: | --- | --- | --- | --- |"
+BOOTSTRAP_KEY = "document_cluster_bootstrap"
 # The study-summary template of analysis-plan.md section 11 joins "10 public white papers" and
 # "15 rules" with the multiplication sign.
 TIMES = "\N{MULTIPLICATION SIGN}"
@@ -76,6 +86,8 @@ SENSITIVITY_ROWS: tuple[tuple[str, str], ...] = (
     ("S3", "S3, uncertain counted as missing"),
     ("S4", "S4, uncertain counted as present"),
 )
+# analysis-plan.md section 4 offers WP-007 as the calibration document; S1 is then the primary set.
+S1_WITHOUT_EXCLUSION = "S1, full set (the same documents as the primary set)"
 REMINDERS: tuple[str, ...] = (
     '"from ESMA\'s interim register" holds only after the register reconciliation of '
     "analysis-plan.md step 0.2.",
@@ -84,6 +96,11 @@ REMINDERS: tuple[str, ...] = (
     "review-protocol.md (Publication gate, item 6) and the decision in analysis-plan.md section 11.",
     "The wording follows the draft templates of analysis-plan.md section 11; re-check it against the "
     "adopted plan.",
+)
+SECOND_REVIEWER_REMINDER = (
+    "The text calls the second reviewer a lawyer and their labels independent of the first "
+    "reviewer's, and analysis-plan.md section 6 asks for adjudication by consensus or a third person; "
+    "the summary cannot show any of this, so confirm it before using the text."
 )
 
 
@@ -184,6 +201,20 @@ def render_document(summary: Mapping[str, Any], *, in_sample: bool = True, sourc
     )
 
 
+def reminders(summary: Mapping[str, Any]) -> list[str]:
+    """What the user confirms before using the rendered text; the summary cannot show it."""
+    items = list(REMINDERS)
+    if len(summary.get("reviewers") or []) == 2:
+        items.append(SECOND_REVIEWER_REMINDER)
+    plan = (summary.get("settings") or {}).get("analysis_plan") or {}
+    if plan.get("status") != "adopted":
+        items.append(
+            f"analysis-plan.md is not recorded as adopted ({plan.get('reason')}); the rendered "
+            "definitions say so, and labels added before adoption are a deviation for section 12."
+        )
+    return items
+
+
 def check_file(summary: Mapping[str, Any], text: str) -> tuple[int, str]:
     """Check the rendered block in ``text`` against the summary; returns (exit code, message)."""
     blocks = list(_BLOCK.finditer(text))
@@ -208,27 +239,38 @@ def check_file(summary: Mapping[str, Any], text: str) -> tuple[int, str]:
 
 def _study_block(summary: Mapping[str, Any], *, in_sample: bool) -> str:
     primary = summary["analyses"]["primary"]
+    limit = summary["settings"]["max_dropped_fraction"]
     lines = [
         BEGIN_MARKER.format(mode=IN_SAMPLE if in_sample else NOT_IN_SAMPLE),
         _study_paragraph(summary, in_sample=in_sample),
         "",
         TABLE_HEADER,
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |",
+        TABLE_RULE,
     ]
     analyses = summary["analyses"]
-    for key, name in SENSITIVITY_ROWS:
+    names = dict(SENSITIVITY_ROWS)
+    if not _excluded_ids(summary):
+        names["S1"] = S1_WITHOUT_EXCLUSION
+    for key, name in names.items():
         block = analyses.get(key) or {}
         if "metrics" not in block:
-            lines.append(f"| {name} | | | | | | | | not computed: {block.get('undefined_reason')} | |")
+            lines.append(f"| {name} |{' |' * 10} not computed: {block.get('undefined_reason')} | |")
             continue
-        counts = block["confusion_matrix"]
+        counts, labels = block["confusion_matrix"], block["label_counts"]
         lines.append(
             f"| {name} | {len(block['documents'])} | {block['cells']} | {block['evaluable_cells']} | "
+            f"{labels['uncertain']} | {labels['not_applicable']} | {labels['extraction_failure']} | "
             f"{counts['tp']} | {counts['fp']} | {counts['fn']} | {counts['tn']} | "
             f"{_metric_cell(block['metrics']['precision'])} | {_metric_cell(block['metrics']['recall'])} |"
         )
+    lines.extend(["", INTERVAL_HEADER, INTERVAL_RULE])
+    interval_sets = ["primary", "S1"] if _excluded_ids(summary) else ["primary"]
+    for key in interval_sets:
+        for metric_name in ("precision", "recall"):
+            metric = analyses[key]["metrics"][metric_name]
+            lines.append(_interval_row(names[key], metric_name.capitalize(), metric, limit))
     lines.append("")
-    lines.append(_s2a_sentence(analyses.get("S2a") or {}))
+    lines.append(_s2a_sentence(analyses.get("S2a") or {}, limit))
     s5 = analyses.get("S5") or {}
     lines.append(f"S5 was not computed: {s5.get('undefined_reason')}.")
     lines.append("")
@@ -240,15 +282,7 @@ def _study_block(summary: Mapping[str, Any], *, in_sample: bool) -> str:
 
 def _study_paragraph(summary: Mapping[str, Any], *, in_sample: bool) -> str:
     primary = summary["analyses"]["primary"]
-    precision = primary["metrics"]["precision"]
-    recall = primary["metrics"]["recall"]
-    precision_ci = f"95% CI {_interval(precision['headline'])}, {precision['headline']['label']}"
-    recall_ci = _interval(recall["headline"])
-    if recall["headline"]["label"] != precision["headline"]["label"]:
-        recall_ci += f", {recall['headline']['label']}"
-    gaps = _gaps(primary)
-    if gaps:
-        recall_ci += f"; {gaps}"
+    precision, recall = _precision_recall(primary)
     clauses = [
         f"{summary['documents_total']} public white papers from ESMA's interim register {TIMES} "
         f"{summary['rules_per_document']} rules"
@@ -263,12 +297,48 @@ def _study_paragraph(summary: Mapping[str, Any], *, in_sample: bool) -> str:
         clauses.append(f"{calibration} used as the calibration document and excluded from every metric")
     clauses.append(f"{primary['excluded_cells']} excluded as uncertain, not applicable or extraction failure")
     return (
-        f"Precision {_pct(precision['estimate'])} ({precision_ci}) and recall {_pct(recall['estimate'])} "
-        f"({recall_ci}) on {primary['evaluable_cells']} evaluable of {summary['rows_total']} document-rule "
-        f"cells ({'; '.join(clauses)}), against {_labels_phrase(summary)}. "
+        f"Precision {precision} and recall {recall} on {primary['evaluable_cells']} evaluable of "
+        f"{summary['rows_total']} document-rule cells ({'; '.join(clauses)}), against "
+        f"{_labels_phrase(summary)}.{_s1_sentence(summary)} "
         f"{'In-sample pilot' if in_sample else 'Pilot'} on a convenience sample; not a prevalence or "
         "compliance finding."
     )
+
+
+def _s1_sentence(summary: Mapping[str, Any]) -> str:
+    """S1 in the same form as the primary result; empty when no document is excluded from the primary set."""
+    excluded = _excluded_ids(summary)
+    if not excluded:
+        return ""
+    s1 = summary["analyses"]["S1"]
+    precision, recall = _precision_recall(s1)
+    return (
+        f" Including {' and '.join(excluded)} (S1, {len(s1['documents'])} documents): precision "
+        f"{precision} and recall {recall} on {s1['evaluable_cells']} evaluable of {s1['cells']} cells "
+        f"({s1['excluded_cells']} excluded as uncertain, not applicable or extraction failure)."
+    )
+
+
+def _precision_recall(block: Mapping[str, Any]) -> tuple[str, str]:
+    """Precision and recall of one analysis set as the results paragraph words them."""
+    precision = block["metrics"]["precision"]
+    recall = block["metrics"]["recall"]
+    if precision["estimate"] is None:
+        precision_text = f"undefined ({precision['undefined_reason']})"
+    else:
+        precision_text = (
+            f"{_pct(precision['estimate'])} (95% CI {_interval(precision['headline'])}, "
+            f"{precision['headline']['label']})"
+        )
+    if recall["estimate"] is None:
+        return precision_text, f"undefined ({recall['undefined_reason']})"
+    recall_ci = _interval(recall["headline"])
+    if recall["headline"]["label"] != precision["headline"]["label"]:
+        recall_ci += f", {recall['headline']['label']}"
+    gaps = _gaps(block)
+    if gaps:
+        recall_ci += f"; {gaps}"
+    return precision_text, f"{_pct(recall['estimate'])} ({recall_ci})"
 
 
 def _profile_line(summary: Mapping[str, Any], *, in_sample: bool) -> str:
@@ -313,6 +383,12 @@ def _cv_sentence(summary: Mapping[str, Any], *, in_sample: bool) -> str:
 def _disclosures(summary: Mapping[str, Any], primary: Mapping[str, Any], *, in_sample: bool) -> list[str]:
     pair = _agreement_pair(summary)
     items: list[str] = []
+    # analysis-plan.md section 11: "reviewer = tool author; partial blinding" with every figure,
+    # whether or not a second reviewer took part.
+    blinding = (
+        "Blinding is partial: the tool author wrote the detector and had access to the published flag "
+        "counts and examples."
+    )
     if pair:
         everything, evaluable = pair["all_labels"], pair["present_missing"]
         adjudicated = (
@@ -321,20 +397,20 @@ def _disclosures(summary: Mapping[str, Any], primary: Mapping[str, Any], *, in_s
             else "no disagreements"
         )
         items.append(
-            f"Labels: the tool author's and a second lawyer's ({' and '.join(pair['reviewers'])}), "
-            f"reviewed independently; {adjudicated}. Agreement on {everything['cells']} cells: raw "
-            f"{_pct(everything['raw_agreement'])}, Cohen's κ = {_number(everything['cohen_kappa'])} "
-            f"over all labels, PABAK {_number(everything['pabak'])}, Gwet's AC1 "
-            f"{_number(everything['gwet_ac1'])}; on the {evaluable['cells']} cells both labelled present "
-            f"or missing, Cohen's κ = {_number(evaluable['cohen_kappa'])}."
+            f"Labels: the tool author's and a second lawyer's ({' and '.join(pair['reviewers'])}); "
+            f"{adjudicated}. {blinding}"
+        )
+        items.append(
+            f"Agreement on {everything['cells']} cells: raw {_pct(everything['raw_agreement'])}, "
+            f"Cohen's κ = {_number(everything['cohen_kappa'])} over all labels, PABAK "
+            f"{_number(everything['pabak'])} and Gwet's AC1 {_number(everything['gwet_ac1'])} (both "
+            f"with q = {len(everything['categories'])} label categories); on the {evaluable['cells']} "
+            f"cells both labelled present or missing, Cohen's κ = {_number(evaluable['cohen_kappa'])}."
         )
     else:
-        items.append(
-            "Labels: the tool author's, single-reviewed. Blinding is partial: the author wrote the "
-            "detector and had access to the published flag counts and examples."
-        )
+        items.append(f"Labels: the tool author's, single-reviewed. {blinding}")
     items.append(
-        "In-sample: the analysis plan's step 0.5 did not rule out that study rules were written or "
+        "In-sample: the analysis plan's step 0.5 has not ruled out that study rules were written or "
         "changed after viewing these documents."
         if in_sample
         else "Out of sample: the analysis plan's step 0.5 ruled out that study rules were written or "
@@ -345,9 +421,11 @@ def _disclosures(summary: Mapping[str, Any], primary: Mapping[str, Any], *, in_s
         "prevalence or compliance finding, and no statement about any issuer or offeror."
     )
     for item in summary["exclusions"]["primary"]:
+        total = item.get("detector_flags_total")
+        of_flags = f"of the detector's {total} flags" if total is not None else "of the detector's flags"
         items.append(
-            f"{item['study_doc_id']}: {item['cells']} cells and {item['detector_flags']} of the detector's "
-            "flags, excluded from the primary analysis post-hoc; S1 includes it."
+            f"{item['study_doc_id']}: {item['cells']} cells and {item['detector_flags']} {of_flags}, "
+            "excluded from the primary analysis post-hoc; S1 includes it."
         )
     calibration = summary["exclusions"]["calibration_document"]
     if calibration.get("study_doc_id"):
@@ -356,12 +434,16 @@ def _disclosures(summary: Mapping[str, Any], primary: Mapping[str, Any], *, in_s
             "calibrate the codebook and enters no metric."
         )
     bootstrap = summary["settings"]["bootstrap"]
-    clusters = primary["metrics"]["precision"]["document_cluster_bootstrap"]["clusters"]
+    clusters = primary["metrics"]["precision"][BOOTSTRAP_KEY]["clusters"]
+    limit = summary["settings"]["max_dropped_fraction"]
     items.append(
         "Intervals: the Wilson and Clopper-Pearson intervals assume independent cells. The "
         f"document-cluster bootstrap (B = {bootstrap['replicates']:,}, seed {bootstrap['seed']}) "
         f"resamples only {clusters} documents and is unstable with so few clusters. The headline "
-        "interval is the wider of the two."
+        "interval is the wider of the Wilson and the document-cluster bootstrap interval. Where more "
+        f"than {limit:.0%} of the bootstrap replicates were dropped for a zero denominator, or the "
+        "bootstrap is undefined, the Wilson interval is the headline, and the tables mark the bootstrap "
+        "as unstable or undefined."
     )
     detector = summary["detector"]
     items.append(
@@ -373,28 +455,62 @@ def _disclosures(summary: Mapping[str, Any], primary: Mapping[str, Any], *, in_s
     return items
 
 
-def _s2a_sentence(block: Mapping[str, Any]) -> str:
+def _s2a_sentence(block: Mapping[str, Any], limit: float) -> str:
     if "metrics" not in block:
         return f"S2(a), the offeror-cluster bootstrap, was not computed: {block.get('undefined_reason')}."
     parts = []
+    replicates = seed = None
     for name in ("precision", "recall"):
         metric = block["metrics"][name]
         interval = metric["offeror_cluster_bootstrap"]
-        if metric["estimate"] is None or interval["lower"] is None:
-            parts.append(f"{name} undefined")
+        replicates, seed = interval["replicates"], interval["seed"]
+        if metric["estimate"] is None:
+            parts.append(f"{name} undefined ({metric['undefined_reason']})")
         else:
-            parts.append(f"{name} {_pct(metric['estimate'])} ({_interval(interval)})")
+            parts.append(f"{name} {_pct(metric['estimate'])} ({_bootstrap_cell(interval, limit)})")
     return (
-        f"S2(a), offeror-cluster bootstrap over the primary set ({block['offeror_clusters']} offerors): "
-        f"{', '.join(parts)}."
+        f"S2(a), offeror-cluster bootstrap over the primary set ({block['offeror_clusters']} offerors, "
+        f"B = {replicates:,}, seed {seed}): {'; '.join(parts)}."
     )
 
 
 def _metric_cell(metric: Mapping[str, Any]) -> str:
     if metric["estimate"] is None:
         return f"undefined ({metric['undefined_reason']})"
-    headline = metric["headline"]
-    return f"{_pct(metric['estimate'])} ({_interval(headline)}, {headline['label']})"
+    return f"{_pct(metric['estimate'])} ({_interval(metric['headline'])}, {_headline_name(metric)})"
+
+
+def _interval_row(analysis: str, name: str, metric: Mapping[str, Any], limit: float) -> str:
+    if metric["estimate"] is None:
+        return f"| {analysis} | {name} | undefined | | | | {metric['undefined_reason']} |"
+    return (
+        f"| {analysis} | {name} | {_pct(metric['estimate'])} | {_interval(metric['wilson'])} | "
+        f"{_interval(metric['clopper_pearson'])} | {_bootstrap_cell(metric[BOOTSTRAP_KEY], limit)} | "
+        f"{_headline_name(metric)} |"
+    )
+
+
+def _bootstrap_cell(bootstrap: Mapping[str, Any], limit: float) -> str:
+    """A bootstrap interval with its dropped replicates, marked unstable above the plan's limit."""
+    if bootstrap["lower"] is None:
+        return f"undefined ({bootstrap['undefined_reason']})"
+    text = (
+        f"{_interval(bootstrap)}; {bootstrap['dropped']:,} of {bootstrap['replicates']:,} replicates dropped"
+    )
+    if bootstrap.get("exceeds_dropped_limit"):
+        text += f"; unstable (more than {limit:.0%} dropped)"
+    return text
+
+
+def _headline_name(metric: Mapping[str, Any]) -> str:
+    """The headline interval's name, and why the Wilson interval is the headline when the rule forced it."""
+    bootstrap = metric[BOOTSTRAP_KEY]
+    if metric["headline"]["method"] == "wilson":
+        if bootstrap.get("exceeds_dropped_limit"):
+            return "Wilson (bootstrap unstable)"
+        if bootstrap["lower"] is None:
+            return "Wilson (bootstrap undefined)"
+    return metric["headline"]["label"]
 
 
 def _gaps(block: Mapping[str, Any]) -> str:
@@ -503,7 +619,7 @@ def main(argv: list[str] | None = None) -> int:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(document, encoding="utf-8")
     print("micar-review-render: reminders before using the text:", file=sys.stderr)
-    for reminder in REMINDERS:
+    for reminder in reminders(summary):
         print(f"  {reminder}", file=sys.stderr)
     return EXIT_OK
 

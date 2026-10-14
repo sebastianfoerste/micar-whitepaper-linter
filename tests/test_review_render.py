@@ -15,9 +15,12 @@ from micar_linter.review_render import (
     EXIT_OK,
     EXIT_REFUSED,
     EXIT_USAGE,
+    S1_WITHOUT_EXCLUSION,
+    SECOND_REVIEWER_REMINDER,
     RenderRefused,
     check_file,
     refusal_reasons,
+    reminders,
     render,
 )
 from micar_linter.review_validation import StudyContext, summarize_rows
@@ -37,7 +40,9 @@ DETECTOR = {
 FORBIDDEN = re.compile(r"validat|accura", re.IGNORECASE)
 
 
-def _rows(gaps_per_document: int = 2, *, pending: int = 0, note: str = "") -> list[dict[str, str]]:
+def _rows(
+    gaps_per_document: int = 2, *, pending: int = 0, note: str = "", note_doc: str = "WP-012"
+) -> list[dict[str, str]]:
     """Synthetic labels: per document, the first rules are flagged; labels vary by position."""
     rows = []
     for d, doc in enumerate(DOCS):
@@ -57,7 +62,7 @@ def _rows(gaps_per_document: int = 2, *, pending: int = 0, note: str = "") -> li
                     "rule_id": rule,
                     "detector_status": "flagged" if flagged else "not_flagged",
                     "human_label": label,
-                    "review_note": note if doc == "WP-012" else "",
+                    "review_note": note if doc == note_doc else "",
                 }
             )
     for row in rows[:pending]:
@@ -65,12 +70,25 @@ def _rows(gaps_per_document: int = 2, *, pending: int = 0, note: str = "") -> li
     return rows
 
 
-def _summary(rows=None, *, reviewers=("r1",), detector=DETECTOR, agreement=None) -> dict:
+# Synthetic offerors: WP-003 to WP-005 share one, WP-011 and WP-012 another (as in the plan's S2).
+OFFERORS = {
+    doc: (
+        "Offeror B" if doc in ("WP-003", "WP-004", "WP-005") else "Offeror C" if doc in ("WP-011", "WP-012") else doc,
+        "",
+    )
+    for doc in DOCS
+}
+
+
+def _summary(rows=None, *, reviewers=("r1",), detector=DETECTOR, agreement=None, offerors=None) -> dict:
     rows = rows if rows is not None else _rows()
     # Every reviewer gave the final labels; a test that needs disagreement sets ``agreement``.
     labels = {(row["study_doc_id"], row["rule_id"]): row["human_label"] for row in rows}
     context = StudyContext(
-        reviewers=reviewers, detector=detector, sheet_labels=dict.fromkeys(reviewers, labels)
+        reviewers=reviewers,
+        detector=detector,
+        sheet_labels=dict.fromkeys(reviewers, labels),
+        offerors=offerors,
     )
     summary = summarize_rows(rows, context, replicates=400)
     if agreement is not None:
@@ -125,7 +143,19 @@ def test_renders_only_numbers_from_the_summary():
         f"; {primary['excluded_cells']} excluded as uncertain, not applicable or extraction failure)"
         in paragraph
     )
-    assert "against the tool author's partially blinded labels, single-reviewed. In-sample pilot" in paragraph
+    # S1 follows in a sentence of the same form (equal prominence, analysis-plan.md section 5).
+    s1 = summary["analyses"]["S1"]
+    s1_precision, s1_recall = s1["metrics"]["precision"], s1["metrics"]["recall"]
+    assert (
+        "against the tool author's partially blinded labels, single-reviewed. Including WP-007 (S1, 10 "
+        f"documents): precision {_expected_pct(s1_precision['estimate'])} (95% CI "
+        f"{_expected_pct(s1_precision['headline']['lower'])} to {_expected_pct(s1_precision['headline']['upper'])}, "
+        f"{s1_precision['headline']['label']}) and recall {_expected_pct(s1_recall['estimate'])}"
+    ) in paragraph
+    assert (
+        f"on {s1['evaluable_cells']} evaluable of {s1['cells']} cells ({s1['excluded_cells']} excluded as "
+        "uncertain, not applicable or extraction failure). In-sample pilot"
+    ) in paragraph
     assert texts["profile"] == (
         f"In-sample pilot on 10 public ESMA-register white papers: precision {_expected_pct(precision['estimate'])}, "
         f"recall {_expected_pct(recall['estimate'])} against my own partially blinded, single-reviewed labels "
@@ -152,8 +182,32 @@ def test_renders_only_numbers_from_the_summary():
         assert set(re.findall(r"\d+\.\d%", text)) <= allowed
         assert not FORBIDDEN.search(text)
     assert "S1, full set with WP-007" in texts["study"]
-    assert "WP-007: 15 cells and 2 of the detector's flags" in texts["study"]
+    assert "WP-007: 15 cells and 2 of the detector's 20 flags" in texts["study"]
     assert "Detector: commit abc1234" in texts["study"]
+    assert "step 0.5 has not ruled out" in texts["study"]
+    assert "Blinding is partial" in texts["study"]
+    # The count of each excluded label, per set (analysis-plan.md section 7).
+    labels, counts = primary["label_counts"], primary["confusion_matrix"]
+    assert (
+        f"| Primary | 9 | 135 | {primary['evaluable_cells']} | {labels['uncertain']} | {labels['not_applicable']} | "
+        f"{labels['extraction_failure']} | {counts['tp']} | {counts['fp']} | {counts['fn']} | {counts['tn']} |"
+    ) in texts["study"]
+    # Wilson, Clopper-Pearson and the bootstrap with its dropped replicates, from the JSON (section 9).
+    bootstrap = precision["document_cluster_bootstrap"]
+    row = (
+        f"| Primary | Precision | {_expected_pct(precision['estimate'])} | "
+        f"{_expected_pct(precision['wilson']['lower'])} to {_expected_pct(precision['wilson']['upper'])} | "
+        f"{_expected_pct(precision['clopper_pearson']['lower'])} to "
+        f"{_expected_pct(precision['clopper_pearson']['upper'])} | "
+        f"{_expected_pct(bootstrap['lower'])} to {_expected_pct(bootstrap['upper'])}; "
+        f"{bootstrap['dropped']} of {bootstrap['replicates']} replicates dropped | "
+        f"{precision['headline']['label']} |"
+    )
+    assert row in texts["study"]
+    assert "| S1, full set with WP-007 | Recall |" in texts["study"]
+    assert "The headline interval is the wider of the Wilson and the document-cluster bootstrap interval." in (
+        texts["study"]
+    )
 
 
 def test_recall_is_also_a_count_below_ten_gaps():
@@ -178,6 +232,41 @@ def test_calibration_document_is_named():
     assert "WP-012 used as the calibration document and excluded from every metric" in texts["study"]
 
 
+def test_calibration_on_wp007_leaves_no_separate_s1():
+    # analysis-plan.md section 4 offers WP-007 as the calibration document; S1 is then the primary set.
+    summary = _summary(_rows(note="calibration", note_doc="WP-007"))
+    assert summary["exclusions"]["primary"] == []
+    study = render(summary)["study"]
+    assert "WP-007 used as the calibration document and excluded from every metric" in study
+    assert f"| {S1_WITHOUT_EXCLUSION} | 9 |" in study
+    assert "S1, full set with WP-007" not in study
+    assert "Including WP-007" not in study
+    assert "excluded from the primary analysis" not in study
+
+
+def test_unstable_bootstrap_is_marked():
+    summary = _summary(offerors=OFFERORS)
+    metric = summary["analyses"]["primary"]["metrics"]["precision"]
+    # Synthetic JSON edit: as if 120 of the 400 replicates had a zero denominator.
+    metric["document_cluster_bootstrap"].update(dropped=120, dropped_fraction=0.3, exceeds_dropped_limit=True)
+    wilson = metric["wilson"]
+    metric["headline"] = {**metric["headline"], "method": "wilson", "label": "Wilson", **{
+        bound: wilson[bound] for bound in ("lower", "upper")
+    }}
+    study = render(summary)["study"]
+    assert "120 of 400 replicates dropped; unstable (more than 10% dropped) | Wilson (bootstrap unstable) |" in study
+    assert "Wilson (bootstrap unstable)) |" in study  # the main table names it too
+    s2a = summary["analyses"]["S2a"]
+    # Without WP-007: WP-001, WP-002, WP-003 to WP-005, WP-009, WP-010, WP-011 and WP-012.
+    assert s2a["offeror_clusters"] == 6
+    boot = s2a["metrics"]["recall"]["offeror_cluster_bootstrap"]
+    assert (
+        f"recall {_expected_pct(s2a['metrics']['recall']['estimate'])} ({_expected_pct(boot['lower'])} to "
+        f"{_expected_pct(boot['upper'])}; {boot['dropped']} of 400 replicates dropped" in study
+    )
+    assert "S2(a), offeror-cluster bootstrap over the primary set (6 offerors, B = 400, seed 20261014)" in study
+
+
 def test_two_reviewers():
     pair = {
         "reviewers": ["r1", "r2"],
@@ -185,6 +274,7 @@ def test_two_reviewers():
         "disagreements": 4,
         "all_labels": {
             "cells": 150,
+            "categories": ["present", "missing", "not_applicable", "uncertain", "extraction_failure"],
             "raw_agreement": 0.973333,
             "cohen_kappa": 0.912345,
             "pabak": 0.966667,
@@ -193,8 +283,16 @@ def test_two_reviewers():
         "present_missing": {"cells": 140, "cohen_kappa": 0.95},
     }
     agreement = {"status": "computed", "pairs": [pair]}
-    texts = render(_summary(reviewers=("r1", "r2"), agreement=agreement))
+    summary = _summary(reviewers=("r1", "r2"), agreement=agreement)
+    texts = render(summary)
     assert "against two lawyers' labels, Cohen's κ = 0.91, adjudicated." in texts["study"]
+    # Partial blinding is disclosed with a second reviewer too (analysis-plan.md section 11), and
+    # nothing the summary cannot show, such as independence, is asserted.
+    assert "Blinding is partial: the tool author wrote the detector" in texts["study"]
+    assert "independently" not in texts["study"]
+    assert "PABAK 0.97 and Gwet's AC1 0.96 (both with q = 5 label categories)" in texts["study"]
+    assert SECOND_REVIEWER_REMINDER in reminders(summary)
+    assert SECOND_REVIEWER_REMINDER not in reminders(_summary())
     assert "my own and a second lawyer's labels (κ = 0.91)" in texts["profile"]
     assert "single-reviewed" not in texts["cv"]
     assert texts["cv"].endswith("; second-reviewer agreement κ = 0.91.")
