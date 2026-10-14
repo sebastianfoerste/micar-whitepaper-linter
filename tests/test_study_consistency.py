@@ -151,40 +151,78 @@ def test_status_figures_in_the_study_documents_equal_the_json():
         assert committed["rows_pending"] < committed["rows_total"]
 
 
+# The analysis plan's parameters as this test reads them. Square brackets mark open draft values
+# ("[10]%"); they are optional so that the test keeps reading the plan after adoption removes them.
+PLAN_PATTERNS = {
+    "bootstrap": (r"B = ([\d,]+) replicates; seed `?(\d+)`?", "B and the seed (section 9)"),
+    "z": (r"z = \[?(\d\.\d+)\]?", "the Wilson z (section 9)"),
+    "dropped": (r"more than \[?(\d+)\]?% of bootstrap replicates", "the dropped-replicate limit (section 9)"),
+    "frozen": (
+        r"\| Findings file \| `findings-pseudonymous.json`, SHA-256 `([0-9a-f]{64})`, digest `([0-9a-f]{64})`",
+        "the frozen findings file (section 2)",
+    ),
+    "primary": (
+        r"^\| Primary \|[^\n]*?\| \[?(\d+)\]?(?: \(\[?(\d+)\]? under the fallback\))? \|",
+        "the primary set's cells (section 7)",
+    ),
+    "full": (
+        r"^\| Full \|[^\n]*?\| \[?(\d+)\]?(?: \(\[?(\d+)\]? under the fallback\))? \|",
+        "the full set's cells (section 7)",
+    ),
+}
+
+
+def _plan_match(plan: str, key: str) -> re.Match:
+    pattern, what = PLAN_PATTERNS[key]
+    match = re.search(pattern, plan, re.MULTILINE)
+    assert match is not None, (
+        f"analysis-plan.md no longer states {what} in a form this test reads ({pattern!r}). If the "
+        "adopted plan changed the value, update the constants in review_validation.py, rerun "
+        "micar-review-summary, and update PLAN_PATTERNS."
+    )
+    return match
+
+
 def test_analysis_plan_parameters_equal_the_summary():
     plan = _text("analysis-plan.md")
     committed = _committed()
     settings = committed["settings"]
 
-    bootstrap = re.search(r"B = ([\d,]+) replicates; seed `(\d+)`", plan)
+    bootstrap = _plan_match(plan, "bootstrap")
     assert (
         int(bootstrap.group(1).replace(",", ""))
         == settings["bootstrap"]["replicates"]
         == BOOTSTRAP_REPLICATES
     )
     assert int(bootstrap.group(2)) == settings["bootstrap"]["seed"] == BOOTSTRAP_SEED
-    assert float(re.search(r"z = (\d\.\d+)", plan).group(1)) == settings["wilson_z"]
-    assert (
-        float(re.search(r"more than \[(\d+)\]% of bootstrap replicates", plan).group(1)) / 100
-        == (settings["max_dropped_fraction"])
-    )
+    assert float(_plan_match(plan, "z").group(1)) == settings["wilson_z"]
+    assert int(_plan_match(plan, "dropped").group(1)) / 100 == settings["max_dropped_fraction"]
     assert "WP-007 is excluded from the primary analysis" in plan
     assert settings["primary_exclusions"] == list(PRIMARY_EXCLUSIONS) == ["WP-007"]
 
-    frozen = re.search(
-        r"\| Findings file \| `findings-pseudonymous.json`, SHA-256 `([0-9a-f]{64})`, digest `([0-9a-f]{64})`",
-        plan,
-    )
+    frozen = _plan_match(plan, "frozen")
     assert frozen.group(1) == committed["detector"]["findings_sha256"]
     assert frozen.group(2) == committed["detector"]["findings_digest"]
 
     # Section 7: primary 135 cells and full 150, or 120 and 135 under the calibration fallback.
-    table = re.search(r"\| Primary \|.*?\| (\d+) \((\d+) under the fallback\) \|", plan)
-    full = re.search(r"\| Full \|.*?\| (\d+) \((\d+) under the fallback\) \|", plan)
     fallback = committed["exclusions"]["calibration_document"]["study_doc_id"] is not None
-    column = 2 if fallback else 1
-    assert committed["analyses"]["primary"]["cells"] == int(table.group(column))
-    assert committed["analyses"]["S1"]["cells"] == int(full.group(column))
+    for key, analysis in (("primary", "primary"), ("full", "S1")):
+        match = _plan_match(plan, key)
+        expected = match.group(2) if fallback else match.group(1)
+        assert expected is not None, (
+            f"a calibration document is in use, but section 7 gives no fallback cell count for the {key} set"
+        )
+        assert committed["analyses"][analysis]["cells"] == int(expected)
+
+
+def test_plan_patterns_read_the_adopted_wording():
+    # Adoption removes the brackets around open draft values; the patterns must still match.
+    plan = _text("analysis-plan.md")
+    adopted = plan.replace("more than [10]%", "more than 10%")
+    assert int(_plan_match(adopted, "dropped").group(1)) == int(_plan_match(plan, "dropped").group(1))
+    # A section 7 row without the fallback note still gives the default count.
+    row = "| Primary | the 10 processed documents without WP-007 | 135 | Headline precision and recall |"
+    assert _plan_match(row, "primary").groups() == ("135", None)
 
 
 def test_internal_detail_stays_out_of_git():
