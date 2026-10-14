@@ -3,14 +3,18 @@
 ``micar-review-workbook`` writes one workbook for one reviewer from ``human-review-<id>.csv``:
 
 - sheet "Instructions": how to label, pointing to ``codebook.md`` and ``review-protocol.md``;
-- sheet "Review": one row per cell in the sheet's recorded order, so workbook row N is line N of
-  the CSV. The cell-identity and requirement columns are locked. ``human_label`` has a dropdown
-  restricted to ``review_validation.LABEL_ORDER``; ``reviewer_id`` accepts only this reviewer's
-  id; ``reviewed_at`` accepts only a date from the day the findings were generated to today, shown
-  as YYYY-MM-DD; ``source_pinpoint`` and ``review_note`` are free text. A locked ``entry_check``
-  column shows, once the spreadsheet application computes it, what a row still needs;
-- a very hidden sheet "_meta": the reviewer, the recorded sheet hash, the findings hash, the seed
-  and a digest of the cell identities, which ``micar-review-merge`` checks on import.
+- sheet "Review": one row per cell in the sheet's recorded order, so workbook row N holds the
+  CSV's record N (row 1 is the header in both). The cell-identity and requirement columns are
+  locked. ``human_label`` has a dropdown restricted to ``review_validation.LABEL_ORDER``;
+  ``reviewer_id`` accepts only this reviewer's id; ``reviewed_at`` accepts only a date from the day
+  the findings were generated (or the ``--not-before`` date) to today, shown as YYYY-MM-DD;
+  ``source_pinpoint`` and ``review_note`` are free text. A locked ``entry_check`` column shows,
+  once the spreadsheet application computes it, what a row still needs. It compares labels and
+  the reviewer ID case-sensitively, as the import does;
+- a very hidden sheet "_meta": the reviewer, the recorded sheet hash, the findings hash, the seed,
+  a digest of the cell identities, which ``micar-review-merge`` checks on import, and the hash of
+  the CSV the workbook was generated from, which the import uses to decide whether the workbook
+  continues the current CSV.
 
 The workbook is built from the blinded sheet only, so it carries no detector outcome. Review values
 already in the CSV are the reviewer's own and are copied as they are; the generator never fills a
@@ -36,8 +40,10 @@ from micar_linter.review_merge import (
     EXIT_OK,
     EXIT_OVERWRITE,
     EXIT_USAGE,
+    NOT_BEFORE_REASON,
     MergeRefused,
     Study,
+    add_not_before,
     csv_rows,
     load_study,
     read_sheet,
@@ -84,10 +90,11 @@ META_KEYS: tuple[str, ...] = (
     "identity_sha256",
     "sheet_sha256_at_generation",
 )
-# Every meta key except the CSV hash at generation must match the study on import. That hash only
-# documents which CSV the workbook came from; the CSV may have changed since (see the import's
-# overwrite check).
-CHECKED_META_KEYS = META_KEYS[:-1]
+GENERATED_FROM_KEY = "sheet_sha256_at_generation"
+# Every meta key except the CSV hash at generation must match the study on import. That hash
+# records which CSV the workbook came from; the CSV may have changed since. The import uses it to
+# tell a workbook that continues the current CSV from one that would discard later CSV edits.
+CHECKED_META_KEYS = tuple(key for key in META_KEYS if key != GENERATED_FROM_KEY)
 
 _HEADER_FILL = "D9D9D9"
 _EDITABLE_FILL = "FFF2CC"
@@ -112,7 +119,7 @@ def workbook_meta(study: Study, reviewer_id: str, sheet_text: str) -> dict[str, 
         "seed": str(study.seed),
         "rows": str(len(expected_rows)),
         "identity_sha256": identity_digest(expected_rows),
-        "sheet_sha256_at_generation": hashlib.sha256(sheet_text.encode("utf-8")).hexdigest(),
+        GENERATED_FROM_KEY: hashlib.sha256(sheet_text.encode("utf-8")).hexdigest(),
     }
 
 
@@ -268,6 +275,14 @@ def read_workbook(path: Path, study: Study, reviewer_id: str) -> list[dict[str, 
     Raises ``MergeRefused`` (exit 3) if the workbook was generated for another reviewer, sheet or
     findings file, or if any cell-identity value or the row order differs from the generated sheet.
     """
+    rows, _ = read_workbook_entries(path, study, reviewer_id)
+    return rows
+
+
+def read_workbook_entries(
+    path: Path, study: Study, reviewer_id: str
+) -> tuple[list[dict[str, str]], dict[str, str]]:
+    """Like ``read_workbook``, and also return the workbook's ``_meta`` values as text."""
     openpyxl = _openpyxl()
     from openpyxl.utils.exceptions import InvalidFileException
 
@@ -326,12 +341,17 @@ def read_workbook(path: Path, study: Study, reviewer_id: str) -> list[dict[str, 
         raise MergeRefused(
             EXIT_IDENTITY, f"{name}: cell identity or row order differs from the generated sheet", problems
         )
-    return [{column: row[column] for column in BLINDED_FIELDS} for row in rows]
+    return [{column: row[column] for column in BLINDED_FIELDS} for row in rows], actual_meta
 
 
 def _instruction_lines(study: Study, reviewer_id: str) -> list[str]:
     sheet = sheet_filename(reviewer_id)
     study_dir = study.directory.as_posix()
+    not_before = (
+        f" --not-before {study.earliest_review_date.isoformat()}"
+        if study.earliest_reason == NOT_BEFORE_REASON
+        else ""
+    )
     labels = [
         f"    {label}: {' and '.join(LABEL_REQUIRED_FIELDS[label])} required."
         for label in LABEL_ORDER
@@ -348,35 +368,50 @@ def _instruction_lines(study: Study, reviewer_id: str) -> list[str]:
         "On the Review sheet, edit only the yellow columns: human_label, reviewer_id, reviewed_at, "
         "source_pinpoint and review_note. The other columns and the row order are locked. Do not sort, "
         "insert or delete rows; filtering is fine.",
-        "Labels (choose from the dropdown; a blank label counts as pending):",
+        "Labels (choose from the dropdown, or type them in lower case exactly as listed; a blank "
+        "label counts as pending):",
         *labels,
         f"    {PENDING_LABEL}: not yet reviewed. The import refuses while any cell is pending.",
-        f"reviewer_id: {reviewer_id}. reviewed_at: the ISO 8601 date of review, YYYY-MM-DD.",
+        f"reviewer_id: {reviewer_id}. reviewed_at: the ISO 8601 date of review, YYYY-MM-DD, not before "
+        f"{study.earliest_review_date.isoformat()}.",
         "The entry_check column is a hint computed by the spreadsheet application. The import's "
         "validation decides.",
         "Sheet protection has no password. It guards against accidental edits only; leave it on.",
         "When every cell is labelled, import the workbook into the CSV sheet:",
         f"    uv run --extra review micar-review-merge import --study-dir {study_dir} "
-        f"--reviewer {reviewer_id} --workbook <this file>",
+        f"--reviewer {reviewer_id}{not_before} --workbook <this file>",
         f"Check progress without writing: uv run --extra review micar-review-merge check --study-dir "
-        f"{study_dir} --reviewer {reviewer_id} --workbook <this file>",
-        "Do not commit this workbook. Commit the labelled CSV sheet on its own.",
+        f"{study_dir} --reviewer {reviewer_id}{not_before} --workbook <this file>",
+        "Do not commit this workbook. Commit the labelled CSV sheet on its own. The repository is "
+        "public: do not push labels before the study README allows it.",
     ]
 
 
 def _check_formula(row_number: int, letters: dict[str, str], reviewer_id: str) -> str:
+    """The entry_check hint for one row.
+
+    Labels and the reviewer ID are compared with EXACT(TRIM(...)), because ``=`` in spreadsheet
+    formulas ignores case while the import compares exactly after stripping spaces. A label such
+    as "Present" therefore shows "label not allowed" here, as the import would refuse it.
+    """
     label = f"{letters['human_label']}{row_number}"
 
     def cell(name: str) -> str:
         return f"{letters[name]}{row_number}"
 
+    def is_label(value: str) -> str:
+        return f'EXACT(TRIM({label}),"{value}")'
+
     def any_of(labels: list[str]) -> str:
-        return "OR(" + ",".join(f'{label}="{value}"' for value in labels) + ")"
+        return "OR(" + ",".join(is_label(value) for value in labels) + ")"
 
     tests = [
-        (f'OR(TRIM({label})="",{label}="{PENDING_LABEL}")', PENDING_LABEL),
+        (f'OR(TRIM({label})="",{is_label(PENDING_LABEL)})', PENDING_LABEL),
         (f"NOT({any_of(list(LABEL_ORDER))})", "label not allowed"),
-        (f'TRIM({cell("reviewer_id")})<>"{reviewer_id}"', f"reviewer_id must be {reviewer_id}"),
+        (
+            f'NOT(EXACT(TRIM({cell("reviewer_id")}),"{reviewer_id}"))',
+            f"reviewer_id must be {reviewer_id}",
+        ),
         (f'{cell("reviewed_at")}=""', "reviewed_at missing"),
     ]
     groups: dict[str, list[str]] = {}
@@ -450,6 +485,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="findings file (default: the one named in human-review-sheets.json)",
     )
+    add_not_before(parser)
     parser.add_argument(
         "--force", action="store_true", help="overwrite an existing workbook (its labels are lost)"
     )
@@ -459,7 +495,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        study = load_study(args.study_dir, args.findings)
+        study = load_study(args.study_dir, args.findings, not_before=args.not_before)
         out = args.out or args.study_dir / f"human-review-{args.reviewer}.xlsx"
         study.expected_sheet(args.reviewer)
         rows = write_workbook(study, args.reviewer, out, force=args.force)

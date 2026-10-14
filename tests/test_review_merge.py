@@ -148,11 +148,21 @@ def _make_workbook(study_dir: Path, reviewer: str = "r1") -> Path:
     return study_dir / f"human-review-{reviewer}.xlsx"
 
 
-def _fill_workbook(path: Path, reviewer: str = "r1", overrides: dict[int, dict] | None = None) -> None:
-    """Fill the editable columns the way a reviewer would; ``overrides`` is keyed by sheet row."""
+def _fill_workbook(
+    path: Path,
+    reviewer: str = "r1",
+    overrides: dict[int, dict] | None = None,
+    keep: frozenset[int] = frozenset(),
+) -> None:
+    """Fill the editable columns the way a reviewer would.
+
+    ``overrides`` is keyed by sheet row; rows in ``keep`` stay as generated unless overridden.
+    """
     workbook = openpyxl.load_workbook(path)
     sheet = workbook[REVIEW_SHEET]
     for row_number in range(2, sheet.max_row + 1):
+        if row_number in keep and row_number not in (overrides or {}):
+            continue
         values = _synthetic(row_number - 2, reviewer)
         values["reviewed_at"] = date.fromisoformat(values["reviewed_at"])
         values.update((overrides or {}).get(row_number, {}))
@@ -218,7 +228,11 @@ def test_workbook_layout_validation_and_protection(study_dir: Path):
         ]
         assert sheet.cell(row_number, COLUMN["human_label"]).value == "pending"
         assert all(sheet.cell(row_number, COLUMN[name]).value is None for name in REVIEW_FIELDS[1:])
-        assert str(sheet.cell(row_number, COLUMN[CHECK_COLUMN]).value).startswith("=IF(")
+        formula = str(sheet.cell(row_number, COLUMN[CHECK_COLUMN]).value)
+        assert formula.startswith("=IF(")
+        assert f'EXACT(TRIM(G{row_number}),"present")' in formula
+        assert f'NOT(EXACT(TRIM(H{row_number}),"r1"))' in formula
+        assert '="present"' not in formula and '<>"r1"' not in formula
 
     assert sheet.protection.sheet
     assert sheet.protection.sort and sheet.protection.insertRows and sheet.protection.deleteRows
@@ -443,6 +457,68 @@ def test_import_and_workbook_refuse_to_overwrite(study_dir: Path):
     assert _import(study_dir, workbook) == EXIT_OK
 
 
+def _label_csv_rows(path: Path, values: dict[int, dict]) -> None:
+    """Enter synthetic values in the CSV directly, as a reviewer may; ``values`` is keyed by row."""
+    rows = _csv(path)
+    for row_number, update in values.items():
+        rows[row_number - 2].update(update)
+    _write_csv(path, rows)
+
+
+def test_import_continues_a_workbook_generated_from_the_current_csv(study_dir: Path):
+    # Started in the CSV, continued in a workbook generated from it: no --replace needed.
+    sheet = study_dir / "human-review-r1.csv"
+    started = {2: _synthetic(0, "r1", label="uncertain"), 3: _synthetic(1, "r1", label="present")}
+    _label_csv_rows(sheet, started)
+    workbook = _make_workbook(study_dir)
+    revised = {**started[3], "review_note": "synthetic note revised in the workbook"}
+    _fill_workbook(workbook, keep=frozenset({2, 3}), overrides={3: revised})
+
+    assert _import(study_dir, workbook) == EXIT_OK
+    rows = _csv(sheet)
+    assert {name: rows[0][name] for name in REVIEW_FIELDS} == _synthetic(0, "r1", label="uncertain")
+    assert rows[1]["review_note"] == "synthetic note revised in the workbook"
+    assert all(row["human_label"] != "pending" for row in rows)
+
+
+def test_import_refuses_when_the_csv_changed_after_the_workbook(study_dir: Path, capsys):
+    sheet = study_dir / "human-review-r1.csv"
+    _label_csv_rows(sheet, {2: _synthetic(0, "r1", label="uncertain")})
+    workbook = _make_workbook(study_dir)
+    _fill_workbook(workbook, keep=frozenset({2}))
+    # The reviewer labels another row in the CSV after generating the workbook.
+    _label_csv_rows(sheet, {5: _synthetic(3, "r1", label="missing")})
+    changed = sheet.read_bytes()
+
+    assert _import(study_dir, workbook) == EXIT_OVERWRITE
+    assert "changed after human-review-r1.xlsx was generated from it" in capsys.readouterr().err
+    assert sheet.read_bytes() == changed
+    assert _import(study_dir, workbook, "r1", "--replace") == EXIT_OK
+    assert _csv(sheet)[3]["human_label"] == _synthetic(3, "r1")["human_label"]
+
+
+def test_not_before_raises_the_earliest_review_date(study_dir: Path, capsys):
+    _label_csv(study_dir / "human-review-r1.csv", "r1")  # every reviewed_at is 2026-07-20
+    check = ["check", "--study-dir", str(study_dir), "--reviewer", "r1"]
+    assert merge_main([*check, "--not-before", "2026-07-20"]) == EXIT_OK
+    assert merge_main([*check, "--not-before", "2026-07-21"]) == EXIT_REFUSED
+    assert "is before 2026-07-21, the --not-before date" in capsys.readouterr().err
+    assert _matrix(study_dir, "--not-before", "2026-07-21") == EXIT_REFUSED
+    assert merge_main([*check, "--not-before", "2026-07-05"]) == EXIT_USAGE
+    assert "is before 2026-07-06, the date the findings were generated" in capsys.readouterr().err
+    with pytest.raises(SystemExit) as exited:
+        merge_main([*check, "--not-before", "2026-13-01"])
+    assert exited.value.code == EXIT_USAGE
+
+    args = ["--study-dir", str(study_dir), "--reviewer", "r1", "--not-before", "2026-07-21"]
+    assert workbook_main(args) == EXIT_OK
+    workbook = openpyxl.load_workbook(study_dir / "human-review-r1.xlsx")
+    dates = {str(item.sqref): item for item in workbook[REVIEW_SHEET].data_validations.dataValidation}
+    assert dates["I2:I151"].formula1 == "DATE(2026,7,21)"
+    instructions = "\n".join(str(cell.value) for cell in workbook["Instructions"]["A"] if cell.value)
+    assert "--reviewer r1 --not-before 2026-07-21 --workbook" in instructions
+
+
 def test_workbook_copies_the_reviewers_own_values_verbatim(study_dir: Path):
     # A reviewer who started in the CSV gets their own values back; nothing else is filled.
     sheet = study_dir / "human-review-r1.csv"
@@ -494,13 +570,15 @@ def _two_reviewer_study(study_dir: Path) -> list[tuple[str, str]]:
     return differing
 
 
-def _adjudication(study_dir: Path, report: list[dict[str, str]], decide) -> Path:
+def _adjudication(study_dir: Path, report: list[dict[str, str]], decide, *, bom: bool = False) -> Path:
     """Copy the disagreement report and fill the adjudication columns with synthetic decisions."""
     rows = [dict(row) for row in report]
     for row in rows:
         row.update(decide(row))
     path = study_dir.parent / "adjudication.csv"
     _write_csv(path, rows)
+    if bom:  # as a spreadsheet application's "CSV UTF-8" export writes it
+        path.write_bytes(b"\xef\xbb\xbf" + path.read_bytes())
     return path
 
 
@@ -560,7 +638,7 @@ def test_two_reviewers_need_an_adjudication_file(study_dir: Path, capsys):
     assert "differ from the current disagreement report" in capsys.readouterr().err
     _write_csv(study_dir / "human-review-r2.csv", r2_original)
 
-    third_person = _adjudication(study_dir, report, decision("r3"))
+    third_person = _adjudication(study_dir, report, decision("r3"), bom=True)
     assert _matrix(study_dir, "--adjudication", str(third_person)) == EXIT_OK
     matrix = {
         (row["study_doc_id"], row["rule_id"]): row for row in _csv(study_dir / "human-review-matrix.csv")

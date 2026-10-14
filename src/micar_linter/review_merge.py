@@ -5,8 +5,10 @@
 - ``check``: validate one reviewer's sheet (the CSV, or a workbook from ``micar-review-workbook``)
   and report progress. It writes nothing.
 - ``import``: read a reviewer's filled workbook, validate every row and write the labels into the
-  reviewer's blinded sheet, ``human-review-<reviewer_id>.csv``. The labelled sheet is then committed
-  on its own, before any merge with detector outcomes (review-protocol.md).
+  reviewer's blinded sheet, ``human-review-<reviewer_id>.csv``. A workbook generated from the CSV
+  as it is now replaces the CSV's values; if the CSV holds review content and changed after the
+  workbook was generated, the import refuses unless ``--replace``. The labelled sheet is then
+  committed on its own, before any merge with detector outcomes (review-protocol.md).
 - ``matrix``: validate the sheet of every reviewer recorded in ``human-review-sheets.json``. With
   two or more reviewers, compare the labels, write a disagreement report and require an
   adjudication file for every disagreement. Then write the final labels into
@@ -17,7 +19,8 @@
 Every step refuses while any cell is pending or invalid and lists the offending rows. A row is
 valid when its label is in the vocabulary of ``review_validation.LABEL_ORDER``, its reviewer_id is
 the sheet's reviewer, its reviewed_at is an ISO 8601 date (YYYY-MM-DD) between the date the findings
-were generated and today, and it carries the field its label requires
+were generated (or the later ``--not-before`` date, such as the date the codebook was adopted) and
+today, and it carries the field its label requires
 (``review_validation.LABEL_REQUIRED_FIELDS``: a pinpoint for present and missing, a note for the
 other labels).
 
@@ -32,7 +35,8 @@ for a disagreement, from the adjudication file.
 Exit status: 0 success; 1 refused because cells are pending or invalid; 2 usage or input error;
 3 cell identity or row order differs from the generated sheets, or the study files are
 inconsistent; 4 reviewers disagree and the adjudication file is missing, stale, pending or invalid;
-5 the target file already holds different review content (``--replace`` overwrites it).
+5 the target file already holds different review content, or the CSV changed after the workbook
+was generated from it (``--replace`` overwrites it).
 """
 
 from __future__ import annotations
@@ -96,6 +100,8 @@ EXIT_ADJUDICATION = 4
 EXIT_OVERWRITE = 5
 
 _ISO_DATE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
+FINDINGS_DATE_REASON = "the date the findings were generated"
+NOT_BEFORE_REASON = "the --not-before date"
 
 
 class MergeRefused(Exception):
@@ -117,6 +123,7 @@ class Study:
     findings_sha256: str
     outputs: Mapping[str, str]
     earliest_review_date: date
+    earliest_reason: str = FINDINGS_DATE_REASON
 
     def sheet_path(self, reviewer_id: str) -> Path:
         return self.directory / sheet_filename(reviewer_id)
@@ -166,8 +173,15 @@ class SheetReport:
         return lines
 
 
-def load_study(directory: Path, findings_path: Path | None = None) -> Study:
-    """Load a study directory and confirm that the generator reproduces its recorded sheets."""
+def load_study(
+    directory: Path, findings_path: Path | None = None, *, not_before: date | None = None
+) -> Study:
+    """Load a study directory and confirm that the generator reproduces its recorded sheets.
+
+    Review dates may not precede the date the findings were generated, or ``not_before`` if it is
+    given (for example the date the codebook was adopted). ``not_before`` may not be earlier than
+    the findings date.
+    """
     try:
         record = read_sheets_record(directory)
     except (OSError, ValueError) as exc:
@@ -220,13 +234,23 @@ def load_study(directory: Path, findings_path: Path | None = None) -> Study:
     if problems:
         raise MergeRefused(EXIT_IDENTITY, "the study files are inconsistent with the generator", problems)
 
+    earliest, reason = _findings_date(findings), FINDINGS_DATE_REASON
+    if not_before is not None:
+        if not_before < earliest:
+            raise MergeRefused(
+                EXIT_USAGE,
+                f"--not-before {not_before.isoformat()} is before {earliest.isoformat()}, "
+                f"{FINDINGS_DATE_REASON}",
+            )
+        earliest, reason = not_before, NOT_BEFORE_REASON
     return Study(
         directory=directory,
         reviewers=reviewers,
         seed=seed,
         findings_sha256=findings_sha256,
         outputs=outputs,
-        earliest_review_date=_findings_date(findings),
+        earliest_review_date=earliest,
+        earliest_reason=reason,
     )
 
 
@@ -255,6 +279,7 @@ def validate_rows(
     source: str,
     earliest: date,
     today: date,
+    earliest_reason: str = FINDINGS_DATE_REASON,
 ) -> SheetReport:
     """Validate every row of one reviewer's sheet. Row numbers count the header as row 1."""
     report = SheetReport(source=source, reviewer_id=reviewer_id, rows=[dict(row) for row in rows])
@@ -280,7 +305,7 @@ def validate_rows(
                 "reviewed_at",
                 _value(row, "reviewed_at"),
                 earliest=earliest,
-                earliest_reason="the date the findings were generated",
+                earliest_reason=earliest_reason,
                 today=today,
             )
         )
@@ -327,7 +352,14 @@ def check_sheet(
     else:
         _, rows = read_sheet(study, reviewer_id)
         source = sheet_filename(reviewer_id)
-    return validate_rows(rows, reviewer_id, source=source, earliest=study.earliest_review_date, today=today)
+    return validate_rows(
+        rows,
+        reviewer_id,
+        source=source,
+        earliest=study.earliest_review_date,
+        earliest_reason=study.earliest_reason,
+        today=today,
+    )
 
 
 def import_workbook(
@@ -338,10 +370,26 @@ def import_workbook(
     replace: bool = False,
     today: date | None = None,
 ) -> tuple[Path, SheetReport]:
-    """Write a reviewer's fully labelled workbook into their blinded CSV sheet."""
+    """Write a reviewer's fully labelled workbook into their blinded CSV sheet.
+
+    A workbook generated from the CSV exactly as it is now continues that CSV, so its values
+    replace the CSV's. If the CSV holds review content and changed after the workbook was
+    generated, the import refuses (exit 5) unless ``replace``, because it would discard those
+    changes.
+    """
+    from micar_linter.review_workbook import GENERATED_FROM_KEY, read_workbook_entries
+
     expected = study.expected_sheet(reviewer_id)
     current_text, _ = read_sheet(study, reviewer_id)
-    report = check_sheet(study, reviewer_id, workbook=workbook, today=today)
+    rows, meta = read_workbook_entries(workbook, study, reviewer_id)
+    report = validate_rows(
+        rows,
+        reviewer_id,
+        source=workbook.name,
+        earliest=study.earliest_review_date,
+        earliest_reason=study.earliest_reason,
+        today=today or _today(),
+    )
     if not report.complete:
         raise MergeRefused(
             EXIT_REFUSED,
@@ -359,7 +407,15 @@ def import_workbook(
     _assert_consistent(expected, new_text, sheet_filename(reviewer_id))
 
     path = study.sheet_path(reviewer_id)
-    _refuse_overwrite(path, current_text, new_text, replace=replace)
+    generated_from_current = meta.get(GENERATED_FROM_KEY) == _sha256_text(current_text)
+    if current_text != new_text and not replace and not generated_from_current and review_content_rows(path):
+        raise MergeRefused(
+            EXIT_OVERWRITE,
+            f"{path.name} holds review content and changed after {workbook.name} was generated from "
+            "it, so the import would discard those changes; nothing was written. Carry the changes "
+            "into the workbook, or pass --replace to overwrite the sheet with the workbook's values "
+            "(changes that are not committed are then lost)",
+        )
     if current_text != new_text:
         path.write_text(new_text, encoding="utf-8", newline="")
     return path, report
@@ -399,6 +455,7 @@ def merge_matrix(
             reviewer_id,
             source=sheet_filename(reviewer_id),
             earliest=study.earliest_review_date,
+            earliest_reason=study.earliest_reason,
             today=today,
         )
         reports[reviewer_id] = report
@@ -528,8 +585,9 @@ def validate_adjudication(
     review date, the reasoning, and the field its final label requires.
     """
     try:
-        text = path.read_text(encoding="utf-8")
-    except OSError as exc:
+        # utf-8-sig: a spreadsheet application may save the file with a byte order mark.
+        text = path.read_text(encoding="utf-8-sig")
+    except (OSError, UnicodeDecodeError) as exc:
         raise MergeRefused(EXIT_USAGE, f"cannot read the adjudication file {path}: {exc}") from exc
     expected_reader = csv.DictReader(io.StringIO(report_text))
     expected_rows = list(expected_reader)
@@ -718,6 +776,29 @@ def _ranges(numbers: Sequence[int]) -> str:
     return ", ".join(parts)
 
 
+def iso_date(value: str) -> date:
+    """argparse type for an ISO 8601 calendar date, YYYY-MM-DD."""
+    if not _ISO_DATE.fullmatch(value):
+        raise argparse.ArgumentTypeError(f"{value!r} is not an ISO 8601 date (YYYY-MM-DD)")
+    try:
+        return date.fromisoformat(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"{value!r} is not a calendar date (YYYY-MM-DD)") from exc
+
+
+def add_not_before(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--not-before",
+        type=iso_date,
+        default=None,
+        metavar="YYYY-MM-DD",
+        help=(
+            "earliest allowed review date, for example the date codebook.md was adopted "
+            "(default: the date the findings were generated)"
+        ),
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="micar-review-merge",
@@ -737,6 +818,7 @@ def build_parser() -> argparse.ArgumentParser:
             default=None,
             help="findings file (default: the one named in human-review-sheets.json)",
         )
+        add_not_before(sub)
 
     check = commands.add_parser("check", help="validate one reviewer's sheet or workbook; writes nothing")
     add_study(check)
@@ -772,7 +854,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        study = load_study(args.study_dir, args.findings)
+        study = load_study(args.study_dir, args.findings, not_before=args.not_before)
         if args.command == "check":
             report = check_sheet(study, args.reviewer, workbook=args.workbook)
             labelled = report.total - len(report.pending)
@@ -788,7 +870,8 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 f"Wrote {path}: {report.total} cells labelled by {args.reviewer} "
                 f"({_label_counts(report.rows)}). Commit this sheet on its own before running "
-                "`micar-review-merge matrix`.",
+                "`micar-review-merge matrix`. The repository is public: do not push labels before "
+                "the study README allows it.",
                 file=sys.stderr,
             )
             return EXIT_OK
