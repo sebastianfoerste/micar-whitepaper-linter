@@ -421,8 +421,9 @@ def _openpyxl() -> Any:
     except ModuleNotFoundError as exc:
         raise MergeRefused(
             EXIT_USAGE,
-            "openpyxl is not installed; run the command with the review extra, for example "
-            "`uv run --extra review micar-review-workbook ...`",
+            "openpyxl is not installed; workbook commands need the review extra, for example "
+            "`uv run --extra review micar-review-workbook ...` or "
+            "`uv run --extra review micar-review-merge import ...`",
         ) from exc
     return openpyxl
 
