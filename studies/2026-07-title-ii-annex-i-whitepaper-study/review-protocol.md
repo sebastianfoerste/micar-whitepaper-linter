@@ -12,7 +12,7 @@ Reviewers receive:
 
 - the exact source document identified by `document_sha256`;
 - the applicable Article 6 or Annex I requirement;
-- the rule label and missing-element description;
+- the rule label and requirement text in the sheet, and `codebook.md`;
 - a blinded review sheet that does not reveal `detector_status` or detector confidence.
 
 The source URL and issuer mapping remain in `source-manifest.json`. Reviewers verify that the source bytes match `document-provenance.json`.

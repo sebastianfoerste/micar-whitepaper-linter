@@ -63,7 +63,7 @@ uv run micar-study-verify-cache \
   --include-candidates
 ```
 
-Regenerate the blinded sheets and the matrix from the findings file. Rule IDs and Annex labels come from `STUDY_RULES`; every label is written as `pending`. The command refuses to overwrite a sheet that already holds review content. Add `--reviewer r2` for a second reviewer, or `--check` to confirm that the committed files match:
+Regenerate the blinded sheets and the matrix from the findings file. Rule IDs and Annex labels come from `STUDY_RULES`; every new sheet has every label `pending`. Reviewers and the seed recorded in `human-review-sheets.json` are always kept, so pass `--reviewer r2` to add a second reviewer. A sheet that already holds review content is kept unchanged; if its cells or row order would change, the command refuses (exit 3). `--check` confirms that the committed files match the generator, comparing every column except the review fields, so it still passes once labels are entered:
 
 ```bash
 uv run micar-review-sheets \

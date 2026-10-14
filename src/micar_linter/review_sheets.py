@@ -12,7 +12,18 @@ Two kinds of file are written:
   adjudication and metric calculation after the independent labels are recorded.
 
 Every human-review field is written as ``pending`` or blank. The generator never fills a label.
-It refuses to overwrite a sheet that already holds review content unless ``--force`` is given.
+
+Once reviewers start labelling, the generated columns (cell identity and, in the matrix, the
+detector outcome) and the row order stay fixed, while the review columns fill up. The check and
+the writer therefore compare only the generated columns:
+
+- ``--check`` passes for a sheet with labels as long as its generated columns and row order match
+  the generator and its review columns are well formed;
+- a sheet that holds review content is kept as it is when its generated columns already match,
+  and the run is refused (exit 3) when they would change, unless ``--force`` is given.
+
+Reviewers and the seed already recorded in ``human-review-sheets.json`` are kept on every run, so
+``--reviewer r2`` adds a second reviewer without dropping ``r1``.
 """
 
 from __future__ import annotations
@@ -29,6 +40,7 @@ from pathlib import Path
 from typing import Any
 
 from micar_linter.batch import STUDY_RULES, StudyRule
+from micar_linter.review_validation import ALLOWED_LABELS
 
 SHEETS_SCHEMA = "micar-study-review-sheets.v1"
 DEFAULT_SEED = 20261014
@@ -63,11 +75,10 @@ MATRIX_FIELDS: tuple[str, ...] = CELL_FIELDS + DETECTOR_FIELDS + REVIEW_FIELDS
 # items the reviewer verifies before adopting the codebook. The wording describes the legal
 # element only and says nothing about how the detector searches for it.
 REVIEW_REQUIREMENTS: dict[str, str] = {
-    "ANNEX_I_PART_A_02_LEGAL_FORM": (
-        "Legal form of the offeror or person seeking admission to trading."
-    ),
+    "ANNEX_I_PART_A_02_LEGAL_FORM": ("Legal form of the offeror or person seeking admission to trading."),
     "ANNEX_I_PART_A_03_REGISTERED_ADDRESS": (
-        "Registered address or head office of the offeror or person seeking admission to trading."
+        "Registered address of the offeror or person seeking admission to trading; for the head "
+        "office, see codebook 5.2."
     ),
     "ANNEX_I_PART_A_04_REGISTRATION_DATE": (
         "Date of registration (incorporation or establishment) of the offeror or person seeking "
@@ -90,15 +101,12 @@ REVIEW_REQUIREMENTS: dict[str, str] = {
         "seeking admission to trading."
     ),
     "ANNEX_I_PART_E_18_CONFLICTS_OF_INTEREST": (
-        "Disclosure of conflicts of interest relating to the offer to the public or the admission "
-        "to trading."
+        "Disclosure of conflicts of interest relating to the offer to the public or the admission to trading."
     ),
     "ANNEX_I_PART_A_10_FINANCIAL_CONDITION": (
         "Financial condition of the offeror or person seeking admission to trading."
     ),
-    "ANNEX_I_PART_D_01_ASSET_NAME_ABBREVIATION": (
-        "Name of the crypto-asset and its abbreviation or ticker."
-    ),
+    "ANNEX_I_PART_D_01_ASSET_NAME_ABBREVIATION": ("Name of the crypto-asset and its abbreviation or ticker."),
     "ANNEX_I_PART_D_03_IMPLEMENTATION_PERSONS": (
         "Natural or legal persons involved in the implementation of the crypto-asset project."
     ),
@@ -297,6 +305,11 @@ def build_review_sheets(
         "blinded_columns": list(BLINDED_FIELDS),
         "matrix_columns": list(MATRIX_FIELDS),
         "initial_review_state": "every human_label is 'pending'; every other review field is blank",
+        "sheet_sha256_policy": (
+            "Each sha256 below is the hash of the file as generated, with every label pending. "
+            "Once labels are entered, a sheet differs from it in the review columns only; "
+            "'micar-review-sheets --check' verifies the other columns and the row order."
+        ),
         "sheets": [
             {
                 "reviewer_id": reviewer_id,
@@ -343,30 +356,126 @@ def review_content_rows(path: Path) -> list[int]:
         return found
 
 
+def generated_columns(fieldnames: Sequence[str]) -> list[str]:
+    """The columns the generator owns: every column except the human-review fields."""
+    return [field for field in fieldnames if field not in REVIEW_FIELDS]
+
+
+def structure_problems(expected: str, actual: str, *, validate_review: bool = True) -> list[str]:
+    """Compare a sheet on disk with generated content, ignoring the human-review columns.
+
+    The header, the number of rows, the row order and every generated column must match. With
+    ``validate_review`` the review columns are checked instead of compared: ``human_label`` must
+    be an allowed label or blank, and a pending (or blank) label must not carry a reviewer, date,
+    pinpoint or note.
+    """
+    expected_reader = csv.DictReader(io.StringIO(expected))
+    actual_reader = csv.DictReader(io.StringIO(actual))
+    expected_rows = list(expected_reader)
+    actual_rows = list(actual_reader)
+    expected_header = list(expected_reader.fieldnames or [])
+    actual_header = list(actual_reader.fieldnames or [])
+    if actual_header != expected_header:
+        return [f"header is {actual_header}, expected {expected_header}"]
+    if len(actual_rows) != len(expected_rows):
+        return [f"{len(actual_rows)} data rows, expected {len(expected_rows)}"]
+
+    problems: list[str] = []
+    columns = generated_columns(expected_header)
+    for row_number, (want, got) in enumerate(zip(expected_rows, actual_rows, strict=True), start=2):
+        changed = [column for column in columns if (got.get(column) or "") != (want.get(column) or "")]
+        if changed:
+            problems.append(f"row {row_number}: {', '.join(changed)} do not match the generator")
+        if validate_review:
+            problems.extend(f"row {row_number}: {problem}" for problem in _review_field_problems(got))
+    return problems
+
+
 def write_review_sheets(outputs: Mapping[str, str], out_dir: Path, *, force: bool = False) -> list[Path]:
+    """Write the generated files and return the paths written.
+
+    A CSV that already holds review content is kept unchanged when its generated columns and row
+    order already match; if they would change, nothing is written and ``ReviewContentError`` is
+    raised, unless ``force`` is true.
+    """
     targets = [out_dir / name for name in outputs]
-    if not force:
-        blocked = {str(path): rows for path in targets if (rows := review_content_rows(path))}
-        if blocked:
-            details = "; ".join(f"{path} (rows {_compact(rows)})" for path, rows in blocked.items())
-            raise ReviewContentError(
-                "refusing to overwrite sheets that already hold review content: "
-                f"{details}. Use --force only if those labels are preserved elsewhere."
-            )
-    out_dir.mkdir(parents=True, exist_ok=True)
+    keep: set[Path] = set()
+    blocked: dict[str, list[int]] = {}
     for path in targets:
+        rows = review_content_rows(path)
+        if not rows or force:
+            continue
+        if structure_problems(outputs[path.name], path.read_text(encoding="utf-8"), validate_review=False):
+            blocked[str(path)] = rows
+        else:
+            keep.add(path)
+    if blocked:
+        details = "; ".join(f"{path} (rows {_compact(rows)})" for path, rows in blocked.items())
+        raise ReviewContentError(
+            "refusing to change the generated columns or row order of sheets that already hold "
+            f"review content: {details}. Use --force only if those labels are preserved elsewhere."
+        )
+    out_dir.mkdir(parents=True, exist_ok=True)
+    written: list[Path] = []
+    for path in targets:
+        if path in keep:
+            continue
         path.write_text(outputs[path.name], encoding="utf-8", newline="")
-    return targets
+        written.append(path)
+    return written
 
 
 def check_review_sheets(outputs: Mapping[str, str], out_dir: Path) -> list[str]:
-    """Return the names of files whose on-disk content differs from the generated content."""
-    stale: list[str] = []
+    """Return one message per problem; an empty list means the files on disk match.
+
+    CSV sheets are compared on their generated columns and row order only, so labels entered by
+    a reviewer do not make a sheet out of date (see ``structure_problems``). The generation
+    record is compared byte for byte.
+    """
+    problems: list[str] = []
     for name, content in outputs.items():
         path = out_dir / name
-        if not path.exists() or path.read_text(encoding="utf-8") != content:
-            stale.append(name)
-    return stale
+        if not path.exists():
+            problems.append(f"{name}: missing")
+            continue
+        actual = path.read_text(encoding="utf-8")
+        if name.endswith(".csv"):
+            problems.extend(f"{name}: {problem}" for problem in structure_problems(content, actual))
+        elif actual != content:
+            problems.append(f"{name}: differs from the generated content")
+    return problems
+
+
+def read_sheets_record(out_dir: Path) -> dict[str, Any] | None:
+    """Return the committed generation record in ``out_dir``, or None if there is none."""
+    path = out_dir / SHEETS_RECORD_FILENAME
+    if not path.exists():
+        return None
+    record = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(record, dict) or not isinstance(record.get("sheets", []), list):
+        raise ValueError(f"{path}: not a review-sheets generation record")
+    return record
+
+
+def resolve_run(
+    record: Mapping[str, Any] | None,
+    requested_reviewers: Sequence[str] | None,
+    requested_seed: int | None,
+) -> tuple[list[str], int]:
+    """Reviewers and seed for a run: the recorded ones, plus any requested reviewers.
+
+    Reviewers already recorded keep their sheets, so adding a reviewer never drops another
+    reviewer's entry from the generation record. An explicit seed overrides the recorded seed.
+    """
+    recorded = [str(sheet.get("reviewer_id", "")) for sheet in (record or {}).get("sheets", [])]
+    reviewers = list(dict.fromkeys([*recorded, *(requested_reviewers or [])])) or list(DEFAULT_REVIEWERS)
+    if requested_seed is not None:
+        seed = requested_seed
+    elif record is not None and "seed" in record:
+        seed = int(record["seed"])
+    else:
+        seed = DEFAULT_SEED
+    return reviewers, seed
 
 
 def _check_findings_rules(findings: Mapping[str, Any], canonical: Mapping[str, StudyRule]) -> None:
@@ -387,6 +496,17 @@ def _check_reviewer_id(reviewer_id: str) -> None:
             f"reviewer id {reviewer_id!r} must start with a lowercase letter and use only "
             "lowercase letters, digits, '-' or '_' (for example r1)"
         )
+
+
+def _review_field_problems(row: Mapping[str, str]) -> list[str]:
+    label = (row.get("human_label") or "").strip()
+    if label and label not in ALLOWED_LABELS:
+        return [f"human_label {label!r} is not one of {sorted(ALLOWED_LABELS)}"]
+    if label in ("", PENDING_LABEL):
+        filled = [field for field in REVIEW_FIELDS[1:] if (row.get(field) or "").strip()]
+        if filled:
+            return [f"{', '.join(filled)} filled while human_label is pending"]
+    return []
 
 
 def _empty_review_fields() -> dict[str, str]:
@@ -418,42 +538,51 @@ def build_parser() -> argparse.ArgumentParser:
         "--reviewer",
         action="append",
         dest="reviewers",
-        help="reviewer id; repeat for several reviewers (default: r1)",
+        help=(
+            f"reviewer id to add; repeat for several. Reviewers recorded in {SHEETS_RECORD_FILENAME} "
+            "are always kept (default when nothing is recorded: r1)"
+        ),
     )
     parser.add_argument(
         "--seed",
         type=int,
-        default=DEFAULT_SEED,
-        help=f"row-order seed (default {DEFAULT_SEED})",
+        default=None,
+        help=f"row-order seed (default: the recorded seed, else {DEFAULT_SEED})",
     )
     parser.add_argument(
         "--check",
         action="store_true",
-        help="write nothing; exit 1 if any committed file differs from the generated content",
+        help=(
+            "write nothing; exit 1 if a committed file differs from the generator. Sheets are "
+            "compared on their generated columns and row order, so entered labels pass"
+        ),
     )
     parser.add_argument(
         "--force",
         action="store_true",
-        help="overwrite sheets even if they already hold review content",
+        help="overwrite sheets even if they already hold review content (the labels are lost)",
     )
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    reviewers = args.reviewers or list(DEFAULT_REVIEWERS)
     try:
-        outputs = generate_review_sheets(args.findings, reviewers=reviewers, seed=args.seed)
+        reviewers, seed = resolve_run(read_sheets_record(args.out_dir), args.reviewers, args.seed)
+        outputs = generate_review_sheets(args.findings, reviewers=reviewers, seed=seed)
     except (OSError, ValueError) as exc:
         print(f"micar-review-sheets: {exc}", file=sys.stderr)
         return 2
 
     if args.check:
-        stale = check_review_sheets(outputs, args.out_dir)
-        if stale:
-            print("Out of date: " + ", ".join(stale), file=sys.stderr)
+        problems = check_review_sheets(outputs, args.out_dir)
+        if problems:
+            print("Out of date or invalid:\n  " + "\n  ".join(problems), file=sys.stderr)
             return 1
-        print(f"Review sheets match {args.findings.name} (seed {args.seed}).", file=sys.stderr)
+        print(
+            f"Review sheets match {args.findings.name} (reviewers {', '.join(reviewers)}; seed {seed}).",
+            file=sys.stderr,
+        )
         return 0
 
     try:
@@ -461,12 +590,15 @@ def main(argv: list[str] | None = None) -> int:
     except ReviewContentError as exc:
         print(f"micar-review-sheets: {exc}", file=sys.stderr)
         return 3
+    kept = [name for name in outputs if args.out_dir / name not in written]
     rows = json.loads(outputs[SHEETS_RECORD_FILENAME])["rows_per_sheet"]
-    print(
-        f"Wrote {', '.join(path.name for path in written)} ({rows} rows per sheet, all labels pending, "
-        f"seed {args.seed}).",
-        file=sys.stderr,
+    message = (
+        f"Wrote {', '.join(path.name for path in written)} ({rows} rows per sheet; new sheets have "
+        f"every label pending; reviewers {', '.join(reviewers)}; seed {seed})."
     )
+    if kept:
+        message += f" Kept unchanged, because they hold review content: {', '.join(kept)}."
+    print(message, file=sys.stderr)
     return 0
 
 

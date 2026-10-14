@@ -22,6 +22,8 @@ from micar_linter.review_sheets import (
     build_review_sheets,
     check_review_sheets,
     main,
+    read_sheets_record,
+    resolve_run,
     write_review_sheets,
 )
 from micar_linter.review_validation import summarize_rows
@@ -47,19 +49,107 @@ def _header(text: str) -> list[str]:
     return text.splitlines()[0].split(",")
 
 
-def test_committed_sheets_equal_generator_output():
+def _label_one_cell(sheet: Path, row_index: int = 0) -> None:
+    """Fill one cell the way a reviewer would; the generated columns stay untouched."""
+    text = sheet.read_text(encoding="utf-8")
+    reader = csv.DictReader(io.StringIO(text))
+    rows = list(reader)
+    rows[row_index].update(
+        human_label="present",
+        reviewer_id="r1",
+        reviewed_at="2026-10-20",
+        source_pinpoint="p. 3",
+        review_note="test",
+    )
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=reader.fieldnames, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+    sheet.write_text(buffer.getvalue(), encoding="utf-8")
+
+
+def test_committed_sheets_match_the_generator_on_their_generated_columns():
+    # Reviewers and seed come from the committed record, and the comparison ignores the review
+    # columns, so this test stays green once labels are committed.
+    reviewers, seed = resolve_run(read_sheets_record(STUDY), None, None)
     outputs = build_review_sheets(
         _findings(),
         findings_sha256=hashlib.sha256(FINDINGS.read_bytes()).hexdigest(),
+        reviewers=reviewers,
+        seed=seed,
     )
 
     assert check_review_sheets(outputs, STUDY) == []
+    assert main(["--findings", str(FINDINGS), "--out-dir", str(STUDY), "--check"]) == 0
     assert not (STUDY / "human-review-blinded.csv").exists()
 
 
-def test_generator_output_is_deterministic():
+def test_generator_output_is_deterministic(tmp_path: Path):
     assert _outputs() == _outputs()
-    assert main(["--findings", str(FINDINGS), "--out-dir", str(STUDY), "--check"]) == 0
+    args = ["--findings", str(FINDINGS), "--out-dir", str(tmp_path)]
+    assert main(args) == 0
+    first = {path.name: path.read_bytes() for path in tmp_path.iterdir()}
+    for path in tmp_path.iterdir():
+        path.unlink()
+    assert main(args) == 0
+    assert {path.name: path.read_bytes() for path in tmp_path.iterdir()} == first
+
+
+def test_check_passes_with_labels_and_fails_on_structural_changes(tmp_path: Path):
+    assert main(["--findings", str(FINDINGS), "--out-dir", str(tmp_path)]) == 0
+    args = ["--findings", str(FINDINGS), "--out-dir", str(tmp_path), "--check"]
+    _label_one_cell(tmp_path / "human-review-r1.csv")
+    _label_one_cell(tmp_path / "human-review-matrix.csv", row_index=4)
+    assert main(args) == 0
+    with (tmp_path / "human-review-matrix.csv").open(newline="", encoding="utf-8") as handle:
+        assert summarize_rows(csv.DictReader(handle))["rows_completed"] == 1
+
+    original = (tmp_path / "human-review-r1.csv").read_text(encoding="utf-8")
+    lines = original.splitlines(keepends=True)
+    broken_cases = {
+        "row order": "".join([lines[0], lines[2], lines[1], *lines[3:]]),
+        "unknown label": original.replace(",present,", ",presnt,", 1),
+        "pending with a pinpoint": original.replace(",pending,,,,", ",pending,,,p. 9,", 1),
+        "missing row": "".join(lines[:-1]),
+    }
+    for case, content in broken_cases.items():
+        (tmp_path / "human-review-r1.csv").write_text(content, encoding="utf-8")
+        assert main(args) == 1, case
+    (tmp_path / "human-review-r1.csv").write_text(original, encoding="utf-8")
+    assert main(args) == 0
+
+    matrix = tmp_path / "human-review-matrix.csv"
+    matrix_text = matrix.read_text(encoding="utf-8")
+    matrix.write_text(matrix_text.replace(",not_flagged,", ",flagged,", 1), encoding="utf-8")
+    assert main(args) == 1
+
+
+def test_adding_a_second_reviewer_keeps_the_first(tmp_path: Path):
+    base = ["--findings", str(FINDINGS), "--out-dir", str(tmp_path)]
+    assert main(base) == 0
+    first_record = json.loads((tmp_path / SHEETS_RECORD_FILENAME).read_text(encoding="utf-8"))
+    _label_one_cell(tmp_path / "human-review-r1.csv")
+    labelled = (tmp_path / "human-review-r1.csv").read_text(encoding="utf-8")
+
+    for reviewers in (["--reviewer", "r2"], ["--reviewer", "r1", "--reviewer", "r2"]):
+        assert main([*base, *reviewers]) == 0
+        assert (tmp_path / "human-review-r1.csv").read_text(encoding="utf-8") == labelled
+        record = json.loads((tmp_path / SHEETS_RECORD_FILENAME).read_text(encoding="utf-8"))
+        assert [sheet["reviewer_id"] for sheet in record["sheets"]] == ["r1", "r2"]
+        assert record["sheets"][0] == first_record["sheets"][0]
+        assert {row["human_label"] for row in _rows((tmp_path / "human-review-r2.csv").read_text())} == {
+            "pending"
+        }
+        assert main([*base, "--check"]) == 0
+
+
+def test_resolve_run_keeps_recorded_reviewers_and_seed():
+    record = {"seed": 7, "sheets": [{"reviewer_id": "r1"}, {"reviewer_id": "r2"}]}
+
+    assert resolve_run(None, None, None) == (["r1"], DEFAULT_SEED)
+    assert resolve_run(record, None, None) == (["r1", "r2"], 7)
+    assert resolve_run(record, ["r3", "r1"], None) == (["r1", "r2", "r3"], 7)
+    assert resolve_run(record, None, 9) == (["r1", "r2"], 9)
 
 
 def test_every_sheet_has_150_pending_rows():
@@ -177,35 +267,45 @@ def test_committed_summary_matches_the_committed_matrix():
 
     assert committed == recomputed
     assert committed["rows_total"] == 150
-    assert committed["rows_completed"] == 0
-    assert committed["publication_ready"] is False
 
 
-def test_refuses_to_overwrite_review_content(tmp_path: Path):
+def test_keeps_labelled_sheets_and_refuses_to_reshape_them(tmp_path: Path):
     outputs = _outputs()
     write_review_sheets(outputs, tmp_path)
     sheet = tmp_path / "human-review-r1.csv"
-    sheet.write_text(sheet.read_text(encoding="utf-8").replace(",pending,", ",present,", 1), encoding="utf-8")
+    _label_one_cell(sheet)
 
-    with pytest.raises(ReviewContentError):
-        write_review_sheets(outputs, tmp_path)
-    assert main(["--findings", str(FINDINGS), "--out-dir", str(tmp_path)]) == 3
+    # Same cells and row order: the labelled sheet is kept, the rest is rewritten.
+    written = write_review_sheets(outputs, tmp_path)
+    assert sheet not in written
     assert ",present," in sheet.read_text(encoding="utf-8")
 
-    assert main(["--findings", str(FINDINGS), "--out-dir", str(tmp_path), "--force"]) == 0
+    # A new seed would reorder the labelled sheet: refused, nothing written.
+    reordered = _outputs(seed=DEFAULT_SEED + 1)
+    with pytest.raises(ReviewContentError):
+        write_review_sheets(reordered, tmp_path)
+    args = ["--findings", str(FINDINGS), "--out-dir", str(tmp_path), "--seed", str(DEFAULT_SEED + 1)]
+    assert main(args) == 3
+    assert ",present," in sheet.read_text(encoding="utf-8")
+
+    assert main([*args, "--force"]) == 0
     assert ",present," not in sheet.read_text(encoding="utf-8")
 
 
-def test_refuses_to_overwrite_a_filled_note(tmp_path: Path):
-    outputs = _outputs()
-    write_review_sheets(outputs, tmp_path)
+def test_refuses_to_change_detector_columns_of_a_matrix_with_notes(tmp_path: Path):
+    findings = _findings()
+    write_review_sheets(_outputs(findings), tmp_path)
     matrix = tmp_path / "human-review-matrix.csv"
     lines = matrix.read_text(encoding="utf-8").splitlines(keepends=True)
     lines[1] = lines[1].rstrip("\n") + "note\n"
     matrix.write_text("".join(lines), encoding="utf-8")
 
+    no_flags = copy.deepcopy(findings)
+    for result in no_flags["results"]:
+        result["findings"] = []
     with pytest.raises(ReviewContentError):
-        write_review_sheets(outputs, tmp_path)
+        write_review_sheets(_outputs(no_flags), tmp_path)
+    assert matrix.read_text(encoding="utf-8").splitlines()[1].endswith("note")
 
 
 def test_cli_writes_then_checks_clean(tmp_path: Path):
