@@ -27,6 +27,8 @@ This plan contains no per-cell or per-document detector outcomes. The reviewer c
 | Codebook | `codebook.md` as adopted in the pre-registration commit |
 | Detector | `STUDY_RULES` and the matching code in `src/micar_linter/batch.py`; generating commit: [SHA, see step 0.4] |
 
+`micar-review-summary` reads the generating commit from the Detector row once it reads `generating commit: <SHA>`, and records it in `human-review-summary.json`; `micar-review-render` refuses until it is recorded.
+
 No change to `STUDY_RULES`, to the matching functions in `batch.py`, or to `document_loader.py` may enter the analysis between the pre-registration commit and the computation of results. `findings-pseudonymous.json` and `findings-pseudonymous.csv` are not edited.
 
 ## 3. Prerequisites before labelling (Phase 0)
@@ -120,7 +122,7 @@ All intervals are two-sided 95%.
 - **S3 and S4:** `uncertain` counted as `missing`, then as `present`, to bound the result.
 - **S5:** the stricter readings recorded in notes under `codebook.md` P4 and the [OJ check] items (for example Art. 6(6) element (iii), or the business address under Part A item 8), where the notes allow it.
 - **Inter-rater agreement, if double-reviewed:** raw agreement; Cohen's kappa on present/missing and on all labels; PABAK or Gwet's AC1. State which cells were double-reviewed.
-- Results are computed by tooling from the committed label files and rendered from its JSON output; no figure is typed by hand.
+- Results are computed by tooling from the committed label files (`micar-review-summary`, which writes `human-review-summary.json`, schema v2) and rendered from its JSON output (`micar-review-render`); no figure is typed by hand. Per-document and per-offeror counts go only to the file named by `--internal-out`, which git ignores.
 
 ## 11. Reporting rules
 
@@ -130,7 +132,7 @@ All intervals are two-sided 95%.
 - **Never** describe the result as "accuracy", "validated", a detection rate for MiCAR violations, a compliance rate or a prevalence estimate. This section governs public wording: `review-protocol.md:90` ("supports reporting detector validation") and the study README heading "Validate against human labels" describe the procedure, not a result.
 - **Disclosures with every figure:** reviewer = tool author; partial blinding; single-reviewed (unless a second reviewer took part); in-sample (unless step 0.5 rules it out); convenience sample of 10 documents.
 
-**Wording templates** (from the study plan, section 3.4; fill only from the computed JSON):
+**Wording templates** (from the study plan, section 3.4; fill only from the computed JSON, which `micar-review-render` does):
 
 - Study summary: "Precision X% (95% CI a to b, document-clustered) and recall Y% (c to d) on N evaluable of 150 document-rule cells (10 public white papers from ESMA's interim register × 15 rules; WP-007 excluded from the primary analysis under a rule fixed before labelling but after the detector output (post-hoc; see S1); M excluded as uncertain, not applicable or extraction failure), against [the tool author's partially blinded labels, single-reviewed | two lawyers' labels, Cohen's κ = k, adjudicated]. [In-sample] pilot on a convenience sample; not a prevalence or compliance finding."
   - The study plan's wording says "excluded ... as pre-registered". This draft replaces it, because section 5 discloses the exclusion as post-hoc and "as pre-registered" alone suggests the rule came before the detector output. [ ] adopt.
