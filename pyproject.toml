@@ -48,6 +48,7 @@ micar-review-sheets = "micar_linter.review_sheets:main"
 micar-study-verify-cache = "micar_linter.study_cache:main"
 micar-review-workbook = "micar_linter.review_workbook:main"
 micar-review-merge = "micar_linter.review_merge:main"
+micar-review-render = "micar_linter.review_render:main"
 
 [project.urls]
 Homepage = "https://github.com/sebastianfoerste/micar-whitepaper-linter"
