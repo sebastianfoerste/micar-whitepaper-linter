@@ -1,6 +1,7 @@
 """Review workbook and merge tool.
 
-Every label in this file is synthetic and lives in a copy of the study directory under tmp_path.
+Every label in this file is synthetic and lives in a study directory that the generator builds
+under tmp_path, so the tests do not depend on the committed labelling progress.
 The autouse fixture checks that no test changes a committed study file.
 """
 
@@ -18,7 +19,7 @@ from pathlib import Path
 import openpyxl
 import pytest
 
-from micar_linter import review_merge, review_sheets, review_workbook
+from micar_linter import review_merge, review_sheets, review_validation, review_workbook
 from micar_linter.review_merge import (
     ADJUDICATION_FIELDS,
     EXIT_ADJUDICATION,
@@ -27,12 +28,19 @@ from micar_linter.review_merge import (
     EXIT_OVERWRITE,
     EXIT_REFUSED,
     EXIT_USAGE,
+    SUMMARY_FILENAME,
     _ranges,
     load_study,
     read_sheet,
 )
 from micar_linter.review_merge import main as merge_main
-from micar_linter.review_sheets import CELL_FIELDS, DETECTOR_FIELDS, REVIEW_FIELDS
+from micar_linter.review_sheets import (
+    CELL_FIELDS,
+    DETECTOR_FIELDS,
+    MATRIX_FILENAME,
+    REVIEW_FIELDS,
+    read_sheets_record,
+)
 from micar_linter.review_validation import LABEL_ORDER, LABEL_REQUIRED_FIELDS, summarize_rows
 from micar_linter.review_workbook import (
     CHECK_COLUMN,
@@ -45,13 +53,7 @@ from micar_linter.review_workbook import main as workbook_main
 
 REPO = Path(__file__).resolve().parents[1]
 STUDY = REPO / "studies" / "2026-07-title-ii-annex-i-whitepaper-study"
-STUDY_FILES = (
-    "findings-pseudonymous.json",
-    "human-review-sheets.json",
-    "human-review-r1.csv",
-    "human-review-matrix.csv",
-    "human-review-summary.json",
-)
+FINDINGS_FILE = "findings-pseudonymous.json"
 TODAY = date(2026, 10, 14)
 REVIEW_DATE = "2026-07-20"
 FINAL_LABELS = [label for label in LABEL_ORDER if label != "pending"]
@@ -80,10 +82,28 @@ def fixed_today(monkeypatch):
 
 @pytest.fixture
 def study_dir(tmp_path: Path) -> Path:
+    """A pending copy of the study for reviewer r1, whatever the committed labelling progress.
+
+    Only the findings file is copied. The sheets, the matrix and the generation record come from
+    the generator with the committed seed, and the summary from micar-review-summary, so the
+    committed labels (once they exist) never reach these tests. The r1 sheet and the matrix must
+    hash to the values recorded in the committed human-review-sheets.json.
+    """
     target = tmp_path / "study"
     target.mkdir()
-    for name in STUDY_FILES:
-        shutil.copy2(STUDY / name, target / name)
+    shutil.copy2(STUDY / FINDINGS_FILE, target / FINDINGS_FILE)
+    record = read_sheets_record(STUDY)
+    assert record is not None
+    outputs = review_sheets.generate_review_sheets(
+        target / FINDINGS_FILE, reviewers=("r1",), seed=int(record["seed"])
+    )
+    recorded = {sheet["file"]: sheet["sha256"] for sheet in record["sheets"]}
+    recorded[record["matrix"]["file"]] = record["matrix"]["sha256"]
+    for name in ("human-review-r1.csv", MATRIX_FILENAME):
+        assert hashlib.sha256(outputs[name].encode("utf-8")).hexdigest() == recorded[name], name
+    review_sheets.write_review_sheets(outputs, target)
+    summary = ["--matrix", str(target / MATRIX_FILENAME), "--out", str(target / SUMMARY_FILENAME)]
+    assert review_validation.main(summary) == 0
     return target
 
 
@@ -582,7 +602,9 @@ def test_two_reviewers_who_agree_need_no_adjudication(study_dir: Path):
 
 
 def test_committed_study_passes_the_identity_checks():
-    # Independent of labelling progress: the committed sheets are the generator's sheets.
+    # The only test that reads the committed sheets. It holds whatever the labelling progress:
+    # load_study regenerates the sheets with the committed reviewers and seed, requires the
+    # committed generation record byte for byte, and read_sheet ignores the review columns.
     study = load_study(STUDY)
     assert study.reviewers
     for reviewer in study.reviewers:
