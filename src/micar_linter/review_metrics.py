@@ -57,7 +57,10 @@ class Proportion:
     numerator: Callable[[Counts], int]
     denominator: Callable[[Counts], int]
     denominator_label: str
+    # Why the denominator is 0 in a set whose cells all carry a final label, and in a set that
+    # still has pending cells. The second must not read like a finding: nothing is labelled yet.
     empty_reason: str
+    pending_reason: str
 
 
 PROPORTIONS: tuple[Proportion, ...] = (
@@ -67,6 +70,7 @@ PROPORTIONS: tuple[Proportion, ...] = (
         lambda c: c.tp + c.fp,
         "TP + FP",
         "no detector-flagged cell is labelled present or missing",
+        "no detector-flagged cell is labelled present or missing yet",
     ),
     Proportion(
         "recall",
@@ -74,6 +78,7 @@ PROPORTIONS: tuple[Proportion, ...] = (
         lambda c: c.tp + c.fn,
         "TP + FN",
         "no cell is labelled missing (the reviewer identified no gap)",
+        "no cell is labelled missing yet",
     ),
     Proportion(
         "specificity",
@@ -81,16 +86,30 @@ PROPORTIONS: tuple[Proportion, ...] = (
         lambda c: c.tn + c.fp,
         "TN + FP",
         "no cell is labelled present",
+        "no cell is labelled present yet",
     ),
 )
 PROPORTION_NAMES: tuple[str, ...] = tuple(proportion.name for proportion in PROPORTIONS)
 
 
-def undefined_reason(proportion: Proportion, counts: Counts) -> str | None:
-    """Why ``proportion`` is undefined for ``counts``, or None if it is defined."""
-    if proportion.denominator(counts) == 0:
-        return f"{proportion.denominator_label} = 0: {proportion.empty_reason}"
-    return None
+def undefined_reason(
+    proportion: Proportion, counts: Counts, *, pending: int = 0, cells: int | None = None
+) -> str | None:
+    """Why ``proportion`` is undefined for ``counts``, or None if it is defined.
+
+    ``pending`` is the number of cells of the set that still lack a final label, and ``cells`` the
+    size of the set. They only change the wording: while cells are pending, a zero denominator
+    says that nothing is labelled yet, not that the reviewer found nothing.
+    """
+    if proportion.denominator(counts) != 0:
+        return None
+    if pending:
+        of_cells = f" of {cells}" if cells is not None else ""
+        return (
+            f"{proportion.denominator_label} = 0 so far: {proportion.pending_reason} "
+            f"({pending}{of_cells} cells in this set pending)"
+        )
+    return f"{proportion.denominator_label} = 0: {proportion.empty_reason}"
 
 
 def wilson_interval(successes: int, n: int, z: float = WILSON_Z) -> tuple[float, float] | None:
@@ -155,6 +174,8 @@ def cluster_bootstrap(
     replicates: int,
     seed: int,
     level: float = CONFIDENCE_LEVEL,
+    pending: int = 0,
+    cells: int | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Percentile bootstrap of every proportion in ``PROPORTIONS`` over ``clusters``.
 
@@ -163,7 +184,7 @@ def cluster_bootstrap(
     replacement (``randrange``) and pools their counts; all proportions are computed from the same
     draws. A replicate whose denominator is 0 is dropped for that proportion and counted. A
     proportion whose denominator is 0 over all clusters is not resampled at all, because every
-    replicate would be dropped.
+    replicate would be dropped; ``pending`` and ``cells`` word its reason as in ``undefined_reason``.
     """
     if replicates < 1:
         raise ValueError("replicates must be at least 1")
@@ -181,7 +202,11 @@ def cluster_bootstrap(
             "seed": seed,
             "undefined_reason": None,
         }
-        reason = "no clusters in the set" if not clusters else undefined_reason(proportion, total)
+        reason = (
+            "no clusters in the set"
+            if not clusters
+            else undefined_reason(proportion, total, pending=pending, cells=cells)
+        )
         if reason:
             base["undefined_reason"] = f"point estimate undefined ({reason}); not resampled"
         else:

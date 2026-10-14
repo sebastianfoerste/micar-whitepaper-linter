@@ -15,6 +15,7 @@ from micar_linter.review_validation import (
     StudyContext,
     internal_detail,
     load_context,
+    plan_status,
     summarize_rows,
     summary_json,
 )
@@ -85,9 +86,12 @@ def test_primary_excludes_wp007_and_s1_includes_it():
     assert analyses["S1"]["confusion_matrix"] == {"tp": 7, "fp": 2, "fn": 2, "tn": 4}
     excluded = summary["exclusions"]["primary"]
     assert [item["study_doc_id"] for item in excluded] == ["WP-007"]
-    # Complete: the WP-007 flag count that the analysis plan asks for is reported.
+    # Complete: the WP-007 flag count that the analysis plan asks for is reported, with the total.
     assert excluded[0]["detector_flags"] == 5
-    # Per-rule counts for the primary and the full set, in matrix order.
+    assert excluded[0]["detector_flags_total"] == 9
+    # Per-rule counts for the primary set only, in matrix order. S1 differs from it only by
+    # WP-007, so a second per-rule table would give WP-007's cells; it goes to --internal-out.
+    assert "per_rule" not in analyses["S1"]
     assert [item["rule_id"] for item in analyses["primary"]["per_rule"]] == RULES
     assert analyses["primary"]["per_rule"][0] == {
         "rule_id": "RULE_01",
@@ -113,10 +117,90 @@ def test_no_detector_outcome_while_any_cell_is_pending():
     excluded = summary["exclusions"]["primary"][0]
     assert excluded["detector_flags"] is None
     assert "withheld while any cell is pending" in excluded["detector_flags_reason"]
+    assert excluded["detector_flags_total"] is None
     detail = internal_detail(rows)
     by_doc = {item["study_doc_id"]: item for item in detail["documents"]}
     assert by_doc["WP-007"]["detector_flags"] is None
     assert by_doc["WP-001"]["detector_flags"] == 2
+    assert detail["S1_per_rule"]["documents"] == ["WP-001", "WP-007"]
+    assert [item["rule_id"] for item in detail["S1_per_rule"]["per_rule"]] == RULES
+
+
+def test_undefined_reasons_do_not_read_like_findings_while_cells_are_pending():
+    pending = _summary(_document("WP-001", [(F, "pending"), (N, "pending")] + [(N, "present")] * 3))
+    metrics = pending["analyses"]["primary"]["metrics"]
+    recall = metrics["recall"]["undefined_reason"]
+    assert recall == "TP + FN = 0 so far: no cell is labelled missing yet (2 of 5 cells in this set pending)"
+    assert "identified no gap" not in json.dumps(pending)
+    assert metrics["recall"]["document_cluster_bootstrap"]["undefined_reason"] == (
+        f"point estimate undefined ({recall}); not resampled"
+    )
+    assert metrics["f1"]["undefined_reason"].startswith("2TP + FP + FN = 0 so far")
+    # Complete, and the reviewer found no gap: now the reason may say so.
+    complete = _summary(_document("WP-001", [(N, "present")] * 5))["analyses"]["primary"]["metrics"]
+    assert complete["recall"]["undefined_reason"] == (
+        "TP + FN = 0: no cell is labelled missing (the reviewer identified no gap)"
+    )
+
+
+def test_f1_is_undefined_only_when_its_denominator_is_zero():
+    # [hand] F1 = 2TP / (2TP + FP + FN). TP = 0 with FP = 1 and FN = 1: 0 / 2 = 0, although
+    # precision and recall are both 0 and their harmonic mean is 0/0.
+    zero = _summary(_document("WP-001", [(F, "present"), (N, "missing"), (N, "present"), (N, "present"), (N, "present")]))
+    f1 = zero["analyses"]["primary"]["metrics"]["f1"]
+    assert (f1["estimate"], f1["numerator"], f1["denominator"], f1["undefined_reason"]) == (0.0, 0, 2, None)
+    # TP = FP = 0 and FN = 1: precision is undefined, F1 is 0 / 1 = 0.
+    no_flags = _summary(_document("WP-001", [(N, "missing")] + [(N, "present")] * 4))
+    metrics = no_flags["analyses"]["primary"]["metrics"]
+    assert metrics["precision"]["estimate"] is None
+    assert metrics["f1"]["estimate"] == 0.0
+    # [hand] TP = 2, FP = 1, FN = 3: 4 / 8 = 0.5, the harmonic mean of 2/3 and 2/5.
+    rows = _document("WP-001", [(F, "missing"), (F, "missing"), (F, "present"), (N, "missing"), (N, "missing")])
+    rows += _document("WP-002", [(N, "missing"), (N, "present"), (N, "present"), (N, "present"), (N, "present")])
+    assert _summary(rows)["analyses"]["primary"]["metrics"]["f1"]["estimate"] == 0.5
+
+
+BANNER_DRAFT = """# Analysis plan
+
+> **DRAFT, not adopted; the reviewer signs and merges this as the pre-registration.**
+>
+> - Adopted by: [reviewer name], on [YYYY-MM-DD]
+> - Pre-registration commit: [SHA]
+"""
+
+
+def test_plan_status_is_read_from_the_banner():
+    draft = plan_status(BANNER_DRAFT)
+    assert (draft["status"], draft["adopted_on"], draft["preregistration_commit"]) == ("draft", None, None)
+    adopted_text = (
+        "# Analysis plan\n\n> - Adopted by: A. Reviewer, on 2026-11-02\n> - Pre-registration commit: [SHA]\n"
+    )
+    adopted = plan_status(adopted_text)
+    assert (adopted["status"], adopted["adopted_on"], adopted["preregistration_commit"]) == (
+        "adopted",
+        "2026-11-02",
+        None,
+    )
+    named = plan_status(adopted_text.replace("[SHA]", "`ABC1234`"))
+    assert named["preregistration_commit"] == "abc1234"
+    contradictory = plan_status(BANNER_DRAFT.replace("[reviewer name], on [YYYY-MM-DD]", "A. Reviewer, on 2026-11-02"))
+    assert contradictory["status"] == "unknown"
+    assert "is filled in" in contradictory["reason"]
+    assert plan_status("# Analysis plan\n")["status"] == "unknown"
+    assert plan_status(None)["reason"] == "no study directory was read"
+
+    # The status reaches the summary's definitions and the WP-007 ground; nothing is hard-coded.
+    rows = _document("WP-001", MIXED) + _document("WP-007", MIXED)
+    for plan, definitions, ground in (
+        (draft, "(DRAFT, not adopted)", "(DRAFT, not adopted)"),
+        (named, "(adopted on 2026-11-02; pre-registration commit abc1234)", "(adopted on 2026-11-02)"),
+        (plan_status(None), "(adoption status unknown: no study directory was read)", "(adoption status unknown)"),
+    ):
+        summary = _summary(rows, StudyContext(plan=plan))
+        assert summary["settings"]["definitions"] == f"analysis-plan.md sections 7 to 10 {definitions}"
+        assert summary["settings"]["analysis_plan"] == plan
+        assert summary["exclusions"]["primary"][0]["ground"] == f"analysis-plan.md section 5 {ground}"
+        assert "DRAFT" not in summary["metric_note"]
 
 
 def test_calibration_document_is_excluded_from_every_set():
@@ -128,6 +212,7 @@ def test_calibration_document_is_excluded_from_every_set():
     )
     summary = _summary(rows)
     assert summary["exclusions"]["calibration_document"]["study_doc_id"] == "WP-012"
+    assert "--internal-out" in summary["exclusions"]["calibration_document"]["note"]
     assert summary["analyses"]["primary"]["documents"] == ["WP-001", "WP-004"]
     assert summary["analyses"]["S1"]["documents"] == ["WP-001", "WP-004", "WP-007"]
     assert summary["analyses"]["primary"]["cells"] == 10
@@ -343,8 +428,10 @@ def test_cli_exit_codes_and_internal_output(tmp_path: Path, capsys):
     summary = json.loads(out.read_text(encoding="utf-8"))
     assert summary["rows_pending"] == 1
     assert "WP-001" not in json.dumps(summary["analyses"]["primary"]["per_rule"])
+    assert "per_rule" not in summary["analyses"]["S1"]
     detail = json.loads(internal.read_text(encoding="utf-8"))
     assert [item["study_doc_id"] for item in detail["documents"]] == ["WP-001", "WP-002"]
+    assert detail["S1_per_rule"]["documents"] == ["WP-001", "WP-002"]
     assert detail["offerors"] is None
 
     matrix.write_text(matrix.read_text(encoding="utf-8").replace("pending", "maybe"), encoding="utf-8")

@@ -208,3 +208,42 @@ def test_internal_detail_stays_out_of_git():
     committed = json.dumps(_committed(), ensure_ascii=False).casefold()
     for entry in manifest["entries"]:
         assert entry["offeror_or_issuer"].casefold() not in committed
+
+
+def test_no_two_published_per_rule_tables_reveal_one_document():
+    # Two per-rule tables over document sets that differ by one document give that document's
+    # label and detector outcome for every rule (S1 and the primary set differ only by WP-007).
+    # The summary publishes per-rule counts for one set; any further per-rule table must differ
+    # from every other by more than one document.
+    tables = []
+
+    def walk(value):
+        if isinstance(value, dict):
+            if "per_rule" in value:
+                assert "documents" in value, "a per-rule table must name its document set"
+                tables.append(frozenset(value["documents"]))
+            for item in value.values():
+                walk(item)
+        elif isinstance(value, list):
+            for item in value:
+                walk(item)
+
+    walk(_committed())
+    assert len(tables) == 1, f"{len(tables)} published per-rule tables; the summary publishes one"
+    for index, first in enumerate(tables):
+        for second in tables[index + 1 :]:
+            assert len(first ^ second) > 1, sorted(first ^ second)
+    assert "per_rule" not in _committed()["analyses"]["S1"]
+
+
+def test_recorded_plan_status_matches_the_banner():
+    plan = _text("analysis-plan.md")
+    recorded = _committed()["settings"]["analysis_plan"]
+    if re.search(r"^>\s*\*\*DRAFT, not adopted", plan, re.MULTILINE):
+        assert recorded["status"] == "draft"
+        assert "(DRAFT, not adopted)" in _committed()["settings"]["definitions"]
+    else:
+        assert recorded["status"] == "adopted", (
+            "analysis-plan.md no longer says DRAFT; fill its 'Adopted by' line and rerun micar-review-summary"
+        )
+        assert recorded["adopted_on"] in _committed()["settings"]["definitions"]

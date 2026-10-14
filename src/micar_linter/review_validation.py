@@ -2,14 +2,14 @@
 
 ``micar-review-summary`` reads the adjudication matrix (the final labels next to the detector
 outcomes) and writes ``human-review-summary.json`` in schema v2. The definitions follow the
-study's analysis plan (``analysis-plan.md``, sections 7 to 10), which is a DRAFT until the reviewer
-adopts it:
+study's analysis plan (``analysis-plan.md``, sections 7 to 10); the summary records whether the
+plan's banner still marks it as a draft or names its adoption (``settings.analysis_plan``):
 
 - analysis sets: the primary set (every processed document except WP-007 and an in-sample
   calibration document) and the full set S1 (with WP-007);
 - per set: label counts, TP, FP, FN and TN, precision, recall and specificity, each with a Wilson
   and a Clopper-Pearson interval, a seeded document-cluster bootstrap and the headline interval,
-  and F1; per-rule counts for the primary and the full set;
+  and F1; per-rule counts for the primary set only;
 - sensitivity analyses S2 (offeror-cluster bootstrap, and one document per offeror), S3 and S4
   (``uncertain`` counted as ``missing``, then as ``present``); S5 is recorded as not computed;
 - agreement between reviewers when two or more are recorded;
@@ -21,10 +21,16 @@ The study directory (default: the matrix's directory) supplies the context:
 ``source-manifest.json`` and ``analysis-plan.md``. A context file that is absent leaves the parts
 that need it undefined, with the reason; one that contradicts the matrix stops the run.
 
-Per-document and per-offeror counts go only to ``--internal-out``, because the analysis plan keeps
-them unpublished (section 10); git ignores ``human-review-internal*.json`` under ``studies/``.
-While any cell is pending, the summary carries no detector outcome beyond what the labelled cells
-imply, so it stays blind for a reviewer who opens it.
+The per-document and per-offeror count tables, and S1's per-rule table, go only to
+``--internal-out``, because the analysis plan keeps per-document counts unpublished (section 10);
+git ignores ``human-review-internal*.json`` under ``studies/``. S1's per-rule table is withheld
+because S1 and the primary set differ only by WP-007: two per-rule tables would give WP-007's
+label and detector outcome for every rule. The sets the plan asks to publish still imply some
+document-level counts: S1 minus the primary set gives WP-007's counts, the primary set minus
+S2(b) the pooled counts of the documents S2(b) drops, and the top-level label counts minus S1's
+the label counts of an in-sample calibration document. While any cell is pending, the summary
+carries no detector outcome beyond what the labelled cells imply, so it stays blind for a
+reviewer who opens it.
 
 The tool never fills, infers or changes a label.
 
@@ -120,11 +126,24 @@ _PLAN_COMMIT = re.compile(
     re.MULTILINE,
 )
 _DOC_NUMBER = re.compile(r"(\d+)")
+# The banner of analysis-plan.md: "> **DRAFT, not adopted; ...**" until adoption, then
+# "> - Adopted by: <name>, on <YYYY-MM-DD>" and "> - Pre-registration commit: <SHA>".
+_PLAN_DRAFT = re.compile(r"^>\s*\*\*DRAFT, not adopted\b", re.MULTILINE)
+_PLAN_ADOPTED = re.compile(
+    r"^>\s*-\s*Adopted by:\s*(?P<who>[^\n]*?),\s*on\s*(?P<date>[^\s]+)\s*$", re.MULTILINE
+)
+_PLAN_PREREGISTRATION = re.compile(
+    r"^>\s*-\s*Pre-registration commit:\s*`?(?P<sha>[^`\s]+)`?\s*$", re.MULTILINE
+)
 
 METRIC_NOTE = (
     "Precision, recall and specificity use only the human labels 'present' and 'missing'. Uncertain, "
     "extraction-failure, not-applicable and pending cells are counted and excluded. Definitions: "
-    "analysis-plan.md, sections 7 to 10 (DRAFT, not adopted)."
+    "analysis-plan.md, sections 7 to 10; settings.analysis_plan records whether the plan is adopted."
+)
+F1_DEFINITION = (
+    "2TP / (2TP + FP + FN), which equals the harmonic mean of precision and recall where both are "
+    "defined and positive; undefined only when 2TP + FP + FN = 0"
 )
 HEADLINE_RULE = (
     "The headline interval is the wider of the Wilson interval and the document-cluster bootstrap "
@@ -160,6 +179,7 @@ class StudyContext:
     detector: Mapping[str, Any] = field(default_factory=lambda: _detector_identity())
     offerors: Mapping[str, tuple[str, str]] | None = None
     offerors_reason: str | None = "no study directory was read"
+    plan: Mapping[str, Any] = field(default_factory=lambda: plan_status(None))
 
 
 def parse_rows(rows: Iterable[Mapping[str, str]]) -> list[Cell]:
@@ -209,10 +229,7 @@ def summarize_rows(
     completed = total - label_counts[PENDING_LABEL]
     complete = total > 0 and label_counts[PENDING_LABEL] == 0
     documents = sorted_documents(cells)
-    calibration = calibration_document(cells)
-    excluded = [doc for doc in PRIMARY_EXCLUSIONS if doc in documents and doc != calibration]
-    full = [cell for cell in cells if cell.doc != calibration]
-    primary = [cell for cell in full if cell.doc not in excluded]
+    calibration, excluded, full, primary = analysis_sets(cells)
     offerors, offerors_reason = _offeror_map(context, cells)
     bootstrap = {"replicates": replicates, "seed": seed}
 
@@ -224,11 +241,13 @@ def summarize_rows(
             per_rule=True,
             **bootstrap,
         ),
+        # No per-rule table for S1: it differs from the primary set only by WP-007, so the two
+        # tables together would give WP-007's label and detector outcome per rule. S1's per-rule
+        # table goes to --internal-out.
         "S1": analysis_block(
             "S1, full set: every processed document, including WP-007, except an in-sample "
             "calibration document.",
             full,
-            per_rule=True,
             **bootstrap,
         ),
     }
@@ -269,9 +288,11 @@ def summarize_rows(
         "reviewers": list(context.reviewers) if context.reviewers is not None else None,
         "metric_note": METRIC_NOTE,
         "detector": dict(context.detector),
-        "settings": _settings(replicates, seed),
+        "settings": _settings(replicates, seed, context.plan),
         "exclusions": {
-            "primary": [_excluded_document(doc, cells, complete=complete) for doc in excluded],
+            "primary": [
+                _excluded_document(doc, cells, complete=complete, plan=context.plan) for doc in excluded
+            ],
             "calibration_document": _calibration_record(calibration, cells),
         },
         "analyses": analyses,
@@ -312,8 +333,11 @@ def analysis_block(
     """Counts, point estimates, intervals and the headline interval for one analysis set."""
     documents = sorted_documents(cells)
     counts, label_counts = tally(cells, uncertain_as)
+    pending = label_counts[PENDING_LABEL]
     clusters = [tally(_cells_of(cells, [doc]), uncertain_as)[0] for doc in documents]
-    resampled = cluster_bootstrap(clusters, replicates=replicates, seed=seed)
+    resampled = cluster_bootstrap(
+        clusters, replicates=replicates, seed=seed, pending=pending, cells=len(cells)
+    )
     block: dict[str, Any] = {
         "description": description,
         "documents": documents,
@@ -326,14 +350,26 @@ def analysis_block(
             "label_counts": label_counts,
             "evaluable_cells": counts.tp + counts.fp + counts.fn + counts.tn,
             "excluded_cells": sum(label_counts[label] for label in EXCLUDED_LABELS),
-            "pending_cells": label_counts[PENDING_LABEL],
+            "pending_cells": pending,
             "confusion_matrix": counts.as_dict(),
-            "metrics": _metrics(counts, resampled, "document_cluster_bootstrap"),
+            "metrics": _metrics(
+                counts, resampled, "document_cluster_bootstrap", pending=pending, cells=len(cells)
+            ),
         }
     )
     if per_rule:
         block["per_rule"] = _per_rule(cells)
     return block
+
+
+def analysis_sets(cells: Sequence[Cell]) -> tuple[str | None, list[str], list[Cell], list[Cell]]:
+    """The calibration document, the primary exclusions, and the cells of S1 and of the primary set."""
+    calibration = calibration_document(cells)
+    documents = sorted_documents(cells)
+    excluded = [doc for doc in PRIMARY_EXCLUSIONS if doc in documents and doc != calibration]
+    full = [cell for cell in cells if cell.doc != calibration]
+    primary = [cell for cell in full if cell.doc not in excluded]
+    return calibration, excluded, full, primary
 
 
 def calibration_document(cells: Sequence[Cell]) -> str | None:
@@ -364,21 +400,25 @@ def sorted_documents(cells: Iterable[Cell]) -> list[str]:
 
 
 def internal_detail(rows: Iterable[Mapping[str, str]], context: StudyContext | None = None) -> dict[str, Any]:
-    """Per-document and per-offeror counts for internal quality checks; never published."""
+    """Per-document, per-offeror and S1 per-rule counts for internal quality checks; never published."""
     context = context or StudyContext()
     cells = parse_rows(rows)
     offerors, offerors_reason = _offeror_map(context, cells)
     documents = sorted_documents(cells)
+    calibration, _, full, _ = analysis_sets(cells)
     detail: dict[str, Any] = {
         "schema_version": INTERNAL_SCHEMA,
         "notice": (
             "Internal quality check (analysis-plan.md section 10). Per-document and per-offeror "
             "counts are not published, or only without WP identifiers, unless the conflicts check "
             "and the legal review under review-protocol.md are complete and the reviewer decides "
-            "otherwise. Do not commit this file."
+            "otherwise. S1's per-rule counts are kept here because, next to the published per-rule "
+            "counts of the primary set, they would give WP-007's label and detector outcome per "
+            "rule. Do not commit this file."
         ),
-        "calibration_document": calibration_document(cells),
+        "calibration_document": calibration,
         "documents": [_count_record(_cells_of(cells, [doc]), {"study_doc_id": doc}) for doc in documents],
+        "S1_per_rule": {"documents": sorted_documents(full), "per_rule": _per_rule(full)},
     }
     if offerors is None:
         detail["offerors"] = None
@@ -436,6 +476,12 @@ def load_context(study_dir: Path) -> StudyContext:
         }
     else:
         offerors_reason = f"no {SOURCE_MANIFEST_FILENAME} in the study directory, so offerors are unknown"
+    plan_path = study_dir / ANALYSIS_PLAN_FILENAME
+    plan = (
+        plan_status(plan_path.read_text(encoding="utf-8"))
+        if plan_path.exists()
+        else plan_status(None, f"no {ANALYSIS_PLAN_FILENAME} in the study directory")
+    )
     return StudyContext(
         reviewers=reviewers,
         reviewers_reason=reviewers_reason,
@@ -443,7 +489,70 @@ def load_context(study_dir: Path) -> StudyContext:
         detector=detector,
         offerors=offerors,
         offerors_reason=offerors_reason,
+        plan=plan,
     )
+
+
+def plan_status(text: str | None, reason: str = "no study directory was read") -> dict[str, Any]:
+    """Whether ``analysis-plan.md`` is still a draft or names its adoption, read from its banner.
+
+    ``draft`` while the banner says "DRAFT, not adopted" and the "Adopted by" line is still a
+    placeholder; ``adopted`` once the banner is gone and that line names a reviewer and an ISO date,
+    with the pre-registration commit when the banner names one; otherwise ``unknown`` with the reason.
+    """
+    record: dict[str, Any] = {
+        "file": ANALYSIS_PLAN_FILENAME,
+        "status": "unknown",
+        "adopted_on": None,
+        "preregistration_commit": None,
+        "reason": reason,
+    }
+    if text is None:
+        return record
+    draft = bool(_PLAN_DRAFT.search(text))
+    adopted = _PLAN_ADOPTED.search(text)
+    filled = (
+        adopted is not None
+        and adopted.group("who").strip() != ""
+        and "[" not in adopted.group("who")
+        and re.fullmatch(r"\d{4}-\d{2}-\d{2}", adopted.group("date")) is not None
+    )
+    banner = f"the banner of {ANALYSIS_PLAN_FILENAME} says 'DRAFT, not adopted'"
+    if draft and not filled:
+        return {**record, "status": "draft", "reason": banner}
+    if draft:
+        return {**record, "reason": f"{banner}, but its 'Adopted by' line is filled in"}
+    if not filled:
+        return {
+            **record,
+            "reason": (
+                f"{ANALYSIS_PLAN_FILENAME} has neither the 'DRAFT, not adopted' banner nor an 'Adopted by' "
+                "line with a reviewer and an ISO date"
+            ),
+        }
+    commit = _PLAN_PREREGISTRATION.search(text)
+    sha = commit.group("sha").lower() if commit else ""
+    return {
+        **record,
+        "status": "adopted",
+        "adopted_on": adopted.group("date"),
+        "preregistration_commit": sha if re.fullmatch(r"[0-9a-f]{7,40}", sha) else None,
+        "reason": None,
+    }
+
+
+def plan_phrase(plan: Mapping[str, Any], *, short: bool = False) -> str:
+    """The plan's status in words, for the summary's definitions and exclusion grounds."""
+    status = plan.get("status")
+    if status == "draft":
+        return "DRAFT, not adopted"
+    if status == "adopted":
+        if short:
+            return f"adopted on {plan['adopted_on']}"
+        commit = plan.get("preregistration_commit")
+        named = f"pre-registration commit {commit}" if commit else "pre-registration commit not yet named"
+        return f"adopted on {plan['adopted_on']}; {named}"
+    return "adoption status unknown" if short else f"adoption status unknown: {plan.get('reason')}"
 
 
 def read_matrix(path: Path) -> list[dict[str, str]]:
@@ -462,14 +571,17 @@ def summary_json(summary: Mapping[str, Any]) -> str:
 
 
 def _metrics(
-    counts: Counts, resampled: Mapping[str, Mapping[str, Any]], bootstrap_key: str
+    counts: Counts,
+    resampled: Mapping[str, Mapping[str, Any]],
+    bootstrap_key: str,
+    *,
+    pending: int = 0,
+    cells: int | None = None,
 ) -> dict[str, Any]:
     metrics: dict[str, Any] = {}
-    estimates: dict[str, float | None] = {}
     for proportion in PROPORTIONS:
-        reason = undefined_reason(proportion, counts)
+        reason = undefined_reason(proportion, counts, pending=pending, cells=cells)
         numerator, denominator = proportion.numerator(counts), proportion.denominator(counts)
-        estimates[proportion.name] = None if reason else numerator / denominator
         wilson = interval_dict(wilson_interval(numerator, denominator), reason, DIGITS)
         bootstrap = _bootstrap_record(resampled[proportion.name])
         metrics[proportion.name] = {
@@ -484,18 +596,30 @@ def _metrics(
             bootstrap_key: bootstrap,
             "headline": _headline(wilson, bootstrap),
         }
-    precision, recall = estimates["precision"], estimates["recall"]
-    if precision is None or recall is None:
-        f1: dict[str, Any] = {"estimate": None, "undefined_reason": "precision or recall is undefined"}
-    elif precision + recall == 0:
-        f1 = {"estimate": None, "undefined_reason": "precision and recall are both 0"}
-    else:
-        f1 = {
-            "estimate": round(2 * precision * recall / (precision + recall), DIGITS),
-            "undefined_reason": None,
-        }
-    metrics["f1"] = f1
+    metrics["f1"] = _f1(counts, pending=pending, cells=cells)
     return metrics
+
+
+def _f1(counts: Counts, *, pending: int = 0, cells: int | None = None) -> dict[str, Any]:
+    """F1 in its closed form (``F1_DEFINITION``): undefined only when its denominator is 0."""
+    numerator, denominator = 2 * counts.tp, 2 * counts.tp + counts.fp + counts.fn
+    reason = None
+    if denominator == 0 and pending:
+        of_cells = f" of {cells}" if cells is not None else ""
+        reason = (
+            "2TP + FP + FN = 0 so far: no cell is labelled missing and no detector-flagged cell is "
+            f"labelled present yet ({pending}{of_cells} cells in this set pending)"
+        )
+    elif denominator == 0:
+        reason = (
+            "2TP + FP + FN = 0: no cell is labelled missing and no detector-flagged cell is labelled present"
+        )
+    return {
+        "estimate": None if reason else round(numerator / denominator, DIGITS),
+        "numerator": numerator,
+        "denominator": denominator,
+        "undefined_reason": reason,
+    }
 
 
 def _bootstrap_record(result: Mapping[str, Any]) -> dict[str, Any]:
@@ -577,12 +701,15 @@ def _offeror_analyses(
         return {key: {"description": text, "undefined_reason": reason} for key, text in descriptions.items()}
     documents = sorted_documents(primary)
     groups = _offeror_groups(documents, offerors)
-    counts, _ = tally(primary)
+    counts, label_counts = tally(primary)
+    pending = label_counts[PENDING_LABEL]
     clusters = [tally(_cells_of(primary, group))[0] for group in groups]
-    resampled = cluster_bootstrap(clusters, replicates=replicates, seed=seed)
+    resampled = cluster_bootstrap(
+        clusters, replicates=replicates, seed=seed, pending=pending, cells=len(primary)
+    )
     s2a_metrics = {}
     for proportion in PROPORTIONS:
-        point = undefined_reason(proportion, counts)
+        point = undefined_reason(proportion, counts, pending=pending, cells=len(primary))
         s2a_metrics[proportion.name] = {
             "estimate": None
             if point
@@ -707,14 +834,16 @@ def _agreement(context: StudyContext, full: Sequence[Cell]) -> dict[str, Any]:
     return {**base, **scope, "status": "computed", "reason": None, "pairs": pairs}
 
 
-def _settings(replicates: int, seed: int) -> dict[str, Any]:
+def _settings(replicates: int, seed: int, plan: Mapping[str, Any]) -> dict[str, Any]:
     return {
-        "definitions": "analysis-plan.md sections 7 to 10 (DRAFT, not adopted)",
+        "definitions": f"analysis-plan.md sections 7 to 10 ({plan_phrase(plan)})",
+        "analysis_plan": dict(plan),
         "evaluable_labels": sorted(EVALUABLE_LABELS, key=LABEL_ORDER.index),
         "excluded_labels": list(EXCLUDED_LABELS),
         "confidence_level": CONFIDENCE_LEVEL,
         "wilson_z": WILSON_Z,
         "clopper_pearson": "exact binomial tails, 0.025 in each tail",
+        "f1": F1_DEFINITION,
         "bootstrap": {
             "replicates": replicates,
             "seed": seed,
@@ -736,16 +865,28 @@ def _settings(replicates: int, seed: int) -> dict[str, Any]:
             "'calibration' (analysis-plan.md section 4); it is excluded from every analysis set"
         ),
         "sensitivity_base": "S2 to S4 vary the primary set",
+        "per_rule_published_for": (
+            "the primary set only; S1's per-rule counts go to --internal-out, because S1 differs from "
+            "the primary set only by WP-007"
+        ),
     }
 
 
-def _excluded_document(doc: str, cells: Sequence[Cell], *, complete: bool) -> dict[str, Any]:
+def _excluded_document(
+    doc: str, cells: Sequence[Cell], *, complete: bool, plan: Mapping[str, Any]
+) -> dict[str, Any]:
+    """An excluded document's cells and, once labelling is complete, its share of the detector's flags.
+
+    ``detector_flags_total`` counts the flags in every cell of the matrix, so the report can say
+    "11 of the detector's 21 flags" (analysis-plan.md section 5).
+    """
     own = _cells_of(cells, [doc])
     return {
         "study_doc_id": doc,
-        "ground": "analysis-plan.md section 5 (draft, not adopted)",
+        "ground": f"analysis-plan.md section 5 ({plan_phrase(plan, short=True)})",
         "cells": len(own),
         "detector_flags": sum(cell.flagged for cell in own) if complete else None,
+        "detector_flags_total": sum(cell.flagged for cell in cells) if complete else None,
         "detector_flags_reason": None if complete else BLIND_WHILE_PENDING,
     }
 
@@ -757,8 +898,9 @@ def _calibration_record(calibration: str | None, cells: Sequence[Cell]) -> dict[
         "study_doc_id": calibration,
         "cells": len(_cells_of(cells, [calibration])),
         "note": (
-            "excluded from every analysis set (analysis-plan.md section 4); its labels are reported "
-            "separately"
+            "excluded from every analysis set (analysis-plan.md section 4). Section 4 asks for its labels "
+            "to be reported separately, while section 10 keeps per-document counts unpublished: its "
+            "counts are only in the --internal-out file until the reviewer decides"
         ),
     }
 

@@ -26,12 +26,14 @@ import pytest
 
 from micar_linter.review_metrics import (
     PROPORTION_NAMES,
+    PROPORTIONS,
     WILSON_Z,
     Counts,
     agreement,
     clopper_pearson_interval,
     cluster_bootstrap,
     quantile_type7,
+    undefined_reason,
     wilson_interval,
 )
 
@@ -68,7 +70,9 @@ def test_clopper_pearson_matches_r_binom_test():
 
 
 def test_boundary_counts():
-    # [R-binom] (0, 30) and (30, 30), printed to 8 decimals; R clips the bounds to [0, 1].
+    # [R-binom] (0, 30) and (30, 30), printed to 8 decimals. statsmodels' recorded arrays clip the
+    # bound at 0 for (0, 30) and at 1 for (30, 30): its notes say that one method's R output fell
+    # outside [0, 1] there, and the file sets those bounds with np.zeros and np.ones.
     assert wilson_interval(0, 30) == pytest.approx((0.0, 0.11351339), abs=1e-7)
     assert wilson_interval(30, 30) == pytest.approx((0.8864866, 1.0), abs=1e-7)
     assert clopper_pearson_interval(0, 30) == pytest.approx((0.0, 0.11570331), abs=1e-7)
@@ -189,6 +193,26 @@ def test_bootstrap_edge_cases():
     )
     with pytest.raises(ValueError):
         cluster_bootstrap([Counts(1)], replicates=0, seed=7)
+    # While cells are pending, the reason says that nothing is labelled yet.
+    waiting = cluster_bootstrap([Counts(), Counts()], replicates=10, seed=7, pending=30, cells=30)
+    assert waiting["recall"]["undefined_reason"] == (
+        "point estimate undefined (TP + FN = 0 so far: no cell is labelled missing yet "
+        "(30 of 30 cells in this set pending)); not resampled"
+    )
+
+
+def test_undefined_reason_wording():
+    precision, recall, specificity = PROPORTIONS
+    assert undefined_reason(precision, Counts(tp=1)) is None
+    assert undefined_reason(recall, Counts(tn=3)) == (
+        "TP + FN = 0: no cell is labelled missing (the reviewer identified no gap)"
+    )
+    assert undefined_reason(recall, Counts(tn=3), pending=2, cells=5) == (
+        "TP + FN = 0 so far: no cell is labelled missing yet (2 of 5 cells in this set pending)"
+    )
+    assert undefined_reason(specificity, Counts(), pending=4) == (
+        "TN + FP = 0 so far: no cell is labelled present yet (4 cells in this set pending)"
+    )
 
 
 def _table_pairs(table: dict[tuple[str, str], int]) -> list[tuple[str, str]]:
