@@ -31,12 +31,12 @@ pip install micar-whitepaper-linter
 micar-lint examples/art-stablecoin.json
 ```
 
-Run directly from source:
+Run directly from source with [uv](https://docs.astral.sh/uv/). In a fresh clone, the first `uv run` creates `.venv` with the locked dependencies and the package from `src/`:
 
 ```bash
-python3 -m micar_linter examples/art-stablecoin.json
-python3 -m micar_linter examples/incomplete.json --strict
-python3 -m micar_linter examples/emt-token.json --json
+uv run micar-lint examples/art-stablecoin.json
+uv run micar-lint examples/incomplete.json --strict
+uv run micar-lint examples/emt-token.json --json
 ```
 
 Install as an editable CLI:
