@@ -8,6 +8,7 @@ import hashlib
 import json
 import random
 import re
+import urllib.parse
 import urllib.request
 from datetime import UTC, datetime
 from io import StringIO
@@ -24,6 +25,8 @@ ESMA_MICA_PAGE = (
 )
 DEFAULT_SAMPLE_SIZE = 10
 DEFAULT_RANDOM_SEED = 20260702
+MAX_REGISTER_BYTES = 25 * 1024 * 1024
+ESMA_HOST = "esma.europa.eu"
 USER_AGENT = "Mozilla/5.0 (compatible; MiCAR-Annex-I-Study/0.1; research)"
 
 
@@ -129,12 +132,37 @@ def write_sample_manifest_csv(manifest: dict[str, Any], out: Path) -> None:
             writer.writerow({field: entry.get(field, "") for field in fields})
 
 
+def _validate_esma_url(url: str) -> None:
+    """Allow only https URLs on esma.europa.eu or its subdomains."""
+    parsed = urllib.parse.urlsplit(url)
+    host = (parsed.hostname or "").lower()
+    if parsed.scheme != "https" or parsed.username or parsed.password:
+        raise SystemExit(f"Register URL must be https without credentials: {url}")
+    if host != ESMA_HOST and not host.endswith("." + ESMA_HOST):
+        raise SystemExit(f"Register URL host must be {ESMA_HOST} or a subdomain: {url}")
+
+
+class _EsmaRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        _validate_esma_url(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def _fetch_esma_url(url: str, *, max_bytes: int = MAX_REGISTER_BYTES) -> bytes:
+    _validate_esma_url(url)
+    opener = urllib.request.build_opener(_EsmaRedirectHandler)
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    with opener.open(req, timeout=30) as response:
+        raw = response.read(max_bytes + 1)
+    if len(raw) > max_bytes:
+        raise SystemExit(f"Register response exceeds {max_bytes} bytes: {url}")
+    return raw
+
+
 def _load_source_rows(source: str | Path) -> tuple[list[dict[str, Any]], str, str]:
     source_text = str(source)
     if source_text.startswith(("http://", "https://")):
-        req = urllib.request.Request(source_text, headers={"User-Agent": USER_AGENT})
-        with urllib.request.urlopen(req, timeout=30) as response:
-            raw = response.read()
+        raw = _fetch_esma_url(source_text)
         text = raw.decode("utf-8-sig")
         return _non_blank_csv_rows(text), source_text, _bytes_sha256(raw)
 

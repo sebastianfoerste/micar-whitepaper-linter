@@ -12,7 +12,23 @@ Follow these steps to set up the white paper linter locally.
 
 ## Installation
 
-### 1. Synchronize Dependencies
+### From PyPI
+The package is published on PyPI as [`micar-whitepaper-linter`](https://pypi.org/project/micar-whitepaper-linter/). It installs the `micar-lint` command, also available as `micar-whitepaper-linter`:
+```bash
+pip install micar-whitepaper-linter
+micar-lint your-draft.json
+```
+Add the `docx` extra to read DOCX drafts:
+```bash
+pip install 'micar-whitepaper-linter[docx]'
+```
+Or run it without installing, using uv:
+```bash
+uvx micar-whitepaper-linter your-draft.json
+uvx --from 'micar-whitepaper-linter[docx]' micar-lint your-draft.docx
+```
+
+### From source
 Sync the python virtual environment (incorporates `docx` and `pdf` extras):
 ```bash
 uv sync --all-extras
@@ -20,6 +36,10 @@ uv sync --all-extras
 Or use pip to install the package in editable mode:
 ```bash
 pip install -e ".[all]"
+```
+To try unreleased changes from `main` without a clone:
+```bash
+uvx --from git+https://github.com/sebastianfoerste/micar-whitepaper-linter micar-lint your-draft.json
 ```
 
 ---

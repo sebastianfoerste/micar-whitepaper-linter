@@ -2,6 +2,8 @@
 
 The package exposes a Python CLI, `micar-lint`, and a small programmatic API around `load_whitepaper`, `lint_whitepaper`, and report renderers.
 
+Install it from PyPI with `pip install micar-whitepaper-linter`. The import package is `micar_linter`; the CLI is also available as `micar-whitepaper-linter`.
+
 ## CLI
 
 ```bash

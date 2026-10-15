@@ -59,3 +59,27 @@ def test_load_whitepaper_xhtml_type_inference(tmp_path: Path):
     assert wp.type == WhitepaperType.ART
     assert "summary" in wp.sections
     assert "art" in wp.sections
+
+
+def test_bold_headings_are_detected(tmp_path: Path):
+    path = tmp_path / "bold.html"
+    path.write_text(
+        "<html><body>"
+        "<p><strong>Risk Factors</strong></p>"
+        "<p>Market volatility is a principal risk.</p>"
+        "<div><b>Information about the Issuer</b></div>"
+        "<p>The issuer is EuroStable AG.</p>"
+        "<b>Summary of the offer</b>"
+        "<p>Plain-language summary.</p>"
+        "<p>Body text with a <b>bold</b> word that is not a heading.</p>"
+        "</body></html>",
+        encoding="utf-8",
+    )
+    sections = load_from_xhtml(path)
+    joined = "\n".join(sections.values())
+    assert "Market volatility is a principal risk." in joined
+    assert "The issuer is EuroStable AG." in joined
+    assert "Plain-language summary." in joined
+    assert "Risk Factors" not in joined
+    assert "bold word that is not a heading" in joined
+    assert len(sections) >= 3
