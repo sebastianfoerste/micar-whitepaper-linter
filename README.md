@@ -12,13 +12,20 @@ A deterministic Python linter for draft white papers under MiCAR (Regulation (EU
 
 **In the browser, nothing leaves the page:** [live playground](https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/) (Pyodide).
 
-**One command, no install** (needs [uv](https://docs.astral.sh/uv/) and Python 3.13+; I ran this form from the repo's git URL):
+**From [PyPI](https://pypi.org/project/micar-whitepaper-linter/)** (Python 3.13+). One command, no install (needs [uv](https://docs.astral.sh/uv/)):
 
 ```bash
-uvx --from git+https://github.com/sebastianfoerste/micar-whitepaper-linter micar-lint your-draft.json
+uvx micar-whitepaper-linter your-draft.json
 ```
 
-PyPI: a `uvx micar-whitepaper-linter` form is coming; the package is not published yet [UNVERIFIED: PyPI name availability not checked].
+Or install the `micar-lint` command:
+
+```bash
+pip install micar-whitepaper-linter
+micar-lint your-draft.json
+```
+
+DOCX drafts need the `docx` extra: `pip install 'micar-whitepaper-linter[docx]'` or `uvx --from 'micar-whitepaper-linter[docx]' micar-lint your-draft.docx`.
 
 From a clone:
 

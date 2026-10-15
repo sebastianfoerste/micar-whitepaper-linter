@@ -24,6 +24,13 @@ flowchart TD
 
 ## Local launch path
 
+Install the released CLI from [PyPI](https://pypi.org/project/micar-whitepaper-linter/) and run it from the repository root:
+
+```bash
+pip install micar-whitepaper-linter
+micar-lint examples/art-stablecoin.json
+```
+
 Run directly from source:
 
 ```bash
