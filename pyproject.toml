@@ -15,6 +15,7 @@ authors = [
 keywords = ["micar", "compliance", "legal-tech", "crypto-asset", "regulatory", "eu"]
 classifiers = [
   "Development Status :: 3 - Alpha",
+  "Environment :: Console",
   "Intended Audience :: Legal Industry",
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3.13",
@@ -38,6 +39,7 @@ dev = [
 ]
 
 [project.scripts]
+micar-whitepaper-linter = "micar_linter.cli:main"
 micar-lint = "micar_linter.cli:main"
 micar-lint-batch = "micar_linter.batch:main_study_batch"
 micar-study-report = "micar_linter.study_report:main"
@@ -45,6 +47,7 @@ micar-review-summary = "micar_linter.review_validation:main"
 
 [project.urls]
 Homepage = "https://github.com/sebastianfoerste/micar-whitepaper-linter"
+Repository = "https://github.com/sebastianfoerste/micar-whitepaper-linter"
 Issues = "https://github.com/sebastianfoerste/micar-whitepaper-linter/issues"
 
 [tool.hatch.build.targets.wheel]

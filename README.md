@@ -1,131 +1,110 @@
 # MiCAR Whitepaper Linter
 
+**Catch missing MiCAR Annex disclosures in a draft crypto-asset white paper before you notify the regulator, with the article cited for every gap.**
+
 [![CI](https://github.com/sebastianfoerste/micar-whitepaper-linter/actions/workflows/ci.yml/badge.svg)](https://github.com/sebastianfoerste/micar-whitepaper-linter/actions/workflows/ci.yml)
 
-The MiCAR Whitepaper Linter is a deterministic Python tool for a first pass over draft crypto-asset white papers under MiCAR. For each required disclosure it checks that the section exists, is not too thin and contains the expected keywords, and it reports the result with a pinpoint citation. A few checks are structural (the iXBRL format and namespaces) or always route an item to a lawyer (the ART deposit floor), and the English wording of the first-page statement required by Art. 6(3) and Art. 51(3) is matched word for word (ignoring case and line breaks), including which person it names as solely responsible. Whether that statement actually sits on the first page is not checked. The linter does not otherwise compare text with prescribed statutory wording, and it does not judge whether a disclosure is accurate, complete or adequate.
+A deterministic Python linter for draft white papers under MiCAR (Regulation (EU) 2023/1114). For each disclosure that Annex I, II or III requires, it checks that the section exists, meets a minimum length and contains the expected keywords, and it cites the provision. It accepts JSON, XHTML (incl. numbered-field iXBRL layouts) and DOCX, and runs as a CLI, a GitHub Action, or in your browser.
 
-**[Try it live in your browser](https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/)**. The full linter runs client-side via Pyodide. Nothing you paste leaves the page.
+A pass means the section is there, long enough and uses the expected terms. It does not mean the disclosure is accurate, complete or compliant. The English wording of the first-page statement required by Art. 6(3) and Art. 51(3) is matched word for word (ignoring case and line breaks), including which person it names as solely responsible. Whether that statement sits on the first page is not checked.
 
-The browser workbench accepts JSON drafts up to 1 MB and XHTML white papers up to 4 MB, includes synthetic examples for all three regimes, and presents searchable findings with citations and section navigation. Download the current report as JSON or text, or save a copy of the draft. Editing a checked draft marks the previous results as stale and disables report export until the checks run again. Python runs in a web worker so the editor stays responsive.
+> Review-gated first-pass tooling. It flags candidate gaps for a lawyer; it does not decide whether a white paper is lawful or complete. **Not legal advice.** Bundled examples are synthetic.
 
-For local preview, run `python3 -m http.server 8765 --bind 127.0.0.1 --directory docs` and open `http://127.0.0.1:8765/playground/`. The first runtime load needs an internet connection. The app does not persist drafts in browser storage.
+## Try it
 
-![Terminal capture of `make demo`: the first findings for the synthetic incomplete ART draft, with pass/review/missing status, severity and citation](docs/demo.png)
+**In the browser, nothing leaves the page:** [live playground](https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/) (Pyodide).
 
-*Rendered from the real output of `make demo` on `examples/incomplete.json`; the capture shows the first 45 of 111 output lines (the full report is in `reports/sample-incomplete-blockers.txt`).*
-
-## Real-world study: MiCAR Title II white papers
-
-This repository now includes a reproducible pilot study over publicly available Title II crypto-asset white papers listed in ESMA's MiCA register.
-
-The study runs deterministic Annex I checks over a reproducible convenience sample and publishes machine-flagged candidate gaps, exact document hashes, extraction metadata and limitations. It also contains a human-review matrix of 150 document-rule cells, but no cell has been reviewed yet (0 of 150). The study therefore reports no precision, recall or prevalence figures, and the candidate flags are not reviewed legal findings.
-
-Read the study report and validation protocol:
-
-- `studies/2026-07-title-ii-annex-i-whitepaper-study/findings-summary.md`
-- `studies/2026-07-title-ii-annex-i-whitepaper-study/review-protocol.md`
-- `studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-matrix.csv` (review template; 0 of 150 cells completed)
-
-Raw white papers are not committed. Study outputs are deterministic first-pass research artifacts and are not legal advice.
-
-## Run it
+**One command, no install** (needs [uv](https://docs.astral.sh/uv/) and Python 3.13+; I ran this form from the repo's git URL):
 
 ```bash
-make install
-make test
-make demo
+uvx --from git+https://github.com/sebastianfoerste/micar-whitepaper-linter micar-lint your-draft.json
 ```
 
-Generate a review bundle from synthetic data:
+PyPI: a `uvx micar-whitepaper-linter` form is coming; the package is not published yet [UNVERIFIED: PyPI name availability not checked].
+
+From a clone:
 
 ```bash
-uv run --extra dev python -m micar_linter examples/incomplete.json --review-bundle-dir /tmp/micar-incomplete-review-bundle
+make install && make demo
+uv run micar-lint examples/incomplete.json
 ```
 
-Check an XHTML white paper in the numbered-field layout of Implementing Regulation (EU) 2024/2984 ("A.1 Name", "A.2 Legal form"). State the regime, because it is not inferred from the text of such a file:
+## Example output
+
+Real output of `uv run micar-lint examples/incomplete.json` (a synthetic, deliberately incomplete ART draft), first findings only:
+
+```text
+MiCAR Whitepaper Linter - Incomplete Synthetic EuroStable ART Draft
+Whitepaper type: ART
+==============================================================================
+Pass: 0  |  Review: 13  |  Missing: 5  |  Blockers: 15
+
+[REVIEW] [BLOCKER] COMMON.SUMMARY  Plain-language summary
+           Cite:  Art. 6 Abs. 7, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR
+           Section: 'summary'  (4 words)
+           -  Section is thin: 4 words, expected at least 80.
+           -  Missing review terms: summary, key information.
+
+[MISS  ] [BLOCKER] COMMON.RISK_WARNING  Mandatory risk warning statement
+           Cite:  Art. 6 Abs. 5, Art. 19 Abs. 4, Art. 51 Abs. 4 MiCAR
+           Section: 'risk_warning'  (0 words)
+           -  Section is empty or absent.
+
+[MISS  ] [BLOCKER] COMMON.IXBRL_TAGGING  Inline XBRL (iXBRL) compliance and ESMA metadata tagging
+           Cite:  Art. 2 VO (EU) 2024/2984
+           -  Draft format: notification requires XHTML with Inline XBRL tagging. ...
+```
+
+(The third finding is trimmed with `...`; the "Abs." citation style is as the tool prints it.) XHTML in the numbered-field layout of Implementing Regulation (EU) 2024/2984 works too; state the regime, since it is not inferred:
 
 ```bash
 uv run micar-lint examples/numbered-other-draft.xhtml --type other
 ```
 
-The Table 2 mapping (crypto-assets other than ARTs and EMTs) has been run against public register documents. The Table 3 and Table 4 mappings follow the Official Journal text and have not yet been run against a real ART or EMT white paper. The iXBRL check tests well-formedness, the Inline XBRL 1.1 namespace and the ESMA MiCA taxonomy namespace. It does not evaluate the taxonomy's existence and value assertions, so it never reports Pass.
-
-## Use as a GitHub Action
-
-Lint a whitepaper draft on every push. The job fails while BLOCKER-severity findings are open:
+## GitHub Action
 
 ```yaml
-jobs:
-  micar-lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: sebastianfoerste/micar-whitepaper-linter@v1
-        with:
-          whitepaper: drafts/whitepaper.json
-          strict: 'true'
+- uses: actions/checkout@v4
+- uses: sebastianfoerste/micar-whitepaper-linter@v1
+  with:
+    whitepaper: drafts/whitepaper.json
+    strict: 'true'
 ```
 
-Inputs: `whitepaper` (path to a JSON/XHTML/DOCX draft), `strict` (default `true`), `extra-args` (e.g. `--json`, `--coverage`). A failing job means open blockers to review, not a legal conclusion.
+The job fails while BLOCKER findings are open. Starter repo with this preconfigured: [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template). Details in [docs/DETAILS.md](docs/DETAILS.md#github-action).
 
-Fastest start: the [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template) repo ships this workflow preconfigured — click **Use this template**.
+## Status and limits
 
-The canonical template source now lives at `templates/whitepaper-starter` in this repository. The existing public template repository remains the release surface. Run `make template-check` to validate its JSON and workflow contract, then `make template-export` to prepare a local path-export branch for human review. The export command never pushes.
+| Area | State |
+| --- | --- |
+| Table 2 (crypto-assets other than ART/EMT) | Run against public ESMA-register documents |
+| Table 3 / Table 4 (ART / EMT) | Follows the Official Journal text; **not yet run against a real ART or EMT white paper** |
+| iXBRL check | Well-formedness, Inline XBRL 1.1 and ESMA MiCA taxonomy namespaces only; never reports Pass |
+| Reserve-floor check | Extracts candidates; never returns `PASS` |
+| Pilot study | 10 documents, 15 rules each, 21 machine-flagged candidate gaps, **pending human review**; convenience sample, no precision/recall claim |
 
-## Reviewer Route
+## Pilot study
 
-For a short proof review, follow this path:
+A reproducible study over Title II white papers in ESMA's MiCA register publishes document hashes, extraction metadata, limitations and a 150-cell human-review matrix. No cell has been reviewed yet (0 of 150), so the study reports no precision, recall or prevalence figures. Flags are unreviewed machine output, not legal findings. Raw white papers are not committed. Start at [findings-summary.md](studies/2026-07-title-ii-annex-i-whitepaper-study/findings-summary.md). Reviewers start at [REVIEWING.md](studies/2026-07-title-ii-annex-i-whitepaper-study/REVIEWING.md).
 
-1. Read `docs/launch-readiness.md`.
-2. Read `docs/sample-review-bundle.md`.
-3. Read `studies/2026-07-title-ii-annex-i-whitepaper-study/findings-summary.md`.
-4. Inspect `src/micar_linter/rules/`.
-5. Run `make check`.
+## Links
 
-This route keeps the human-review boundary visible while showing the deterministic rules, synthetic examples, and 2026 study methodology.
+- [Browser playground](https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/) and demo image: [docs/demo.png](docs/demo.png)
+- [Full usage, features, reviewer route, redline bundles](docs/DETAILS.md) · [Setup](docs/SETUP.md) · [Features](docs/FEATURES.md) · [Architecture](docs/ARCHITECTURE.md) · [Rule extension guide](docs/rule-extension-guide.md) · [Sample review bundle](docs/sample-review-bundle.md) · [Launch readiness](docs/launch-readiness.md)
+- [Study protocol](studies/2026-07-title-ii-annex-i-whitepaper-study/review-protocol.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Privacy](PRIVACY.md)
 
-## Core features
+Develop with `make check` (lint, tests, CLI smoke check).
 
-- Deterministic first-pass checks for the disclosures required by MiCAR Annex I, II and III (keywords, minimum length and structure, not legal review).
-- JSON, XHTML and DOCX parsing.
-- Rules-as-code severity engine.
-- JSON reports for automated checks.
-- Local artifact manifests and remediation reports.
-- Coverage matrices, review tables and batch packs.
-- Review table export: adds rule-by-rule rows with blocker status, citations, remediation, reviewer decision state and bundle export eligibility.
-- Workspace export: `--workspace-output <path>` writes a local batch vault, conditional review table and reusable review playbook. Open blockers keep filing and external-review readiness disabled.
+## Part of the EU regulation as code suite
 
-## What the checks establish
+Deterministic, review-gated tools by [sebastianfoerste](https://github.com/sebastianfoerste):
 
-A pass means that the section exists, meets the minimum length and contains the rule's keywords. It does not mean that the disclosure is correct, complete or compliant. Annex selection is explicit, rule IDs are stable, unmatched keywords produce cited candidate flags, severity is tested, and JSON outputs can be used by review workflows without hiding the legal basis.
+- [awesome-eu-fintech-regulation](https://github.com/sebastianfoerste/awesome-eu-fintech-regulation): curated EU fintech primary sources and tools
+- [contract-review-eval-harness](https://github.com/sebastianfoerste/contract-review-eval-harness)
+- [legal-function-operating-system](https://github.com/sebastianfoerste/legal-function-operating-system)
+- [eu-ai-act-classifier](https://github.com/sebastianfoerste/eu-ai-act-classifier): AI Act risk tiers with cited obligations
+- **micar-whitepaper-linter** (this repo)
+- [eu-reg-mcp](https://github.com/sebastianfoerste/eu-reg-mcp): MCP server; exposes a `lint_micar_whitepaper` tool
+- [micar-register-observatory](https://github.com/sebastianfoerste/micar-register-observatory)
 
-The tool preserves legal judgment. It flags candidate disclosure gaps and produces draft review artifacts. It does not decide whether a white paper is lawful or complete.
-
-The reserve-floor check extracts percentage candidates and identifies the potentially applicable threshold under Articles 35(4), 36(4)(d), 45(3) and 45(7)(b) MiCAR from draft characterisation fields. It never returns `PASS`: applicability and any legal conclusion remain subject to lawyer confirmation.
-
-## Tech stack
-
-Python, Hatchling, uv and pytest.
-
-## Verification checklist
-
-- Run `make check`.
-- Run `uv run micar-lint examples/art-stablecoin.json`.
-- Run `uv run micar-lint examples/incomplete.json`.
-- Generate a review bundle from a synthetic example.
-- Confirm fixture labels are synthetic.
-- Confirm report output states that the tool is not legal advice.
-
-## Collaborative redline bundle
-
-Run `micar-lint <draft> --workspace-output workspace.json --collaboration-bundle-dir review/` to generate a digest-bound collaboration sidecar, MiCAR playbook change set and supervised workflow pack. Accepted changes can be rendered as genuine OOXML tracked insertions and deletions in a copied DOCX. The source draft is never overwritten.
-
-## Related
-
-Part of a portfolio of deterministic, review-gated EU-regulation tools:
-
-- [eu-ai-act-classifier](https://github.com/sebastianfoerste/eu-ai-act-classifier) — EU AI Act risk-tier classifier with cited obligations and a browser playground.
-- [dpa-and-data-transfer-review](https://github.com/sebastianfoerste/dpa-and-data-transfer-review) — GDPR Art. 28 and Chapter V transfer checks with a visible review state.
-- [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template) — Starter repo that lints a whitepaper draft in CI using this tool.
-
-Curated index of EU financial-regulation primary sources and tools: [awesome-eu-fintech-regulation](https://github.com/sebastianfoerste/awesome-eu-fintech-regulation).
+Also: [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template), [dpa-and-data-transfer-review](https://github.com/sebastianfoerste/dpa-and-data-transfer-review).
