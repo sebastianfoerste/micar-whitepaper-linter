@@ -1,16 +1,36 @@
 # MiCAR Whitepaper Linter
 
-**Catch missing MiCAR Annex disclosures in a draft crypto-asset white paper before you notify the regulator, with the article cited for every gap.**
-
 [![CI](https://github.com/sebastianfoerste/micar-whitepaper-linter/actions/workflows/ci.yml/badge.svg)](https://github.com/sebastianfoerste/micar-whitepaper-linter/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python >=3.13](https://img.shields.io/badge/python-%3E%3D3.13-blue.svg)](pyproject.toml)
+
+**Flag missing and thin disclosures in draft MiCAR white papers before substantive legal review, using deterministic Annex I, II and III checks with pinpoint citations.**
 
 A deterministic Python linter for draft white papers under MiCAR (Regulation (EU) 2023/1114). It checks Annex I, II and III requirements as code, accepts JSON, XHTML (incl. numbered-field iXBRL layouts) and DOCX, and runs as a CLI, a GitHub Action, or in your browser.
 
 > Review-gated first-pass tooling. It flags candidate gaps for a lawyer; it does not decide whether a white paper is lawful or complete. **Not legal advice.** Bundled examples are synthetic.
 
-## Try it
+<!--
+  Screenshot/GIF placeholder — to be added.
+  Replace the note below with a screenshot or GIF of a real run (for example `make demo`
+  in a terminal, or a GitHub Action job log), stored under docs/ with descriptive alt text.
+-->
+> **Screenshot/GIF placeholder — to be added**
 
-**In the browser, nothing leaves the page:** [live playground](https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/) (Pyodide).
+## Who it's for
+
+- **Lawyers and compliance teams** reviewing a MiCAR white paper draft who want a cited first-pass list of candidate disclosure gaps before the substantive legal review.
+- **Teams drafting a white paper in a Git repository** who want every push checked in CI.
+
+Rule sets cover all three white paper regimes under MiCAR (Regulation (EU) 2023/1114): crypto-assets other than ARTs and EMTs (Annex I), asset-referenced tokens (Annex II) and e-money tokens (Annex III). It is a screening tool, not a sign-off: whether a white paper is lawful or complete remains a lawyer's judgment. Not legal advice.
+
+## Try it now
+
+- **In the browser, nothing leaves the page:** [live playground](https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/) (Pyodide).
+- **GitHub Action:** add `sebastianfoerste/micar-whitepaper-linter@v1` to a workflow in the repository that holds your draft. Findings and their citations appear in the job log, and by default (`strict: 'true'`) the job fails while BLOCKER-severity findings are open. See [GitHub Action](#github-action) for the snippet and inputs, or start from the [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template) repo, which ships the workflow preconfigured.
+- **Local CLI:** follow the [Quick start](#quick-start) below. The core linter runs locally and does not require external LLM or network processing.
+
+## Quick start
 
 **From [PyPI](https://pypi.org/project/micar-whitepaper-linter/)** (Python 3.13+). One command, no install (needs [uv](https://docs.astral.sh/uv/)):
 
@@ -27,12 +47,21 @@ micar-lint your-draft.json
 
 DOCX drafts need the `docx` extra: `pip install 'micar-whitepaper-linter[docx]'` or `uvx --from 'micar-whitepaper-linter[docx]' micar-lint your-draft.docx`.
 
-From a clone:
+**From a clone** of this repository (requires Python 3.13+, uv and make):
 
 ```bash
-make install && make demo
-uv run micar-lint examples/incomplete.json
+make install   # uv sync --extra dev
+make demo      # lint examples/incomplete.json, a synthetic ART draft with open blockers
+uv run micar-lint examples/incomplete.json --review-bundle-dir /tmp/micar-incomplete-review-bundle
 ```
+
+The last command also writes a review bundle to `/tmp/micar-incomplete-review-bundle`: compliance and remediation checklists, a coverage matrix, a review table, a reviewer sign-off record and an artifact manifest.
+
+To check your own draft, pass its path to `uv run micar-lint` instead of an example file:
+
+- A JSON draft states its regime in its `type` field. For an XHTML or DOCX draft, add `--type other|art|emt`; the numbered-field XHTML layout requires it.
+- `--strict` exits with status 1 while any BLOCKER finding is open.
+- `--json` prints machine-readable JSON instead of text.
 
 ## Example output
 
@@ -65,6 +94,14 @@ Pass: 0  |  Review: 13  |  Missing: 5  |  Blockers: 15
 ```bash
 uv run micar-lint examples/numbered-other-draft.xhtml --type other
 ```
+
+## Browser workbench (local preview)
+
+The repository includes a browser workbench in `docs/playground/`. The full linter runs client-side via Pyodide. Nothing you paste leaves the page.
+
+For local preview, run `python3 -m http.server 8765 --bind 127.0.0.1 --directory docs` and open `http://127.0.0.1:8765/playground/`. The first runtime load needs an internet connection. The app does not persist drafts in browser storage.
+
+Details in [docs/DETAILS.md](docs/DETAILS.md#browser-workbench).
 
 ## GitHub Action
 
