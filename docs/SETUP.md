@@ -25,7 +25,7 @@ pip install 'micar-whitepaper-linter[docx]'
 Or run it without installing, using uv:
 ```bash
 uvx micar-whitepaper-linter your-draft.json
-uvx --from 'micar-whitepaper-linter[docx]' micar-lint your-draft.docx
+uvx --python 3.13 --from 'micar-whitepaper-linter[docx]' micar-lint your-draft.docx
 ```
 
 ### From source

@@ -45,7 +45,7 @@ pip install micar-whitepaper-linter
 micar-lint your-draft.json
 ```
 
-DOCX drafts need the `docx` extra: `pip install 'micar-whitepaper-linter[docx]'` or `uvx --from 'micar-whitepaper-linter[docx]' micar-lint your-draft.docx`.
+DOCX drafts need the `docx` extra: `pip install 'micar-whitepaper-linter[docx]'` or `uvx --python 3.13 --from 'micar-whitepaper-linter[docx]' micar-lint your-draft.docx`.
 
 **From a clone** of this repository (requires Python 3.13+, uv and make):
 
