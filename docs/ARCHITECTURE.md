@@ -34,11 +34,11 @@ Normalizes inputs into structural sections:
 - **`xhtml_parser.py`** & **`ixbrl.py`**: Parse Inline XBRL XHTML files, extracting tagged compliance attributes.
 
 ### 2. Regulatory Regimes (`rules/`)
-All validation rules inherit from `rules.base.BaseRule`:
-- **`common.py`**: Validates basic information required for all whitepapers (e.g. issuer identity details, default warning clauses).
+Each rule is a `Rule` record from `rules/base.py` (section, keywords, minimum length, severity, citation):
+- **`common.py`**: Checks for disclosures required in every white paper (summary, risk warning, management-body statement, notification date, language, iXBRL format).
 - **`annex_i.py`**: Specific to Other Crypto-Assets.
-- **`annex_ii.py`**: Specific to Asset-Referenced Tokens (verify reserve assets disclosures, redemption rights).
-- **`annex_iii.py`**: Specific to E-Money Tokens (verify issuer licensing, redeemability details).
+- **`annex_ii.py`**: Specific to Asset-Referenced Tokens (checks for reserve-of-assets and redemption disclosures).
+- **`annex_iii.py`**: Specific to E-Money Tokens (checks for issuer licensing and redemption disclosures).
 
 ### 3. Report Compiler (`report.py`)
-Collects and groups rule findings, prioritizing blocker flags (conditions that would cause regulatory rejection) over recommendations.
+Collects and groups rule findings, prioritizing open blockers (items to cure before notification or submission for approval) over other findings.

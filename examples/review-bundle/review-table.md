@@ -25,9 +25,9 @@ This markdown table is a local review artifact. It does not approve filing, publ
 | ANNEX_II.G.COMPOSITION_DISCLOSURE | Anhang II Teil G i.V.m. Art. 36 MiCAR | review | yes | remediation_required | yes |
 | ANNEX_II.G.DEPOSIT_FLOOR_REVIEW | Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d, Art. 45 Abs. 3 und Art. 45 Abs. 7 Buchst. b MiCAR | review | yes | remediation_required | yes |
 | ANNEX_II.G.CUSTODY | Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR | review | yes | remediation_required | yes |
-| ANNEX_II.G.VALUATION_AUDIT | Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR | pass | no | pending_lawyer_confirmation | yes |
+| ANNEX_II.G.VALUATION_AUDIT | Anhang II Teil G i.V.m. Art. 36 Abs. 7, 9, 11 und 12 MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | ANNEX_II.H | Art. 19 Abs. 1 UAbs. 1 Buchst. h MiCAR i.V.m. Art. 4 VO (EU) 2025/422; Anhang Tabelle 3 Teil H VO (EU) 2024/2984 | pass | no | pending_lawyer_confirmation | yes |
-| ANNEX_II.I | Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 MiCAR | pass | no | pending_lawyer_confirmation | yes |
+| ANNEX_II.I | Anhang II Teil C Nr. 8, Teil D Nr. 9, 14, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 Abs. 2 und 3, Art. 46 MiCAR | pass | no | pending_lawyer_confirmation | yes |
 
 ## Review Gate
 

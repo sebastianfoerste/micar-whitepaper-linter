@@ -68,19 +68,27 @@ def test_leading_fields_of_tables_3_and_4_do_not_collide_with_part_i(tmp_path: P
         f"<tr><td>{number}</td><td>{label}</td><td>{content}</td></tr>"
         for number, label, content in [
             ("I.01", "Date of notification", "2026-03-02"),
-            ("I.06", "Right of redemption", "Holders can redeem at par at any time."),
+            (
+                "I.06",
+                "Right of redemption",
+                "The holders of asset-referenced tokens have a right of redemption at any time.",
+            ),
             ("A.1", "Statutory name", "Example Issuer AG"),
             ("B.14", "Language or languages of the crypto-asset white paper", "German"),
-            ("D.1", "Holder's rights and obligations", "Redemption at market value of the reserve."),
+            (
+                "D.1",
+                "Holder's rights and obligations",
+                "Redemption in funds equal to the market value of the referenced assets.",
+            ),
             ("G.1", "Description of the reserve of assets", "Bank deposits and government bonds."),
         ]
     )
     whitepaper = load_whitepaper(_write(tmp_path, f"<table>{rows}</table>"), WhitepaperType.ART)
     assert whitepaper.section("notification_date") == "Date of notification: 2026-03-02"
     assert "risks" not in whitepaper.sections
-    assert "redeem at par" in whitepaper.section("summary")
+    assert "right of redemption at any time" in whitepaper.section("summary")
     assert "Bank deposits" in whitepaper.section("reserve_of_assets")
-    for part in ("redeem at par", "market value of the reserve", "Bank deposits"):
+    for part in ("right of redemption at any time", "market value of the referenced assets", "Bank deposits"):
         assert part in whitepaper.section("redemption")
     assert "German" in whitepaper.section("language")
 

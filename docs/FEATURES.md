@@ -11,8 +11,8 @@ This document details the functional features implemented in the MiCAR Whitepape
   - [src/micar_linter/xhtml_parser.py](../src/micar_linter/xhtml_parser.py)
 - **Status**: Fully Implemented.
 
-## 2. Regime-Specific Annex Audits
-- **Description**: Applies validation checkers based on whether the token is a standard utility token (Annex I), stablecoin (Annex II), or e-money token (Annex III).
+## 2. Regime-Specific Annex Checks
+- **Description**: Applies keyword, length and structure checks based on whether the token is a standard utility token (Annex I), stablecoin (Annex II), or e-money token (Annex III).
 - **Related Files**:
   - [src/micar_linter/rules/annex_i.py](../src/micar_linter/rules/annex_i.py)
   - [src/micar_linter/rules/annex_ii.py](../src/micar_linter/rules/annex_ii.py)
@@ -21,10 +21,10 @@ This document details the functional features implemented in the MiCAR Whitepape
 
 ## 3. Finding Severity Mapping
 - **Description**: Classifies findings into distinct severity levels:
-  - **Blocker**: Severe omissions causing immediate regulatory rejection.
-  - **Major**: Core missing disclosures.
-  - **Minor**: Non-binding suggestions.
-  - **Pass**: Standard compliant parameters met.
+  - **Blocker**: A required disclosure looks absent or incomplete; treat it as open before notification or submission for approval.
+  - **Major**: A disclosure looks present but may be materially incomplete or misleading.
+  - **Minor**: A drafting gap that does not gate notification.
+  - **Pass**: The automated check matched. Accuracy, completeness and legal sufficiency still need review.
 - **Related Files**:
   - [src/micar_linter/rules/base.py](../src/micar_linter/rules/base.py)
 - **Status**: Fully Implemented.

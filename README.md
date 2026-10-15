@@ -4,7 +4,9 @@
 
 [![CI](https://github.com/sebastianfoerste/micar-whitepaper-linter/actions/workflows/ci.yml/badge.svg)](https://github.com/sebastianfoerste/micar-whitepaper-linter/actions/workflows/ci.yml)
 
-A deterministic Python linter for draft white papers under MiCAR (Regulation (EU) 2023/1114). It checks Annex I, II and III requirements as code, accepts JSON, XHTML (incl. numbered-field iXBRL layouts) and DOCX, and runs as a CLI, a GitHub Action, or in your browser.
+A deterministic Python linter for draft white papers under MiCAR (Regulation (EU) 2023/1114). For each disclosure that Annex I, II or III requires, it checks that the section exists, meets a minimum length and contains the expected keywords, and it cites the provision. It accepts JSON, XHTML (incl. numbered-field iXBRL layouts) and DOCX, and runs as a CLI, a GitHub Action, or in your browser.
+
+A pass means the section is there, long enough and uses the expected terms. It does not mean the disclosure is accurate, complete or compliant. The English wording of the first-page statement required by Art. 6(3) and Art. 51(3) is matched word for word (ignoring case and line breaks), including which person it names as solely responsible. Whether that statement sits on the first page is not checked.
 
 > Review-gated first-pass tooling. It flags candidate gaps for a lawyer; it does not decide whether a white paper is lawful or complete. **Not legal advice.** Bundled examples are synthetic.
 
@@ -83,11 +85,11 @@ The job fails while BLOCKER findings are open. Starter repo with this preconfigu
 
 ## Pilot study
 
-A reproducible study over Title II white papers in ESMA's MiCA register publishes document hashes, extraction metadata, limitations and a 150-cell human-review matrix. Flags are unreviewed machine output, not legal findings. Raw white papers are not committed. Start at [findings-summary.md](studies/2026-07-title-ii-annex-i-whitepaper-study/findings-summary.md).
+A reproducible study over Title II white papers in ESMA's MiCA register publishes document hashes, extraction metadata, limitations and a 150-cell human-review matrix. No cell has been reviewed yet (0 of 150), so the study reports no precision, recall or prevalence figures. Flags are unreviewed machine output, not legal findings. Raw white papers are not committed. Start at [findings-summary.md](studies/2026-07-title-ii-annex-i-whitepaper-study/findings-summary.md). Reviewers start at [REVIEWING.md](studies/2026-07-title-ii-annex-i-whitepaper-study/REVIEWING.md).
 
 ## Links
 
-- [Browser playground](https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/) and demo image: [docs/demo.svg](docs/demo.svg)
+- [Browser playground](https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/) and demo image: [docs/demo.png](docs/demo.png)
 - [Full usage, features, reviewer route, redline bundles](docs/DETAILS.md) · [Setup](docs/SETUP.md) · [Features](docs/FEATURES.md) · [Architecture](docs/ARCHITECTURE.md) · [Rule extension guide](docs/rule-extension-guide.md) · [Sample review bundle](docs/sample-review-bundle.md) · [Launch readiness](docs/launch-readiness.md)
 - [Study protocol](studies/2026-07-title-ii-annex-i-whitepaper-study/review-protocol.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Privacy](PRIVACY.md)
 

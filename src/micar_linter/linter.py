@@ -59,6 +59,11 @@ class Linter:
         if rule.rule_id == "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW":
             return _deposit_floor_finding(rule, whitepaper)
 
+        if rule.rule_id in NOT_APPROVED_STATEMENT_RULE_IDS:
+            statement = _not_approved_statement_finding(rule, whitepaper)
+            if statement is not None:
+                return statement
+
         is_de = whitepaper.language == "de"
 
         text = whitepaper.section(rule.section)
@@ -74,6 +79,9 @@ class Linter:
             )
 
         issues: list[str] = []
+        # PDF, Markdown and DOCX loaders keep line breaks, so a statutory sentence that wraps
+        # across lines must still match a single-line term.
+        text = _collapse_whitespace(text)
         normalized = text.lower()
 
         if word_count < rule.min_words:
@@ -139,6 +147,8 @@ class Linter:
                 )
                 issues.append(msg)
 
+        issues.extend(_rule_specific_issues(rule, normalized, is_de))
+
         status = "review" if issues else "pass"
         return Finding(rule=rule, status=status, word_count=word_count, issues=tuple(issues))
 
@@ -169,6 +179,95 @@ def lint_whitepaper(whitepaper: Whitepaper) -> Report:
 
 def _count_words(text: str) -> int:
     return sum(1 for word in text.split() if word.strip())
+
+
+_LINE_END_HYPHEN = re.compile(r"-[ \t]*(?:\r\n|\r|\n)\s*")
+_WHITESPACE_RUN = re.compile(r"\s+")
+
+
+def _collapse_whitespace(text: str) -> str:
+    """Join a hyphenated compound broken at a line end, then collapse every whitespace run."""
+    return _WHITESPACE_RUN.sub(" ", _LINE_END_HYPHEN.sub("-", text)).strip()
+
+
+# Art. 6(3) and Art. 51(3) MiCAR prescribe the first-page statement word for word. The
+# English wording was checked against the EUR-Lex text of Art. 6(3) and 51(3) MiCAR as
+# mirrored in legalize-dev/legalize-eu (CELEX 32023R1114). The German wording has not been
+# checked against the German Official Journal text, so a German draft is referred to review
+# and never passes.
+NOT_APPROVED_STATEMENT_RULE_IDS = frozenset(
+    {"ANNEX_I.NOT_APPROVED_STATEMENT", "ANNEX_III.NOT_APPROVED_STATEMENT"}
+)
+_BOOLEAN_FIELD_VALUES = frozenset({"true", "false", "yes", "no", "ja", "nein"})
+
+
+def _not_approved_statement_finding(rule: Rule, whitepaper: Whitepaper) -> Finding | None:
+    """Return the finding where the generic term check would mislead, otherwise None."""
+    is_de = whitepaper.language == "de"
+    text = whitepaper.section(rule.section)
+    if not text.strip():
+        return None
+    words = _count_words(text)
+    emt = rule.rule_id.startswith("ANNEX_III.")
+    article_de = "Art. 51 Abs. 3" if emt else "Art. 6 Abs. 3"
+    article_en = "Art. 51(3)" if emt else "Art. 6(3)"
+    if _collapse_whitespace(text).lower().strip(" .'\"") in _BOOLEAN_FIELD_VALUES:
+        msg = (
+            f"Das Feld enthält nur einen Ja/Nein-Wert, nicht den Wortlaut nach {article_de} MiCAR. "
+            "Wortlaut und Platzierung auf der ersten Seite manuell prüfen."
+            if is_de
+            else f"The field holds only a yes/no value, not the {article_en} MiCAR wording. "
+            "Check the wording and its first-page placement manually."
+        )
+        return Finding(rule=rule, status="review", word_count=words, issues=(msg,))
+    if is_de:
+        msg = (
+            f"Der deutsche Wortlaut der Erklärung nach {article_de} MiCAR ist in diesem Linter "
+            "noch nicht gegen die deutsche Fassung im Amtsblatt geprüft. Wortlaut und "
+            "Platzierung auf der ersten Seite manuell mit dem Amtsblatt abgleichen."
+        )
+        return Finding(rule=rule, status="review", word_count=words, issues=(msg,))
+    return None
+
+
+# Art. 6(3), second subparagraph, MiCAR: the statement names the offeror, the person seeking
+# admission to trading or the operator of the trading platform (Table 2 field 02 of
+# Implementing Regulation (EU) 2024/2984 prints all three sentences).
+_TITLE_II_RESPONSIBILITY_CLAUSE = "of the crypto-asset is solely responsible"
+_TITLE_II_RESPONSIBLE_PERSON = re.compile(
+    r"\b(?:offeror|person seeking admission to trading|operator of the trading platform) "
+    + _TITLE_II_RESPONSIBILITY_CLAUSE
+)
+_AT_PAR = re.compile(r"\bat\s+par\b")
+_MARKTWERT = re.compile(r"\bmarktwert")
+
+
+def _rule_specific_issues(rule: Rule, normalized: str, is_de: bool) -> list[str]:
+    """Issues a rule needs beyond its terms and patterns; normalized is lowercase, one line."""
+    if rule.rule_id == "ANNEX_I.NOT_APPROVED_STATEMENT" and not is_de:
+        names_clause = _TITLE_II_RESPONSIBILITY_CLAUSE in normalized
+        if names_clause and not _TITLE_II_RESPONSIBLE_PERSON.search(normalized):
+            return [
+                "Art. 6(3) MiCAR names the offeror, the person seeking admission to trading or the "
+                "operator of the trading platform as solely responsible; the statement names "
+                "someone else."
+            ]
+    if rule.rule_id == "ANNEX_II.I":
+        if is_de and not _MARKTWERT.search(normalized):
+            return [
+                "Kein Rücktausch zum Marktwert erkannt (Art. 39 Abs. 2 MiCAR). Ein Rücktausch nur "
+                "durch Übertragung der Vermögenswerte, auf die sich der Token bezieht, wird in "
+                "deutschen Entwürfen noch nicht erkannt, weil der deutsche Wortlaut dieser "
+                "Alternative nicht geprüft ist. Bitte manuell prüfen."
+            ]
+        if not is_de and _AT_PAR.search(normalized):
+            return [
+                "The section mentions redemption at par. Redemption at par value is the e-money "
+                "token rule (Art. 49(4) MiCAR); an ART issuer redeems in funds equivalent to the "
+                "market value of the referenced assets or by delivering those assets "
+                "(Art. 39(2) MiCAR). Check which basis the policy states."
+            ]
+    return []
 
 
 _PERCENTAGE_PATTERN = re.compile(r"(?<![\d.,])(\d{1,3}(?:[.,]\d+)?)\s*%(?!\d)")
