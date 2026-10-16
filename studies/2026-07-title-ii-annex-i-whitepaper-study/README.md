@@ -25,7 +25,7 @@ Raw white papers are not committed. Downloaded source files belong under `.study
 - `human-review-matrix.csv`: all 150 document-rule cells with detector status, for adjudication and metric calculation after the independent labels are recorded. Reviewers do not open it while labelling.
 - `human-review-sheets.json`: generation record for the sheets and the matrix: findings hash, rule source, seed, row-order policy and file hashes.
 - `human-review-adjudication.csv`: only with a second reviewer. For every cell on which the reviewers disagree, the final label, who adjudicated, the date and the reasoning.
-- `human-review-summary.json`: current completion and validation metrics; it remains publication-blocking while rows are pending.
+- `human-review-summary.json`: completion counts and, once every cell is labelled, the metrics defined in `analysis-plan.md` (schema v2, written by `micar-review-summary`); it remains publication-blocking while rows are pending.
 - `review-protocol.md`: label definitions, review procedure, adjudication, and publication gate.
 - `codebook.md`: DRAFT, not adopted. Per-rule decision rules and open codebook policies for the reviewer.
 - `analysis-plan.md`: DRAFT, not adopted. Pre-registered metrics, exclusions, intervals and reporting rules.
@@ -163,6 +163,49 @@ uv run micar-review-summary \
   --require-complete
 ```
 
-The command exits with status 2 while any row remains pending. Metrics exclude uncertain, extraction-failure, and not-applicable labels.
+The command exits with status 2 while any row remains pending, and with status 1, writing nothing, when an input is invalid or the study files contradict each other. Metrics exclude uncertain, extraction-failure, and not-applicable labels.
+
+The summary (schema v2) implements sections 7 to 10 of the draft `analysis-plan.md`. Besides the matrix, it reads the study directory: `human-review-sheets.json` and the reviewers' sheets, the findings file, `source-manifest.json` (offerors) and `analysis-plan.md` (whether its banner still says "DRAFT, not adopted" or names the adoption, and the detector's generating commit, once the Detector row of section 2 names it at step 0.4). It records:
+
+- completion and label counts;
+- for the primary set (without WP-007 and without an in-sample calibration document, which is the document whose every cell carries the note `calibration`) and for the full set S1: TP, FP, FN and TN; precision, recall and specificity, each with a Wilson and a Clopper-Pearson interval, a document-cluster bootstrap (10,000 replicates, seed 20261014) and the headline interval; F1 as 2TP / (2TP + FP + FN); and, for the primary set only, per-rule counts;
+- the sensitivity analyses S2 (an offeror-cluster bootstrap, and one document per offeror), S3 and S4 (`uncertain` counted as `missing`, then as `present`). S5 is marked as not computed, because the stricter readings it needs are recorded in free-text notes;
+- with two reviewers, their raw agreement, Cohen's kappa, PABAK and Gwet's AC1, over all labels and over the cells both labelled `present` or `missing`;
+- the detector identity: the findings file's SHA-256, schema, digest and generation date, and the generating commit.
+
+A metric whose denominator is 0 is `null`, with the reason; while cells are pending, the reason says that nothing is labelled yet. While any cell is pending, the summary does not report how many detector flags fall in WP-007.
+
+Per-document counts are for internal checks only (`analysis-plan.md`, section 10). `--internal-out` writes the per-document and per-offeror count tables, and S1's per-rule table, to a separate file, which git ignores under this name. S1's per-rule table stays out of the summary because S1 differs from the primary set only by WP-007, so the two tables together would give WP-007's label and detector outcome for every rule. The sets the plan asks to publish still imply some document-level counts: S1 minus the primary set gives WP-007's counts, the primary set minus S2(b) the pooled counts of the documents S2(b) drops, and the top-level label counts minus S1's the label counts of an in-sample calibration document.
+
+```bash
+uv run micar-review-summary \
+  --matrix studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-matrix.csv \
+  --out studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-summary.json \
+  --internal-out studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-internal.json
+```
+
+## Render the results
+
+The result sentences are rendered from `human-review-summary.json` alone, so no figure is typed by hand:
+
+```bash
+uv run micar-review-render \
+  --summary studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-summary.json
+```
+
+The output holds the results block for this README or the report, the profile README line and the CV sentence, in the draft wording templates of `analysis-plan.md`, section 11. The results block contains:
+
+- the results paragraph, with a sentence on S1 in the same form as the primary result;
+- a table of the primary and sensitivity analyses, with N evaluable and the count of each excluded label;
+- a table of the Wilson, Clopper-Pearson and document-cluster bootstrap intervals for the primary set and S1, with the dropped replicates and the "unstable" mark;
+- S2(a), S5 and the disclosures. The renderer refuses (exit 1) and lists the reasons while any cell is pending, while `micar-review-summary --require-complete` would fail, when primary precision or recall is undefined, when the detector commit is not recorded, or when a second reviewer's agreement is missing. It writes "In-sample" unless `--not-in-sample` is passed, which is only for the case that step 0.5 rules out. It never describes the result as validated.
+
+Paste the results block with its begin and end markers. `--check` confirms that a block still equals a fresh rendering of the summary (exit 3 if it differs); `tests/test_study_consistency.py` runs the same check on this README, `findings-summary.md`, `limitations.md` and `methodology.md`, and finds hand-typed precision or recall figures in all four. It also compares the status figures quoted in this README, `findings-summary.md` and `limitations.md` with the JSON:
+
+```bash
+uv run micar-review-render \
+  --summary studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-summary.json \
+  --check studies/2026-07-title-ii-annex-i-whitepaper-study/README.md
+```
 
 The committed detector outputs are deterministic research artifacts. They are not legal advice.
