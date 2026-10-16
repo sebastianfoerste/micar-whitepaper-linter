@@ -2,7 +2,7 @@
 
 This is a personal portfolio project. External contributions are not accepted at this time.
 
-If you are evaluating the repository, please read the [Reviewer Checklist](README.md#reviewer-checklist) in the README.
+If you are evaluating the repository, please read the [Verification checklist](docs/DETAILS.md#verification-checklist) in `docs/DETAILS.md`.
 
 ## Running the Tests
 

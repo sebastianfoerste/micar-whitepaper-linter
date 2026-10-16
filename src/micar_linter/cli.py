@@ -54,6 +54,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Emit machine-readable JSON instead of text.",
     )
     parser.add_argument(
+        "--citation-style",
+        choices=["en", "de"],
+        default="en",
+        help=(
+            "Citation style in the text report: English EU style, e.g. 'Art. 6(7) MiCAR' "
+            "(default), or the canonical German form, e.g. 'Art. 6 Abs. 7 MiCAR'. "
+            "JSON output always carries both."
+        ),
+    )
+    parser.add_argument(
         "--type",
         choices=[item.value for item in WhitepaperType],
         help=(
@@ -221,7 +231,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.json:
         print(render_json(report))
     else:
-        print(render_text(report))
+        print(render_text(report, args.citation_style))
 
     written_outputs: list[Path] = []
 

@@ -131,7 +131,7 @@ def test_linter_prohibited_patterns():
             severity=Severity.BLOCKER,
         ),
     )
-    
+
     # Has prohibited word
     wp_fail = Whitepaper(
         title="Test WP",
@@ -169,7 +169,7 @@ def test_linter_warnings_on_unrecognized_sections():
         },
         metadata={},
     )
-    
+
     report = lint_whitepaper(wp)
     # The linter check should identify that misspelled_offeror is not in the ruleset
     assert len(report.warnings) > 0

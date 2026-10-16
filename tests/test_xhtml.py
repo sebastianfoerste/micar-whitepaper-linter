@@ -6,7 +6,7 @@ from micar_linter.xhtml_parser import load_from_xhtml
 
 def test_load_from_xhtml(tmp_path: Path):
     xhtml_path = tmp_path / "test.xhtml"
-    
+
     # Create a synthetic XHTML content
     xhtml_content = """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
@@ -28,16 +28,17 @@ def test_load_from_xhtml(tmp_path: Path):
 </html>
 """
     xhtml_path.write_text(xhtml_content, encoding="utf-8")
-    
+
     sections = load_from_xhtml(xhtml_path)
-    
+
     assert "summary" in sections
     assert "issuer" in sections
     assert "risks" in sections
-    
+
     assert "plain-language summary" in sections["summary"]
     assert "EuroStable AG" in sections["issuer"]
     assert "market price volatility" in sections["risks"]
+
 
 def test_load_whitepaper_xhtml_type_inference(tmp_path: Path):
     xhtml_path = tmp_path / "art-test.xhtml"
@@ -53,9 +54,33 @@ def test_load_whitepaper_xhtml_type_inference(tmp_path: Path):
 </html>
 """
     xhtml_path.write_text(xhtml_content, encoding="utf-8")
-    
+
     wp = load_whitepaper(xhtml_path)
     assert wp.title == "Art Test"
     assert wp.type == WhitepaperType.ART
     assert "summary" in wp.sections
     assert "art" in wp.sections
+
+
+def test_bold_headings_are_detected(tmp_path: Path):
+    path = tmp_path / "bold.html"
+    path.write_text(
+        "<html><body>"
+        "<p><strong>Risk Factors</strong></p>"
+        "<p>Market volatility is a principal risk.</p>"
+        "<div><b>Information about the Issuer</b></div>"
+        "<p>The issuer is EuroStable AG.</p>"
+        "<b>Summary of the offer</b>"
+        "<p>Plain-language summary.</p>"
+        "<p>Body text with a <b>bold</b> word that is not a heading.</p>"
+        "</body></html>",
+        encoding="utf-8",
+    )
+    sections = load_from_xhtml(path)
+    joined = "\n".join(sections.values())
+    assert "Market volatility is a principal risk." in joined
+    assert "The issuer is EuroStable AG." in joined
+    assert "Plain-language summary." in joined
+    assert "Risk Factors" not in joined
+    assert "bold word that is not a heading" in joined
+    assert len(sections) >= 3
