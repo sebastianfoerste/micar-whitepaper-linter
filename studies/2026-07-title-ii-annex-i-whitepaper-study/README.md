@@ -21,10 +21,13 @@ Raw white papers are not committed. Downloaded source files belong under `.study
 - `document-provenance.json`: exact source-byte hashes and extraction metadata for processed documents.
 - `findings-pseudonymous.json`: machine-generated candidate flags keyed by WP identifier.
 - `findings-pseudonymous.csv`: flat candidate-flag table.
-- `human-review-blinded.csv`: detector-hidden sheet for independent first review.
-- `human-review-matrix.csv`: all 150 document-rule cells with detector status for adjudication and metric calculation.
+- `human-review-r1.csv`: blinded sheet for reviewer `r1`. It omits detector outcomes, adds the rule label and requirement for each cell, and shuffles rows within each document by a recorded seed. A second reviewer gets `human-review-r2.csv`.
+- `human-review-matrix.csv`: all 150 document-rule cells with detector status, for adjudication and metric calculation after the independent labels are recorded. Reviewers do not open it while labelling.
+- `human-review-sheets.json`: generation record for the sheets and the matrix: findings hash, rule source, seed, row-order policy and file hashes.
 - `human-review-summary.json`: current completion and validation metrics; it remains publication-blocking while rows are pending.
 - `review-protocol.md`: label definitions, review procedure, adjudication, and publication gate.
+- `codebook.md`: DRAFT, not adopted. Per-rule decision rules and open codebook policies for the reviewer.
+- `analysis-plan.md`: DRAFT, not adopted. Pre-registered metrics, exclusions, intervals and reporting rules.
 - `findings-summary.md`: rendered pilot report.
 - `methodology.md`: source, sampling, extraction, rule, and metric methodology.
 - `limitations.md`: limitations and prohibited inferences.
@@ -49,9 +52,28 @@ uv run micar-study-report \
   --out studies/2026-07-title-ii-annex-i-whitepaper-study/findings-summary.md
 ```
 
+## Prepare the human review
+
+Check that the cached source bytes are the bytes the detector processed. The check runs offline and exits non-zero if any document is missing (3) or differs (1):
+
+```bash
+uv run micar-study-verify-cache \
+  --provenance studies/2026-07-title-ii-annex-i-whitepaper-study/document-provenance.json \
+  --cache .study-cache/title-ii-whitepapers \
+  --include-candidates
+```
+
+Regenerate the blinded sheets and the matrix from the findings file. Rule IDs and Annex labels come from `STUDY_RULES`; every new sheet has every label `pending`. Reviewers and the seed recorded in `human-review-sheets.json` are always kept, so pass `--reviewer r2` to add a second reviewer. A sheet that already holds review content is kept unchanged; if its cells or row order would change, the command refuses (exit 3). `--check` confirms that the committed files match the generator, comparing every column except the review fields, so it still passes once labels are entered:
+
+```bash
+uv run micar-review-sheets \
+  --findings studies/2026-07-title-ii-annex-i-whitepaper-study/findings-pseudonymous.json \
+  --out-dir studies/2026-07-title-ii-annex-i-whitepaper-study
+```
+
 ## Validate against human labels
 
-Complete `human-review-matrix.csv` under `review-protocol.md`, then run:
+Each reviewer labels only their own blinded sheet (`human-review-r1.csv`, and `human-review-r2.csv` for a second reviewer) under `review-protocol.md` and `codebook.md`. While labelling, reviewers do not open `human-review-matrix.csv`, `findings-pseudonymous.*` or `findings-summary.md`. Each reviewer's labels are committed on their own. Only then are the final labels merged into `human-review-matrix.csv` with the detector outcomes. Then run:
 
 ```bash
 uv run micar-review-summary \

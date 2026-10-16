@@ -19,7 +19,9 @@ from micar_linter.linter import lint_whitepaper
 from micar_linter.whitepaper import load_whitepaper
 
 BATCH_SCHEMA = "micar-whitepaper-linter.batch-review-pack.v1"
-STUDY_FINDINGS_SCHEMA = "micar-whitepaper-linter.title-ii-annex-i-study-findings.v1"
+# v2 renames summary.documents_reviewed to summary.documents_processed: the batch processes
+# documents, it does not review them. Committed v1 files keep the old key; readers accept both.
+STUDY_FINDINGS_SCHEMA = "micar-whitepaper-linter.title-ii-annex-i-study-findings.v2"
 SUPPORTED_SUFFIXES = {".json", ".pdf", ".docx", ".xhtml", ".html", ".md"}
 STUDY_SUPPORTED_SUFFIXES = {".xhtml", ".html", ".htm", ".pdf", ".txt"}
 DEFAULT_STUDY_SAMPLE_SIZE = 10
@@ -768,7 +770,7 @@ def _study_summary(results: list[dict[str, Any]], excluded: list[dict[str, Any]]
         for finding in result["findings"]:
             by_rule[finding["rule_id"]] = by_rule.get(finding["rule_id"], 0) + 1
     return {
-        "documents_reviewed": len(results),
+        "documents_processed": len(results),
         "documents_excluded": len(excluded),
         "rules_checked_per_document": len(STUDY_RULES),
         "potential_gaps": total_gaps,
@@ -831,7 +833,7 @@ def main_study_batch(argv: list[str] | None = None) -> int:
         ).format(
             json_path=args.out,
             csv_path=csv_path,
-            docs=payload["summary"]["documents_reviewed"],
+            docs=payload["summary"]["documents_processed"],
             gaps=payload["summary"]["potential_gaps"],
         ),
         file=sys.stderr,
