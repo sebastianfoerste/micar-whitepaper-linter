@@ -1,0 +1,21 @@
+name: False positive / wrong citation
+description: A rule flagged something it should not have, or cites the wrong provision.
+labels: [false-positive]
+body:
+  - type: markdown
+    attributes:
+      value: "Do not paste confidential or unpublished whitepaper text. Use a short synthetic excerpt."
+  - type: input
+    id: rule
+    attributes: {label: Rule ID, placeholder: COMMON.SUMMARY}
+    validations: {required: true}
+  - type: input
+    id: citation
+    attributes: {label: Citation printed by the tool}
+  - type: textarea
+    id: why
+    attributes: {label: "Why is the finding or citation wrong?", description: "Point to the provision (article, paragraph, act)."}
+    validations: {required: true}
+  - type: textarea
+    id: repro
+    attributes: {label: Synthetic input that reproduces it, render: json}
