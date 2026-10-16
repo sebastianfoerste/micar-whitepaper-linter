@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import io
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
+
+from micar_linter import esma_register
 from micar_linter.esma_register import build_source_manifest
 
 
@@ -104,3 +108,45 @@ def test_register_marks_outdated_rows_excluded(tmp_path: Path):
 
     assert manifest["entries"][0]["included"] is False
     assert manifest["entries"][0]["exclusion_reason"] == "out_of_date_or_superseded"
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://www.esma.europa.eu/x.csv",
+        "https://evil.example/x.csv",
+        "https://esma.europa.eu.evil.example/x.csv",
+        "https://notesma.europa.eu/x.csv",
+        "https://user:pw@www.esma.europa.eu/x.csv",
+    ],
+)
+def test_register_url_rejected_outside_https_esma(url):
+    with pytest.raises(SystemExit):
+        esma_register.build_source_manifest(url)
+
+
+def test_register_url_allows_esma_hosts():
+    for url in ("https://www.esma.europa.eu/a.csv", "https://esma.europa.eu/a.csv"):
+        esma_register._validate_esma_url(url)
+
+
+class _FakeOpener:
+    def __init__(self, payload: bytes):
+        self.payload = payload
+
+    def open(self, req, timeout=None):
+        return io.BytesIO(self.payload)
+
+
+def test_register_fetch_enforces_size_cap(monkeypatch):
+    monkeypatch.setattr(esma_register.urllib.request, "build_opener", lambda *a: _FakeOpener(b"x" * 11))
+    with pytest.raises(SystemExit):
+        esma_register._fetch_esma_url("https://www.esma.europa.eu/a.csv", max_bytes=10)
+    assert esma_register._fetch_esma_url("https://www.esma.europa.eu/a.csv", max_bytes=11) == b"x" * 11
+
+
+def test_register_redirect_to_other_host_rejected():
+    handler = esma_register._EsmaRedirectHandler()
+    req = esma_register.urllib.request.Request("https://www.esma.europa.eu/a.csv")
+    with pytest.raises(SystemExit):
+        handler.redirect_request(req, None, 302, "Found", {}, "https://evil.example/a.csv")

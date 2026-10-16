@@ -1,0 +1,19 @@
+name: Rule proposal
+description: Propose a new check. A citation and a synthetic fixture are required.
+labels: [rule-proposal]
+body:
+  - type: textarea
+    id: requirement
+    attributes: {label: "What should be checked?"}
+    validations: {required: true}
+  - type: input
+    id: citation
+    attributes: {label: Legal basis, placeholder: "Art. 6(1) MiCAR / Annex I Part A"}
+    validations: {required: true}
+  - type: dropdown
+    id: type
+    attributes: {label: Whitepaper type, options: [OTHER, ART, EMT, all]}
+  - type: textarea
+    id: fixture
+    attributes: {label: Synthetic passing and failing example, render: json}
+    validations: {required: true}
