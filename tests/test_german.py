@@ -12,7 +12,7 @@ def test_german_language_auto_detection():
             "summary": "Dies ist die Zusammenfassung des Projekts. Es enthält wesentliche Informationen.",
             "risk_warning": "Das ist ein Warnhinweis bezüglich des Risikos eines Wertverlusts.",
         },
-        metadata={}
+        metadata={},
     )
     assert wp_de.language == "de"
 
@@ -24,7 +24,7 @@ def test_german_language_auto_detection():
             "summary": "This is the summary of the project. It contains key information.",
             "risk_warning": "This is a warning warning about the risk of value loss.",
         },
-        metadata={}
+        metadata={},
     )
     assert wp_en.language == "en"
 
@@ -63,11 +63,11 @@ def test_german_draft_linting():
             "notification_date": "Datum der Notifizierung ist heute am 29. Mai 2026.",
             "language": "Die offizielle Sprache dieses Dokuments ist Deutsch, wie gesetzlich vorgesehen.",
         },
-        metadata={}
+        metadata={},
     )
-    
+
     findings = Linter(COMMON_RULES).lint(wp_de)
-    
+
     for f in findings:
         if f.rule.rule_id in (
             "COMMON.SUMMARY",

@@ -214,9 +214,7 @@ STUDY_RULES: tuple[StudyRule, ...] = (
         rule_id="ANNEX_I_PART_D_03_IMPLEMENTATION_PERSONS",
         annex_item="Annex I, Part D, item 3",
         label="Persons involved in crypto-asset project implementation",
-        missing_element=(
-            "natural or legal persons involved in implementation of the crypto-asset project"
-        ),
+        missing_element=("natural or legal persons involved in implementation of the crypto-asset project"),
         required_patterns=(
             r"\bdesign and development\b",
             r"\bpersons? involved\b",

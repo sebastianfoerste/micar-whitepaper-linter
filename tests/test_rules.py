@@ -20,17 +20,13 @@ def test_rulesets_compile_patterns():
                 try:
                     re.compile(pattern)
                 except re.error as exc:
-                    pytest.fail(
-                        f"Invalid required_pattern '{pattern}' in rule {rule.rule_id}: {exc}"
-                    )
+                    pytest.fail(f"Invalid required_pattern '{pattern}' in rule {rule.rule_id}: {exc}")
 
             for pattern in rule.prohibited_patterns:
                 try:
                     re.compile(pattern)
                 except re.error as exc:
-                    pytest.fail(
-                        f"Invalid prohibited_pattern '{pattern}' in rule {rule.rule_id}: {exc}"
-                    )
+                    pytest.fail(f"Invalid prohibited_pattern '{pattern}' in rule {rule.rule_id}: {exc}")
 
 
 def test_every_rule_carries_a_pinpoint_citation():
