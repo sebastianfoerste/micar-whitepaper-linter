@@ -45,7 +45,7 @@ pip install micar-whitepaper-linter
 micar-lint your-draft.json
 ```
 
-DOCX drafts need the `docx` extra: `pip install 'micar-whitepaper-linter[docx]'` or `uvx --from 'micar-whitepaper-linter[docx]' micar-lint your-draft.docx`.
+DOCX drafts need the `docx` extra: `pip install 'micar-whitepaper-linter[docx]'` or `uvx --python 3.13 --from 'micar-whitepaper-linter[docx]' micar-lint your-draft.docx`.
 
 **From a clone** of this repository (requires Python 3.13+, uv and make):
 
@@ -74,22 +74,26 @@ Whitepaper type: ART
 Pass: 0  |  Review: 13  |  Missing: 5  |  Blockers: 15
 
 [REVIEW] [BLOCKER] COMMON.SUMMARY  Plain-language summary
-           Cite:  Art. 6 Abs. 7, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR
+           Cite:  Art. 6(7), Art. 19(6), Art. 51(6) MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'summary'  (4 words)
            -  Section is thin: 4 words, expected at least 80.
            -  Missing review terms: summary, key information.
 
 [MISS  ] [BLOCKER] COMMON.RISK_WARNING  Mandatory risk warning statement
-           Cite:  Art. 6 Abs. 5, Art. 19 Abs. 4, Art. 51 Abs. 4 MiCAR
+           Cite:  Art. 6(5), Art. 19(4), Art. 51(4) MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'risk_warning'  (0 words)
            -  Section is empty or absent.
 
 [MISS  ] [BLOCKER] COMMON.IXBRL_TAGGING  Inline XBRL (iXBRL) compliance and ESMA metadata tagging
-           Cite:  Art. 2 VO (EU) 2024/2984
+           Cite:  Art. 2 Regulation (EU) 2024/2984
+           Text:  https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng
+           Section: 'ixbrl_tagging'  (0 words)
            -  Draft format: notification requires XHTML with Inline XBRL tagging. ...
 ```
 
-(The third finding is trimmed with `...`; the "Abs." citation style is as the tool prints it.) XHTML in the numbered-field layout of Implementing Regulation (EU) 2024/2984 works too; state the regime, since it is not inferred:
+(The third finding is trimmed with `...`. Citations print in English EU style with a link to the act on EUR-Lex; `--citation-style de` prints the German form, e.g. "Art. 6 Abs. 7 MiCAR". `--json` carries both, plus the links.) XHTML in the numbered-field layout of Implementing Regulation (EU) 2024/2984 works too; state the regime, since it is not inferred:
 
 ```bash
 uv run micar-lint examples/numbered-other-draft.xhtml --type other

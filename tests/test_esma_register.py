@@ -139,9 +139,7 @@ class _FakeOpener:
 
 
 def test_register_fetch_enforces_size_cap(monkeypatch):
-    monkeypatch.setattr(
-        esma_register.urllib.request, "build_opener", lambda *a: _FakeOpener(b"x" * 11)
-    )
+    monkeypatch.setattr(esma_register.urllib.request, "build_opener", lambda *a: _FakeOpener(b"x" * 11))
     with pytest.raises(SystemExit):
         esma_register._fetch_esma_url("https://www.esma.europa.eu/a.csv", max_bytes=10)
     assert esma_register._fetch_esma_url("https://www.esma.europa.eu/a.csv", max_bytes=11) == b"x" * 11

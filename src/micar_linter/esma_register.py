@@ -188,15 +188,9 @@ def _non_blank_csv_rows(text: str) -> list[dict[str, Any]]:
 
 
 def _normalize_row(row: dict[str, Any], index: int) -> dict[str, Any]:
-    entry = (
-        _normalize_official_row(row, index)
-        if "wp_url" in row
-        else _normalize_source_pack_row(row, index)
-    )
+    entry = _normalize_official_row(row, index) if "wp_url" in row else _normalize_source_pack_row(row, index)
 
-    entry["register_row_hash_sha256"] = str(
-        row.get("register_row_hash_sha256") or _row_hash(entry)
-    )
+    entry["register_row_hash_sha256"] = str(row.get("register_row_hash_sha256") or _row_hash(entry))
     eligible, reason = _eligibility(entry)
     entry["_eligible"] = eligible
     entry["_eligibility_reason"] = reason

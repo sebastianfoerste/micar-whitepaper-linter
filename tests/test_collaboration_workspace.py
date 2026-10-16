@@ -80,8 +80,7 @@ def test_docx_redline_uses_tracked_insertions_and_deletions(tmp_path) -> None:
     assert "Original table survives" in text
     assert xml.xpath("count(.//w:ins)", namespaces=ns) == 1
     inserted_changes = [
-        "".join(node.xpath(".//w:t/text()", namespaces=ns))
-        for node in xml.xpath(".//w:ins", namespaces=ns)
+        "".join(node.xpath(".//w:t/text()", namespaces=ns)) for node in xml.xpath(".//w:ins", namespaces=ns)
     ]
     assert inserted_changes == [change_set["changes"][0]["proposed_text"]]
 
