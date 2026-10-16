@@ -52,6 +52,5 @@ def test_wheel_contents_match_the_source_tree() -> None:
     if stale:
         pytest.fail(
             "docs/playground wheel is stale; rebuild it with "
-            "`uv build --wheel -o docs/playground/` and delete the superseded wheel.\n  "
-            + "\n  ".join(stale)
+            "`uv build --wheel -o docs/playground/` and delete the superseded wheel.\n  " + "\n  ".join(stale)
         )

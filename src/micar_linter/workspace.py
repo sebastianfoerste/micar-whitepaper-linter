@@ -112,9 +112,7 @@ def build_interactive_review_table(vault: dict[str, Any]) -> dict[str, Any]:
             "rows": len(rows),
             "documents": vault["document_count"],
             "blockers": sum(row["blocker"] for row in rows),
-            "pending_manual_decisions": sum(
-                row["manual_input"]["decision"] == "pending" for row in rows
-            ),
+            "pending_manual_decisions": sum(row["manual_input"]["decision"] == "pending" for row in rows),
         },
         "external_action_allowed": False,
     }
