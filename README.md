@@ -10,13 +10,6 @@ A deterministic Python linter for draft white papers under MiCAR (Regulation (EU
 
 > Review-gated first-pass tooling. It flags candidate gaps for a lawyer; it does not decide whether a white paper is lawful or complete. **Not legal advice.** Bundled examples are synthetic.
 
-<!--
-  Screenshot/GIF placeholder — to be added.
-  Replace the note below with a screenshot or GIF of a real run (for example `make demo`
-  in a terminal, or a GitHub Action job log), stored under docs/ with descriptive alt text.
--->
-> **Screenshot/GIF placeholder — to be added**
-
 ## Who it's for
 
 - **Lawyers and compliance teams** reviewing a MiCAR white paper draft who want a cited first-pass list of candidate disclosure gaps before the substantive legal review.
