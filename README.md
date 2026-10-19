@@ -128,7 +128,7 @@ A reproducible study over Title II white papers in ESMA's MiCA register publishe
 
 ## Links
 
-- [Browser playground](https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/) and demo image: [docs/demo.svg](docs/demo.svg)
+- [Browser playground](https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/) and [screenshot of the full example output](docs/demo.png) ([text](docs/demo.txt))
 - [Full usage, features, reviewer route, redline bundles](docs/DETAILS.md) · [Setup](docs/SETUP.md) · [Features](docs/FEATURES.md) · [Architecture](docs/ARCHITECTURE.md) · [Rule extension guide](docs/rule-extension-guide.md) · [Sample review bundle](docs/sample-review-bundle.md) · [Launch readiness](docs/launch-readiness.md)
 - [Study protocol](studies/2026-07-title-ii-annex-i-whitepaper-study/review-protocol.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Privacy](PRIVACY.md)
 
