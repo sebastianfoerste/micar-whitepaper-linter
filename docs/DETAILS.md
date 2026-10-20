@@ -61,7 +61,36 @@ jobs:
           strict: 'true'
 ```
 
-Inputs: `whitepaper` (path to a JSON/XHTML/DOCX draft), `strict` (default `true`), `extra-args` (e.g. `--json`, `--coverage`). The job fails while BLOCKER-severity findings are open. A failing job means open blockers to review, not a legal conclusion.
+Inputs:
+
+| Input | Default | Effect |
+|---|---|---|
+| `whitepaper` | required | Path to a JSON, XHTML or DOCX draft |
+| `strict` | `true` | Fail the job while BLOCKER findings are open |
+| `extra-args` | `''` | More CLI arguments, e.g. `--json`, `--type art` |
+| `summary` | `true` | Append a table of open findings to the job summary: rule, status, severity, citation, `file:line`, rule page |
+| `annotations` | `true` | Annotate up to 10 open findings on the draft file (open blockers first) |
+| `upload-sarif` | `false` | Upload a SARIF log to GitHub code scanning |
+
+Output: `sarif-file`, the path of the SARIF log, for other uploaders such as reviewdog.
+
+The job fails while BLOCKER-severity findings are open. A failing job means open blockers to review, not a legal conclusion. The summary, annotations and SARIF log carry rule IDs, statuses, citations and line numbers, never draft text or the draft title, and they change no status or exit code. The iXBRL format check (`COMMON.IXBRL_TAGGING`) never passes, so it is listed in its own summary section and not annotated.
+
+Line numbers point at the section key in a JSON draft or the matching heading in an XHTML draft; numbered-field XHTML, DOCX and absent sections point at line 1.
+
+Code scanning needs extra permissions and works on public repositories, or private ones with GitHub Code Security. Uploads from fork pull requests fail with the default read-only token:
+
+```yaml
+permissions:
+  contents: read
+  security-events: write
+steps:
+  - uses: actions/checkout@v4
+  - uses: sebastianfoerste/micar-whitepaper-linter@v1
+    with:
+      whitepaper: drafts/whitepaper.json
+      upload-sarif: 'true'
+```
 
 Fastest start: the [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template) repo ships this workflow preconfigured — click **Use this template**.
 
