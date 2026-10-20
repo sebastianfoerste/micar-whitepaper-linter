@@ -60,7 +60,7 @@ main { padding: 40px 32px 30px; }
 .button { display: inline-block; background: var(--accent); color: var(--on-accent); border-radius: 5px; padding: 10px 16px; text-decoration: none; font-weight: 600; font-size: var(--text-sm); }
 .button:hover { background: var(--accent-hover); }
 .button.secondary { background: var(--paper); color: var(--ink); border: 1px solid var(--line-strong); }
-.actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 20px 0 6px; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 20px 0 26px; }
 ul.plain { padding-left: 18px; }
 ul.plain li { margin-bottom: 6px; }
 dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; margin: 0; font-size: var(--text-sm); }
