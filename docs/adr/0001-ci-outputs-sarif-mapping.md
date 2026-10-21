@@ -18,6 +18,8 @@ Option 3.
 
 - **Mapping.** One SARIF `rule` per rule run, with `helpUri` to `docs/rules/<RULE_ID>.html` on the Pages site, both citation forms in `properties`, and tags. One `result` per open finding (`missing` or `review`); passes are counted in `run.properties.summary`, not listed. Level: BLOCKER → `error`, MAJOR → `warning`, MINOR → `note` (annotations: `error`, `warning`, `notice`).
 - **Location.** The input path as given. `startLine` is the line of the section key inside the JSON `sections` object (last duplicate wins, as in Python and the playground), or the first XHTML heading that maps to the section. Numbered-field XHTML, DOCX, PDF, Markdown and absent sections use line 1.
+- **Category.** `automationDetails.id` is `micar-lint/<first 12 hex of SHA-256 of the path>/`. codeql-action takes the category from it when present, and accepts one run per category per job, so two drafts in one job need distinct ids. The Action therefore passes no `category` input.
+- **Output directory.** The Action writes to a fresh `mktemp -d` directory under `RUNNER_TEMP` per run, so a second use in one job cannot re-report the first run's files.
 - **Fingerprint.** `partialFingerprints["micarRuleSection/v1"]` = SHA-256 of path, rule ID and section key, so it carries no text. GitHub documents only `primaryLocationLineHash`, which it computes itself.
 - **No draft text.** Messages use rule metadata and issue strings. Issue strings of `COMMON.IXBRL_TAGGING` and `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW` can quote the draft (namespaces, parser errors, percentages) and are replaced by a fixed sentence. The summary names the file path, not the draft title.
 - **The always-open format gate.** `COMMON.IXBRL_TAGGING` keeps its status and severity. It is tagged `format-gate` in SARIF, listed in its own summary section, and left out of the 10 annotations so it does not take a slot on every run.
@@ -31,6 +33,8 @@ Option 3.
 - SARIF upload fails on fork PRs and on private repositories without Code Security; it is opt-in and documented.
 - The annotation caps (10 per level per step) are documented only in a reviewdog issue (Claimed); the summary is the complete list.
 - rdjson for reviewdog is not emitted; reviewdog can read SARIF.
+
+- The job log still prints the full text report, including the draft title. Only the summary, annotations and SARIF log are draft-free.
 
 ## Non-negotiables check
 

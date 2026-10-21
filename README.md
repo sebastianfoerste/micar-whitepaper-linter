@@ -20,7 +20,7 @@ Rule sets cover all three white paper regimes under MiCAR (Regulation (EU) 2023/
 ## Try it now
 
 - **In the browser, nothing leaves the page:** [live playground](https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/) (Pyodide).
-- **GitHub Action:** add `sebastianfoerste/micar-whitepaper-linter@v1` to a workflow in the repository that holds your draft. Findings and their citations appear in the job summary and as annotations on the draft, and by default (`strict: 'true'`) the job fails while BLOCKER-severity findings are open. See [GitHub Action](#github-action) for the snippet and inputs, or start from the [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template) repo, which ships the workflow preconfigured.
+- **GitHub Action:** add `sebastianfoerste/micar-whitepaper-linter@v1` to a workflow in the repository that holds your draft. Findings and their citations appear in the job log (from the next `v1` release also in the job summary and as annotations on the draft), and by default (`strict: 'true'`) the job fails while BLOCKER-severity findings are open. See [GitHub Action](#github-action) for the snippet and inputs, or start from the [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template) repo, which ships the workflow preconfigured.
 - **Local CLI:** follow the [Quick start](#quick-start) below. The core linter runs locally and does not require external LLM or network processing.
 
 ## Quick start
@@ -110,7 +110,7 @@ Details in [docs/DETAILS.md](docs/DETAILS.md#browser-workbench).
     strict: 'true'
 ```
 
-The job fails while BLOCKER findings are open and adds a summary table and line annotations, never draft text; SARIF upload is opt-in. Every rule has a [reference page](https://sebastianfoerste.github.io/micar-whitepaper-linter/rules/). Starter repo with this preconfigured: [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template). Details in [docs/DETAILS.md](docs/DETAILS.md#github-action).
+The job fails while BLOCKER findings are open. From the next `v1` release it also adds a summary table and line annotations, which carry no draft text, and offers opt-in SARIF upload; the job log still prints the full report, including draft content such as the title. Every rule has a [reference page](https://sebastianfoerste.github.io/micar-whitepaper-linter/rules/). Starter repo with this preconfigured: [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template). Details in [docs/DETAILS.md](docs/DETAILS.md#github-action).
 
 ## Status and limits
 
