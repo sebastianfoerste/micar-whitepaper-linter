@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from micar_linter import __version__, citations
+from micar_linter.lei import check_digits_for
 from micar_linter.linter import Linter
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Rule
@@ -44,6 +45,15 @@ VERIFICATION_NOTE = (
 )
 FILLER = "This synthetic sentence only adds length and states no fact about any issuer or token."
 FORMAT_GATE = {"COMMON.IXBRL_TAGGING"}
+LEI_RULES = {"COMMON.LEI_CHECK_DIGITS", "COMMON.LEI_CONSISTENCY"}
+# Synthetic LEIs: an obviously fictitious 18-character base completed with computed check digits.
+SYNTHETIC_LEI = "9999SYNTH0000ZZQ01" + check_digits_for("9999SYNTH0000ZZQ01")
+OTHER_SYNTHETIC_LEI = "9999SYNTH0000ZZQ02" + check_digits_for("9999SYNTH0000ZZQ02")
+BROKEN_LEI = SYNTHETIC_LEI[:-2] + f"{(int(SYNTHETIC_LEI[-2:]) + 1) % 100:02d}"
+LEI_VERIFICATION_NOTE = (
+    "The citation is the Part of each Annex that the party rules already cite. The point that names the "
+    "LEI has not been verified against the Official Journal; treat the legal basis as pending owner review."
+)
 NEVER_PASS = {"COMMON.IXBRL_TAGGING", "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW"}
 UNTESTED_REGIMES = {
     "ANNEX_II": "The Annex II rules have not yet been run against a real ART white paper.",
@@ -103,6 +113,54 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
                 "An XHTML file is checked for the Inline XBRL 1.1 and ESMA MiCA taxonomy namespaces and "
                 "then shows Review, because tag completeness needs a taxonomy validator.",
             )
+        ]
+    if rule.rule_id in LEI_RULES:
+        base = {"title": "Synthetic rule example", "type": regime.value}
+        issuer = f"Synthetic Issuer AG, a fictional company. LEI: {SYNTHETIC_LEI}."
+        if rule.rule_id == "COMMON.LEI_CHECK_DIGITS":
+            return [
+                Example(
+                    "No LEI in the draft",
+                    "missing",
+                    {**base, "sections": {"issuer": "Synthetic Issuer AG."}},
+                    "Without an LEI there are no check digits to verify, so the rule fails closed.",
+                ),
+                Example(
+                    "Check digits do not match",
+                    "review",
+                    {**base, "sections": {"issuer": f"Synthetic Issuer AG. LEI: {BROKEN_LEI}."}},
+                    "The last two digits do not satisfy ISO/IEC 7064 MOD 97-10, which usually means a typo.",
+                ),
+                Example(
+                    "Check digits match",
+                    "pass",
+                    {**base, "sections": {"issuer": issuer}},
+                    "The code is well formed. The check does not ask a registry whether the LEI exists or "
+                    "belongs to the named entity.",
+                ),
+            ]
+        return [
+            Example(
+                "No LEI in a party section",
+                "missing",
+                {**base, "sections": {"issuer": "Synthetic Issuer AG.", "summary": f"LEI {SYNTHETIC_LEI}."}},
+                "The issuer, offeror and trading platform operator sections carry no valid LEI.",
+            ),
+            Example(
+                "LEI outside the party sections",
+                "review",
+                {
+                    **base,
+                    "sections": {"issuer": issuer, "summary": f"The issuer's LEI is {OTHER_SYNTHETIC_LEI}."},
+                },
+                "The summary names a valid LEI that no party section states.",
+            ),
+            Example(
+                "Same LEI throughout",
+                "pass",
+                {**base, "sections": {"issuer": issuer, "summary": f"The issuer's LEI is {SYNTHETIC_LEI}."}},
+                "Every valid LEI in the draft matches a party section, and the issuer states one.",
+            ),
         ]
     if rule.rule_id == "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW":
         flags = {
@@ -192,13 +250,12 @@ def _page(title: str, description: str, body: str, *, root: str = "../") -> str:
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="site-header">
   <a class="brand" href="{root}"><span class="brand-mark" aria-hidden="true">M</span><span>MiCAR <strong>Whitepaper Linter</strong></span></a>
-  <nav aria-label="Site"><a href="{root}">Overview</a><a href="{root}rules/">Rules</a><a href="{root}playground/">Playground</a><a href="{REPO}">Source</a><button class="theme-toggle" type="button" data-theme-toggle aria-pressed="false">Dark theme</button></nav>
+  <nav aria-label="Site"><a href="{root}">Overview</a><a href="{root}rules/">Rules</a><a href="{root}playground/">Playground</a><a href="{REPO}">Source</a></nav>
 </header>
 <main id="main">
 {body}
 </main>
 <footer><span>MiCAR Whitepaper Linter {_e(__version__)} · MIT licence · First-pass screening, not legal advice.</span><span>Generated from the rule set by <code>scripts/build_rule_docs.py</code>.</span></footer>
-<script src="{root}assets/theme.js" defer></script>
 </body>
 </html>
 """
@@ -219,6 +276,22 @@ def status_logic(rule: Rule) -> str:
             "<li><strong>Review</strong>: the draft is XHTML. The check reports namespace problems and always adds "
             "that tag completeness was not checked.</li><li><strong>Pass</strong>: never. This is a fail-closed "
             "format gate.</li></ul>"
+        )
+    if rule.rule_id == "COMMON.LEI_CHECK_DIGITS":
+        return (
+            '<ul class="plain"><li><strong>Missing</strong>: no LEI-shaped code (18 letters or digits and two '
+            "check digits) appears in any section. A 20-digit number counts only next to an LEI label.</li>"
+            "<li><strong>Review</strong>: an LEI-shaped code fails the ISO/IEC 7064 MOD 97-10 check digits.</li>"
+            "<li><strong>Pass</strong>: every LEI-shaped code has valid check digits. No registry is asked.</li></ul>"
+        )
+    if rule.rule_id == "COMMON.LEI_CONSISTENCY":
+        return (
+            '<ul class="plain"><li><strong>Missing</strong>: no section <code>issuer</code>, <code>offeror</code> or '
+            "<code>trading_platform_operator</code> carries an LEI with valid check digits.</li>"
+            "<li><strong>Review</strong>: a valid LEI in another section appears in no party section, or the "
+            "<code>issuer</code> section names more than one valid LEI.</li>"
+            "<li><strong>Pass</strong>: none of the above. Codes with invalid check digits are reported by "
+            '<a href="COMMON.LEI_CHECK_DIGITS.html">COMMON.LEI_CHECK_DIGITS</a>, not here.</li></ul>'
         )
     if rule.rule_id == "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW":
         return (
@@ -255,6 +328,8 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
         (
             "Reads no section. It checks the file format, so adding a section to a draft cannot change its status."
             if rule.rule_id in FORMAT_GATE
+            else "Reads every section of the draft; findings are anchored to the <code>issuer</code> section."
+            if rule.rule_id in LEI_RULES
             else f"Reads one section key, <code>{_e(rule.section)}</code>. Text elsewhere in the draft is not considered."
         ),
         (
@@ -262,6 +337,9 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             if rule.rule_id == "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW"
             else "Checks the file format and taxonomy namespace only, not tag completeness."
             if rule.rule_id == "COMMON.IXBRL_TAGGING"
+            else "Works offline on the characters of each code. It does not confirm that an LEI is registered, "
+            "current or held by the entity the draft names."
+            if rule.rule_id in LEI_RULES
             else "Matches words and counts length. It does not test accuracy, consistency with other sections or "
             "the point-level items of the cited Part."
         ),
@@ -269,6 +347,8 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
     ]
     if family in UNTESTED_REGIMES:
         limitations.append(UNTESTED_REGIMES[family])
+    if rule.rule_id in LEI_RULES:
+        limitations.append(LEI_VERIFICATION_NOTE)
     if rule.rule_id in NEVER_PASS:
         limitations.append("This rule never reports Pass.")
     example_html = []
@@ -291,7 +371,7 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
 <dt>Canonical form</dt><dd lang="de">{_e(rule.citation)}</dd>
 <dt>Runs for</dt><dd>{_e("; ".join(REGIME_NAMES[r] for r in regimes))}</dd>
 <dt>Severity if open</dt><dd>{_e(rule.severity.label)}</dd>
-<dt>Section key</dt><dd>{"none: checks the file format" if rule.rule_id in FORMAT_GATE else f"<code>{_e(rule.section)}</code>"}</dd>
+<dt>Section key</dt><dd>{"none: checks the file format" if rule.rule_id in FORMAT_GATE else "all sections; anchored to <code>issuer</code>" if rule.rule_id in LEI_RULES else f"<code>{_e(rule.section)}</code>"}</dd>
 <dt>Minimum words</dt><dd>{rule.min_words}</dd>
 <dt>Listed terms (English)</dt><dd>{_terms(rule.required_terms)}</dd>
 <dt>Listed terms (German)</dt><dd lang="de">{_terms(rule.required_terms_de)}</dd>
@@ -303,7 +383,7 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
 <h2>Legal basis</h2>
 <p>{_e(citation_en)}</p>
 <ul class="plain">{sources}</ul>
-<p class="callout">{_e(VERIFICATION_NOTE)}</p>
+<p class="callout">{_e(VERIFICATION_NOTE)}{" " + _e(LEI_VERIFICATION_NOTE) if rule.rule_id in LEI_RULES else ""}</p>
 <h2>Synthetic examples</h2>
 <p class="small muted">Each example is linted when this page is generated. The build fails if a result differs.</p>
 {"".join(example_html)}

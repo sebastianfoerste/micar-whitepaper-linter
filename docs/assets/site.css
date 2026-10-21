@@ -1,4 +1,4 @@
-/* Shared tokens and layout for the landing page and the rule pages.
+/* Shared tokens and layout for the landing page and the rule pages (light theme only).
    The playground keeps its own stylesheet with the same tokens. */
 :root {
   color-scheme: light;
@@ -10,22 +10,6 @@
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --text-xs: 11px; --text-sm: 13px; --text-md: 15px; --text-lg: 18px; --text-xl: 26px; --text-2xl: 40px;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --ink: #e3e9e6; --muted: #a3b0ab; --line: #34413f; --paper: #1b2426; --bg: #121a1c;
-    --accent: #7cc4ae; --accent-hover: #9ad6c2; --on-accent: #0f1a17; --green: #8fd0a9; --amber: #e6c27a; --red: #f0a093;
-    --line-strong: #3f4d4a; --subtle: #182123; --chip: #222c2e; --code-ink: #c6d4d0; --focus: #7cc4ae;
-    --soft-red: #3a2522; --soft-amber: #352c18; --soft-green: #1f3529;
-  }
-}
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --ink: #e3e9e6; --muted: #a3b0ab; --line: #34413f; --paper: #1b2426; --bg: #121a1c;
-  --accent: #7cc4ae; --accent-hover: #9ad6c2; --on-accent: #0f1a17; --green: #8fd0a9; --amber: #e6c27a; --red: #f0a093;
-  --line-strong: #3f4d4a; --subtle: #182123; --chip: #222c2e; --code-ink: #c6d4d0; --focus: #7cc4ae;
-  --soft-red: #3a2522; --soft-amber: #352c18; --soft-green: #1f3529;
 }
 * { box-sizing: border-box; }
 body { margin: 0; color: var(--ink); background: var(--bg); font: var(--text-md)/1.6 var(--font-sans); }
@@ -47,7 +31,6 @@ pre code { background: none; border: 0; padding: 0; }
 nav { display: flex; gap: 20px; align-items: center; font-size: var(--text-sm); flex-wrap: wrap; }
 nav a { color: var(--ink); text-decoration: none; }
 nav a:hover, nav a[aria-current="page"] { text-decoration: underline; }
-.theme-toggle { font: inherit; font-size: var(--text-xs); color: var(--ink); background: var(--paper); border: 1px solid var(--line-strong); border-radius: 5px; padding: 5px 9px; cursor: pointer; }
 main { padding: 40px 32px 30px; }
 .eyebrow { font-size: 10px; font-weight: 650; letter-spacing: 1.6px; color: var(--accent); text-transform: uppercase; margin-bottom: 10px; }
 .lede { color: var(--muted); font-size: 16px; max-width: 720px; }

@@ -62,17 +62,17 @@ Rank = Impact × evidence weight (Observed 3, Claimed 2, Inferred 1) ÷ effort (
 | H1 | SARIF, step summary, annotations in the Action | 5 | pass | M | Observed (github/docs, reviewdog, Ruff `github` format) | table stakes for linters, new for MiCA | 7.5 | **Built** |
 | H2 | Generated rule pages with executed examples | 5 | pass | M | Observed (ESLint, Ruff, DQC) | differentiator | 7.5 | **Built** |
 | H10 | Wilson 95% intervals in `micar-review-summary` | 2 | pass | S | Observed (CUAD, LegalBench lack them) | differentiator once labels exist | 6 | Spec, next |
-| H11 | LEI check digits and issuer identity consistency | 4 | pass | M | Observed (WhitePaperXBRL mod-97) | differentiator if fail-closed | 6 | Spec, next |
+| H11 | LEI check digits and issuer identity consistency | 4 | pass | M | Observed (WhitePaperXBRL mod-97) | differentiator if fail-closed | 6 | **Built** (swapped in for H7 at the owner's request, 2026-10-21) |
 | H8 | Point-level rules | 5 | fail (this run: point citations unverifiable; see Needs owner decision) | L | Observed (WhitePaperXBRL field-level) | table stakes for filing tools | 3.75 | Parked: needs EUR-Lex verification |
 | H6 | Landing page | 3 | pass | S | Inferred | table stakes | 3 | **Built** (design) |
-| H7 | Dark mode with tokens, no storage | 2 | pass | M | Observed (Ruff playground theme) | table stakes | 3 | **Built** (design) |
+| H7 | Dark mode with tokens, no storage | 2 | pass | M | Observed (Ruff playground theme) | table stakes | 3 | Built, then **removed** at the owner's request (2026-10-21) for H11 |
 | H3 | Inline section highlight and structural quick-fixes | 4 | pass | L | Observed (Ruff playground, Ruff fix safety) | differentiator | 3 | Spec + Proposed ADR |
 | H5 | Browser DOCX import | 3 | pass | M | Inferred | differentiator | 1.5 | Spec; kill test pending |
 | H9 | Arelle formula assertions (CLI extra) | 3 | fail (this run: new extra changes `pyproject.toml`/`uv.lock`; see Needs owner decision) | L | Observed | differentiator | 2.25 | Proposed ADR |
 | D4 | Load progress and "format gate only" state | 2 | pass | S | Inferred | polish | 2 | Spec |
 | H4 | English citations in the browser | 4 | fail (`displayCitation` is `TODO(human)`; see Needs owner decision) | S | Observed (CLI already renders them) | table stakes | — | Owner decision (`TODO(human)`) |
 
-Budget: 4 items built (2 features, 2 design upgrades), all Fit = pass, effort S or M.
+Budget: 4 items built, all Fit = pass, effort S or M. Since 2026-10-21 these are 3 features (H1, H2, H11) and 1 design upgrade (H6): the owner swapped dark mode (H7) for H11, which restores rank order.
 
 **Correction (audit follow-up, 2026-10-21).** The selection departed from rank order. The budget allowed up to 3 features and up to 2 design upgrades within 4 items, so H11 (rank 6) or H10 (rank 6) fitted as a third feature beside one design upgrade, and should have been built ahead of H7 (rank 3). The earlier note here, that the cap "left no slot", misread the budget. H7 was kept because it was finished and tested before the error was found; swapping it for H11 is listed under Needs owner decision. The axe fix on the brand link (D3) was a one-attribute change made inside H7, not a fifth item.
 
@@ -117,13 +117,17 @@ Where this repo should beat everyone: **the only MiCA white-paper checker whose 
 - **Acceptance.** One page per rule; every example's stated status equals the linter's; committed pages equal regenerated pages; axe clean at 1440 and 390 px in both themes.
 - **Risk.** Readers could reuse the passing filler text. Mitigated by the explicit note and by content that states no facts.
 
-### F3. LEI check digits and identity consistency (H11), next
+### F3. LEI check digits and identity consistency (H11), built 2026-10-21
 
 - **User story.** As a first-pass reviewer, I learn when an LEI in the draft fails its check digits, or when the issuer's LEI differs between sections.
 - **References.** WhitePaperXBRL LEI mod-97 checks (Observed); its GLEIF fail-open is the anti-pattern to avoid.
-- **Adapt.** New rule IDs (e.g. `COMMON.LEI_FORMAT`, `COMMON.IDENTITY_CONSISTENCY`), Review findings only, never Pass on absence of an LEI, no network call. ISO 17442 format plus ISO 7064 MOD 97-10 check digits. Fixtures use test-generated LEIs.
-- **Acceptance.** Invalid check digits → Review; two different valid LEIs for the issuer → Review; no LEI → no new pass claimed; existing rule IDs and counts per regime documented as changed in the changelog.
-- **Risk.** Adds findings to existing reports; needs a changelog entry and playground sample refresh (`make playground-samples`).
+- **Built as.** Two new rules that run for every regime, both MAJOR, both offline (`src/micar_linter/lei.py`):
+  - `COMMON.LEI_CHECK_DIGITS`: Missing when the draft contains no LEI-shaped code (fail closed); Review when a code fails the ISO/IEC 7064 MOD 97-10 check digits; Pass when every code is well formed. A purely numeric 20-digit run counts only right after an LEI label.
+  - `COMMON.LEI_CONSISTENCY`: Missing when no party section (`issuer`, `offeror`, `trading_platform_operator`) carries a valid LEI; Review when a valid LEI elsewhere appears in no party section, or the issuer section names more than one; Pass otherwise.
+  - No registry (GLEIF) lookup, so a pass never says an LEI exists or belongs to the named entity. CI outputs replace the issue text, which quotes the LEI, with the fixed sentence.
+- **Citation.** Part A of each Annex, at Part level, the citation the party rules already use; the repo's study maps the LEI to Annex I, Part A. The point-level basis is not verified (EUR-Lex unreachable) and every rule page says so. See [ADR 0007](../adr/0007-lei-rules.md).
+- **Acceptance.** Met: `tests/test_lei.py` (14 tests) covers the check-digit arithmetic, labelled and unlabelled numbers, every status of both rules, German messages, every regime and draft-free CI outputs. Generated rule pages carry tested examples. Fixture LEIs are synthetic, with computed check digits.
+- **Effect.** Each regime gains two rules (Annex I 16 → 18, Annex II 18 → 20, Annex III 14 → 16). The synthetic examples carry no LEI, so they now show both rules as Missing. Existing rule IDs are unchanged.
 
 ### F4. Wilson intervals in the review summary (H10), next
 
@@ -164,9 +168,9 @@ with call sites passing the finding instead of `finding.citation`, and a test (t
 
 | ID | Upgrade | Status |
 |---|---|---|
-| D1 (H7) | Colour tokens for every value in `styles.css`, a dark set via `prefers-color-scheme` and `[data-theme]`, a page-session toggle with no storage | Built. axe: 0 violations in 13 states × 2 widths × 2 themes |
+| D1 (H7) | Colour tokens for every value in `styles.css`, a dark set via `prefers-color-scheme` and `[data-theme]`, a page-session toggle with no storage | Built (axe: 0 violations in 13 states × 2 widths × 2 themes), then the dark set and toggle were removed at the owner's request on 2026-10-21. The light-only colour tokens stay |
 | D2 (H6) | `docs/index.html` landing page sharing tokens with the rule pages | Built. axe clean, no horizontal scroll at 390 px |
-| D3 | Accessibility fix: brand link name matches visible text | Built (with D1) |
+| D3 | Accessibility fix: brand link name matches visible text | Built (with D1); kept after D1's dark set was removed |
 | D4 | Load progress for the runtime, and a defined state for "only the format gate is open" (no content gaps, explicitly not a compliance opinion) | Spec |
 | D5 (H3) | Overlay the `sectionSelection` span on the textarea; CodeMirror 6 only as one vendored same-origin module; structural fixes only (insert a missing key as `""`) labelled with Ruff-style safety | Spec + [ADR 0003](../adr/0003-playground-editor.md) (Proposed) |
 
@@ -180,11 +184,11 @@ with call sites passing the finding instead of `finding.citation`, and a test (t
 | H4 | parked (owner) | https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/ee156930df78b515d5a61397467c24439b61fecd/docs/playground/model.mjs | `displayCitation` is reserved for the owner (`TODO(human)`); diff above |
 | H5 | parked | https://github.com/pyodide/pyodide/releases/download/0.28.2/pyodide-0.28.2.tar.bz2 (no python-docx in the distribution) | Size and time kill test not yet run |
 | H6 | confirmed (built) | none external (Inferred) | Gives the Pages root a home and states limits |
-| H7 | confirmed (built) | https://github.com/astral-sh/ruff/blob/3e3f22dcc47a534d5bb6668817464b02c6e6e133/playground/ruff/src/Editor/settings.ts (theme setting persisted there; not here) | Tokens plus page-session toggle |
+| H7 | built, then removed | https://github.com/astral-sh/ruff/blob/3e3f22dcc47a534d5bb6668817464b02c6e6e133/playground/ruff/src/Editor/settings.ts (theme setting persisted there; not here) | Removed at the owner's request (2026-10-21) in favour of H11 |
 | H8 | parked (owner) | https://github.com/Loideroi/WhitePaperXBRL/blob/f0dc7028e8c13ed8ccd3e322221f03b225f73a10/docs/agent_docs/validation-rules.md | Point citations need EUR-Lex verification |
 | H9 | modified, parked | https://github.com/Arelle/Arelle/blob/2ba2e9d96554554a79c2545219f6e5b941bb4d59/arelle/CntlrCmdLine.py; https://github.com/Arelle/Arelle/issues/1898 | CLI-only; killed for the browser (`lxml!=6.0.0`) |
 | H10 | confirmed, not built | https://github.com/TheAtticusProject/cuad/blob/67faa0e6023b04fcaae6cc09497ab00e5d63a2a2/evaluate.py; https://github.com/HazyResearch/legalbench/blob/b46bf4ffae90524b2b72aaa30e7745fe9db64481/README.md | Should have been built as a third feature (see the correction above); low impact while 0 of 150 cells are reviewed |
-| H11 | modified, not built | https://github.com/Loideroi/WhitePaperXBRL/blob/f0dc7028e8c13ed8ccd3e322221f03b225f73a10/docs/agent_docs/validation-rules.md | Should have been built as a third feature (see the correction above); adapt as fail-closed Review findings with no network lookup |
+| H11 | modified (built) | https://github.com/Loideroi/WhitePaperXBRL/blob/f0dc7028e8c13ed8ccd3e322221f03b225f73a10/docs/agent_docs/validation-rules.md | Built 2026-10-21 as two fail-closed rules, `COMMON.LEI_CHECK_DIGITS` and `COMMON.LEI_CONSISTENCY`; offline, no registry lookup; see [ADR 0007](../adr/0007-lei-rules.md) |
 
 ## Needs owner decision
 
@@ -195,5 +199,6 @@ with call sites passing the finding instead of `finding.citation`, and a test (t
 5. **Annotations and summary on by default** under `@v1`: additive output with no exit-code change, but visible to every existing consumer on the next `v1` move.
 6. **`uvx --no-cache`** in the Action: correctness over a few seconds per run (briefing correction 6).
 7. **H8 IDs and citations**: approve the point-level ID scheme and verify each point citation on EUR-Lex.
-8. **H7 versus H11**: keep the built dark mode (H7, rank 3), or replace it with fail-closed LEI check digits (H11, rank 6) as rank order required.
-9. **Doc drift** proposed in the PR body: `AGENTS.md` (`BaseRule`, database migrations, "compliant"), `docs/FEATURES.md` and `docs/ARCHITECTURE.md` ("regulatory rejection", "compliant"), starter README custody claim (`ANNEX_II.G.CUSTODY` can pass), German citations in `reports/sample-*.txt` and in the text report footer.
+8. **H7 versus H11**: decided 2026-10-21. The owner swapped dark mode out for H11.
+9. **H11 legal basis**: the LEI rules cite Part A of each Annex at Part level (the citation the party rules already use). Verify the point that names the LEI against the Official Journal, and confirm MAJOR as their severity.
+10. **Doc drift** proposed in the PR body: `AGENTS.md` (`BaseRule`, database migrations, "compliant"), `docs/FEATURES.md` and `docs/ARCHITECTURE.md` ("regulatory rejection", "compliant"), starter README custody claim (`ANNEX_II.G.CUSTODY` can pass), German citations in `reports/sample-*.txt` and in the text report footer.

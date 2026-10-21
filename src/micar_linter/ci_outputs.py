@@ -30,8 +30,15 @@ MAX_ANNOTATIONS = 10
 # This blocker stays open for every draft until an iXBRL validation runs, so it is
 # reported in SARIF and the summary but does not take an annotation slot.
 FORMAT_GATE_RULES = frozenset({"COMMON.IXBRL_TAGGING"})
-# Issue messages of these rules can quote draft content.
-DRAFT_ECHO_RULES = frozenset({"COMMON.IXBRL_TAGGING", "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW"})
+# Issue messages of these rules can quote draft content (namespaces, percentages, LEIs).
+DRAFT_ECHO_RULES = frozenset(
+    {
+        "COMMON.IXBRL_TAGGING",
+        "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
+        "COMMON.LEI_CHECK_DIGITS",
+        "COMMON.LEI_CONSISTENCY",
+    }
+)
 _FIXED_ISSUE = "Details are in the full lint report; this output does not repeat draft content."
 
 _SARIF_LEVEL = {Severity.BLOCKER: "error", Severity.MAJOR: "warning", Severity.MINOR: "note"}
