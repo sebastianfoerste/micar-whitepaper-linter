@@ -139,9 +139,8 @@ def test_status_figures_in_the_study_documents_equal_the_json():
     assert (status == "pending_review") is (not committed["publication_ready"])
 
     report = _text("findings-summary.md")
-    # Findings schema v1 wording; the count is of processed documents.
-    assert _number(r"Documents reviewed: (\d+)", report) == committed["documents_total"]
-    assert _number(r"The (\d+) document-rule cells are listed", report) == committed["rows_total"]
+    assert _number(r"Documents processed: (\d+)", report) == committed["documents_total"]
+    assert _number(r"Reviewers label the (\d+) document-rule cells", report) == committed["rows_total"]
 
     limitations = _text("limitations.md")
     pending_claim = re.search(r"All (\d+) document-rule cells remain pending", limitations)

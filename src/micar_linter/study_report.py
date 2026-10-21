@@ -51,13 +51,10 @@ def render_study_report(payload: dict[str, Any]) -> str:
         ),
         "",
         (
-            "The output is a research artifact. It does not provide legal advice and does not "
-            "assess the full legal sufficiency of any white paper. Findings tables use WP-ID "
-            "identifiers rather than printing issuer names inline; the source manifest links each "
-            "WP-ID to its public ESMA register entry, so findings are traceable to their source "
-            "and are not anonymized. Findings are machine-flagged and pending human legal review; "
-            "a flag is a candidate gap in extracted text, not a confirmed deficiency by the named "
-            "issuer."
+            "The output is a research artifact. It does not provide legal advice or assess the full "
+            "legal sufficiency of any white paper. Tables use WP identifiers, but the public source "
+            "manifest links those identifiers to issuer names and URLs. The data are pseudonymous, "
+            "not anonymous."
         ),
         "",
         "## Sample",
@@ -134,8 +131,9 @@ def render_study_report(payload: dict[str, Any]) -> str:
             "## Human validation gate",
             "",
             f"Reviewers label the {cells} document-rule cells in blinded per-reviewer sheets "
-            "(for example `human-review-r1.csv`) that omit detector outcomes. The outcomes are merged into "
-            "`human-review-matrix.csv` only after the independent labels are recorded. No precision, "
+            "(for example `human-review-r1.csv`) that omit detector outcomes. `human-review-matrix.csv` "
+            "already holds the detector outcomes, so reviewers do not open it while labelling; the "
+            "final labels are merged into it only after the independent labels are recorded. No precision, "
             "recall, false-positive, or false-negative claim is made until qualified reviewers label "
             "every cell under `review-protocol.md` and `micar-review-summary --require-complete` exits "
             "successfully.",

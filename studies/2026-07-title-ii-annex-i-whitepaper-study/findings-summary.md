@@ -8,7 +8,7 @@ The output is a research artifact. It does not provide legal advice or assess th
 
 ## Sample
 
-- Documents reviewed: 10
+- Documents processed: 10
 - Target sample size: 10
 - Documents excluded before or during batch processing: 2
 - Scope: Title II crypto-assets other than asset-referenced tokens and e-money tokens.
@@ -65,7 +65,7 @@ The study checks 15 deterministic controls: 12 high-signal Annex I disclosure fi
 
 ## Human validation gate
 
-The 150 document-rule cells are listed in `human-review-matrix.csv`. No precision, recall, false-positive, or false-negative claim is made until qualified reviewers label every cell under `review-protocol.md` and `micar-review-summary --require-complete` exits successfully.
+Reviewers label the 150 document-rule cells in blinded per-reviewer sheets (for example `human-review-r1.csv`) that omit detector outcomes. `human-review-matrix.csv` already holds the detector outcomes, so reviewers do not open it while labelling; the final labels are merged into it only after the independent labels are recorded. No precision, recall, false-positive, or false-negative claim is made until qualified reviewers label every cell under `review-protocol.md` and `micar-review-summary --require-complete` exits successfully.
 
 Document byte hashes and extraction metadata are recorded in `document-provenance.json`.
 
@@ -83,6 +83,9 @@ Document byte hashes and extraction metadata are recorded in `document-provenanc
 | `ANNEX_I_PART_A_08_MANAGEMENT_BODY` | 1 |
 | `ANNEX_I_PART_D_03_IMPLEMENTATION_PERSONS` | 1 |
 | `ANNEX_I_PART_F_02_CHARACTERISTICS_FUNCTIONALITY` | 1 |
+| `ARTICLE_6_05_MANDATORY_WARNINGS` | 1 |
+| `ARTICLE_6_06_MANAGEMENT_BODY_STATEMENT` | 1 |
+| `ARTICLE_6_07_SUMMARY` | 1 |
 
 ## Excluded documents
 
