@@ -63,16 +63,18 @@ Rank = Impact × evidence weight (Observed 3, Claimed 2, Inferred 1) ÷ effort (
 | H2 | Generated rule pages with executed examples | 5 | pass | M | Observed (ESLint, Ruff, DQC) | differentiator | 7.5 | **Built** |
 | H10 | Wilson 95% intervals in `micar-review-summary` | 2 | pass | S | Observed (CUAD, LegalBench lack them) | differentiator once labels exist | 6 | Spec, next |
 | H11 | LEI check digits and issuer identity consistency | 4 | pass | M | Observed (WhitePaperXBRL mod-97) | differentiator if fail-closed | 6 | Spec, next |
-| H8 | Point-level rules | 5 | owner | L | Observed (WhitePaperXBRL field-level) | table stakes for filing tools | 3.75 | Parked: needs EUR-Lex verification |
+| H8 | Point-level rules | 5 | fail (this run: point citations unverifiable; see Needs owner decision) | L | Observed (WhitePaperXBRL field-level) | table stakes for filing tools | 3.75 | Parked: needs EUR-Lex verification |
 | H6 | Landing page | 3 | pass | S | Inferred | table stakes | 3 | **Built** (design) |
 | H7 | Dark mode with tokens, no storage | 2 | pass | M | Observed (Ruff playground theme) | table stakes | 3 | **Built** (design) |
 | H3 | Inline section highlight and structural quick-fixes | 4 | pass | L | Observed (Ruff playground, Ruff fix safety) | differentiator | 3 | Spec + Proposed ADR |
 | H5 | Browser DOCX import | 3 | pass | M | Inferred | differentiator | 1.5 | Spec; kill test pending |
-| H9 | Arelle formula assertions (CLI extra) | 3 | owner | L | Observed | differentiator | 2.25 | Proposed ADR |
+| H9 | Arelle formula assertions (CLI extra) | 3 | fail (this run: new extra changes `pyproject.toml`/`uv.lock`; see Needs owner decision) | L | Observed | differentiator | 2.25 | Proposed ADR |
 | D4 | Load progress and "format gate only" state | 2 | pass | S | Inferred | polish | 2 | Spec |
-| H4 | English citations in the browser | 4 | owner | S | Observed (CLI already renders them) | table stakes | — | Owner decision (`TODO(human)`) |
+| H4 | English citations in the browser | 4 | fail (`displayCitation` is `TODO(human)`; see Needs owner decision) | S | Observed (CLI already renders them) | table stakes | — | Owner decision (`TODO(human)`) |
 
-Budget: 4 items built (2 features, 2 design upgrades), all Fit = pass, effort S or M. H10 and H11 rank above H6 and H7 but the feature/design split and the four-item cap left no slot; they are first in line.
+Budget: 4 items built (2 features, 2 design upgrades), all Fit = pass, effort S or M.
+
+**Correction (audit follow-up, 2026-10-21).** The selection departed from rank order. The budget allowed up to 3 features and up to 2 design upgrades within 4 items, so H11 (rank 6) or H10 (rank 6) fitted as a third feature beside one design upgrade, and should have been built ahead of H7 (rank 3). The earlier note here, that the cap "left no slot", misread the budget. H7 was kept because it was finished and tested before the error was found; swapping it for H11 is listed under Needs owner decision. The axe fix on the brand link (D3) was a one-attribute change made inside H7, not a fifth item.
 
 ## Anti-patterns
 
@@ -83,7 +85,7 @@ Vendors are named only where the behaviour was **Observed**.
 | A readiness score or status with no published checks | MiCAOracle returns a readiness score and traffic lights; its 18 checks are not published (README, Observed) | Cited, reviewable findings; "report language is load-bearing" |
 | A human approval that turns a status green | MiCAOracle: approval upgrades the light to GREEN (README, Observed) | A waiver shows `waived`, never `pass`, and keeps the exit code |
 | Failing open on an external lookup | WhitePaperXBRL treats a failed GLEIF lookup as a valid LEI (docs, Observed) | Fail closed |
-| Compliance badges and production claims around stub logic | mica-crypto-mcp: README shows a compliance badge and "Production-ready" while the white-paper tool returns `"status": "stub"` (code, Observed) | Never call a pass, or a tool, "compliant" |
+| Compliance badges and production claims around stub logic | mica-crypto-mcp: README shows a compliance badge and describes the package as production-ready while the white-paper tool returns `"status": "stub"` (code, Observed) | Never call a pass, or a tool, "compliant" |
 | Server-side processing of uploaded drafts | WhitePaperXBRL (in memory, Observed); MiCAOracle is remote-only (Observed) | "Nothing you paste leaves the page" |
 | Share links and autosaved editor state | Ruff playground: `localStorage` autosave and stored share links without expiry (source, Observed) | No persisted drafts, no share links |
 | Raw tool output echoed into CI annotations | reviewdog annotation example (Observed) | CI outputs carry no draft text |
@@ -172,17 +174,17 @@ with call sites passing the finding instead of `finding.citation`, and a test (t
 
 | H | Verdict | Evidence | Reason |
 |---|---|---|---|
-| H1 | modified (built) | github/docs SARIF and workflow-command sources; reviewdog README and proto; Ruff `github` format (all in landscape Part B) | Built with summary and annotations on by default and SARIF opt-in; format gate kept out of annotations; `helpUri` kept for other SARIF consumers although GitHub does not document it |
-| H2 | confirmed (built) | ESLint `tools/check-rule-examples.js`; Ruff rule-doc generator; DQC docs | Examples executed in tests, not only rendered |
-| H3 | parked | Ruff playground source | Effort L; needs the editor ADR decision |
-| H4 | parked (owner) | `model.mjs` `TODO(human)` | Reserved for the owner; diff above |
-| H5 | parked | Pyodide 0.28.2 tarball has no python-docx | Size and time kill test not yet run |
-| H6 | confirmed (built) | Inferred | Gives the Pages root a home and states limits |
-| H7 | confirmed (built) | Ruff playground theme (Observed; it persists the theme, we do not) | Tokens plus page-session toggle |
-| H8 | parked (owner) | WhitePaperXBRL field-level checks | Point citations need EUR-Lex verification |
-| H9 | modified, parked | Arelle source: offline flag, no MiCA plugin, `lxml!=6.0.0`; issue #1898 | CLI-only; killed for the browser |
-| H10 | confirmed, not built | CUAD `evaluate.py`, LegalBench evaluation code | Out of budget; low impact while 0 of 150 cells are reviewed |
-| H11 | modified, not built | WhitePaperXBRL LEI docs | Adapt as fail-closed Review findings with no network lookup |
+| H1 | modified (built) | https://github.com/github/docs/blob/666463860bec200da6c8db9cb9334e7335d9b753/content/code-security/reference/code-scanning/sarif-files/sarif-support.md; https://github.com/reviewdog/reviewdog/blob/73c79487a087e1696b3e70a0ae5d2a7233343567/README.md | Built with summary and annotations on by default and SARIF opt-in; format gate kept out of annotations; `helpUri` kept for other SARIF consumers although GitHub does not document it |
+| H2 | confirmed (built) | https://github.com/eslint/eslint/blob/449724e95bfa013fa32c29375925b4111d3924e4/tools/check-rule-examples.js; https://github.com/astral-sh/ruff/blob/3e3f22dcc47a534d5bb6668817464b02c6e6e133/crates/ruff_dev/src/generate_docs.rs; https://github.com/DataQualityCommittee/dqc_us_rules/blob/64abefd357c34ef45f9f4336a1e3171984d76601/docs/DQC_US_0001/DQC_0001.md | Examples executed in tests, not only rendered |
+| H3 | parked | https://github.com/astral-sh/ruff/blob/3e3f22dcc47a534d5bb6668817464b02c6e6e133/playground/ruff/src/Editor/settings.ts | Effort L; needs the editor ADR decision |
+| H4 | parked (owner) | https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/ee156930df78b515d5a61397467c24439b61fecd/docs/playground/model.mjs | `displayCitation` is reserved for the owner (`TODO(human)`); diff above |
+| H5 | parked | https://github.com/pyodide/pyodide/releases/download/0.28.2/pyodide-0.28.2.tar.bz2 (no python-docx in the distribution) | Size and time kill test not yet run |
+| H6 | confirmed (built) | none external (Inferred) | Gives the Pages root a home and states limits |
+| H7 | confirmed (built) | https://github.com/astral-sh/ruff/blob/3e3f22dcc47a534d5bb6668817464b02c6e6e133/playground/ruff/src/Editor/settings.ts (theme setting persisted there; not here) | Tokens plus page-session toggle |
+| H8 | parked (owner) | https://raw.githubusercontent.com/Loideroi/WhitePaperXBRL/main/docs/agent_docs/validation-rules.md | Point citations need EUR-Lex verification |
+| H9 | modified, parked | https://github.com/Arelle/Arelle/blob/2ba2e9d96554554a79c2545219f6e5b941bb4d59/arelle/CntlrCmdLine.py; https://github.com/Arelle/Arelle/issues/1898 | CLI-only; killed for the browser (`lxml!=6.0.0`) |
+| H10 | confirmed, not built | https://github.com/TheAtticusProject/cuad/blob/67faa0e6023b04fcaae6cc09497ab00e5d63a2a2/evaluate.py; https://github.com/HazyResearch/legalbench/blob/main/README.md | Should have been built as a third feature (see the correction above); low impact while 0 of 150 cells are reviewed |
+| H11 | modified, not built | https://raw.githubusercontent.com/Loideroi/WhitePaperXBRL/main/docs/agent_docs/validation-rules.md | Should have been built as a third feature (see the correction above); adapt as fail-closed Review findings with no network lookup |
 
 ## Needs owner decision
 
@@ -193,4 +195,5 @@ with call sites passing the finding instead of `finding.citation`, and a test (t
 5. **Annotations and summary on by default** under `@v1`: additive output with no exit-code change, but visible to every existing consumer on the next `v1` move.
 6. **`uvx --no-cache`** in the Action: correctness over a few seconds per run (briefing correction 6).
 7. **H8 IDs and citations**: approve the point-level ID scheme and verify each point citation on EUR-Lex.
-8. **Doc drift** proposed in the PR body: `AGENTS.md` (`BaseRule`, database migrations, "compliant"), `docs/FEATURES.md` and `docs/ARCHITECTURE.md` ("regulatory rejection", "compliant"), starter README custody claim (`ANNEX_II.G.CUSTODY` can pass), German citations in `reports/sample-*.txt` and in the text report footer.
+8. **H7 versus H11**: keep the built dark mode (H7, rank 3), or replace it with fail-closed LEI check digits (H11, rank 6) as rank order required.
+9. **Doc drift** proposed in the PR body: `AGENTS.md` (`BaseRule`, database migrations, "compliant"), `docs/FEATURES.md` and `docs/ARCHITECTURE.md` ("regulatory rejection", "compliant"), starter README custody claim (`ANNEX_II.G.CUSTODY` can pass), German citations in `reports/sample-*.txt` and in the text report footer.

@@ -36,7 +36,7 @@ Anti-patterns are flagged **only** where the evidence is Observed.
 
 ### 1. ToolOracle MiCAOracle ("MiCA Ampel" MCP server)
 
-**What it is.** A remote MCP server with 20 tools for token-level and entity-level MiCA readiness. The README lists `readiness_check`, `gap_report`, `assess_token` ("Evaluates 18 checks"), `bridge_approve`, `freshness_check` and `audit_trail`. A third-party OpenAPI mirror also lists `validate_whitepaper`. Sources: [README](https://raw.githubusercontent.com/ToolOracle/micaoracle/main/README.md), [OpenAPI mirror](https://raw.githubusercontent.com/api-evangelist/tooloracle-io/main/openapi/tooloracle-io-mica-ampel-api-openapi.yml); Observed.
+**What it is.** A remote MCP server with 20 tools for token-level and entity-level MiCA readiness. The README lists `readiness_check`, `gap_report`, `assess_token` (said to run eighteen checks), `bridge_approve`, `freshness_check` and `audit_trail`. A third-party OpenAPI mirror also lists `validate_whitepaper`. Sources: [README](https://raw.githubusercontent.com/ToolOracle/micaoracle/main/README.md), [OpenAPI mirror](https://raw.githubusercontent.com/api-evangelist/tooloracle-io/main/openapi/tooloracle-io-mica-ampel-api-openapi.yml); Observed.
 
 **Core job UX.**
 - The agent calls a tool and gets back an Ampel status per article (GREEN, YELLOW, RED or GREY) plus a readiness score (Observed).
@@ -45,13 +45,13 @@ Anti-patterns are flagged **only** where the evidence is Observed.
 **Trust mechanics.**
 - `audit_trail` exists (Observed).
 - `freshness_check` downgrades a stale GREEN to YELLOW (Observed). This is a useful idea: a status decays when its evidence ages.
-- A human `bridge_approve` "upgrades Ampel to GREEN" (Observed).
+- A human `bridge_approve` call moves the light to green (Observed).
 - The README has no licence, no privacy statement and no disclaimer (Observed).
 
 **Pricing and onboarding.** A free tier gives 10 calls per day. Pro costs €99 a month (Observed).
 
 **Anti-patterns (Observed):**
-- **Unpublished scoring logic.** The README names "18 checks" and a "full MiCA readiness score" but does not publish the check logic. This breaks the principle that a reviewer must be able to reproduce why a finding fired.
+- **Unpublished scoring logic.** The README mentions eighteen checks and an overall readiness score but does not publish the check logic. This breaks the principle that a reviewer must be able to reproduce why a finding fired.
 - **Server-side processing with no retention statement.** All calls go to a remote endpoint (tooloracle.io / api.feedoracle.io), and no data-handling policy is given. This breaks data minimisation and transparency for confidential pre-publication drafts.
 - **Approval flips status to GREEN.** A manual approval changes the displayed status to GREEN. This blurs "a human accepted the risk" with "the check passed", which breaks the separation of finding from waiver.
 
@@ -60,7 +60,7 @@ Anti-patterns are flagged **only** where the evidence is Observed.
 | Per-article traffic-light status | ToolOracle README, 2026-10-20, Observed | adapt | playground | Group findings by Annex part with a status. Avoid green "pass" wording and use "no gaps found by these rules". |
 | Single readiness score | ToolOracle README, 2026-10-20, Observed | reject | playground, CLI | A score implies a calibration we don't have. Report counts per severity instead. |
 | Freshness decay of a status | ToolOracle README (`freshness_check`), 2026-10-20, Observed | adapt | Action, rule docs | Stamp each report with the rule-set version and date, and have the Action warn when the rule set is older than the latest release. |
-| Approval upgrades status to GREEN | ToolOracle README (`bridge_approve`), 2026-10-20, Observed | adapt | CLI, Action | Support an explicit, logged waiver per rule ID that stays visible as "waived", never as "pass". |
+| Human approval turns a status green | ToolOracle README (`bridge_approve`), 2026-10-20, Observed | adapt | CLI, Action | Support an explicit, logged waiver per rule ID that stays visible as "waived", never as "pass". |
 | Remote-only processing | ToolOracle README (`mcp-remote` to tooloracle.io), 2026-10-20, Observed | reject | playground | Our in-browser, no-upload model is a differentiator. Keep it, and say it on the page. |
 | `audit_trail` tool | ToolOracle README, 2026-10-20, Observed | adapt | Action | Emit a machine-readable report (JSON/SARIF) as a CI artifact, giving a per-commit trail. |
 
@@ -70,11 +70,11 @@ Anti-patterns are flagged **only** where the evidence is Observed.
 
 **What it is.** An MCP server on PyPI under the MIT licence (v1.0.9, uploaded 2026-06-27). It offers tools for classification, CASP authorisation, `whitepaper_requirements`, market abuse, AML and regulation search. Sources: [PyPI JSON](https://pypi.org/pypi/mica-crypto-mcp/json) and the sdist code; Observed.
 
-**Core job UX.** `whitepaper_requirements(query)` returns JSON with `"status": "stub"`, empty `regulation_refs` and a note that logic "ships in v1.1". It suggests POSTing the result to a remote service to get an "HMAC-signed compliance cert" (server.py lines 176–204; Observed).
+**Core job UX.** `whitepaper_requirements(query)` returns JSON with `"status": "stub"`, empty `regulation_refs` and a note that the checking logic is planned for a later version. It suggests sending the result to a remote service that returns a signed certificate (server.py lines 176–204; Observed).
 
 **Trust mechanics.**
-- The README shows an "EU AI Act Compliant" badge and the claim "Production-ready" (Observed).
-- Paid tiers sell "signed attestations" (Observed).
+- The README shows a badge claiming AI Act compliance and describes the package as ready for production use (Observed).
+- Paid tiers include signed certificates of the result (Observed).
 
 **Anti-patterns (Observed):**
 - **Compliance language without logic.** The README calls the product compliant and production-ready while the white-paper tool is a stub with no references. This breaks the rule that a claim must match the published logic.
@@ -124,7 +124,7 @@ Anti-patterns are flagged **only** where the evidence is Observed.
 | LEI mod-97 check | validation-rules.md, 2026-10-20, Observed | adopt | CLI, playground | A deterministic, offline check is cheap and high-signal. |
 | GLEIF lookup that fails open on network error | validation-rules.md, 2026-10-20, Observed | reject | CLI | Fail closed or report "not verified". Never treat it as valid. |
 | Server-side upload, in-memory | security-model.md, 2026-10-20, Observed | reject | playground | We stay client-side. |
-| "MiCA compliant" in the description | GitHub repo description, 2026-10-20, Observed | reject | rule docs, playground | Use "no gaps found by N rules (version X)" wording. |
+| Compliance wording in the repo description | GitHub repo description, 2026-10-20, Observed | reject | rule docs, playground | Use "no gaps found by N rules (version X)" wording. |
 | Hand-coded assertions instead of the formula linkbase | validation-rules.md, 2026-10-20, Observed | adapt | rule docs | If we add taxonomy completeness, say whether rules are derived from or checked against the ESMA formula files, and document version drift. |
 
 ---
@@ -135,7 +135,7 @@ Anti-patterns are flagged **only** where the evidence is Observed.
 
 **Claimed features.**
 - Template-driven workflows for EMT, ART and OTHR.
-- "Real-time, automated validation" against the full MiCAR ITS rulebook.
+- Automated validation in real time against the whole MiCAR ITS rule set.
 - External technical validation by a Pacioli.ai Validating Node.
 - A dedicated, isolated instance per client.
 - iXBRL export for filing.
@@ -143,7 +143,7 @@ Anti-patterns are flagged **only** where the evidence is Observed.
 
 **Not visible.** How results are shown (score or status), citations per finding, uncertainty handling, retention, pricing.
 
-**Anti-patterns.** None flagged, because the evidence is not Observed. Inferred note: a "full rulebook" claim with no public rule list can't be checked from outside. Our published rule docs are the contrast.
+**Anti-patterns.** None flagged, because the evidence is not Observed. Inferred note: a whole-rulebook claim with no public rule list can't be checked from outside. Our published rule docs are the contrast.
 
 | pattern | seen at (URL, date, tag) | adopt / adapt / reject | our surface | reason |
 |---|---|---|---|---|
@@ -161,14 +161,14 @@ Anti-patterns are flagged **only** where the evidence is Observed.
 **Claimed UX.**
 - Each finding is a sidebar card for one passage, carrying a proposed change, an explanation, alternatives and real-world examples.
 - Cards are sorted into tabs: All, Style, Clarity, Proofing, Citations.
-- "Ignore in all docs" turns off a rule for good, and a "Show ignored" view lets the user re-enable it.
+- "Ignore in all docs" turns off a rule for good, and a separate view of ignored rules lets the user re-enable it.
 - An AI toggle affects only citation suggestions and chat. Rule-based checks are unaffected.
 
 | pattern | seen at (URL, date, tag) | adopt / adapt / reject | our surface | reason |
 |---|---|---|---|---|
 | One card per finding: passage, reason, suggestion | support.briefcatch.com, 2026-10-20, Claimed | adapt | playground | Card = rule ID + pinpoint citation + why it fired + what to add. No auto-rewrite of disclosure text. |
 | Tabs by finding category | support.briefcatch.com, 2026-10-20, Claimed | adapt | playground | Tabs or filters by Annex part and severity. |
-| Ignore a rule in all docs, with a "Show ignored" view | support.briefcatch.com, 2026-10-20, Claimed | adapt | CLI, Action | A config file of waivers per rule ID, always listed in the report summary. |
+| Ignore a rule everywhere, with a view of ignored rules | support.briefcatch.com, 2026-10-20, Claimed | adapt | CLI, Action | A config file of waivers per rule ID, always listed in the report summary. |
 | AI kept separate from rule-based checks | support.briefcatch.com, 2026-10-20, Claimed | adopt | rule docs | State plainly that the checking path is deterministic, with no LLM. |
 | Suggested replacement text | support.briefcatch.com, 2026-10-20, Claimed | reject | playground | For regulated disclosures we suggest what is missing, not wording. Rewriting disclosure text is outside a linter's safe scope. |
 
@@ -176,7 +176,7 @@ Anti-patterns are flagged **only** where the evidence is Observed.
 ## Part B: Open-source pattern donors
 
 
-Accessed 2026-10-20. Tags: Observed / Claimed / Inferred (see oss-notes.md for full evidence). Our principles assumed from the brief: deterministic, offline-capable, fail closed on missing sections, confidential drafts must not leak (no server-side storage, no document text in public CI surfaces).
+Accessed 2026-10-20. Tags: Observed / Claimed / Inferred (full evidence in Part B of the [competitive landscape](2026-10-competitive-landscape.md)). Our principles assumed from the brief: deterministic, offline-capable, fail closed on missing sections, confidential drafts must not leak (no server-side storage, no document text in public CI surfaces).
 
 Surfaces: **playground** (Pyodide), **CLI** (`micar-lint`), **Action** (composite GitHub Action), **rule docs**.
 
@@ -222,7 +222,7 @@ Surfaces: **playground** (Pyodide), **CLI** (`micar-lint`), **Action** (composit
 | pattern | seen at (URL, date, tag) | adopt / adapt / reject | our surface | reason |
 |---|---|---|---|---|
 | Correct/incorrect example blocks verified by CI | github.com/eslint/eslint/blob/449724e/tools/check-rule-examples.js, 2026-10-20, Observed | adopt (pytest parametrised over rule-doc fixtures) | rule docs, CLI tests | docs can't drift from behaviour |
-| `meta.docs.url` on every rule | …/lib/rules/no-unused-vars.js, Observed | adopt (`BaseRule.doc_url`) | CLI, Action, SARIF helpUri | one click from finding to rationale |
+| `meta.docs.url` on every rule | …/lib/rules/no-unused-vars.js, Observed | adopt (a doc URL derived from `Rule.rule_id`) | CLI, Action, SARIF helpUri | one click from finding to rationale |
 | Mandatory `fixable` / `hasSuggestions` declarations | …/docs/src/extend/custom-rules.md, Observed | adapt: `remediation: none|guidance|template` | rule docs, CLI | explicit about what we never auto-edit |
 | Suggestions never auto-applied | same, Observed | adopt | playground | legal text must be author-edited |
 | json-with-metadata formatter (results + rule meta) | …/lib/cli-engine/formatters/formatters-meta.json, Observed | adopt | CLI | self-describing JSON report for auditors |
@@ -267,7 +267,7 @@ Surfaces: **playground** (Pyodide), **CLI** (`micar-lint`), **Action** (composit
 
 | pattern | seen at (URL, date, tag) | adopt / adapt / reject | our surface | reason |
 |---|---|---|---|---|
-| Declarative YAML rule types (existence, consistency, conditional) | github.com/errata-ai/vale/tree/9f822e9/internal/check, 2026-10-20, Observed | adapt (keep Python `BaseRule`, add declarative "required field present" config) | CLI, rule docs | many Annex items are presence checks |
+| Declarative YAML rule types (existence, consistency, conditional) | github.com/errata-ai/vale/tree/9f822e9/internal/check, 2026-10-20, Observed | adapt (keep the Python `Rule` dataclass, add declarative "required field present" config) | CLI, rule docs | many Annex items are presence checks |
 | `--output` template file | …/cmd/vale/flag.go, Observed | reject for now | CLI | fixed formats easier to keep deterministic |
 | JSON alert carries `Match` text | …/internal/core/alert.go, Observed | reject for public outputs; allow in local `--format json --include-excerpts` | CLI, Action | confidentiality |
 | Action converts own JSON → rdjsonl → reviewdog | github.com/errata-ai/vale-action/blob/518a913/src/main.ts, Observed | adapt (emit rdjson directly) | Action | avoids second converter |

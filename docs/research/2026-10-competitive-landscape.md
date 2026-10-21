@@ -98,7 +98,7 @@ Totals: 31 web searches (25 EN, 3 DE, 3 FR) and 10 GitHub/PyPI searches.
 - **Job:** prepare, validate and file MiCAR white papers. START stands for Submission, Traceability, Automation, Reporting and Transparency (search snippet of [legal.pwc.de press release](https://legal.pwc.de/en/news/press-releases/pwc-germany-pwc-legal-and-auditchain-labs-announce-cooperation-for-regulatory-disclosure-automation); Claimed).
 - **Features:** template-driven workflows for EMT, ART and OTHR. Snippets describe real-time automated validation against "the full MiCAR ITS rulebook". An independent external check runs on the Pacioli.ai Validating Node. Output is exported as iXBRL. Each client gets a dedicated, isolated instance (search snippets of the PwC press release and the [June 2026 flyer](https://legal.pwc.de/content/services/pwc-legal-flyer-micar-start-platform-june-2026.pdf); Claimed).
 - **Buyer:** crypto-asset issuers and capital-market participants. PwC Legal provides the legal advice (Claimed, same sources).
-- **Agentic:** snippets say "agentic regulatory disclosure automation" (Claimed). An earlier Auditchain Luca Suite is described as built on OMG's SBRM standard ([OMG](https://www.omg.org/insights/how-sbrm-enables-digital-asset-white-paper-compliance-under-the-eu-mica-regulations/); Claimed).
+- **Agentic:** snippets describe the offering as agent-driven automation of regulatory disclosures (Claimed). An earlier Auditchain Luca Suite is described as built on OMG's SBRM standard ([OMG](https://www.omg.org/insights/how-sbrm-enables-digital-asset-white-paper-compliance-under-the-eu-mica-regulations/); Claimed).
 - **Not found:** pricing, the published rule logic, how results are presented, and retention terms.
 - **Reviews:** none found. The Reddit-style query (#16) returned nothing relevant.
 
@@ -106,11 +106,11 @@ Totals: 31 web searches (25 EN, 3 DE, 3 FR) and 10 GitHub/PyPI searches.
 - **Status:** the product page failed DNS. A search for "Bluprynt MiCA checker" returned no relevant result (#4, #22). Whether the checker still exists is unknown.
 - **Company:** a search snippet describes Bluprynt as a compliance OS that uses AI and blockchain for issuer disclosures ([Caplight](https://www.caplight.com/company/bluprynt); Claimed). A snippet reports a $4.25M funding round ([Crowdfund Insider](https://www.crowdfundinsider.com/2026/03/264429-digital-asset-os-bluprynt-announces-4-25m-round/); Claimed).
 - **Features:** a snippet mentions "assessments based on researched metrics" from document analysis (#18 snippet, startup-seeker; Claimed). With the Avalanche Foundation, Bluprynt records MiCA metadata on-chain, including compliance status, timestamps and completeness ([Crowdfund Insider](https://www.crowdfundinsider.com/?p=235411); Claimed). It has a partnership with Legion for MiCA-compliant token sales ([Decrypt](https://decrypt.co/289825/legion-bluprynt-mica-compliant-ico-eu); Claimed).
-- **Not confirmed:** I could not confirm any "AI compliance score". One 64/100 score in the results is StartupHub's agent-readiness rating of Bluprynt's website, not a white paper score (Claimed).
+- **Not confirmed:** I could not confirm any AI-generated compliance score. One 64/100 score in the results is StartupHub's agent-readiness rating of Bluprynt's website, not a white paper score (Claimed).
 - **Reviews:** none found on G2, Capterra or Reddit. All of those hosts were unreachable, and searches surfaced nothing.
 
 #### MiCA Crypto Alliance "White Paper Tracker" (seed)
-- **Status:** the seed URL failed DNS. Searches (#10, #23) found only the Alliance's **CASP Tracker**, launched on "August 5" with no year given. It is a searchable view of the ESMA interim register with name, LEI, country, regulator, date and service filters, plus side-by-side comparison ([KuCoin flash news](https://www.kucoin.com/news/flash/mica-crypto-alliance-launches-searchable-tracker-for-esma-crypto-authorisations); Claimed).
+- **Status:** the seed URL failed DNS. Searches (#10, #23) found only the Alliance's **CASP Tracker**, launched on 5 August, with no year given in the snippet. It is a searchable view of the ESMA interim register with name, LEI, country, regulator, date and service filters, plus side-by-side comparison ([KuCoin flash news](https://www.kucoin.com/news/flash/mica-crypto-alliance-launches-searchable-tracker-for-esma-crypto-authorisations); Claimed).
 - **Disclaimer:** coverage says the ESMA register remains the official source (Claimed).
 - **Not found:** no evidence of a white-paper tracker. A snippet mentions an Alliance webinar on XHTML/iXBRL white papers ([luma](https://luma.com/b8f7gs0b); Claimed). Whether the white-paper tracker still exists is unknown.
 
@@ -128,8 +128,8 @@ Totals: 31 web searches (25 EN, 3 DE, 3 FR) and 10 GitHub/PyPI searches.
 
 #### NEW: ToolOracle MiCAOracle / "MiCA Ampel" (MCP server)
 - **Sources:** [github.com/ToolOracle/micaoracle](https://github.com/ToolOracle/micaoracle) and its [README](https://raw.githubusercontent.com/ToolOracle/micaoracle/main/README.md) (Observed).
-- **Tools:** 20 MCP tools for token-level and entity-level MiCA assessment, including `readiness_check`, `gap_report`, `assess_token` (described as evaluating 18 checks), `bridge_approve` and `audit_trail` (Observed).
-- **Results:** traffic-light statuses GREEN, YELLOW, RED and GREY. `readiness_check` returns a "full MiCA readiness score" plus a light per article. Per the README, "Approval upgrades Ampel to GREEN". `freshness_check` downgrades a stale GREEN (Observed).
+- **Tools:** 20 MCP tools for token-level and entity-level MiCA assessment, including `readiness_check`, `gap_report`, `assess_token` (said to run eighteen checks), `bridge_approve` and `audit_trail` (Observed).
+- **Results:** traffic-light statuses GREEN, YELLOW, RED and GREY. `readiness_check` returns an overall readiness score plus a light per article. The README says a human approval through `bridge_approve` moves the light to green. `freshness_check` downgrades a stale GREEN (Observed).
 - **Deployment:** remote-only. Clients connect via `mcp-remote` to tooloracle.io (Observed). A third-party OpenAPI mirror lists `validate_whitepaper` among the tools, behind `api.feedoracle.io` ([api-evangelist/tooloracle-io](https://raw.githubusercontent.com/api-evangelist/tooloracle-io/main/openapi/tooloracle-io-mica-ampel-api-openapi.yml); Observed). The 18 checks and the inputs to `validate_whitepaper` are not published (Observed).
 - **Pricing:** Free (10 calls/day), Pro €99/month, Enterprise custom (Observed).
 - **Missing from the README:** licence, privacy statement and legal disclaimer (Observed).
@@ -138,8 +138,8 @@ Totals: 31 web searches (25 EN, 3 DE, 3 FR) and 10 GitHub/PyPI searches.
 #### NEW: mica-crypto-mcp (MEOK AI Labs) on PyPI
 - **Sources:** [pypi.org/project/mica-crypto-mcp](https://pypi.org/pypi/mica-crypto-mcp/json) (Observed). I downloaded the sdist v1.0.9 (uploaded 2026-06-27) and read its code.
 - **Licence:** MIT.
-- **Code:** the `whitepaper_requirements` tool returns `"status": "stub"`, an empty `regulation_refs`, and a note saying logic "ships in v1.1". It suggests POSTing the result to a remote signing service for an "HMAC-signed compliance cert" (`server.py` lines 176–204; Observed).
-- **README:** shows an "EU AI Act Compliant" badge and the claim "Production-ready". It lists paid tiers at £29, £79 and £1,499 per month (Observed).
+- **Code:** the `whitepaper_requirements` tool returns `"status": "stub"`, an empty `regulation_refs`, and a note that the checking logic is planned for a later version. It suggests sending the result to a remote service that returns a signed certificate (`server.py` lines 176–204; Observed).
+- **README:** shows a badge claiming AI Act compliance and describes the package as ready for production use. It lists paid tiers at £29, £79 and £1,499 per month (Observed).
 - **LLM use:** none in the checking path, because there is no checking logic at all (Observed).
 
 #### NEW: Whitepaper Grey (agent listing)
@@ -183,7 +183,7 @@ Totals: 31 web searches (25 EN, 3 DE, 3 FR) and 10 GitHub/PyPI searches.
 - **xBRL-Forge** ([repo](https://github.com/antonheitz/xBRL-Forge) and [LICENCE.md](https://raw.githubusercontent.com/antonheitz/xBRL-Forge/main/LICENCE.md); Observed): a generic JSON or DOCX to XBRL/iXBRL generator. It has no MiCA mention and no validation. Its licence is custom and non-commercial (source-available; commercial use needs a separate licence). 8 stars.
 - **Arelle** ([repo](https://github.com/Arelle/Arelle); Observed): Apache-2.0 and the de-facto open-source XBRL validator. A sparse clone of master (commit 2ba2e9d, 2026-10-19) shows `arelle/plugin/validate` with CIPC, DBA, EBA, EDINET, ESEF, FERC, IRD, NL, PRH, ROS and UK, and no MiCA plugin. A grep for "mica" in that directory returned nothing (Observed). [Issue #1898 "ESMA MiCA Validation Rules"](https://github.com/Arelle/Arelle/issues/1898), opened 2025-09-09 by a maintainer, asks to add reporting-manual validation. It is open, in Triage, with no PR (Observed).
 - **AshishSinghvi18/XBRLValidator** ([AGENT_PLAN.md](https://raw.githubusercontent.com/AshishSinghvi18/XBRLValidator/main/AGENT_PLAN.md); Observed): an agent build plan for a regulator-grade validator (EFM, ESEF and others). The first 100k characters do not mention MiCA. It is a plan, not working software.
-- **BriefCatch** (Claimed; [support.briefcatch.com](https://support.briefcatch.com/home/web-app/suggestions)): a Word add-in with suggestion cards, each showing the finding, the proposed change and an explanation, sorted into tabs. "Ignore in all docs" turns a rule off, and a "Show ignored" view exists. The AI toggle affects only citations and chat; the rule-based features are unaffected (snippet).
+- **BriefCatch** (Claimed; [support.briefcatch.com](https://support.briefcatch.com/home/web-app/suggestions)): a Word add-in with suggestion cards, each showing the finding, the proposed change and an explanation, sorted into tabs. "Ignore in all docs" turns a rule off, and a view of ignored rules exists. The AI toggle affects only citations and chat; the rule-based features are unaffected (snippet).
 - **Definely Proof / Draft** (Claimed; [definely.com/proof](https://definely.com/proof), [help.definely.com](https://help.definely.com/en/articles/669589-fix-cross-reference-issues)): checks defined terms (undefined, unused, duplicate) and cross-references, with a Manual review-each-fix mode and an Auto bulk-fix mode.
 - **Markup AI**: the host failed DNS and I ran no search. Unknown.
 - **GlobalSuite** (Claimed, FR snippet): sells versioning, approval and traceability for white papers ([globalsuitesolutions.com](https://www.globalsuitesolutions.com/fr/?p=99865)).
@@ -233,10 +233,10 @@ Totals: 31 web searches (25 EN, 3 DE, 3 FR) and 10 GitHub/PyPI searches.
 
 ### Q7. How START, Bluprynt and the Alliance tracker present results
 
-- **START:** all evidence is Claimed. It is described as real-time automated validation against the "full MiCAR ITS rulebook" plus an "independent external technical validation" by a Pacioli.ai Validating Node, with iXBRL export. I found no screenshot or description of a score versus a status, of per-finding citations, or of uncertainty handling. Calling a check "full rulebook" without published rule logic cannot be checked from outside. I am not tagging it as an anti-pattern because I could not see the product.
-- **Bluprynt:** Claimed only. Snippets mention "assessments based on researched metrics" and on-chain metadata recording a "compliance status" and completeness. I found no evidence of a numeric AI score, citations or uncertainty display.
+- **START:** all evidence is Claimed. It is described as real-time automated validation against the "full MiCAR ITS rulebook" plus a separate technical validation by an external Pacioli.ai Validating Node, with iXBRL export. I found no screenshot or description of a score versus a status, of per-finding citations, or of uncertainty handling. Calling a check "full rulebook" without published rule logic cannot be checked from outside. I am not tagging it as an anti-pattern because I could not see the product.
+- **Bluprynt:** Claimed only. Snippets mention metric-based assessments and on-chain metadata that records a compliance status and completeness. I found no evidence of a numeric AI score, citations or uncertainty display.
 - **MiCA Crypto Alliance:** I found no white-paper tracker. The CASP tracker presents register facts and defers to ESMA as the official source (Claimed).
-- **Observed comparator (MiCAOracle):** traffic-light statuses plus a "readiness score". A human `bridge_approve` turns a status GREEN, and a stale GREEN decays to YELLOW. No per-finding legal citation format is documented.
+- **Observed comparator (MiCAOracle):** traffic-light statuses plus an overall readiness score. A human `bridge_approve` turns a status GREEN, and a stale GREEN decays to YELLOW. No per-finding legal citation format is documented.
 - **User voice on AI scores:** none found.
 
 ### A.6. Not reachable (all on 2026-10-20)
@@ -274,7 +274,7 @@ Totals: 31 web searches (25 EN, 3 DE, 3 FR) and 10 GitHub/PyPI searches.
 ## Part B: Open-source pattern donors
 
 Accessed: **2026-10-20** for every source below. Tags: **Observed** = read source/docs file in a clone or raw fetch; **Claimed** = snippet/marketing/third-party statement only; **Inferred** = my reasoning from observed facts.
-All quotations are ≤10 words; everything else is paraphrase. Clones live in `a local scratch directory ` (shallow, never executed).
+All quotations are ≤10 words; everything else is paraphrase. Repositories were read from shallow clones in a local scratch directory that is not committed; nothing in them was executed.
 
 ### B.0. Preflight and "Not reachable" log
 
@@ -388,7 +388,7 @@ git ls-remote https://github.com/reviewdog/action-setup 'refs/tags/v1*'
 | astral-sh/setup-uv | v6 / v7 floating | d0d8abe6… / 94527f2e… | d0cc045d04ccac9d8b7881df0226f9e82c39688e / 37802adc94f370d6bfd71619e3f0bf239e1f3b78 | |
 | astral-sh/setup-uv | v10.3.0 (newest; lightweight, no floating `v8`/`v9`/`v10`) | — | **1c37ad07a6a961277cf70c0d37d6f313000f5884** | `node24`; README pins v10.1.0 `bec219d2…` |
 | reviewdog/action-setup | v1.5.0 | 38a8d76742a75eeb6c6ffc616bde64179fd09ebf | **d8a7baabd7f3e8544ee4dbde3ee41d0011c3a93f** | = v1 floating |
-Raw output saved: `research-oss/shas_*.txt`. All **Observed**. v3 deprecation: **Observed** https://raw.githubusercontent.com/github/codeql-action/6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee/CHANGELOG.md L232. setup-uv v5 runs on node20 — **Observed** action.yml at d4b2f3b6; Node 20 runner deprecation not checked here (unknown).
+The raw `git ls-remote` output was kept locally and is not committed; the SHAs above are copied from it. All **Observed**. v3 deprecation: **Observed** https://raw.githubusercontent.com/github/codeql-action/6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee/CHANGELOG.md L232. setup-uv v5 runs on node20 — **Observed** action.yml at d4b2f3b6; Node 20 runner deprecation not checked here (unknown).
 
 ### B.5. Ruff (MIT) — ring: pattern-donor
 
@@ -450,7 +450,7 @@ stoplightio/spectral `95ab37eeea1f69ee9ae1a43b88f3ed1df007f190` (2026-10-13), Ap
 
 ### B.11. XBRL US DQC rules — custom licence (not OSI; pattern only)
 DataQualityCommittee/dqc_us_rules `64abefd357c34ef45f9f4336a1e3171984d76601` (2026-10-19) — **Observed**.
-- Licence: copyright AICPA/Calcbench/Toppan Merrill/Workiva/XBRL US; copying allowed but document itself "may not be modified" — **Observed** `License.md`. Treat as pattern source only.
+- Licence: copyright AICPA/Calcbench/Toppan Merrill/Workiva/XBRL US; copying allowed but the documents themselves may not be altered — **Observed** `License.md`. Treat as pattern source only.
 - Rule doc (`docs/DQC_US_0001/DQC_0001.md`): title; Rule ID; Status; Release date; Effective date; Rule function; Data Quality Guidance; Basis for rule (cites SEC staff observations, FASB guides); Problem solved; Example rule message (with "Rule version: x"); For Developers → Message template with `${ruleVersion}`; Rule element ID index; Appendix of post-implementation edits; companion .xlsx lists — **Observed**.
 - Versioning: semver MAJOR.MINOR.FIX; majors open with public comment period + RC tags; each release includes all prior approved rules; messages carry rule version — **Observed** README L23-33.
 - Tests: pass/fail XBRL filings per rule; JSON test-case manifest consumed by GitHub Actions — **Observed** `tests/readme.md`.
@@ -495,4 +495,4 @@ Shared (Observed across Ruff, ESLint, Spectral, DQC): stable rule ID in title; o
 Example testing: ESLint executes every doc example and fails CI if incorrect examples don't trigger or correct ones do (Observed); Ruff checks section presence + example formatting only (Observed); Spectral and DQC keep tests separate from docs (DQC pass/fail filings) (Observed). Adopt ESLint's approach: doc examples are fixtures run by pytest.
 
 ### Q8. CUAD and LegalBench accuracy reporting
-See §14: CUAD → AUPR, precision@80%/90% recall, Jaccard≥0.5 span match, no intervals; LegalBench → balanced accuracy (exact match) / F1 per task, no intervals. Both **Observed** in code.
+See B.14: CUAD → AUPR, precision@80%/90% recall, Jaccard≥0.5 span match, no intervals; LegalBench → balanced accuracy (exact match) / F1 per task, no intervals. Both **Observed** in code.
