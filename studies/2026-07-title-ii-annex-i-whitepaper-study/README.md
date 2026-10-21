@@ -193,7 +193,7 @@ uv run micar-review-render \
   --summary studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-summary.json
 ```
 
-The output holds the results block for this README or the report, the profile README line and the CV sentence, in the draft wording templates of `analysis-plan.md`, section 11. The results block contains:
+The output holds the results block for this README (not for `findings-summary.md`, which `micar-study-report` generates and `tests/test_study_report_drift.py` keeps identical to the renderer), the profile README line and the CV sentence, in the draft wording templates of `analysis-plan.md`, section 11. The results block contains:
 
 - the results paragraph, with a sentence on S1 in the same form as the primary result;
 - a table of the primary and sensitivity analyses, with N evaluable and the count of each excluded label;

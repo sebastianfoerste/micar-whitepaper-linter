@@ -192,7 +192,7 @@ def render_document(summary: Mapping[str, Any], *, in_sample: bool = True, sourc
     origin = f" from {source}" if source else ""
     return (
         f"<!-- Rendered by micar-review-render{origin}. Do not edit the figures by hand. -->\n\n"
-        "## Study results block (paste into the study README or report)\n\n"
+        "## Study results block (paste into the study README)\n\n"
         f"{texts['study']}\n"
         "## Profile README line\n\n"
         f"{texts['profile']}\n\n"
