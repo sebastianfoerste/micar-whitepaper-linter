@@ -3,8 +3,8 @@
 A finding concerns a section, not a span of words, so the line is where the
 section starts: the key inside the JSON ``sections`` object, or the first
 XHTML heading that maps to the section. Other formats, numbered-field XHTML
-and sections a draft does not contain fall back to line 1. Only line numbers are derived from the draft;
-no draft text is returned.
+and sections a draft does not contain fall back to line 1. Only line numbers
+are derived from the draft; no draft text is returned.
 """
 
 from __future__ import annotations
@@ -28,7 +28,9 @@ def finding_lines(report: Report, source_path: Path) -> dict[str, int]:
             offset = offsets.get(finding.rule.section)
             lines[finding.rule.rule_id] = text.count("\n", 0, offset) + 1 if offset is not None else 1
     elif suffix in (".xhtml", ".html"):
-        heading_lines = _xhtml_heading_lines(source_path)
+        # A numbered-field layout takes its sections from template fields, not headings,
+        # so a title heading must not be mistaken for a section anchor.
+        heading_lines = {} if _is_numbered_layout(source_path) else _xhtml_heading_lines(source_path)
         for finding in report.findings:
             lines[finding.rule.rule_id] = heading_lines.get(finding.rule.section, 1)
     else:
@@ -111,6 +113,15 @@ def _members(text: str, i: int) -> list[tuple[str, int, int]]:
         if text[i] == ",":
             i = _skip(text, i + 1)
     return members
+
+
+def _is_numbered_layout(path: Path) -> bool:
+    try:
+        from micar_linter.numbered_fields import extract_numbered_fields, is_numbered_layout
+
+        return is_numbered_layout(extract_numbered_fields(path))
+    except Exception:
+        return False
 
 
 def _xhtml_heading_lines(path: Path) -> dict[str, int]:

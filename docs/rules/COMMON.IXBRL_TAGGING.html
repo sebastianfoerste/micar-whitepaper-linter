@@ -22,7 +22,7 @@
 <dt>Canonical form</dt><dd lang="de">Art. 2 VO (EU) 2024/2984</dd>
 <dt>Runs for</dt><dd>Annex I · other crypto-assets; Annex II · asset-referenced tokens; Annex III · e-money tokens</dd>
 <dt>Severity if open</dt><dd>BLOCKER</dd>
-<dt>Section key</dt><dd><code>ixbrl_tagging</code></dd>
+<dt>Section key</dt><dd>none: checks the file format</dd>
 <dt>Minimum words</dt><dd>0</dd>
 <dt>Listed terms (English)</dt><dd>none</dd>
 <dt>Listed terms (German)</dt><dd lang="de">none</dd>
@@ -40,12 +40,10 @@
 <div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>Any JSON draft</strong></div><p class="small muted">A JSON, DOCX, PDF or Markdown draft cannot carry Inline XBRL, so the blocker stays open. An XHTML file is checked for the Inline XBRL 1.1 and ESMA MiCA taxonomy namespaces and then shows Review, because tag completeness needs a taxonomy validator.</p><pre><code>{
   &quot;title&quot;: &quot;Synthetic rule example&quot;,
   &quot;type&quot;: &quot;other&quot;,
-  &quot;sections&quot;: {
-    &quot;ixbrl_tagging&quot;: &quot;&quot;
-  }
+  &quot;sections&quot;: {}
 }</code></pre></div>
 <h2>Limitations</h2>
-<ul class="plain"><li>Reads one section key, <code>ixbrl_tagging</code>. Text elsewhere in the draft is not considered.</li><li>Checks the file format and taxonomy namespace only, not tag completeness.</li><li>Status and severity are fixed by the rule. A draft cannot waive or downgrade them.</li><li>This rule never reports Pass.</li></ul>
+<ul class="plain"><li>Reads no section. It checks the file format, so adding a section to a draft cannot change its status.</li><li>Checks the file format and taxonomy namespace only, not tag completeness.</li><li>Status and severity are fixed by the rule. A draft cannot waive or downgrade them.</li><li>This rule never reports Pass.</li></ul>
 <p class="small muted">Disagree with this rule, or missing one? <a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/issues/new?template=rule-proposal.yml">Propose a rule change</a>.</p>
 
 </main>

@@ -19,7 +19,7 @@ from pathlib import Path
 from micar_linter import __version__, citations
 from micar_linter.linter import Report
 from micar_linter.locations import finding_lines
-from micar_linter.rules.base import Finding, Severity
+from micar_linter.rules.base import Finding, Rule, Severity
 
 RULE_DOCS_BASE = "https://sebastianfoerste.github.io/micar-whitepaper-linter/rules/"
 INFORMATION_URI = "https://github.com/sebastianfoerste/micar-whitepaper-linter"
@@ -36,6 +36,21 @@ _FIXED_ISSUE = "Details are in the full lint report; this output does not repeat
 _SARIF_LEVEL = {Severity.BLOCKER: "error", Severity.MAJOR: "warning", Severity.MINOR: "note"}
 _ANNOTATION_LEVEL = {Severity.BLOCKER: "error", Severity.MAJOR: "warning", Severity.MINOR: "notice"}
 _STATUS_ORDER = {"missing": 0, "review": 1, "pass": 2}
+
+
+def sarif_category(source_path: Path) -> str:
+    digest = hashlib.sha256(source_path.as_posix().encode()).hexdigest()[:12]
+    return f"micar-lint/{digest}/"
+
+
+def rule_help(rule: Rule) -> str:
+    """Plain-text help for a rule. The format gate reads file metadata, not a section."""
+    basis = citations.to_english(rule.citation)
+    if rule.rule_id in FORMAT_GATE_RULES:
+        scope = "First-pass check of the file format; no section is read"
+    else:
+        scope = f"First-pass check on section '{rule.section}'"
+    return f"{basis}. {scope}. Not legal advice. Rule page: {rule_doc_url(rule.rule_id)}"
 
 
 def rule_doc_url(rule_id: str) -> str:
@@ -71,18 +86,13 @@ def build_sarif(report: Report, source_path: Path) -> dict:
                 "shortDescription": {"text": rule.label},
                 "fullDescription": {"text": f"{rule.label}. {citations.to_english(rule.citation)}."},
                 "helpUri": rule_doc_url(rule.rule_id),
-                "help": {
-                    "text": (
-                        f"{citations.to_english(rule.citation)}. First-pass check on section "
-                        f"'{rule.section}'. Not legal advice. Rule page: {rule_doc_url(rule.rule_id)}"
-                    )
-                },
+                "help": {"text": rule_help(rule)},
                 "defaultConfiguration": {"level": _SARIF_LEVEL[rule.severity]},
                 "properties": {
                     "citation": rule.citation,
                     "citation_en": citations.to_english(rule.citation),
                     "severity": rule.severity.label,
-                    "section": rule.section,
+                    "section": None if rule.rule_id in FORMAT_GATE_RULES else rule.section,
                     "tags": tags,
                 },
             }
@@ -130,7 +140,9 @@ def build_sarif(report: Report, source_path: Path) -> dict:
                         "rules": rules,
                     }
                 },
-                "automationDetails": {"id": f"micar-lint/{report.whitepaper_type.value}/"},
+                # One category per draft path: code scanning accepts one run per category
+                # and job, and replaces earlier alerts of the same category.
+                "automationDetails": {"id": sarif_category(source_path)},
                 "results": results,
                 "properties": {
                     "whitepaper_type": report.whitepaper_type.value,

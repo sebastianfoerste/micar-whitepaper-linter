@@ -11,7 +11,7 @@ from micar_linter.ci_outputs import (
 )
 from micar_linter.cli import main
 from micar_linter.linter import lint_whitepaper
-from micar_linter.locations import _json_section_offsets
+from micar_linter.locations import _json_section_offsets, finding_lines
 from micar_linter.whitepaper import WhitepaperType, load_whitepaper
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -166,3 +166,31 @@ def test_action_pins_every_dependency_by_sha():
     assert uses
     assert all(re.search(r"@[0-9a-f]{40}$", ref) for ref in uses), uses
     assert "--sarif-output" in action and "GITHUB_STEP_SUMMARY" in action
+
+
+def test_sarif_category_differs_per_draft_path(tmp_path: Path):
+    first, second = tmp_path / "a" / "draft.json", tmp_path / "b" / "draft.json"
+    for path in (first, second):
+        path.parent.mkdir()
+        path.write_text(json.dumps({"title": "t", "type": "other", "sections": {}}), encoding="utf-8")
+    ids = {
+        json.loads(render_sarif(_report(p), p))["runs"][0]["automationDetails"]["id"] for p in (first, second)
+    }
+    assert len(ids) == 2
+    assert all(i.startswith("micar-lint/") for i in ids)
+
+
+def test_numbered_field_xhtml_findings_stay_on_line_one():
+    path = ROOT / "examples" / "numbered-other-draft.xhtml"
+    report = _report(path, WhitepaperType.OTHER)
+    assert set(finding_lines(report, path).values()) == {1}
+
+
+def test_format_gate_help_names_no_section():
+    path = Path("examples/incomplete.json")
+    rules = json.loads(render_sarif(_report(ROOT / path), path))["runs"][0]["tool"]["driver"]["rules"]
+    gate = next(r for r in rules if r["id"] == "COMMON.IXBRL_TAGGING")
+    assert "ixbrl_tagging" not in json.dumps(gate)
+    assert "no section is read" in gate["help"]["text"]
+    summary = next(r for r in rules if r["id"] == "COMMON.SUMMARY")
+    assert "section 'summary'" in summary["help"]["text"]

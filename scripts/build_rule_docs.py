@@ -43,6 +43,7 @@ VERIFICATION_NOTE = (
     "build environment. The citation is the rule's own, unchanged."
 )
 FILLER = "This synthetic sentence only adds length and states no fact about any issuer or token."
+FORMAT_GATE = {"COMMON.IXBRL_TAGGING"}
 NEVER_PASS = {"COMMON.IXBRL_TAGGING", "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW"}
 UNTESTED_REGIMES = {
     "ANNEX_II": "The Annex II rules have not yet been run against a real ART white paper.",
@@ -97,7 +98,7 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
             Example(
                 "Any JSON draft",
                 "missing",
-                _draft(rule, regime, ""),
+                {"title": "Synthetic rule example", "type": regime.value, "sections": {}},
                 "A JSON, DOCX, PDF or Markdown draft cannot carry Inline XBRL, so the blocker stays open. "
                 "An XHTML file is checked for the Inline XBRL 1.1 and ESMA MiCA taxonomy namespaces and "
                 "then shows Review, because tag completeness needs a taxonomy validator.",
@@ -251,7 +252,11 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
         f'<li><a href="{_e(url)}">{_e(url)}</a></li>' for url in citations.source_urls(rule.citation)
     )
     limitations = [
-        f"Reads one section key, <code>{_e(rule.section)}</code>. Text elsewhere in the draft is not considered.",
+        (
+            "Reads no section. It checks the file format, so adding a section to a draft cannot change its status."
+            if rule.rule_id in FORMAT_GATE
+            else f"Reads one section key, <code>{_e(rule.section)}</code>. Text elsewhere in the draft is not considered."
+        ),
         (
             "Reads draft metadata and percentages only. It does not test accuracy or decide whether a floor is met."
             if rule.rule_id == "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW"
@@ -286,7 +291,7 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
 <dt>Canonical form</dt><dd lang="de">{_e(rule.citation)}</dd>
 <dt>Runs for</dt><dd>{_e("; ".join(REGIME_NAMES[r] for r in regimes))}</dd>
 <dt>Severity if open</dt><dd>{_e(rule.severity.label)}</dd>
-<dt>Section key</dt><dd><code>{_e(rule.section)}</code></dd>
+<dt>Section key</dt><dd>{"none: checks the file format" if rule.rule_id in FORMAT_GATE else f"<code>{_e(rule.section)}</code>"}</dd>
 <dt>Minimum words</dt><dd>{rule.min_words}</dd>
 <dt>Listed terms (English)</dt><dd>{_terms(rule.required_terms)}</dd>
 <dt>Listed terms (German)</dt><dd lang="de">{_terms(rule.required_terms_de)}</dd>
