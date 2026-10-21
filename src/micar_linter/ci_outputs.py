@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import posixpath
 from pathlib import Path
 
 from micar_linter import __version__, citations
@@ -38,8 +39,10 @@ _ANNOTATION_LEVEL = {Severity.BLOCKER: "error", Severity.MAJOR: "warning", Sever
 _STATUS_ORDER = {"missing": 0, "review": 1, "pass": 2}
 
 
-def sarif_category(source_path: Path) -> str:
-    digest = hashlib.sha256(source_path.as_posix().encode()).hexdigest()[:12]
+def sarif_category(source_path: Path, whitepaper_type: str) -> str:
+    """One code-scanning category per draft and regime, independent of path spelling."""
+    seed = f"{posixpath.normpath(source_path.as_posix())}\n{whitepaper_type}"
+    digest = hashlib.sha256(seed.encode()).hexdigest()[:12]
     return f"micar-lint/{digest}/"
 
 
@@ -140,9 +143,9 @@ def build_sarif(report: Report, source_path: Path) -> dict:
                         "rules": rules,
                     }
                 },
-                # One category per draft path: code scanning accepts one run per category
+                # One category per draft path and regime: code scanning accepts one run per category
                 # and job, and replaces earlier alerts of the same category.
-                "automationDetails": {"id": sarif_category(source_path)},
+                "automationDetails": {"id": sarif_category(source_path, report.whitepaper_type.value)},
                 "results": results,
                 "properties": {
                     "whitepaper_type": report.whitepaper_type.value,

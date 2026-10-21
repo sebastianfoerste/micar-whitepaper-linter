@@ -181,10 +181,10 @@ with call sites passing the finding instead of `finding.citation`, and a test (t
 | H5 | parked | https://github.com/pyodide/pyodide/releases/download/0.28.2/pyodide-0.28.2.tar.bz2 (no python-docx in the distribution) | Size and time kill test not yet run |
 | H6 | confirmed (built) | none external (Inferred) | Gives the Pages root a home and states limits |
 | H7 | confirmed (built) | https://github.com/astral-sh/ruff/blob/3e3f22dcc47a534d5bb6668817464b02c6e6e133/playground/ruff/src/Editor/settings.ts (theme setting persisted there; not here) | Tokens plus page-session toggle |
-| H8 | parked (owner) | https://raw.githubusercontent.com/Loideroi/WhitePaperXBRL/main/docs/agent_docs/validation-rules.md | Point citations need EUR-Lex verification |
+| H8 | parked (owner) | https://github.com/Loideroi/WhitePaperXBRL/blob/f0dc7028e8c13ed8ccd3e322221f03b225f73a10/docs/agent_docs/validation-rules.md | Point citations need EUR-Lex verification |
 | H9 | modified, parked | https://github.com/Arelle/Arelle/blob/2ba2e9d96554554a79c2545219f6e5b941bb4d59/arelle/CntlrCmdLine.py; https://github.com/Arelle/Arelle/issues/1898 | CLI-only; killed for the browser (`lxml!=6.0.0`) |
-| H10 | confirmed, not built | https://github.com/TheAtticusProject/cuad/blob/67faa0e6023b04fcaae6cc09497ab00e5d63a2a2/evaluate.py; https://github.com/HazyResearch/legalbench/blob/main/README.md | Should have been built as a third feature (see the correction above); low impact while 0 of 150 cells are reviewed |
-| H11 | modified, not built | https://raw.githubusercontent.com/Loideroi/WhitePaperXBRL/main/docs/agent_docs/validation-rules.md | Should have been built as a third feature (see the correction above); adapt as fail-closed Review findings with no network lookup |
+| H10 | confirmed, not built | https://github.com/TheAtticusProject/cuad/blob/67faa0e6023b04fcaae6cc09497ab00e5d63a2a2/evaluate.py; https://github.com/HazyResearch/legalbench/blob/b46bf4ffae90524b2b72aaa30e7745fe9db64481/README.md | Should have been built as a third feature (see the correction above); low impact while 0 of 150 cells are reviewed |
+| H11 | modified, not built | https://github.com/Loideroi/WhitePaperXBRL/blob/f0dc7028e8c13ed8ccd3e322221f03b225f73a10/docs/agent_docs/validation-rules.md | Should have been built as a third feature (see the correction above); adapt as fail-closed Review findings with no network lookup |
 
 ## Needs owner decision
 

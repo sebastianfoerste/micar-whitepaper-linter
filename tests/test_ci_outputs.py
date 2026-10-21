@@ -8,6 +8,7 @@ from micar_linter.ci_outputs import (
     render_sarif,
     render_summary,
     rule_doc_url,
+    sarif_category,
 )
 from micar_linter.cli import main
 from micar_linter.linter import lint_whitepaper
@@ -194,3 +195,15 @@ def test_format_gate_help_names_no_section():
     assert "no section is read" in gate["help"]["text"]
     summary = next(r for r in rules if r["id"] == "COMMON.SUMMARY")
     assert "section 'summary'" in summary["help"]["text"]
+
+
+def test_sarif_category_differs_per_regime_and_ignores_path_spelling():
+    path = ROOT / "examples" / "numbered-other-draft.xhtml"
+    ids = {
+        json.loads(render_sarif(_report(path, regime), path))["runs"][0]["automationDetails"]["id"]
+        for regime in (WhitepaperType.OTHER, WhitepaperType.ART)
+    }
+    assert len(ids) == 2
+    assert sarif_category(Path("drafts/../draft.json"), "other") == sarif_category(
+        Path("draft.json"), "other"
+    )
