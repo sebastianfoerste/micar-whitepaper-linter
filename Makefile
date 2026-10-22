@@ -1,6 +1,6 @@
 UV ?= uv
 
-.PHONY: check install demo lint test smoke review-bundle playground-check playground-samples template-check template-export
+.PHONY: check install demo demo-image lint test smoke review-bundle playground-check playground-samples template-check template-export
 
 check: lint test smoke review-bundle playground-check template-check
 
@@ -10,8 +10,11 @@ install:
 demo:
 	$(UV) run --extra dev python -m micar_linter examples/incomplete.json
 
+demo-image:
+	$(UV) run python scripts/render_demo.py
+
 lint:
-	$(UV) run --extra dev ruff check src tests
+	$(UV) run --extra dev ruff check src tests scripts
 
 test:
 	$(UV) run --extra dev pytest -q
