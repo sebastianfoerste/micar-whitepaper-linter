@@ -10,7 +10,7 @@ If you are evaluating the repository, please read the [Verification checklist](d
 # Install environment (uv required)
 uv sync --extra dev
 
-# Run the full proof gate (ruff + pytest + smoke command)
+# Run the full proof gate (ruff, pytest, CLI smoke, review bundle, playground and template checks)
 make check
 
 # Run pytest directly
@@ -20,9 +20,9 @@ uv run --extra dev pytest
 ## Safe Development Conventions
 
 1. **No real white paper content.** Use the bundled synthetic fixture files in `examples/`. Do not add real issuer or token names, real IBAN or wallet addresses, or real regulatory correspondence.
-2. **Report language is load-bearing.** The blocker message and lawyer sign-off section in `src/micar_linter/report.py` are tested. Do not weaken the "not package-ready" language or the "lawyer has signed off" requirement.
+2. **Report language is load-bearing.** `tests/test_report.py` renders real reports from `src/micar_linter/report.py` and checks that the text report shows the "not package-ready" blocker message while any finding is open, that the audit log shows it while any BLOCKER finding is open, that neither shows it otherwise, and that the audit log always ends with the lawyer sign-off section. Do not weaken the "not package-ready" language or the "lawyer has signed off" requirement.
 3. **Coverage matrix is documented.** The linter covers Annexes I/II/III. Document any new rule's article reference accurately.
-4. **Test before commit.** Run `make check` before staging any change. The language regression test must pass.
+4. **Test before commit.** Run `make check` before staging any change. The report language tests must pass.
 
 ## Coding Agents
 
