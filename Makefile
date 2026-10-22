@@ -1,6 +1,6 @@
 UV ?= uv
 
-.PHONY: check install demo demo-image lint test smoke review-bundle playground-check playground-samples template-check template-export
+.PHONY: check install demo demo-image lint test smoke review-bundle playground-check playground-samples sample-reports template-check template-export
 
 check: lint test smoke review-bundle playground-check template-check
 
@@ -33,6 +33,9 @@ playground-check:
 
 playground-samples:
 	$(UV) run python scripts/build_playground_samples.py
+
+sample-reports:
+	$(UV) run python scripts/build_sample_reports.py
 
 template-check:
 	python3 scripts/check_whitepaper_starter.py
