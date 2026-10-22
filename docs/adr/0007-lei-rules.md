@@ -31,7 +31,7 @@ Option 2, offline.
 
 ## Consequences
 
-- Each regime gains two rules, and every existing report gains two findings. The synthetic examples have no LEI, so they show both rules as Missing.
+- Each regime gains two rules, and every existing report gains two findings. The three full synthetic examples carry a fictional LEI with computed check digits and pass both rules; `examples/incomplete.json` has none and shows both as Missing.
 - Rule IDs are new; no existing ID, status, severity or exit code changes. `--strict` is unaffected, because neither rule is a BLOCKER.
 
 ## Non-negotiables check

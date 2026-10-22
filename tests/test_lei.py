@@ -114,3 +114,12 @@ def test_ci_outputs_never_echo_an_lei(tmp_path: Path):
         render_annotations(report, path),
     ):
         assert ISSUER_LEI not in output and BROKEN_LEI not in output
+
+
+@pytest.mark.parametrize("name", ["other-crypto-asset.json", "art-stablecoin.json", "emt-token.json"])
+def test_full_synthetic_examples_carry_a_valid_lei(name):
+    path = Path(__file__).resolve().parents[1] / "examples" / name
+    findings = {f.rule.rule_id: f.status for f in lint_whitepaper(load_whitepaper(path)).findings}
+    assert findings["COMMON.LEI_CHECK_DIGITS"] == "pass"
+    assert findings["COMMON.LEI_CONSISTENCY"] == "pass"
+    assert "SYNTH" in " ".join(find_leis(path.read_text(encoding="utf-8")))
