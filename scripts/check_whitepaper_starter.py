@@ -27,9 +27,7 @@ def main() -> int:
     if not isinstance(payload.get("sections"), dict) or not payload["sections"]:
         raise SystemExit("whitepaper.json must contain disclosure sections")
 
-    workflow = (TEMPLATE / ".github/workflows/micar-lint.yml").read_text(
-        encoding="utf-8"
-    )
+    workflow = (TEMPLATE / ".github/workflows/micar-lint.yml").read_text(encoding="utf-8")
     required_fragments = {
         "uses: sebastianfoerste/micar-whitepaper-linter@v1",
         "whitepaper: whitepaper.json",
