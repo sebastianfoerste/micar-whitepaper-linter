@@ -16,11 +16,13 @@ The following review artifacts have been generated in the [examples/review-bundl
 3. **[coverage-matrix.json](../examples/review-bundle/coverage-matrix.json)**: A detailed JSON matrix mapping individual sections to word counts, rule IDs, and specific text matches/missing phrases.
 4. **[manifest.json](../examples/review-bundle/manifest.json)**: A manifest recording document metadata (title, type, checksums, and linter version).
 
+The bundle files cite each rule in its canonical German form, which is what `--citation-style de` prints in the text report (for example "Art. 6 Abs. 7 MiCAR"). The CLI text report below uses the default English style.
+
 ---
 
 ## CLI Linter Output
 
-The linter was run on `examples/art-stablecoin.json` to produce the following output:
+The linter was run on `examples/art-stablecoin.json` with the default English citation style to produce the following output (regenerate it with `make sample-reports`):
 
 ```
 MiCAR Whitepaper Linter - Synthetic EuroStable ART White Paper
@@ -29,83 +31,103 @@ Whitepaper type: ART
 Pass: 14  |  Review: 3  |  Missing: 1  |  Blockers: 4
 
 [PASS  ] [BLOCKER] COMMON.SUMMARY  Plain-language summary
-           Cite:  Art. 6 Abs. 7, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR
+           Cite:  Art. 6(7), Art. 19(6), Art. 51(6) MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'summary'  (85 words)
 
 [PASS  ] [BLOCKER] COMMON.RISK_WARNING  Mandatory risk warning statement
-           Cite:  Art. 6 Abs. 5, Art. 19 Abs. 4, Art. 51 Abs. 4 MiCAR
+           Cite:  Art. 6(5), Art. 19(4), Art. 51(4) MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'risk_warning'  (73 words)
 
 [PASS  ] [BLOCKER] COMMON.MANAGEMENT_STATEMENT  Statement by the management body on completeness, fairness, and clarity
-           Cite:  Art. 6 Abs. 6, Art. 19 Abs. 5, Art. 51 Abs. 5 MiCAR
+           Cite:  Art. 6(6), Art. 19(5), Art. 51(5) MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'management_statement'  (60 words)
 
 [PASS  ] [MAJOR  ] COMMON.NOTIFICATION_DATE  Date of notification to the competent authority
-           Cite:  Art. 6 Abs. 8, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR
+           Cite:  Art. 6(8), Art. 19(7), Art. 51(7) MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'notification_date'  (9 words)
 
 [PASS  ] [MAJOR  ] COMMON.LANGUAGE  Language of the white paper (home Member State official language or customary in international finance)
-           Cite:  Art. 6 Abs. 9, Art. 19 Abs. 8, Art. 51 Abs. 8 MiCAR
+           Cite:  Art. 6(9), Art. 19(8), Art. 51(8) MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'language'  (28 words)
 
 [MISS  ] [BLOCKER] COMMON.IXBRL_TAGGING  Inline XBRL (iXBRL) compliance and ESMA metadata tagging
-           Cite:  Art. 2 VO (EU) 2024/2984
+           Cite:  Art. 2 Regulation (EU) 2024/2984
+           Text:  https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng
            Section: 'ixbrl_tagging'  (0 words)
            -  Draft format: notification requires XHTML with Inline XBRL tagging. This format cannot satisfy that requirement; the content checks still apply.
 
 [PASS  ] [BLOCKER] ANNEX_II.A  Information about the issuer of the ART (legal form, governance, prudential profile)
-           Cite:  Anhang II Teil A MiCAR
+           Cite:  Annex II, Part A MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'issuer'  (94 words)
 
 [PASS  ] [BLOCKER] ANNEX_II.B  Information about the asset-referenced token (reference assets, stabilisation mechanism)
-           Cite:  Anhang II Teil B MiCAR
+           Cite:  Annex II, Part B MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'art'  (95 words)
 
 [PASS  ] [BLOCKER] ANNEX_II.C  Information about the offer to the public of the ART or its admission to trading
-           Cite:  Anhang II Teil C MiCAR
+           Cite:  Annex II, Part C MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'offer_or_admission'  (77 words)
 
 [PASS  ] [BLOCKER] ANNEX_II.D  Rights and obligations of holders (redemption right at par, complaints handling)
-           Cite:  Anhang II Teil D i.V.m. Art. 39 MiCAR
+           Cite:  Annex II, Part D in conjunction with Art. 39 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'rights_and_obligations'  (94 words)
 
 [PASS  ] [BLOCKER] ANNEX_II.E  Information on the underlying technology (DLT, custody architecture, key management)
-           Cite:  Anhang II Teil E MiCAR
+           Cite:  Annex II, Part E MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'technology'  (77 words)
 
 [PASS  ] [BLOCKER] ANNEX_II.F  Risk factors specific to ARTs (de-pegging, reserve impairment, redemption suspension)
-           Cite:  Anhang II Teil F MiCAR
+           Cite:  Annex II, Part F MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'risks'  (157 words)
 
 [REVIEW] [BLOCKER] ANNEX_II.G.COMPOSITION_DISCLOSURE  Reserve composition disclosure (Annex II Part G)
-           Cite:  Anhang II Teil G i.V.m. Art. 36 MiCAR
+           Cite:  Annex II, Part G in conjunction with Art. 36 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'reserve_of_assets'  (192 words)
            -  Missing review terms: concentration.
 
 [REVIEW] [BLOCKER] ANNEX_II.G.DEPOSIT_FLOOR_REVIEW  Candidate deposit floor for the reserve (30 % under Art. 36(4)(d); 60 % under Art. 45(7)(b) for significant ARTs, or for non-significant ARTs via Arts. 35(4) and 45(3) MiCAR) - lawyer review required
-           Cite:  Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d, Art. 45 Abs. 3 und Art. 45 Abs. 7 Buchst. b MiCAR
+           Cite:  Annex II, Part G in conjunction with Art. 35(4), Art. 36(4), point (d), Art. 45(3) and Art. 45(7), point (b) MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'reserve_of_assets'  (192 words)
            -  Draft percentage candidate(s) detected: 30%. The draft characterisation indicates a 30% candidate floor (Art. 36(4)(d) MiCAR). A lawyer must confirm applicability, statement context, and compliance.
 
 [REVIEW] [BLOCKER] ANNEX_II.G.CUSTODY  Custody policy and custodian selection (Art. 36(2) MiCAR)
-           Cite:  Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR
+           Cite:  Annex II, Part G in conjunction with Art. 36(2), Art. 37 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'reserve_of_assets'  (192 words)
            -  Missing review terms: insolvency.
 
 [PASS  ] [BLOCKER] ANNEX_II.G.VALUATION_AUDIT  Valuation procedure and audit frequency (Art. 36(3) MiCAR)
-           Cite:  Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR
+           Cite:  Annex II, Part G in conjunction with Art. 36(3) MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'reserve_of_assets'  (192 words)
 
 [PASS  ] [MAJOR  ] ANNEX_II.H  Principal adverse environmental and climate-related impact of the consensus mechanism
-           Cite:  Art. 19 Abs. 1 UAbs. 1 Buchst. h MiCAR i.V.m. Art. 4 VO (EU) 2025/422; Anhang Tabelle 3 Teil H VO (EU) 2024/2984
+           Cite:  Art. 19(1), first subparagraph, point (h) MiCAR in conjunction with Art. 4 Regulation (EU) 2025/422; Annex, Table 3, Part H Regulation (EU) 2024/2984
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Text:  https://eur-lex.europa.eu/eli/reg_del/2025/422/oj/eng
+           Text:  https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng
            Section: 'environmental_impact'  (104 words)
 
 [PASS  ] [BLOCKER] ANNEX_II.I  Redemption rights and procedure (timing, fees, suspension conditions)
-           Cite:  Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 MiCAR
+           Cite:  Annex II, Part D, points 9, 15 and 16, Part G, point 3 in conjunction with Art. 39 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'redemption'  (125 words)
 
 ==============================================================================
-First-pass screening only. The draft is not package-ready. The white paper notification or submission for approval (Art. 8 Abs. 1, Art. 16 Abs. 2 UAbs. 2, Art. 17 Abs. 1 Buchst. a, Art. 18 Abs. 2 Buchst. k, Art. 51 Abs. 11 MiCAR) should not enter an external review or filing workflow until BLOCKER items are cured and a lawyer has signed off.
+First-pass screening only. The draft is not package-ready. The white paper notification or submission for approval (Art. 8(1), Art. 16(2), second subparagraph, Art. 17(1), point (a), Art. 18(2), point (k), Art. 51(11) MiCAR) should not enter an external review or filing workflow until BLOCKER items are cured and a lawyer has signed off.
 This tool is not legal advice.
 ```
 
@@ -115,7 +137,7 @@ This tool is not legal advice.
 
 - **Total Checked Rules**: 18
 - **Passed Rules**: 14
-- **Rules Requiring Review**: 3 (reserve disclosure, the fact-dependent deposit floor, and custody under Annex II Teil G)
+- **Rules Requiring Review**: 3 (reserve disclosure, the fact-dependent deposit floor, and custody under Annex II, Part G)
 - **Missing Sections**: 1 (format: a JSON draft cannot satisfy the XHTML/iXBRL notification format)
 - **Total Blocker Violations**: 4 blockers (`COMMON.IXBRL_TAGGING`, `ANNEX_II.G.COMPOSITION_DISCLOSURE`, `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW`, `ANNEX_II.G.CUSTODY`)
 
@@ -127,7 +149,7 @@ The compliance review check was run via the following command:
 ```bash
 make review-bundle
 ```
-All 146 unit tests pass successfully when run via:
+The full unit test suite runs via:
 ```bash
 make test
 ```

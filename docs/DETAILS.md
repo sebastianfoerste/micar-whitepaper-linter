@@ -28,7 +28,7 @@ Raw white papers are not committed. Study outputs are deterministic first-pass r
 make install
 make test
 make demo
-make check      # lint, tests and the sample CLI smoke check
+make check      # ruff, pytest, CLI smoke, review bundle, playground and template checks
 ```
 
 Generate a review bundle from synthetic data:
@@ -116,3 +116,41 @@ Python, Hatchling, uv and pytest.
 ## Collaborative redline bundle
 
 Run `micar-lint <draft> --workspace-output workspace.json --collaboration-bundle-dir review/` to generate a digest-bound collaboration sidecar, MiCAR playbook change set and supervised workflow pack. Accepted changes can be rendered as genuine OOXML tracked insertions and deletions in a copied DOCX. The source draft is never overwritten.
+
+## Example output
+
+Real output of `uv run micar-lint examples/incomplete.json` (a synthetic, deliberately incomplete ART draft), first three findings only:
+
+```text
+MiCAR Whitepaper Linter - Incomplete Synthetic EuroStable ART Draft
+Whitepaper type: ART
+==============================================================================
+Pass: 0  |  Review: 13  |  Missing: 5  |  Blockers: 15
+
+[REVIEW] [BLOCKER] COMMON.SUMMARY  Plain-language summary
+           Cite:  Art. 6(7), Art. 19(6), Art. 51(6) MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'summary'  (4 words)
+           -  Section is thin: 4 words, expected at least 80.
+           -  Missing review terms: summary, key information.
+
+[MISS  ] [BLOCKER] COMMON.RISK_WARNING  Mandatory risk warning statement
+           Cite:  Art. 6(5), Art. 19(4), Art. 51(4) MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'risk_warning'  (0 words)
+           -  Section is empty or absent.
+
+[REVIEW] [BLOCKER] COMMON.MANAGEMENT_STATEMENT  Statement by the management body on completeness, fairness, and clarity
+           Cite:  Art. 6(6), Art. 19(5), Art. 51(5) MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'management_statement'  (1 words)
+           -  Section is thin: 1 words, expected at least 40.
+           -  Missing review terms: management body, complies, fair, clear, not misleading.
+...
+```
+
+(The `...` marks where the remaining findings and the footer were cut. Citations print in English EU style with a link to the act on EUR-Lex; `--citation-style de` prints the German form, e.g. "Art. 6 Abs. 7 MiCAR". `--json` carries both, plus the links.) XHTML in the numbered-field layout of Implementing Regulation (EU) 2024/2984 works too; state the regime, since it is not inferred:
+
+```bash
+uv run micar-lint examples/numbered-other-draft.xhtml --type other
+```
