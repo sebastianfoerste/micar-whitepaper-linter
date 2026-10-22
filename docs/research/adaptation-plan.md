@@ -200,5 +200,5 @@ with call sites passing the finding instead of `finding.citation`, and a test (t
 6. **`uvx --no-cache`** in the Action: correctness over a few seconds per run (briefing correction 6).
 7. **H8 IDs and citations**: approve the point-level ID scheme and verify each point citation on EUR-Lex.
 8. **H7 versus H11**: decided 2026-10-21. The owner swapped dark mode out for H11.
-9. **H11 legal basis**: the LEI rules cite Part A of each Annex at Part level (the citation the party rules already use). Verify the point that names the LEI against the Official Journal, and confirm MAJOR as their severity.
+9. **H11 legal basis**: the LEI rules cite Part A of each Annex at Part level (the citation the party rules already use). Verify the point that names the LEI against the Official Journal. Severity MAJOR for both rules was confirmed by the owner on 2026-10-22.
 10. **Doc drift** proposed in the PR body: `AGENTS.md` (`BaseRule`, database migrations, "compliant"), `docs/FEATURES.md` and `docs/ARCHITECTURE.md` ("regulatory rejection", "compliant"), starter README custody claim (`ANNEX_II.G.CUSTODY` can pass), German citations in `reports/sample-*.txt` and in the text report footer.

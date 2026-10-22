@@ -40,4 +40,5 @@ Option 2, offline.
 - Deterministic, with no model and no network.
 - Test LEIs are synthetic with computed check digits; no real identifier appears in the repo.
 - No citation pinpoint added; the legal basis is marked as pending owner verification.
-- Needs owner decision: the severity (MAJOR) and the point-level citation.
+- Severity: MAJOR for both rules, confirmed by the owner on 2026-10-22.
+- Needs owner decision: the point-level citation.
