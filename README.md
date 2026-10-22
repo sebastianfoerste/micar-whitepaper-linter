@@ -58,7 +58,7 @@ To check your own draft, pass its path to `uv run micar-lint` instead of an exam
 
 ## Example output
 
-Real output of `uv run micar-lint examples/incomplete.json` (a synthetic, deliberately incomplete ART draft), first findings only:
+Real output of `uv run micar-lint examples/incomplete.json` (a synthetic, deliberately incomplete ART draft), first three findings only:
 
 ```text
 MiCAR Whitepaper Linter - Incomplete Synthetic EuroStable ART Draft
@@ -79,14 +79,16 @@ Pass: 0  |  Review: 13  |  Missing: 5  |  Blockers: 15
            Section: 'risk_warning'  (0 words)
            -  Section is empty or absent.
 
-[MISS  ] [BLOCKER] COMMON.IXBRL_TAGGING  Inline XBRL (iXBRL) compliance and ESMA metadata tagging
-           Cite:  Art. 2 Regulation (EU) 2024/2984
-           Text:  https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng
-           Section: 'ixbrl_tagging'  (0 words)
-           -  Draft format: notification requires XHTML with Inline XBRL tagging. ...
+[REVIEW] [BLOCKER] COMMON.MANAGEMENT_STATEMENT  Statement by the management body on completeness, fairness, and clarity
+           Cite:  Art. 6(6), Art. 19(5), Art. 51(5) MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'management_statement'  (1 words)
+           -  Section is thin: 1 words, expected at least 40.
+           -  Missing review terms: management body, complies, fair, clear, not misleading.
+...
 ```
 
-(The third finding is trimmed with `...`. Citations print in English EU style with a link to the act on EUR-Lex; `--citation-style de` prints the German form, e.g. "Art. 6 Abs. 7 MiCAR". `--json` carries both, plus the links.) XHTML in the numbered-field layout of Implementing Regulation (EU) 2024/2984 works too; state the regime, since it is not inferred:
+(The `...` marks where the remaining findings and the footer were cut. Citations print in English EU style with a link to the act on EUR-Lex; `--citation-style de` prints the German form, e.g. "Art. 6 Abs. 7 MiCAR". `--json` carries both, plus the links.) XHTML in the numbered-field layout of Implementing Regulation (EU) 2024/2984 works too; state the regime, since it is not inferred:
 
 ```bash
 uv run micar-lint examples/numbered-other-draft.xhtml --type other
