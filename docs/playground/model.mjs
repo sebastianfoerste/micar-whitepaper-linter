@@ -55,6 +55,11 @@ export function displayCitation(citation) {
   return citation;
 }
 
+// Rule pages sit beside the playground on the same site: <site>/rules/<RULE_ID>.html.
+export function ruleDocHref(ruleId, pageUrl) {
+  return new URL(`../rules/${encodeURIComponent(ruleId)}.html`, pageUrl).href;
+}
+
 export function selectFindings(findings, filter = "open", search = "") {
   const query = search.trim().toLowerCase();
   const statusOrder = { missing: 0, review: 1, pass: 2 };

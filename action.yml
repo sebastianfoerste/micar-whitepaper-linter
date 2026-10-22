@@ -17,19 +17,39 @@ inputs:
     description: 'Additional CLI arguments passed to micar-lint (e.g. --json, --coverage).'
     required: false
     default: ''
+  summary:
+    description: 'Append a table of open findings (rule, status, severity, citation, line, rule page) to the job summary. Never includes draft text.'
+    required: false
+    default: 'true'
+  annotations:
+    description: 'Annotate up to 10 open findings on the draft file. Never includes draft text.'
+    required: false
+    default: 'true'
+  upload-sarif:
+    description: 'Upload a SARIF log to GitHub code scanning. Needs `security-events: write`; private repositories also need GitHub Advanced Security.'
+    required: false
+    default: 'false'
+
+outputs:
+  sarif-file:
+    description: 'Path of the SARIF 2.1.0 log of open findings, for other uploaders.'
+    value: ${{ steps.lint.outputs.sarif-file }}
 
 runs:
   using: 'composite'
   steps:
     - name: Install uv
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
 
     - name: Lint whitepaper
+      id: lint
       shell: bash
       env:
         INPUT_WHITEPAPER: ${{ inputs.whitepaper }}
         INPUT_STRICT: ${{ inputs.strict }}
         INPUT_EXTRA_ARGS: ${{ inputs.extra-args }}
+        INPUT_SUMMARY: ${{ inputs.summary }}
+        INPUT_ANNOTATIONS: ${{ inputs.annotations }}
       run: |
         STRICT_ARGS=()
         if [ "${INPUT_STRICT}" = "true" ]; then
@@ -39,4 +59,32 @@ runs:
         if [ -n "${INPUT_EXTRA_ARGS}" ]; then
           read -r -a EXTRA_ARGS <<< "${INPUT_EXTRA_ARGS}"
         fi
-        uvx --from "${GITHUB_ACTION_PATH}" micar-lint "${INPUT_WHITEPAPER}" "${STRICT_ARGS[@]}" "${EXTRA_ARGS[@]}"
+        # A fresh directory per run: a second use of the Action in one job must not re-report
+        # files from the first, e.g. when this run exits before writing its outputs.
+        OUT_DIR="$(mktemp -d "${RUNNER_TEMP}/micar-lint.XXXXXX")"
+        # The CLI writes every output before it returns, so a strict failure still reports.
+        # --no-cache: uv keys a path build on pyproject.toml, so a moved v1 tag could reuse a stale build.
+        set +e
+        uvx --no-cache --from "${GITHUB_ACTION_PATH}" micar-lint "${INPUT_WHITEPAPER}" "${STRICT_ARGS[@]}" "${EXTRA_ARGS[@]}" \
+          --sarif-output "${OUT_DIR}/micar-lint.sarif" \
+          --summary-output "${OUT_DIR}/summary.md" \
+          --annotations-output "${OUT_DIR}/annotations.txt"
+        STATUS=$?
+        set -e
+        if [ -f "${OUT_DIR}/micar-lint.sarif" ]; then
+          echo "sarif-file=${OUT_DIR}/micar-lint.sarif" >> "${GITHUB_OUTPUT}"
+        fi
+        if [ "${INPUT_ANNOTATIONS}" = "true" ] && [ -f "${OUT_DIR}/annotations.txt" ]; then
+          cat "${OUT_DIR}/annotations.txt"
+        fi
+        if [ "${INPUT_SUMMARY}" = "true" ] && [ -f "${OUT_DIR}/summary.md" ]; then
+          cat "${OUT_DIR}/summary.md" >> "${GITHUB_STEP_SUMMARY}"
+        fi
+        exit "${STATUS}"
+
+    - name: Upload SARIF
+      if: ${{ always() && inputs.upload-sarif == 'true' && steps.lint.outputs.sarif-file != '' }}
+      uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+      with:
+        # The SARIF log sets automationDetails.id per draft path, which codeql-action uses as the category.
+        sarif_file: ${{ steps.lint.outputs.sarif-file }}

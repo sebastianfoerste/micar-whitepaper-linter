@@ -11,6 +11,7 @@ from pathlib import Path
 from micar_linter import __version__
 from micar_linter.artifact_manifest import build_artifact_manifest, render_artifact_manifest
 from micar_linter.batch import build_batch_review_pack, render_batch_review_pack
+from micar_linter.ci_outputs import render_annotations, render_sarif, render_summary
 from micar_linter.collaboration_workspace import (
     build_change_set,
     build_review_sidecar,
@@ -111,6 +112,24 @@ def build_parser() -> argparse.ArgumentParser:
         "--compare-review-table-output",
         type=Path,
         help="Path to write a JSON comparison of multiple local draft review tables.",
+    )
+    parser.add_argument(
+        "--sarif-output",
+        type=Path,
+        help=(
+            "Path to write a SARIF 2.1.0 log of open findings for code scanning. "
+            "Carries rule metadata, citations and line numbers, never draft text."
+        ),
+    )
+    parser.add_argument(
+        "--summary-output",
+        type=Path,
+        help="Path to write a Markdown summary table of open findings, e.g. for $GITHUB_STEP_SUMMARY.",
+    )
+    parser.add_argument(
+        "--annotations-output",
+        type=Path,
+        help="Path to write GitHub workflow annotation commands for up to 10 open findings.",
     )
     parser.add_argument(
         "--coverage",
@@ -302,6 +321,22 @@ def main(argv: list[str] | None = None) -> int:
                 f"error: cannot write review table to {args.review_table_output}: {exc}",
                 file=sys.stderr,
             )
+            return 2
+
+    ci_outputs = (
+        (args.sarif_output, render_sarif, "SARIF log"),
+        (args.summary_output, render_summary, "summary"),
+        (args.annotations_output, render_annotations, "annotations"),
+    )
+    for output_path, render, name in ci_outputs:
+        if not output_path:
+            continue
+        try:
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(render(report, args.path), encoding="utf-8")
+            written_outputs.append(output_path)
+        except OSError as exc:
+            print(f"error: cannot write {name} to {output_path}: {exc}", file=sys.stderr)
             return 2
 
     if args.manifest_output:

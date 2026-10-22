@@ -1,5 +1,5 @@
 import { FORMATS, MAX_BYTES, MAX_XHTML_BYTES, REGIMES, displayCitation, draftFormat, formatDraft, parseDraft, reportIsCurrent,
-  sectionSelection, selectFindings, validateDraft } from "./model.mjs";
+  ruleDocHref, sectionSelection, selectFindings, validateDraft } from "./model.mjs";
 
 const $ = id => document.getElementById(id);
 const input = $("input");
@@ -296,6 +296,15 @@ function renderFindings() {
     for (const issue of finding.issues) issues.append(node("li", "", issue));
     if (!finding.issues.length) issues.append(node("li", "", "Automated check matched. Verify the disclosure in substance."));
     body.append(issues, node("p", "finding-meta", `${finding.severity} severity · ${finding.word_count} words · ${finding.section}`));
+    // A new tab keeps the draft in this one; rule pages are static and load nothing else.
+    const rulePage = node("a", "rule-link", `How ${finding.rule_id} is checked `);
+    const arrow = node("span", "", "↗");
+    arrow.setAttribute("aria-hidden", "true");
+    rulePage.append(arrow, node("span", "sr-only", " (opens in a new tab)"));
+    rulePage.href = ruleDocHref(finding.rule_id, location.href);
+    rulePage.target = "_blank";
+    rulePage.rel = "noopener";
+    body.append(rulePage);
     // iXBRL is a file-format check; adding a JSON section cannot satisfy it.
     // Section navigation reads JSON keys; an XHTML draft has none to select.
     if (finding.rule_id !== "COMMON.IXBRL_TAGGING" && checkedFormat === "json") {

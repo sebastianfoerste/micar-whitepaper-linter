@@ -74,4 +74,23 @@ COMMON_RULES: tuple[Rule, ...] = (
         min_words=0,
         severity=Severity.BLOCKER,
     ),
+    # The two LEI rules read every section and check identifiers offline (micar_linter.lei).
+    # They cite the Part of each Annex that the existing party rules cite; the point that
+    # names the LEI has not been verified against the Official Journal.
+    Rule(
+        rule_id="COMMON.LEI_CHECK_DIGITS",
+        citation="Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR",
+        section="issuer",
+        label="Legal Entity Identifier format and check digits (ISO 17442, ISO/IEC 7064 MOD 97-10)",
+        min_words=0,
+        severity=Severity.MAJOR,
+    ),
+    Rule(
+        rule_id="COMMON.LEI_CONSISTENCY",
+        citation="Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR",
+        section="issuer",
+        label="Legal Entity Identifiers agree across the party sections and the rest of the draft",
+        min_words=0,
+        severity=Severity.MAJOR,
+    ),
 )
