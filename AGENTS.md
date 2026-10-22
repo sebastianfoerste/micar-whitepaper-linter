@@ -16,7 +16,7 @@ The MiCAR Whitepaper Linter is a deterministic Python tool and command-line pack
   - `document.py` & `whitepaper.py`: Logical structure models.
   - `report.py`: Compile final logs.
 - `tests/`: Pytest tests files.
-- `examples/`: Sample compliant and incomplete draft documents.
+- `examples/`: Synthetic example drafts, complete and incomplete. They contain no real issuer data.
 
 ---
 
@@ -30,7 +30,7 @@ Ensure you run commands using `uv` or inside your virtual environment:
 ---
 
 ## 4. Coding Conventions
-- **Regulatory Rules**: centralize all rules in [src/micar_linter/rules/](src/micar_linter/rules/). All rules must inherit from `BaseRule`.
+- **Regulatory Rules**: centralize all rules in [src/micar_linter/rules/](src/micar_linter/rules/). Each rule is an instance of the frozen `Rule` dataclass in `rules/base.py`; there is no `BaseRule` class to inherit from. `Linter` in `linter.py` applies the generic checks (listed terms, patterns, minimum words), and dispatches by rule ID the rules that need their own logic.
 - **Fail Closed**: Compliance checks must fail closed on missing sections.
 
 ---
@@ -45,5 +45,5 @@ Do not casually modify:
 ## 6. Git and Branching Rules
 Do not merge feature branches into `main`, `master` or `develop`, and do not push to those remote branches, unless the user approved it in the current session or the change goes up as a pull request for review. These branches deploy; an unreviewed merge cannot be recalled.
 
-Before proposing a merge or push, run the local validation checks on the feature branch: schema parity, the test suite, and database migration validation.
+Before proposing a merge or push, run `make check` on the feature branch. It runs ruff, the pytest suite (which also asserts the `*.v1` output schema identifiers), the CLI smoke run, the review bundle, the playground checks and the starter-template contract. The project has no database, so there are no migrations to validate.
 
