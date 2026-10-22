@@ -9,6 +9,11 @@ from micar_linter.linter import Report
 
 _STATUS_ICON = {"pass": "PASS  ", "review": "REVIEW", "missing": "MISS  "}
 _TITLE_BAR = "=" * 78
+# Notification and approval provisions named in the blocker footer, in canonical German form.
+_FILING_CITATION = (
+    "Art. 8 Abs. 1, Art. 16 Abs. 2 UAbs. 2, Art. 17 Abs. 1 Buchst. a, Art. 18 Abs. 2 Buchst. k, "
+    "Art. 51 Abs. 11 MiCAR"
+)
 
 
 def render_text(report: Report, citation_style: str = "en") -> str:
@@ -51,10 +56,9 @@ def render_text(report: Report, citation_style: str = "en") -> str:
     else:
         lines.append(
             "First-pass screening only. The draft is not package-ready. The white paper "
-            "notification or submission for approval (Art. 8 Abs. 1, Art. 16 Abs. 2 UAbs. 2, "
-            "Art. 17 Abs. 1 Buchst. a, Art. 18 Abs. 2 Buchst. k, Art. 51 Abs. 11 MiCAR) should not "
-            "enter an external review or filing workflow until BLOCKER items are cured and a lawyer "
-            "has signed off."
+            f"notification or submission for approval ({citations.render(_FILING_CITATION, citation_style)}) "
+            "should not enter an external review or filing workflow until BLOCKER items are cured and a "
+            "lawyer has signed off."
         )
     lines.append("This tool is not legal advice.")
     return "\n".join(lines)
