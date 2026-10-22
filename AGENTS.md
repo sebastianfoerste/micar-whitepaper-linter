@@ -5,7 +5,7 @@ Welcome, AI Agent! This guide details conventions, directory mapping, and rules 
 ---
 
 ## 1. Project Purpose
-The MiCAR Whitepaper Linter is a deterministic Python package that screens draft crypto-asset white papers under the Markets in Crypto-Assets Regulation (MiCAR - Regulation (EU) 2023/1114). It flags candidate disclosure gaps against Annexes I, II and III, each with a citation. It is first-pass tooling for lawyer review: it does not decide whether a white paper is compliant, and its output says it is not legal advice. It runs as a CLI (`micar-lint`), as a GitHub Action (`action.yml`) and in a browser playground (`docs/playground/`, on Pyodide).
+The MiCAR Whitepaper Linter is a deterministic Python package that screens draft crypto-asset white papers under the Markets in Crypto-Assets Regulation (MiCAR - Regulation (EU) 2023/1114). It flags candidate disclosure gaps against Annexes I, II and III and the common requirements of Articles 6, 19 and 51, each with a citation. It is first-pass tooling for lawyer review: it does not decide whether a white paper is compliant. The text report, the CI outputs and the playground say it is not legal advice; the `--json` report carries no such notice. It runs as a CLI (`micar-lint`), as a GitHub Action (`action.yml`) and in a browser playground (`docs/playground/`, on Pyodide).
 
 ---
 
@@ -14,18 +14,19 @@ The MiCAR Whitepaper Linter is a deterministic Python package that screens draft
   - `rules/`: Rule definitions. `annex_i.py`, `annex_ii.py` and `annex_iii.py` hold the Annex I, II and III rules. `common.py` holds the rules every white paper type runs (summary, risk warning, management statement, notification date, language, the iXBRL format gate and the LEI checks). `base.py` defines `Severity`, `Rule` and `Finding`. `__init__.py` builds `RULESETS`: the common rules plus Annex I for `other`, Annex II for `art` and Annex III for `emt`.
   - `linter.py`: `Linter`, `Report` and `lint_whitepaper`, plus the logic of the rules that are not generic checks.
   - `whitepaper.py`: the `Whitepaper` input model, the `WhitepaperType` regimes and `load_whitepaper`, which dispatches by file suffix.
-  - `document.py`: PDF, DOCX and Markdown section extraction, and the heading-to-section matching the loaders share.
+  - `document.py`: PDF, DOCX and Markdown section extraction for `load_whitepaper`, and `match_heading_to_section`, the heading-to-section matching all loaders share. `document_loader.py` is a separate loader for the batch study (`batch.py`) with its own PDF, XHTML and text extraction, so a parsing change may be needed in both.
   - `xhtml_parser.py`: XHTML text extraction and heading-based section mapping. `numbered_fields.py` handles white papers in the numbered-field layout of Implementing Regulation (EU) 2024/2984.
   - `ixbrl.py`: Inline XBRL format checks (the iXBRL 1.1 namespace and facts tagged with the ESMA MiCA taxonomy). It does not check tag completeness.
   - `lei.py`: LEI format, check digits and party sections, used by the two LEI rules.
-  - `report.py`: Renders a `Report` as text, JSON, a Markdown audit log or a coverage table. Other outputs have their own modules: `ci_outputs.py` (SARIF, job summary, annotations), `review_table.py`, `review_bundle.py`, `remediation.py`, `coverage.py` and `artifact_manifest.py`.
+  - `report.py`: Renders a `Report` as text, JSON, a Markdown audit log or a coverage table. Other outputs have their own modules, among them `ci_outputs.py` (SARIF, job summary, annotations), `review_table.py`, `review_bundle.py`, `remediation.py`, `coverage.py`, `artifact_manifest.py`, `batch.py`, `workspace.py` and `collaboration_workspace.py`.
 - `tests/`: Pytest tests (`test_*.py`) and Node tests for the playground (`tests/playground/*.test.mjs`). Pytest does not run the Node tests; `make playground-check` does.
 - `examples/`: Synthetic inputs with fictional issuers (JSON, XHTML, DOCX). They contain no real issuer data.
   - `art-stablecoin.json`, `emt-token.json` and `other-crypto-asset.json` are full drafts with fictional `SYNTH` LEIs. Each still has open blockers, the iXBRL format gate among them, so `--strict` exits 1.
   - `incomplete.json` is deliberately incomplete.
   - `numbered-other-draft.xhtml` uses the numbered-field layout and needs `--type other`.
   - `review-bundle/` is a committed sample output (see section 6).
-- `docs/`: The GitHub Pages root: landing page, `playground/`, generated `rules/`, `adr/` (architecture decisions) and `research/`.
+- `docs/`: The GitHub Pages root: landing page, `playground/`, generated `rules/`, `adr/` (architecture decisions) and `research/`. `docs/playground/lint.py` is the browser bridge; it is not in the wheel and ruff does not lint it.
+- `studies/`: The Title II white paper study. Its committed files hold public ESMA register metadata (real issuer names and URLs) and short matched-text excerpts; raw white papers are never committed (they stay in the git-ignored `.study-cache/`). `research/_captures/` is git-ignored third-party material that stays local.
 - `scripts/`: Generators and checks. `templates/whitepaper-starter/`: source of the starter template. `action.yml`: the GitHub Action.
 
 ---
@@ -40,12 +41,14 @@ Ensure you run commands using `uv` or inside your virtual environment. `make che
 ---
 
 ## 4. Coding Conventions
-- **Regulatory Rules**: centralize all rules in [src/micar_linter/rules/](src/micar_linter/rules/). Each rule is an instance of the frozen `Rule` dataclass in `rules/base.py`; there is no `BaseRule` class to inherit from. `Linter` in `linter.py` applies the generic checks (listed terms, required and prohibited patterns, minimum words, with German variants for German drafts), and dispatches by rule ID the rules that need their own logic.
-- **Rules with their own logic**: besides the dispatch in `linter.py`, add the rule ID to the special-case sets and examples in `scripts/build_rule_docs.py`. If its issue messages can quote draft text, add it to `DRAFT_ECHO_RULES` in `ci_outputs.py`, so SARIF, the job summary and annotations never repeat the draft.
-- **Fail Closed**: Compliance checks must fail closed on missing sections. `COMMON.IXBRL_TAGGING` and `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW` never return pass.
-- **Stable rule IDs**: add new rule IDs, never rename existing ones. They key SARIF results, the rule-page URLs and review bundles.
-- **Report language is load-bearing** (CONTRIBUTING.md): the blocker and lawyer sign-off wording is tested. Never describe a pass as compliance.
-- **Synthetic data only**: no real white paper, issuer, IBAN or wallet content anywhere in the repository (CONTRIBUTING.md).
+- **Regulatory Rules**: centralize all rules in [src/micar_linter/rules/](src/micar_linter/rules/). Each rule is an instance of the frozen `Rule` dataclass in `rules/base.py`; there is no `BaseRule` class to inherit from. `Linter` in `linter.py` applies the generic checks (listed terms, required and prohibited patterns, minimum words, with German variants for German drafts), and dispatches by rule ID the rules that need their own logic. The one exception to `rules/` is the batch study: `batch.py` defines a separate `StudyRule` set (`STUDY_RULES`, IDs such as `ANNEX_I_PART_A_02_LEGAL_FORM`) used only by `micar-lint-batch`, outside `RULESETS` and without rule pages.
+- **Rules with their own logic**: besides the dispatch in `linter.py`, handle the rule ID everywhere `scripts/build_rule_docs.py` special-cases rules: the sets `FORMAT_GATE`, `LEI_RULES` and `NEVER_PASS` where they apply, a branch in `examples()`, a branch in `status_logic()` and the limitations in `rule_page()`. If its issue messages can quote draft text, add it to `DRAFT_ECHO_RULES` in `ci_outputs.py`, so SARIF result messages use a fixed sentence instead (the job summary and annotations never print issue messages).
+- **New section keys**: a rule that reads a new section key also needs a heading pattern in `SECTION_PATTERNS` (`document.py`) and, for numbered-field XHTML, a mapping in `_PART_SECTIONS` (`numbered_fields.py`). Without them, PDF, DOCX, Markdown and XHTML drafts always report the rule as missing.
+- **Playground dependencies**: the playground installs the wheel with `deps=False` and loads only lxml (for XHTML). Keep the pypdf, python-docx and lxml imports lazy, and add no runtime dependency, or the browser checks break; the pytest suite runs with every dependency installed and would not notice.
+- **Fail Closed**: Compliance checks must fail closed on missing sections. `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW` never returns pass (`_deposit_floor_finding` has no pass branch). `COMMON.IXBRL_TAGGING` never passes for any loaded draft: JSON and the other draft formats give missing, and XHTML stays at review because `validate_ixbrl` never returns an empty issue list (when the namespace checks pass it still adds the tag-completeness note). `_ixbrl_finding` itself has a pass branch for an empty list, so a change to `ixbrl.py` must keep at least one issue or the gate opens.
+- **Stable rule IDs** (ADR 0005): add new rule IDs, never rename existing ones. They key SARIF results, the rule-page URLs and review bundles.
+- **Report language is load-bearing** (CONTRIBUTING.md): the blocker and lawyer sign-off wording is tested in `tests/test_cli.py`. Never describe a pass as compliance.
+- **Synthetic data only** (CONTRIBUTING.md): examples, tests, fixtures, playground samples and the starter template use fictional issuers only. Add no real white paper text, issuer or token names, IBANs or wallet addresses. The study under `studies/` is the one exception (see section 2).
 
 ---
 
@@ -61,8 +64,8 @@ Do not edit these by hand. Regenerate them after the change that affects them:
 - `docs/rules/*.html`: run `uv run python scripts/build_rule_docs.py` after any rule change. `tests/test_rule_docs.py` fails on stale pages and lints every example on them.
 - `docs/playground/micar_whitepaper_linter-<version>-py3-none-any.whl`: after any change under `src/`, delete the wheel and run `uv build --wheel -o docs/playground/`. `tests/test_playground_wheel.py` checks that it matches the source, the project version and `docs/playground/index.html`. A local, untracked `docs/playground/.gitignore` containing `*` hides new files in that folder from `git status`; use `git add -f` for a wheel with a new name.
 - `docs/playground/samples.json` and `docs/playground/sample-numbered.xhtml`: run `make playground-samples` after editing the examples they are built from.
-- `examples/review-bundle/` and `reports/sample-*.txt`: committed sample outputs that tests read. No make target regenerates them.
-- The version appears in `pyproject.toml`, `src/micar_linter/__init__.py`, `CITATION.cff`, the playground wheel's filename and `docs/playground/index.html`.
+- `examples/review-bundle/` and `reports/sample-*.txt`: committed sample outputs. `examples/review-bundle/` is a copy of the `make review-bundle` output for `art-stablecoin.json` (that target writes to the git-ignored `dist/review-bundle/`). `reports/sample-art-pass.txt` and `reports/sample-incomplete-blockers.txt` are `micar-lint` text reports for `art-stablecoin.json` and `incomplete.json`. `tests/test_reserve_rules.py` reads `review-table.json` and `sample-art-pass.txt`; no test reads `sample-incomplete-blockers.txt`. Refresh them by copying, after any change to rules or report wording.
+- The version appears in `pyproject.toml`, `uv.lock` (run `uv lock`, or CI's `uv sync --locked` fails), `src/micar_linter/__init__.py`, `CITATION.cff` (with `date-released`), the playground wheel's filename, `docs/playground/index.html` and every page in `docs/rules/` (regenerate them).
 
 ---
 
@@ -70,3 +73,5 @@ Do not edit these by hand. Regenerate them after the change that affects them:
 Do not merge feature branches into `main`, `master` or `develop`, and do not push to those remote branches, unless the user approved it in the current session or the change goes up as a pull request for review. These branches deploy; an unreviewed merge cannot be recalled.
 
 Before proposing a merge or push, run `make check` on the feature branch. It runs ruff, the pytest suite (which asserts several of the `*.v1` output schema identifiers), the CLI smoke run, the review bundle, the playground checks and the starter-template contract. CI runs only on pushes and pull requests to `main`, so on a feature branch `make check` is the only gate. The project has no database, so there are no migrations to validate.
+
+The GitHub Action is released through tags (`v1`, `v1.0.0`, `v1.1.0`, `v1.1.1`) that are separate from the package version tags (`v0.1.0` to `v0.2.1`). Users and the starter template pin `@v1`, so moving `v1` changes the Action for every user.
