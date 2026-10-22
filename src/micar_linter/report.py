@@ -6,6 +6,7 @@ import json
 
 from micar_linter import citations
 from micar_linter.linter import Report
+from micar_linter.rules.base import Severity
 
 _STATUS_ICON = {"pass": "PASS  ", "review": "REVIEW", "missing": "MISS  "}
 _TITLE_BAR = "=" * 78
@@ -141,6 +142,10 @@ def render_audit_log(report: Report, source_file: str, sha256: str) -> str:
             "and a lawyer has signed off."
         )
         lines.append("")
+    elif not report.is_clean:
+        lines.append("> [!WARNING]")
+        lines.append(_open_findings_note(report))
+        lines.append("")
     else:
         lines.append("> [!NOTE]")
         lines.append("> All automated checks passed. Substantive lawyer review is still required.")
@@ -161,6 +166,23 @@ def render_audit_log(report: Report, source_file: str, sha256: str) -> str:
     lines.append("```")
 
     return "\n".join(lines)
+
+
+def _open_findings_note(report: Report) -> str:
+    """The audit log note while findings are open but none is a BLOCKER: how many are open, by severity."""
+    open_findings = [f for f in report.findings if not f.passed]
+    by_severity = ", ".join(
+        f"{count} {severity.label}"
+        for severity in sorted(Severity, reverse=True)
+        if (count := sum(f.rule.severity is severity for f in open_findings))
+    )
+    one = len(open_findings) == 1
+    return (
+        f"> **{len(open_findings)} {'finding is' if one else 'findings are'} still open ({by_severity}) "
+        "and no BLOCKER finding is open.** The draft still needs the open "
+        f"{'finding' if one else 'findings'} resolved or reviewed, and substantive lawyer review "
+        "is still required."
+    )
 
 
 def render_coverage_table(report: Report) -> str:
