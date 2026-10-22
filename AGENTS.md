@@ -25,7 +25,7 @@ Ensure you run commands using `uv` or inside your virtual environment:
 - `make check`: Run lint, tests, and the sample CLI smoke check with dev tooling.
 - `uv run micar-lint <file>`: Run linter against a document.
 - `uv run --extra dev pytest`: Run test suite with dev tooling available.
-- `uv run --extra dev ruff check src tests`: Lint code with dev tooling available.
+- `uv run --extra dev ruff check src tests scripts`: Lint code with dev tooling available.
 
 ---
 
