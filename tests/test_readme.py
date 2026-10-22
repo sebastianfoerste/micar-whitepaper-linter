@@ -19,24 +19,64 @@ REPO_BLOB = "https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/ma
 URL_SCHEME = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*:")
 CUT = "..."
 NUMBER_WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five"}
+# A code fence, also one opened on a list item line; a backtick fence's info string holds no backtick.
+FENCE = re.compile(r"[ \t]*(?:(?:[-*+]|\d{1,9}[.)])[ \t]+)?(`{3,}(?=[^`]*$)|~{3,})")
+LINKS = (
+    re.compile(r"\]\(\s*<?([^)\s>]+)"),  # [text](target) and ![alt](target)
+    re.compile(r"^ {0,3}\[(?!\^)[^\]]+\]:[ \t]*\n?[ \t]*<?([^\s>]+)", re.M),  # [label]: target
+    re.compile(r"<a\s(?:[^>]*?\s)?href\s*=\s*[\"']?([^\"'\s>]+)", re.I),
+    re.compile(r"<img\s(?:[^>]*?\s)?src\s*=\s*[\"']?([^\"'\s>]+)", re.I),
+    re.compile(r"<([A-Za-z][A-Za-z0-9+.-]{1,31}:[^\s<>]*)>"),  # <https://...> autolinks
+)
+ATX_HEADING = re.compile(r" {0,3}#{1,6}(?:[ \t]+(.*?))??(?:[ \t]+#+)?[ \t]*$")
+SETEXT_UNDERLINE = re.compile(r" {0,3}(?:=+|-+)[ \t]*$")
+THEMATIC_BREAK = re.compile(r" {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$")
+# Lines that cannot start a paragraph, so never become a Setext heading: list items, quotes, tables.
+NOT_PARAGRAPH = re.compile(r" {0,3}(?:[-*+][ \t]|\d{1,9}[.)][ \t]|>|\|)")
+
+
+def _prose_lines(text: str) -> list[str]:
+    """The lines of a Markdown file with fenced code blocks (``` or ~~~) blanked out."""
+    lines: list[str] = []
+    fence = ""
+    for line in text.splitlines():
+        marker = FENCE.match(line)
+        if fence:
+            if marker and marker.group(1).startswith(fence) and not line[marker.end() :].strip():
+                fence = ""
+            line = ""
+        elif marker:
+            fence, line = marker.group(1), ""
+        lines.append(line)
+    return lines
 
 
 def _link_targets(text: str) -> list[str]:
-    return re.findall(r"\]\(\s*<?([^)\s>]+)", text)
+    prose = "\n".join(_prose_lines(text))
+    return [target for pattern in LINKS for target in pattern.findall(prose)]
 
 
 def _heading_anchors(path: Path) -> set[str]:
-    """GitHub heading slugs, skipping fenced code blocks."""
+    """GitHub heading slugs of the ATX (`## x`, `## x ##`) and Setext (`x` over `===` or `---`) headings."""
     anchors: set[str] = set()
-    in_fence = False
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if line.startswith("```"):
-            in_fence = not in_fence
+    paragraph: list[str] = []  # the open paragraph, which a Setext underline turns into a heading
+    in_block = False  # inside a list item, quote, table or indented code, whose lines start no paragraph
+    for line in _prose_lines(path.read_text(encoding="utf-8")):
+        atx = ATX_HEADING.match(line)
+        if paragraph and SETEXT_UNDERLINE.match(line):
+            heading = "\n".join(paragraph)  # GitHub drops the line break from the slug
+        elif atx:
+            heading = atx.group(1) or ""
+        else:
+            if not line.strip() or THEMATIC_BREAK.match(line):
+                paragraph, in_block = [], False
+            elif NOT_PARAGRAPH.match(line) or (not paragraph and line.startswith(("    ", "\t"))):
+                paragraph, in_block = [], True
+            elif not in_block:
+                paragraph.append(line.strip())
             continue
-        heading = re.match(r"#{1,6}\s+(.*?)\s*$", line)
-        if in_fence or not heading:
-            continue
-        text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", heading.group(1))
+        paragraph, in_block = [], False
+        text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", heading)
         slug = re.sub(r"[^\w\- ]", "", text.lower()).replace(" ", "-")
         anchor, suffix = slug, 0
         while anchor in anchors:
@@ -52,11 +92,14 @@ def _assert_resolves(path: Path, anchor: str, link: str, source: str) -> None:
         assert anchor in _heading_anchors(path), f"{source} anchor not found: {link}"
 
 
-def _example_block(text: str) -> list[str]:
+def _example_block(text: str) -> tuple[str, list[str]]:
+    """The intro between the "## Example output" heading and its ```text block, and the block's lines."""
     section = text.split("## Example output", 1)[1]
     block = re.search(r"```text\n(.*?)\n```", section, re.S)
     assert block, "Example output section has no ```text block"
-    return block.group(1).splitlines()
+    intro = section[: block.start()]
+    assert not re.search(r"^#", intro, re.M), "the ```text block is not in the Example output section"
+    return intro, block.group(1).splitlines()
 
 
 def test_readme_stays_within_word_budget():
@@ -93,8 +136,7 @@ def test_moved_sections_have_working_relative_links(doc):
 
 @pytest.mark.parametrize("doc", ["README.md", "docs/DETAILS.md"])
 def test_example_output_is_the_start_of_the_real_cli_output(doc, capsys):
-    text = (ROOT / doc).read_text(encoding="utf-8")
-    shown = _example_block(text)
+    intro, shown = _example_block((ROOT / doc).read_text(encoding="utf-8"))
     assert main([str(ROOT / "examples/incomplete.json")]) == 0
     real = capsys.readouterr().out.splitlines()
 
@@ -104,7 +146,6 @@ def test_example_output_is_the_start_of_the_real_cli_output(doc, capsys):
         assert len(shown) < len(real), f"{doc} marks a cut but shows the whole output"
     assert real[: len(shown)] == shown, f"{doc} example output is not the first lines of the real CLI output"
 
-    findings = [line for line in shown if line.startswith("[")]
-    assert f"first {NUMBER_WORDS[len(findings)]} findings only" in text, (
-        f"{doc} shows {len(findings)} findings but labels them differently"
-    )
+    count = len([line for line in shown if line.startswith("[")])
+    label = f"first {NUMBER_WORDS.get(count, count)} findings only"
+    assert label in intro, f"{doc} shows {count} findings but the text above the block does not say '{label}'"

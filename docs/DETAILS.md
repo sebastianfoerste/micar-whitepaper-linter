@@ -28,7 +28,7 @@ Raw white papers are not committed. Study outputs are deterministic first-pass r
 make install
 make test
 make demo
-make check      # lint, tests and the sample CLI smoke check
+make check      # ruff, pytest, CLI smoke, review bundle, playground and template checks
 ```
 
 Generate a review bundle from synthetic data:

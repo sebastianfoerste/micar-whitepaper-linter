@@ -6,7 +6,7 @@
 
 **Flag missing and thin disclosures in draft MiCAR white papers before substantive legal review, using deterministic Annex I, II and III checks with pinpoint citations.**
 
-A deterministic Python linter for draft white papers under MiCAR (Regulation (EU) 2023/1114). It checks Annex I, II and III requirements as code, accepts JSON, XHTML (incl. numbered-field iXBRL layouts) and DOCX, and runs as a CLI, a GitHub Action, or in your browser.
+A deterministic Python linter for draft white papers under MiCAR (Regulation (EU) 2023/1114). It checks Annex I, II and III requirements as code, accepts JSON, XHTML (incl. numbered-field iXBRL layouts) and DOCX, and runs as a CLI, [a GitHub Action](https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/docs/SETUP.md#github-action), or [in your browser](https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/).
 
 > Review-gated first-pass tooling. It flags candidate gaps for a lawyer; it does not decide whether a white paper is lawful or complete. **Not legal advice.** Bundled examples are synthetic.
 

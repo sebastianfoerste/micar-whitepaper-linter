@@ -3,13 +3,14 @@
 promises them: the text report keeps the blocker message while any finding is open, the audit log
 while any BLOCKER finding is open, and the audit log always ends with the lawyer sign-off section."""
 
+import re
 from pathlib import Path
 
 import pytest
 
 from micar_linter.cli import main
 from micar_linter.linter import Report
-from micar_linter.report import render_audit_log, render_text
+from micar_linter.report import _TITLE_BAR, render_audit_log, render_text
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Finding, Severity
 from micar_linter.whitepaper import WhitepaperType
@@ -19,7 +20,15 @@ INCOMPLETE = ROOT / "examples/incomplete.json"
 
 NOT_PACKAGE_READY = "not package-ready"
 TEXT_BLOCKER = "First-pass screening only. The draft is not package-ready."
+# The notification and approval provisions in each citation style, then the clause they gate.
+TEXT_FILING = {
+    "en": "(Art. 8(1), Art. 16(2), second subparagraph, Art. 17(1), point (a), Art. 18(2), point (k), "
+    "Art. 51(11) MiCAR) should not enter an external review or filing workflow",
+    "de": "(Art. 8 Abs. 1, Art. 16 Abs. 2 UAbs. 2, Art. 17 Abs. 1 Buchst. a, Art. 18 Abs. 2 Buchst. k, "
+    "Art. 51 Abs. 11 MiCAR) should not enter an external review or filing workflow",
+}
 TEXT_SIGN_OFF = "until BLOCKER items are cured and a lawyer has signed off."
+TEXT_NOTIFICATION = "The white paper notification or submission for approval"
 TEXT_CLEAN = "All required disclosures present. Lawyer review still required."
 NOT_LEGAL_ADVICE = "This tool is not legal advice."
 LOG_BLOCKER = (
@@ -48,24 +57,31 @@ def _first_rule(severity: Severity) -> str:
     return next(rule.rule_id for rule in RULESETS[WhitepaperType.ART] if rule.severity is severity)
 
 
+def _text_blocker_sentence(style: str) -> str:
+    """The text report's closing warning while any finding is open, whole, so no qualifier can slip in."""
+    return f"{TEXT_BLOCKER} {TEXT_NOTIFICATION} {TEXT_FILING[style]} {TEXT_SIGN_OFF}"
+
+
 def _assert_sign_off_section_closes(log: str) -> None:
-    assert log.count(SIGN_OFF_HEADING) == 1
-    section = log.split(SIGN_OFF_HEADING, 1)[1]
-    assert "\n## " not in section, "the lawyer sign-off section must be the last section"
-    assert SIGN_OFF_TEXT in section
+    lines = log.splitlines()
+    assert lines.count(SIGN_OFF_HEADING) == 1, f"expected the line '{SIGN_OFF_HEADING}' exactly once"
+    section = lines[lines.index(SIGN_OFF_HEADING) + 1 :]
+    assert not [line for line in section if line.startswith("#")], "the lawyer sign-off section must be last"
+    assert SIGN_OFF_TEXT in "\n".join(section)
     for field in SIGN_OFF_FIELDS:
-        assert field in section
+        assert [line for line in section if re.fullmatch(rf"{re.escape(field)} +_+", line)], (
+            f"the lawyer sign-off section has no '{field}' line to fill in"
+        )
 
 
-@pytest.mark.parametrize(("style", "filing_citation"), [("en", "Art. 8(1)"), ("de", "Art. 8 Abs. 1")])
-def test_text_report_with_open_blockers_is_not_package_ready(capsys, style, filing_citation):
+@pytest.mark.parametrize("style", TEXT_FILING)
+def test_text_report_with_open_blockers_is_not_package_ready(capsys, style):
     assert main([str(INCOMPLETE), "--citation-style", style]) == 0
     out = capsys.readouterr().out
-    footer = out.split("=" * 78)[-1]
+    assert out.count(_TITLE_BAR) == 2, "the text report has a title bar and a footer bar"
+    _, footer = out.rsplit(_TITLE_BAR, 1)
 
-    assert TEXT_BLOCKER in footer
-    assert TEXT_SIGN_OFF in footer
-    assert filing_citation in footer
+    assert _text_blocker_sentence(style) in footer
     assert TEXT_CLEAN not in out
     assert out.rstrip("\n").endswith(NOT_LEGAL_ADVICE)
 
@@ -76,8 +92,7 @@ def test_text_report_keeps_the_blocker_message_while_a_non_blocker_finding_is_op
 
     text = render_text(report)
 
-    assert TEXT_BLOCKER in text
-    assert TEXT_SIGN_OFF in text
+    assert _text_blocker_sentence("en") in text
     assert TEXT_CLEAN not in text
 
 
