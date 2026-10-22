@@ -8,7 +8,9 @@ from micar_linter.whitepaper import Whitepaper, WhitepaperType
 
 def test_artifact_manifest_reports_missing_outputs_and_export_blockers(tmp_path: Path):
     source_path = tmp_path / "incomplete.json"
-    source_path.write_text('{"title":"Incomplete","type":"other","sections":{"summary":"Short"}}', encoding="utf-8")
+    source_path.write_text(
+        '{"title":"Incomplete","type":"other","sections":{"summary":"Short"}}', encoding="utf-8"
+    )
     missing_output = tmp_path / "missing-report.md"
     report = lint_whitepaper(
         Whitepaper(

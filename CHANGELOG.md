@@ -1,8 +1,8 @@
 # Changelog
 
-This file starts with 1.2.0. Earlier releases are recorded only as git tags (v0.1.0, v1.0.0, v1.1.0, v1.1.1); up to v1.1.1 the package metadata still read 0.1.0 or 0.2.0. From 1.2.0 the package version and the release tag match.
+This file starts with 0.2.2. Earlier releases are recorded as git tags and GitHub release notes. The Python package on PyPI and the GitHub Action are versioned separately: package releases are tagged v0.x (v0.1.0, v0.2.0, v0.2.1), Action releases v1.x, and Action users keep pinning `@v1`.
 
-## [1.2.0] - unreleased
+## 0.2.2 (unreleased)
 
 Citations and statements below were checked against the EUR-Lex texts of Regulation (EU) 2023/1114 (CELEX 32023R1114) and Implementing Regulation (EU) 2024/2984 (CELEX 32024R2984), as mirrored in legalize-dev/legalize-eu.
 
@@ -12,7 +12,7 @@ Citations and statements below were checked against the EUR-Lex texts of Regulat
 - `ANNEX_II.G.VALUATION_AUDIT` cited Art. 36(3) MiCAR, which is operational segregation. It now cites Art. 36(7), (9), (11) and (12). Its label says that only the keywords are checked, and that requiring the word "audit" is an internal interpretation and not an Annex II item: Annex II Part G and Part G of Table 3 of Implementing Regulation (EU) 2024/2984 list no audit, Art. 36(9) requires the audit and Art. 30(2) the publication of the audit report. Whether a missing audit description should stay a BLOCKER is left to lawyer review. The custody label cites Art. 37 MiCAR.
 - `ANNEX_II.I` cites Annex II Part C point 8, Part D points 9, 14, 15 and 16, Part G point 3, Art. 39(2) and (3) and Art. 46 MiCAR.
 - `ANNEX_II.I` asks for the affirmative wording of either Art. 39(2) basis ("market value of the referenced assets", "by delivering the assets"), so a negated mention such as "Holders cannot choose delivery of the referenced assets" no longer passes. "At par" in an English ART redemption section is referred to review with a note that redemption at par value is the e-money token rule (Art. 49(4) MiCAR).
-- German ART checks accept "Rücktausch", which follows German Art. 39 text reproduced in web search results and was not checked against the German Official Journal. Until it is, they still accept "Rücknahme" and "Rückzahlung", the terms used before 1.2.0. `ANNEX_II.I` asks German drafts for "Marktwert"; a German policy that redeems only by delivering the referenced assets cannot be recognised yet and is referred to review with a note saying so.
+- German ART checks accept "Rücktausch", which follows German Art. 39 text reproduced in web search results and was not checked against the German Official Journal. Until it is, they still accept "Rücknahme" and "Rückzahlung", the terms used before 0.2.2. `ANNEX_II.I` asks German drafts for "Marktwert"; a German policy that redeems only by delivering the referenced assets cannot be recognised yet and is referred to review with a note saying so.
 - Term and pattern matching collapses whitespace, so a required phrase that wraps across lines in a PDF, Markdown or DOCX draft still matches.
 - The starter template (`templates/whitepaper-starter`) cites the ART provisions for its `art` type and no longer asks for redemption at par.
 
@@ -20,9 +20,13 @@ Citations and statements below were checked against the EUR-Lex texts of Regulat
 
 - `ANNEX_I.NOT_APPROVED_STATEMENT` (Art. 6(3) MiCAR) and `ANNEX_III.NOT_APPROVED_STATEMENT` (Art. 51(3) MiCAR) check the English first-page statement that no competent authority has approved the white paper, and fail closed when it is absent. The Title II check also requires the statement to name the offeror, the person seeking admission to trading or the operator of the trading platform (Art. 6(3), second subparagraph). A statement without a heading is routed by its content. First-page placement is not checked. German drafts are referred to review until the German wording is checked against the Official Journal. The ART ruleset has no such rule because Art. 19 MiCAR prescribes no such statement (Table 3 field I.02 of Implementing Regulation (EU) 2024/2984 holds the Art. 19(4) warning instead). The white paper of an authorised ART issuer is deemed approved (Art. 21(1) MiCAR) and that of a credit institution is approved (Art. 17(1)(a)), but an issuer exempt under Art. 16(2) only notifies it.
 - `studies/2026-07-title-ii-annex-i-whitepaper-study/scripts/build_review_matrix.py` builds the human-review sheets from the detector output.
+- Text reports print each citation in English EU drafting style, for example "Art. 6(7) MiCAR", followed by a link to the cited act on EUR-Lex. `--citation-style de` prints the German form the rules keep, for example "Art. 6 Abs. 7 MiCAR". JSON output carries both (`citation`, `citation_en`) and the links (`sources`). (#27)
+- Community files: issue forms for bugs, false positives and rule proposals, a pull request template, `CITATION.cff` and a code of conduct. (#27)
 
 ### Changed
 
 - The human-review sheets of the Title II study use the detector's current rule IDs. None of the 150 cells has been reviewed.
-- README and docs describe the checks as keyword, minimum-length and structure checks and no longer call them audits or a pass compliance. The README image is a rendering of the real `make demo` output.
-- The playground wheel is rebuilt as `micar_whitepaper_linter-1.2.0-py3-none-any.whl`.
+- README and docs describe the checks as keyword, minimum-length and structure checks and no longer call them audits or a pass compliance. The README image is a rendering of the real `make demo` output; it predates the English citation style and still shows the German form.
+- The English citation style lists several paragraphs of one article in EU form, for example "Art. 36(7), (9), (11) and (12)" and "Art. 39(2) and (3)", so the corrected `ANNEX_II.G.VALUATION_AUDIT` and `ANNEX_II.I` citations render correctly.
+- The docs pin `--python 3.13` where the extras are installed with uvx (#27), and the README screenshot placeholder is removed (#28).
+- The playground wheel is rebuilt as `micar_whitepaper_linter-0.2.2-py3-none-any.whl`.

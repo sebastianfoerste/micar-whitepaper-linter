@@ -10,7 +10,7 @@ mirrored in legalize-dev/legalize-eu).
 The German keywords "Rücktausch" and "Marktwert" follow the German text of Art. 39 MiCAR
 as reproduced on springlex.eu and gesetze.legal in web search results; they have not been
 checked against the German Official Journal text. Until they are, the German checks also
-accept "Rücknahme" and "Rückzahlung", the terms used before 1.2.0, and a German policy that
+accept "Rücknahme" and "Rückzahlung", the terms used before 0.2.2, and a German policy that
 redeems only by delivering the referenced assets is referred to review with a note.
 """
 

@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import json
 
+from micar_linter import citations
 from micar_linter.linter import Report
 
 _STATUS_ICON = {"pass": "PASS  ", "review": "REVIEW", "missing": "MISS  "}
 _TITLE_BAR = "=" * 78
 
 
-def render_text(report: Report) -> str:
+def render_text(report: Report, citation_style: str = "en") -> str:
     lines: list[str] = []
     lines.append(f"MiCAR Whitepaper Linter - {report.title}")
     lines.append(f"Whitepaper type: {report.whitepaper_type.value.upper()}")
@@ -30,7 +31,9 @@ def render_text(report: Report) -> str:
         icon = _STATUS_ICON[finding.status]
         sev = rule.severity.label
         lines.append(f"[{icon}] [{sev:7}] {rule.rule_id}  {rule.label}")
-        lines.append(f"           Cite:  {rule.citation}")
+        lines.append(f"           Cite:  {citations.render(rule.citation, citation_style)}")
+        for url in citations.source_urls(rule.citation):
+            lines.append(f"           Text:  {url}")
         lines.append(f"           Section: '{rule.section}'  ({finding.word_count} words)")
         for issue in finding.issues:
             lines.append(f"           -  {issue}")
@@ -73,6 +76,8 @@ def render_json(report: Report) -> str:
             {
                 "rule_id": f.rule.rule_id,
                 "citation": f.rule.citation,
+                "citation_en": citations.to_english(f.rule.citation),
+                "sources": citations.source_urls(f.rule.citation),
                 "section": f.rule.section,
                 "label": f.rule.label,
                 "severity": f.rule.severity.label,
@@ -166,9 +171,7 @@ def render_coverage_table(report: Report) -> str:
         citation = finding.rule.citation
         severity = finding.rule.severity.label
         status = finding.status.upper()
-        lines.append(
-            f"| {rule_id:<20} | {citation:<15} | {severity:<8} | {status:<7} |"
-        )
+        lines.append(f"| {rule_id:<20} | {citation:<15} | {severity:<8} | {status:<7} |")
     lines.append("=" * 78)
     lines.append(
         "Pass: {p}  |  Review: {r}  |  Missing: {m}  |  Blockers: {b}".format(

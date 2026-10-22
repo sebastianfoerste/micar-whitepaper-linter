@@ -18,7 +18,7 @@ from micar_linter.rules.base import Rule, Severity
 
 # German redemption term. "Rücktausch" follows reproductions of the German Art. 39 MiCAR in
 # web search results; it has not been checked against the German Official Journal text.
-# Until it is, the terms used before 1.2.0 ("Rücknahme", "Rückzahlung") are accepted too, so
+# Until it is, the terms used before 0.2.2 ("Rücknahme", "Rückzahlung") are accepted too, so
 # no German draft fails on an unverified keyword change.
 _REDEMPTION_DE = r"rücktausch|rücknahme|rückzahlung"
 

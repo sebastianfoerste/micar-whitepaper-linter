@@ -84,7 +84,7 @@ wheels = [
 
 [[package]]
 name = "micar-whitepaper-linter"
-version = "1.2.0"
+version = "0.2.2"
 source = { editable = "." }
 dependencies = [
     { name = "lxml" },

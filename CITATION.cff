@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: If you use this software, please cite it as below.
+title: "micar-whitepaper-linter: deterministic MiCAR crypto-asset whitepaper checks with article citations"
+authors:
+  - family-names: Förste
+    given-names: Sebastian
+version: 0.2.1
+date-released: 2026-10-15
+license: MIT
+repository-code: https://github.com/sebastianfoerste/micar-whitepaper-linter
+url: https://pypi.org/project/micar-whitepaper-linter/
+keywords: [MiCAR, MiCA, crypto-assets, whitepaper, regulatory compliance, linter]

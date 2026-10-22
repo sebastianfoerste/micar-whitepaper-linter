@@ -180,8 +180,7 @@ def render_review_table_markdown(table: dict[str, Any]) -> str:
     for row in table["rows"]:
         lines.append(
             (
-                "| {rule_id} | {citation} | {status} | {blocker} | "
-                "{reviewer_decision} | {anchor_verified} |"
+                "| {rule_id} | {citation} | {status} | {blocker} | {reviewer_decision} | {anchor_verified} |"
             ).format(
                 rule_id=row["rule_id"],
                 citation=row["citation"],
@@ -511,7 +510,6 @@ def _prompt_improvement(
             ]
         ),
     }
-
 
 
 def _row_id(report: Report, finding: Finding) -> str:

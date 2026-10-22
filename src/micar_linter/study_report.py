@@ -166,9 +166,7 @@ def render_study_report(payload: dict[str, Any]) -> str:
             ]
         )
         for item in excluded_documents:
-            lines.append(
-                f"| `{item.get('study_doc_id', '')}` | `{item.get('exclusion_reason', '')}` |"
-            )
+            lines.append(f"| `{item.get('study_doc_id', '')}` | `{item.get('exclusion_reason', '')}` |")
     else:
         lines.append("No documents were excluded in this run.")
 
