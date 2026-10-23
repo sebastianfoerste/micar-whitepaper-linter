@@ -63,7 +63,9 @@ def _draft(*risk_heading: tuple[str, str]) -> list[tuple[str, str]]:
 def _write_docx(path: Path, blocks: list[tuple[str, str]]) -> Path:
     doc = docx.Document()
     for kind, text in blocks:
-        if kind in ("heading", "large"):
+        if kind == "title":
+            doc.add_paragraph(text, style="Title")
+        elif kind in ("heading", "large"):
             doc.add_heading(text, level=1)
         elif kind == "subheading":
             doc.add_heading(text, level=2)
@@ -106,8 +108,9 @@ def _write_docx(path: Path, blocks: list[tuple[str, str]]) -> Path:
 
 
 # 10 pt Helvetica for body text and plain lines; Helvetica-Bold in 10 pt for "bold" lines, 11 pt for
-# "subheading" lines and 14 pt for "large" ones. In a DOCX, "large" is a Heading 1 and "subheading" a Heading 2.
-PDF_FONTS = {"bold": "/F2 10 Tf", "subheading": "/F2 11 Tf", "large": "/F2 14 Tf"}
+# "subheading" lines, 14 pt for "large" ones and 20 pt for a "title". In a DOCX, "large" is a Heading 1,
+# "subheading" a Heading 2 and "title" a Title-style paragraph.
+PDF_FONTS = {"bold": "/F2 10 Tf", "subheading": "/F2 11 Tf", "large": "/F2 14 Tf", "title": "/F2 20 Tf"}
 
 
 def _shown(kind: str, line: str, next_line: str) -> str:
@@ -847,6 +850,126 @@ def test_sub_heading_that_names_no_section_stays_in_its_section(tmp_path: Path, 
     assert _words(RISK_TEXT) in _words(sections["risks"])
     assert TECHNOLOGY not in _words(sections["risks"])
     assert _findings(path)["ANNEX_I.I"].status == "pass"
+
+
+# A risk section split into one paragraph per risk, under labels that name no section. Together the
+# paragraphs pass ANNEX_I.I; the first alone does not.
+RISK_PARTS = [
+    (
+        "Market risk",
+        "Holders may sell units only where a market exists, and prices can move sharply within a single day. "
+        "Past performance of similar services does not indicate future returns, and holders may lose the full "
+        "amount. Holders should read this document in full and seek independent advice before they buy units.",
+    ),
+    (
+        "Liquidity risk",
+        "Liquidity can disappear when few buyers are active, so holders may be unable to exit at a fair price.",
+    ),
+    (
+        "Regulatory risk",
+        "A change in regulatory treatment in any Member State could restrict transfers or require new licences.",
+    ),
+    (
+        "Operational risk",
+        "Operational failures at the service provider, such as outages or faulty software updates, can delay "
+        "transfers for days. Keys held by holders can be lost or stolen, and lost keys cannot be recovered.",
+    ),
+    (
+        "Smart contract risk",
+        "Smart contract defects can freeze balances until a fix is deployed and accepted by the network. "
+        "Technology failures at the ledger can also stop transfers for days.",
+    ),
+]
+GERMAN_RISK_LABELS = [
+    "Marktrisiko",
+    "Liquiditätsrisiko",
+    "Regulatorisches Risiko",
+    "Operationelles Risiko",
+    "Smart-Contract-Risiko",
+]
+# The risk headings: the heading that opens the section and the labels of its paragraphs.
+RISK_HEADINGS = {
+    "numbered": (
+        "12. Information on risks",
+        [f"12.{n} {label}" for n, (label, _) in enumerate(RISK_PARTS, 1)],
+    ),
+    "unnumbered": ("Information on risks", [label for label, _ in RISK_PARTS]),
+    "german": (
+        "12. Informationen über die Risiken",
+        [f"12.{n} {label}" for n, label in enumerate(GERMAN_RISK_LABELS, 1)],
+    ),
+}
+
+
+def _risk_blocks(kind: str, opener: str, labels: list[str]) -> list[tuple[str, str]]:
+    """A summary, the risk heading and the risk paragraphs under their labels, every heading in kind,
+    then a "Glossary" in the larger heading font."""
+    blocks = [(kind, "Summary"), ("body", SUMMARY), (kind, opener)]
+    for label, (_, text) in zip(labels, RISK_PARTS, strict=True):
+        blocks += [(kind, label), ("body", text)]
+    return [*blocks, ("large", "Glossary"), ("body", TECHNOLOGY)]
+
+
+def _assert_risk_parts_pass(path: Path, sections: dict[str, str]) -> None:
+    """Every risk paragraph is in the risk section, the glossary text is not, and ANNEX_I.I passes."""
+    assert sorted(sections) == ["risks", "summary"]
+    risks = _words(sections["risks"])
+    assert all(_words(text) in risks for _, text in RISK_PARTS)
+    assert TECHNOLOGY not in risks
+    findings = _findings(path)
+    assert findings["ANNEX_I.I"].rule.severity is Severity.BLOCKER
+    assert findings["ANNEX_I.I"].status == "pass"
+
+
+@pytest.mark.parametrize("suffix", sorted(WRITERS))
+@pytest.mark.parametrize("case", sorted(RISK_HEADINGS))
+def test_bold_label_under_a_bold_heading_stays_in_its_section(tmp_path: Path, suffix: str, case: str):
+    # "12.1 Market risk" or "Market risk" in bold under a bold "12. Information on risks": a bold DOCX
+    # label and a PDF line in bold at the body size are sub-headings, not the next section.
+    write, load = WRITERS[suffix]
+    opener, labels = RISK_HEADINGS[case]
+    path = write(tmp_path / f"quillmoor{suffix}", _risk_blocks("bold", opener, labels))
+
+    _assert_risk_parts_pass(path, load(path))
+
+
+@pytest.mark.parametrize("suffix", sorted(WRITERS))
+@pytest.mark.parametrize("case", sorted(RISK_HEADINGS))
+def test_heading_numbered_below_or_naming_one_risk_stays_in_the_risk_section(
+    tmp_path: Path, suffix: str, case: str
+):
+    # The labels have the Heading 1 style or the 14 pt heading font of the risk heading, the same rank.
+    # "12.1" extends the number of "12.", and "Market risk" names one risk, so each stays in the risks.
+    write, load = WRITERS[suffix]
+    opener, labels = RISK_HEADINGS[case]
+    path = write(tmp_path / f"quillmoor{suffix}", _risk_blocks("large", opener, labels))
+
+    _assert_risk_parts_pass(path, load(path))
+
+
+@pytest.mark.parametrize("suffix", sorted(WRITERS))
+def test_cover_title_that_names_a_section_sets_no_heading_level(tmp_path: Path, suffix: str):
+    # A large cover title that names the crypto-asset section opens it in a PDF (a DOCX skips the Title
+    # style). The headings after it keep their own level, so "Glossary" in the font of "Risk Factors"
+    # still ends the risks, in the PDF as in the DOCX.
+    write, load = WRITERS[suffix]
+    blocks = [
+        ("title", "Crypto-Asset White Paper for the Quillmoor Utility Token"),
+        ("space", ""),
+        ("large", "Summary"),
+        ("body", SUMMARY),
+        ("large", "Risk Factors"),
+        ("body", THIN_RISKS),
+        ("large", "Glossary"),
+        ("body", RISK_TEXT),
+    ]
+    path = write(tmp_path / f"quillmoor{suffix}", blocks)
+
+    sections = load(path)
+    assert _words(sections["risks"]) == THIN_RISKS
+    findings = _findings(path)
+    assert findings["ANNEX_I.I"].rule.severity is Severity.BLOCKER
+    assert (findings["ANNEX_I.I"].status, findings["ANNEX_I.I"].word_count) == ("review", 11)
 
 
 # Rows of the summary table of Implementing Regulation (EU) 2024/2984 as pypdf reads them: the field

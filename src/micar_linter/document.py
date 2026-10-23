@@ -245,18 +245,56 @@ def _template_kind(text: str) -> str | None:
     return "field" if "." in number else "summary"
 
 
+def _outline_number(text: str) -> str | None:
+    """The outline number a heading starts with, without its closing mark: "12" in "12. Information on
+    risks" and "12.1" in "12.1 Market risk". None for other headings."""
+    numbering = _NUMBERING.match(text)
+    number = numbering.group().strip().rstrip(".)") if numbering else ""
+    return number if re.fullmatch(r"\d{1,2}(?:\.\d{1,2})*", number) else None
+
+
+def _numbered_below(number: str | None, opener_number: str | None) -> bool:
+    """Whether a heading number extends the number of the heading that opened the section, as "12.1"
+    and "12.1.3" extend "12"."""
+    return number is not None and opener_number is not None and number.startswith(f"{opener_number}.")
+
+
+# A heading that names one risk ("Market risk", "Smart contract risk", "Marktrisiko") rather than the
+# risk section; the risk warning is a section of its own.
+_ONE_RISK = re.compile(r"\brisk\b(?!\s+warning)|risiko\b", re.IGNORECASE)
+
+
+def _sub_heading(text: str, number: str | None, opener_number: str | None, keys: list[str]) -> bool:
+    """Whether the number or the words of a heading that names no section place it under the heading
+    that opened the current section, whose keys are keys: "12.1" under "12.", or a heading that names
+    one risk in the risk section."""
+    return _numbered_below(number, opener_number) or ("risks" in keys and bool(_ONE_RISK.search(text)))
+
+
 def _ends_section(
-    kind: str | None, level: float | None, opener: str | None, section_level: float | None
+    kind: str | None,
+    level: float | None,
+    opener: str | None,
+    section_level: float | None,
+    *,
+    label: bool = False,
+    sub_heading: bool = False,
 ) -> bool:
     """Whether a heading that names no section ends the current section.
 
     kind is the template numbering of the heading (see _template_kind) and opener that of the heading
     that opened the current section. level and section_level rank the heading and the heading that
     opened the section: a larger value is a lower level (a smaller PDF font, a deeper DOCX outline level).
+    label tells whether only bold type or capitals mark the heading: a DOCX paragraph without a Heading
+    style or an outline level, or a PDF line in bold at the size of the body text. sub_heading tells
+    whether its number or its words place it under the heading that opened the section (see _sub_heading).
 
     A part title always ends the section, and a field of a part never does, as it belongs to its part.
-    A field of the summary table ends the section of the summary field before it. Any other heading ends
-    the section unless it ranks below the heading that opened it, as a sub-heading does.
+    A field of the summary table ends the section of the summary field before it. A label and a heading
+    that its number or words place under the heading that opened the section stay in the section, as
+    "Market risk" and "12.1 Market risk" do under "12. Information on risks". Any other heading, one with
+    a Heading style, an outline level or a larger font, ends the section unless it ranks below the
+    heading that opened it.
     """
     if kind == "part":
         return True
@@ -264,15 +302,26 @@ def _ends_section(
         return False
     if kind == "summary":
         return opener == "summary"
+    if label or sub_heading:
+        return False
     return level is None or section_level is None or level <= section_level
 
 
 def _opening_level(level: float | None, section_level: float | None, in_section: bool) -> float | None:
-    """The level of the section a heading that names a section opens: a sub-heading of the current
-    section keeps the level of the heading that opened it."""
+    """The level of the section a heading that names a section opens. in_section tells whether the
+    heading names a section that is open: such a sub-heading ("Market Risks" under "Risk Factors") keeps
+    the level of the heading that opened it. A heading that names another section has its own level, so
+    a large cover title that names a section ("Crypto-Asset White Paper") sets no level for the headings
+    after it."""
     if in_section and section_level is not None and (level is None or level > section_level):
         return section_level
     return level
+
+
+def _opening_number(number: str | None, opener_number: str | None) -> str | None:
+    """The outline number of the section a heading opens or ends: a heading numbered below the heading
+    that opened the current section ("12.2 Technology risks" under "12.") keeps that heading's number."""
+    return opener_number if _numbered_below(number, opener_number) else number
 
 
 def _field_answer(text: str, keys: list[str]) -> str:
@@ -403,12 +452,17 @@ def _body_font(lines: list[_Line]) -> tuple[float, bool] | None:
     return letters.most_common(1)[0][0] if letters else None
 
 
+def _larger(line: _Line, body_font: tuple[float, bool] | None) -> bool:
+    """Set at least 15 % larger than the body text."""
+    return line.size is not None and body_font is not None and line.size >= body_font[0] * 1.15
+
+
 def _styled(line: _Line, body_font: tuple[float, bool] | None) -> bool:
     """Set at least 15 % larger than the body text, or in bold where the body text is not."""
     if line.size is None or body_font is None:
         return False
     size, bold = body_font
-    return line.size >= size * 1.15 or (line.bold and not bold and line.size >= size * 0.95)
+    return _larger(line, body_font) or (line.bold and not bold and line.size >= size * 0.95)
 
 
 # Wrapped lines of one paragraph sit at most this many times their font size apart. A heading right
@@ -542,8 +596,10 @@ def _line_sections(lines: list[_Line]) -> DocumentSections:
     sections: dict[str, list[str]] = {}
     headings: list[str] = []
     current_keys: list[str] = []
-    # The template numbering and the level of the heading that opened the current section.
+    # The template numbering, the outline number and the level of the heading that opened the current
+    # section.
     opener: str | None = None
+    opener_number: str | None = None
     section_level: float | None = None
     previous: str | None = None
     previous_role: str | None = None
@@ -555,6 +611,7 @@ def _line_sections(lines: list[_Line]) -> DocumentSections:
             continue
         keys = match_heading_to_section(line.text)
         kind = _template_kind(line.text)
+        number = _outline_number(line.text)
         # A larger heading font is a higher level.
         level = -round(line.size, 1) if styled[index] and line.size is not None else None
         role = _BODY
@@ -573,9 +630,16 @@ def _line_sections(lines: list[_Line]) -> DocumentSections:
         elif (
             (styled[index] or kind)
             and _heading_shaped(line.text, styled[index])
-            and _ends_section(kind, level, opener, section_level)
+            and _ends_section(
+                kind,
+                level,
+                opener,
+                section_level,
+                label=styled[index] and not _larger(line, body_font),
+                sub_heading=_sub_heading(line.text, number, opener_number, current_keys),
+            )
         ):
-            # A heading that names no section, such as "Glossary" in the heading font.
+            # A heading that names no section, such as "Glossary" in a larger heading font.
             role = _BREAK
         if role == _BODY:
             for key in current_keys:
@@ -583,7 +647,7 @@ def _line_sections(lines: list[_Line]) -> DocumentSections:
         else:
             headings.append(line.text)
             if role == _HEADING:
-                section_level = _opening_level(level, section_level, bool(current_keys))
+                section_level = _opening_level(level, section_level, bool(set(keys) & set(current_keys)))
                 current_keys = keys
                 answer = _field_answer(line.text, keys)
                 for key in keys if answer else ():
@@ -591,7 +655,7 @@ def _line_sections(lines: list[_Line]) -> DocumentSections:
             else:
                 section_level = level
                 current_keys = []
-            opener = kind
+            opener, opener_number = kind, _opening_number(number, opener_number)
         previous, previous_role, previous_styled = line.text, role, styled[index]
     return DocumentSections({k: "\n".join(v) for k, v in sections.items()}, tuple(headings), text)
 
@@ -709,8 +773,10 @@ def parse_docx(path: Path) -> DocumentSections:
     headings: list[str] = []
     texts: list[str] = []
     current_keys: list[str] = []
-    # The template numbering and the outline level of the heading that opened the current section.
+    # The template numbering, the outline number and the outline level of the heading that opened the
+    # current section.
     opener: str | None = None
+    opener_number: str | None = None
     section_level: float | None = None
 
     for para in doc.paragraphs:
@@ -734,11 +800,21 @@ def parse_docx(path: Path) -> DocumentSections:
         headings.append(text)
         keys = match_heading_to_section(text)
         kind = _template_kind(text)
+        number = _outline_number(text)
         if keys:
-            section_level = _opening_level(level, section_level, bool(current_keys))
+            section_level = _opening_level(level, section_level, bool(set(keys) & set(current_keys)))
             current_keys, opener = keys, kind
-        elif _ends_section(kind, level, opener, section_level):
+            opener_number = _opening_number(number, opener_number)
+        elif _ends_section(
+            kind,
+            level,
+            opener,
+            section_level,
+            label=level == _LABEL_LEVEL,
+            sub_heading=_sub_heading(text, number, opener_number, current_keys),
+        ):
             current_keys, opener, section_level = [], kind, level
+            opener_number = _opening_number(number, opener_number)
 
     return DocumentSections({k: "\n".join(v) for k, v in sections.items()}, tuple(headings), "\n".join(texts))
 
@@ -821,7 +897,8 @@ def parse_pdf(path: Path) -> DocumentSections:
     shaped like a heading (see _line_role); where the draft sets its headings in a heading font, a line
     in the body font is a heading only if numbered as in the template. A short line that names a section
     but is not accepted as a heading ends the current section, and so does a heading that names no
-    section. A running page header or footer is body text. Heading text is not section body.
+    section unless it is a sub-heading (see _ends_section). A running page header or footer is body
+    text. Heading text is not section body.
     """
     try:
         import pypdf
