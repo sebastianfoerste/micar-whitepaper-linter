@@ -7,7 +7,7 @@ from pathlib import Path
 
 from lxml import etree
 
-from micar_linter.document import match_heading_to_section
+from micar_linter.document import is_statement_start, match_heading_to_section
 
 
 def _is_fully_bold(elem: etree._Element, text: str) -> bool:
@@ -57,6 +57,9 @@ def load_from_xhtml(path: Path) -> dict[str, str]:
             matched_keys = match_heading_to_section(text)
             if matched_keys:
                 current_keys = matched_keys
+        elif is_statement_start(text):
+            # The Art. 6(3) / 51(3) statement carries no heading of its own.
+            sections.setdefault("not_approved_statement", []).append(text)
         else:
             if current_keys:
                 for k in current_keys:

@@ -1,7 +1,36 @@
 # Changelog
 
-## Unreleased
+This file starts with 0.2.2. Earlier releases are recorded as git tags and GitHub release notes. The Python package on PyPI and the GitHub Action are versioned separately: package releases are tagged v0.x (v0.1.0, v0.2.0, v0.2.1), Action releases v1.x, and Action users keep pinning `@v1`.
+
+## 0.2.2 (unreleased)
+
+Citations and statements below were checked against the EUR-Lex texts of Regulation (EU) 2023/1114 (CELEX 32023R1114) and Implementing Regulation (EU) 2024/2984 (CELEX 32024R2984), as mirrored in legalize-dev/legalize-eu.
 
 ### Fixed
 
-- The audit log (`--audit-log`) and the review bundle's `compliance-checklist.md` no longer say "All automated checks passed" while a MAJOR or MINOR finding is open. When findings are open but none is a BLOCKER, the log shows a warning that gives the number of open findings by severity, for example "1 finding is still open (1 MAJOR) and no BLOCKER finding is open", and says that the draft still needs them resolved or reviewed and that substantive lawyer review is still required. The "All automated checks passed" note now appears only when every finding passes, the condition under which the text report says all required disclosures are present. The BLOCKER warning is unchanged. The playground wheel is rebuilt from the fixed source.
+- `ANNEX_II.D` and `ANNEX_II.I` no longer require redemption "at par" for asset-referenced tokens. At par is the e-money token rule (Art. 49(4) MiCAR). An ART issuer redeems by paying funds equivalent to the market value of the referenced assets or by delivering those assets (Art. 39(2) MiCAR), and `ANNEX_II.I` accepts either basis. `ANNEX_II.D` asks for the permanent right of redemption, its treatment in insolvency and complaints handling (Annex II Part D, points 9, 12 and 13).
+- `ANNEX_II.G.VALUATION_AUDIT` cited Art. 36(3) MiCAR, which is operational segregation. It now cites Art. 36(7), (9), (11) and (12). Its label says that only the keywords are checked, and that requiring the word "audit" is an internal interpretation and not an Annex II item: Annex II Part G and Part G of Table 3 of Implementing Regulation (EU) 2024/2984 list no audit, Art. 36(9) requires the audit and Art. 30(2) the publication of the audit report. Whether a missing audit description should stay a BLOCKER is left to lawyer review. The custody label cites Art. 37 MiCAR.
+- `ANNEX_II.I` cites Annex II Part C point 8, Part D points 9, 14, 15 and 16, Part G point 3, Art. 39(2) and (3) and Art. 46 MiCAR.
+- `ANNEX_II.I` asks for the affirmative wording of either Art. 39(2) basis ("market value of the referenced assets", "by delivering the assets"), so a negated mention such as "Holders cannot choose delivery of the referenced assets" no longer passes. "At par" in an English ART redemption section is referred to review with a note that redemption at par value is the e-money token rule (Art. 49(4) MiCAR).
+- German ART checks accept "Rücktausch", which follows German Art. 39 text reproduced in web search results and was not checked against the German Official Journal. Until it is, they still accept "Rücknahme" and "Rückzahlung", the terms used before 0.2.2. `ANNEX_II.I` asks German drafts for "Marktwert"; a German policy that redeems only by delivering the referenced assets cannot be recognised yet and is referred to review with a note saying so.
+- Term and pattern matching collapses whitespace, so a required phrase that wraps across lines in a PDF, Markdown or DOCX draft still matches.
+- The starter template (`templates/whitepaper-starter`) cites the ART provisions for its `art` type and no longer asks for redemption at par.
+- The audit log (`--audit-log`) and the review bundle's `compliance-checklist.md` no longer say "All automated checks passed" while a MAJOR or MINOR finding is open. When findings are open but none is a BLOCKER, the log shows a warning that gives the number of open findings by severity, for example "1 finding is still open (1 MAJOR) and no BLOCKER finding is open", and says that the draft still needs them resolved or reviewed and that substantive lawyer review is still required. The "All automated checks passed" note now appears only when every finding passes, the condition under which the text report says all required disclosures are present. The BLOCKER warning is unchanged. (#32)
+
+### Added
+
+- `ANNEX_I.NOT_APPROVED_STATEMENT` (Art. 6(3) MiCAR) and `ANNEX_III.NOT_APPROVED_STATEMENT` (Art. 51(3) MiCAR) check the English first-page statement that no competent authority has approved the white paper, and fail closed when it is absent. The Title II check also requires the statement to name the offeror, the person seeking admission to trading or the operator of the trading platform (Art. 6(3), second subparagraph). A statement without a heading is routed by its content. First-page placement is not checked. German drafts are referred to review until the German wording is checked against the Official Journal. The ART ruleset has no such rule because Art. 19 MiCAR prescribes no such statement (Table 3 field I.02 of Implementing Regulation (EU) 2024/2984 holds the Art. 19(4) warning instead). The white paper of an authorised ART issuer is deemed approved (Art. 21(1) MiCAR) and that of a credit institution is approved (Art. 17(1)(a)), but an issuer exempt under Art. 16(2) only notifies it.
+- `studies/2026-07-title-ii-annex-i-whitepaper-study/scripts/build_review_matrix.py` builds the human-review sheets from the detector output.
+- Text reports print each citation in English EU drafting style, for example "Art. 6(7) MiCAR", followed by a link to the cited act on EUR-Lex. `--citation-style de` prints the German form the rules keep, for example "Art. 6 Abs. 7 MiCAR". JSON output carries both (`citation`, `citation_en`) and the links (`sources`). (#27)
+- Community files: issue forms for bugs, false positives and rule proposals, a pull request template, `CITATION.cff` and a code of conduct. (#27)
+
+### Changed
+
+- The human-review sheets of the Title II study use the detector's current rule IDs. None of the 150 cells has been reviewed.
+- README and docs describe the checks as keyword, minimum-length and structure checks and no longer call them audits or a pass compliance.
+- The README is trimmed to the 350-word limit that `tests/test_readme.py` enforces; the removed sections moved to `docs/SETUP.md`, `docs/DETAILS.md` and `docs/overview.md`. `reports/*.txt` and the CLI block in `docs/sample-review-bundle.md` are regenerated from the CLI by `scripts/build_sample_reports.py`, and a test fails when they go stale. (#31)
+- The README links a capture of the real CLI output, `docs/demo.png`, rendered with its text `docs/demo.txt` by `scripts/render_demo.py`; a test fails when it drifts from the CLI. The text report's blocker footer follows the citation style. (#29)
+- The starter template uses no en or em dashes. (#33)
+- The English citation style lists several paragraphs of one article in EU form, for example "Art. 36(7), (9), (11) and (12)" and "Art. 39(2) and (3)", so the corrected `ANNEX_II.G.VALUATION_AUDIT` and `ANNEX_II.I` citations render correctly.
+- The docs pin `--python 3.13` where the extras are installed with uvx (#27), and the README screenshot placeholder is removed (#28).
+- The playground wheel is rebuilt as `micar_whitepaper_linter-0.2.2-py3-none-any.whl`.

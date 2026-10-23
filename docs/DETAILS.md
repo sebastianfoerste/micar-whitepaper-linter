@@ -14,11 +14,12 @@ For local preview, run `python3 -m http.server 8765 --bind 127.0.0.1 --directory
 
 This repository includes a reproducible pilot study over publicly available Title II crypto-asset white papers listed in ESMA's MiCA register.
 
-The study runs deterministic Annex I checks over a reproducible convenience sample and publishes machine-flagged candidate gaps, exact document hashes, extraction metadata, limitations, and a 150-cell human-review matrix. The candidate flags are not reviewed legal findings.
+The study runs deterministic Annex I checks over a reproducible convenience sample and publishes machine-flagged candidate gaps, exact document hashes, extraction metadata and limitations. It also contains a human-review matrix of 150 document-rule cells, but no cell has been reviewed yet (0 of 150). The study therefore reports no precision, recall or prevalence figures, and the candidate flags are not reviewed legal findings.
 
 - [`findings-summary.md`](../studies/2026-07-title-ii-annex-i-whitepaper-study/findings-summary.md)
 - [`review-protocol.md`](../studies/2026-07-title-ii-annex-i-whitepaper-study/review-protocol.md)
-- [`human-review-matrix.csv`](../studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-matrix.csv)
+- [`human-review-matrix.csv`](../studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-matrix.csv) (review template; 0 of 150 cells completed)
+- [`REVIEWING.md`](../studies/2026-07-title-ii-annex-i-whitepaper-study/REVIEWING.md) (how to fill in the matrix)
 
 Raw white papers are not committed. Study outputs are deterministic first-pass research artifacts and are not legal advice.
 
@@ -81,7 +82,7 @@ This route keeps the human-review boundary visible while showing the determinist
 
 ## Features
 
-- Deterministic regulatory audits for MiCAR Annex I, II and III.
+- Deterministic first-pass checks for the disclosures required by MiCAR Annex I, II and III (keywords, minimum length and structure, not legal review).
 - JSON, XHTML and DOCX parsing.
 - Rules-as-code severity engine.
 - JSON reports for automated checks.
@@ -92,9 +93,9 @@ This route keeps the human-review boundary visible while showing the determinist
 
 See also [FEATURES.md](FEATURES.md), [SETUP.md](SETUP.md), [ARCHITECTURE.md](ARCHITECTURE.md).
 
-## Verified behaviour
+## What the checks establish
 
-MiCAR white-paper requirements can be encoded as deterministic, cited and testable rules. Annex selection is explicit, rule IDs are stable, unmatched disclosure patterns produce cited candidate flags, severity is tested, and JSON outputs can be used by review workflows without hiding the legal basis.
+A pass means that the section exists, meets the minimum length and contains the rule's keywords. It does not mean that the disclosure is correct, complete or compliant. Annex selection is explicit, rule IDs are stable, unmatched keywords produce cited candidate flags, severity is tested, and JSON outputs can be used by review workflows without hiding the legal basis.
 
 The tool preserves legal judgment. It flags candidate disclosure gaps and produces draft review artifacts. It does not decide whether a white paper is lawful or complete.
 

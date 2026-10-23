@@ -49,10 +49,10 @@ Pass: 14  |  Review: 3  |  Missing: 1  |  Blockers: 4
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'offer_or_admission'  (77 words)
 
-[PASS  ] [BLOCKER] ANNEX_II.D  Rights and obligations of holders (redemption right at par, complaints handling)
+[PASS  ] [BLOCKER] ANNEX_II.D  Rights and obligations of holders (permanent right of redemption and its treatment in insolvency, complaints handling)
            Cite:  Annex II, Part D in conjunction with Art. 39 MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'rights_and_obligations'  (94 words)
+           Section: 'rights_and_obligations'  (142 words)
 
 [PASS  ] [BLOCKER] ANNEX_II.E  Information on the underlying technology (DLT, custody architecture, key management)
            Cite:  Annex II, Part E MiCAR
@@ -62,30 +62,30 @@ Pass: 14  |  Review: 3  |  Missing: 1  |  Blockers: 4
 [PASS  ] [BLOCKER] ANNEX_II.F  Risk factors specific to ARTs (de-pegging, reserve impairment, redemption suspension)
            Cite:  Annex II, Part F MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'risks'  (157 words)
+           Section: 'risks'  (176 words)
 
 [REVIEW] [BLOCKER] ANNEX_II.G.COMPOSITION_DISCLOSURE  Reserve composition disclosure (Annex II Part G)
            Cite:  Annex II, Part G in conjunction with Art. 36 MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'reserve_of_assets'  (192 words)
+           Section: 'reserve_of_assets'  (213 words)
            -  Missing review terms: concentration.
 
 [REVIEW] [BLOCKER] ANNEX_II.G.DEPOSIT_FLOOR_REVIEW  Candidate deposit floor for the reserve (30 % under Art. 36(4)(d); 60 % under Art. 45(7)(b) for significant ARTs, or for non-significant ARTs via Arts. 35(4) and 45(3) MiCAR) - lawyer review required
            Cite:  Annex II, Part G in conjunction with Art. 35(4), Art. 36(4), point (d), Art. 45(3) and Art. 45(7), point (b) MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'reserve_of_assets'  (192 words)
+           Section: 'reserve_of_assets'  (213 words)
            -  Draft percentage candidate(s) detected: 30%. The draft characterisation indicates a 30% candidate floor (Art. 36(4)(d) MiCAR). A lawyer must confirm applicability, statement context, and compliance.
 
-[REVIEW] [BLOCKER] ANNEX_II.G.CUSTODY  Custody policy and custodian selection (Art. 36(2) MiCAR)
+[REVIEW] [BLOCKER] ANNEX_II.G.CUSTODY  Custody policy and custodian selection (Art. 37 MiCAR; legal segregation under Art. 36(2))
            Cite:  Annex II, Part G in conjunction with Art. 36(2), Art. 37 MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'reserve_of_assets'  (192 words)
+           Section: 'reserve_of_assets'  (213 words)
            -  Missing review terms: insolvency.
 
-[PASS  ] [BLOCKER] ANNEX_II.G.VALUATION_AUDIT  Valuation procedure and audit frequency (Art. 36(3) MiCAR)
-           Cite:  Annex II, Part G in conjunction with Art. 36(3) MiCAR
+[PASS  ] [BLOCKER] ANNEX_II.G.VALUATION_AUDIT  Reserve valuation and audit disclosure (keyword check only; compliance with Art. 36(7), (9), (11) and (12) MiCAR not checked; the audit keyword is an internal interpretation, not an Annex II item: Art. 36(9) requires the audit and Art. 30(2) the publication of the audit report)
+           Cite:  Annex II, Part G in conjunction with Art. 36(7), (9), (11) and (12) MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'reserve_of_assets'  (192 words)
+           Section: 'reserve_of_assets'  (213 words)
 
 [PASS  ] [MAJOR  ] ANNEX_II.H  Principal adverse environmental and climate-related impact of the consensus mechanism
            Cite:  Art. 19(1), first subparagraph, point (h) MiCAR in conjunction with Art. 4 Regulation (EU) 2025/422; Annex, Table 3, Part H Regulation (EU) 2024/2984
@@ -94,10 +94,10 @@ Pass: 14  |  Review: 3  |  Missing: 1  |  Blockers: 4
            Text:  https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng
            Section: 'environmental_impact'  (104 words)
 
-[PASS  ] [BLOCKER] ANNEX_II.I  Redemption rights and procedure (timing, fees, suspension conditions)
-           Cite:  Annex II, Part D, points 9, 15 and 16, Part G, point 3 in conjunction with Art. 39 MiCAR
+[PASS  ] [BLOCKER] ANNEX_II.I  Redemption policy (funds equal to the market value of the referenced assets or delivery of those assets; procedure, timing, fees, suspension conditions)
+           Cite:  Annex II, Part C, point 8, Part D, points 9, 14, 15 and 16, Part G, point 3 in conjunction with Art. 39(2) and (3), Art. 46 MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'redemption'  (125 words)
+           Section: 'redemption'  (169 words)
 
 ==============================================================================
 First-pass screening only. The draft is not package-ready. The white paper notification or submission for approval (Art. 8(1), Art. 16(2), second subparagraph, Art. 17(1), point (a), Art. 18(2), point (k), Art. 51(11) MiCAR) should not enter an external review or filing workflow until BLOCKER items are cured and a lawyer has signed off.
