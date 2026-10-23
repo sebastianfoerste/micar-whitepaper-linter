@@ -665,6 +665,31 @@ def test_regime_is_inferred_from_heading_text(tmp_path: Path, suffix: str):
     assert findings["ANNEX_II.G.COMPOSITION_DISCLOSURE"].status == "review"
 
 
+@pytest.mark.parametrize("suffix", sorted(WRITERS))
+def test_regime_is_inferred_from_text_in_no_section(tmp_path: Path, suffix: str):
+    # Only the introduction before the first heading names the regime, and it belongs to no section.
+    write, _ = WRITERS[suffix]
+    blocks = [
+        (
+            "body",
+            "This white paper describes the QAR, an asset-referenced token issued by Quillmoor Ledger S.A.",
+        ),
+        ("heading", "Summary"),
+        ("body", "The QAR token is described here in plain language for retail holders."),
+        ("heading", "Redemption"),
+        ("body", "Holders may redeem at any time."),
+    ]
+    path = write(tmp_path / f"quillmoor{suffix}", blocks)
+
+    whitepaper = load_whitepaper(path)
+    assert whitepaper.type is WhitepaperType.ART
+    assert sorted(whitepaper.sections) == ["redemption", "summary"]
+    # The Annex II BLOCKERs run: the redemption check reviews its thin section.
+    findings = _findings(path, None)
+    assert findings["ANNEX_II.I"].rule.severity is Severity.BLOCKER
+    assert (findings["ANNEX_II.I"].status, findings["ANNEX_II.I"].word_count) == ("review", 6)
+
+
 @pytest.mark.parametrize(
     "field,answer,key",
     [

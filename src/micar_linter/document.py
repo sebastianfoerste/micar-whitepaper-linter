@@ -159,14 +159,17 @@ _QUOTES = "\"'\u2018\u2019\u201c\u201d"
 
 @dataclass(frozen=True)
 class DocumentSections:
-    """The section texts of a DOCX or PDF draft and, apart from them, the text of its headings.
+    """The section texts of a DOCX or PDF draft and, apart from them, the text of its headings and its
+    whole extracted text.
 
-    Heading text is not section body, but regime inference reads it: a heading such as
+    Heading text is not section body, and some text sits in no section (before the first heading, or
+    after a line that ends a section). Regime inference reads the whole text: a heading such as
     "Reserve of Assets" may be the only place that names the regime.
     """
 
     sections: dict[str, str]
     headings: tuple[str, ...]
+    text: str = ""
 
 
 def _words(text: str) -> list[str]:
@@ -516,6 +519,7 @@ def _merge_wrapped(
 
 
 def _line_sections(lines: list[_Line]) -> DocumentSections:
+    text = "\n".join(line.text for line in lines)
     body_font = _body_font(lines)
     styled = [_styled(line, body_font) for line in lines]
     lines, styled, running = _merge_wrapped(lines, styled, _running(lines), _heights_hold(lines, body_font))
@@ -588,7 +592,7 @@ def _line_sections(lines: list[_Line]) -> DocumentSections:
                 current_keys = []
             opener = kind
         previous, previous_role, previous_styled = line.text, role, styled[index]
-    return DocumentSections({k: "\n".join(v) for k, v in sections.items()}, tuple(headings))
+    return DocumentSections({k: "\n".join(v) for k, v in sections.items()}, tuple(headings), text)
 
 
 def sections_from_lines(lines: Iterable[str]) -> dict[str, str]:
@@ -702,6 +706,7 @@ def parse_docx(path: Path) -> DocumentSections:
     doc = docx.Document(path)
     sections: dict[str, list[str]] = {}
     headings: list[str] = []
+    texts: list[str] = []
     current_keys: list[str] = []
     # The template numbering and the outline level of the heading that opened the current section.
     opener: str | None = None
@@ -711,6 +716,7 @@ def parse_docx(path: Path) -> DocumentSections:
         text = para.text.strip()
         if not text:
             continue
+        texts.append(text)
 
         # The Title style names the white paper, not one of its sections.
         if para.style is not None and para.style.name == "Title":
@@ -733,7 +739,7 @@ def parse_docx(path: Path) -> DocumentSections:
         elif _ends_section(kind, level, opener, section_level):
             current_keys, opener, section_level = [], kind, level
 
-    return DocumentSections({k: "\n".join(v) for k, v in sections.items()}, tuple(headings))
+    return DocumentSections({k: "\n".join(v) for k, v in sections.items()}, tuple(headings), "\n".join(texts))
 
 
 def load_from_docx(path: Path) -> dict[str, str]:
