@@ -29,6 +29,9 @@ SECTION_PATTERNS = {
         r"\bleitungsorgan\w*",
         r"\bmanagement\s+statement\b",
         r"\bstatement\b.*\bmanagement\b",
+        # Field 03 of the summary of the Implementing Regulation (EU) 2024/2984 template, "Compliance
+        # statement in accordance with Article 6(6)", holds the statement of the management body.
+        r"\bcompliance\s+statement\b",
     ],
     "notification_date": [
         r"\bdate\s+of\s+notification\b",

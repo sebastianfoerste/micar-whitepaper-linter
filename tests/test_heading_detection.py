@@ -1139,6 +1139,49 @@ def test_pdf_summary_table_field_that_names_no_section_ends_the_field_before_it(
     assert findings["ANNEX_I.I"].status == "pass"
 
 
+# The answer to field 03 of the 2024/2984 summary, in the wording of the template.
+COMPLIANCE = (
+    "This crypto-asset white paper complies with Title II of Regulation (EU) 2023/1114 and, to the best of "
+    "the knowledge of the management body, the information presented in the crypto-asset white paper is "
+    "fair, clear and not misleading and the crypto-asset white paper makes no omission likely to affect "
+    "its import."
+)
+
+
+@pytest.mark.parametrize("suffix,kind", [(".docx", "bold"), (".pdf", "line")], ids=["docx-bold", "pdf-line"])
+def test_compliance_statement_field_of_the_summary_opens_the_management_statement(
+    tmp_path: Path, suffix: str, kind: str
+):
+    # Field 03 "Compliance statement in accordance with Article 6(6)" holds the statement of the
+    # management body, so its answer is the management statement and passes its check.
+    write, load = WRITERS[suffix]
+    blocks = [
+        ("large", "Summary"),
+        ("body", KEY_SUMMARY),
+        (kind, "03 Compliance statement in accordance with Article 6(6) of Regulation (EU) 2023/1114"),
+        ("body", COMPLIANCE),
+        (kind, "04 Statement in accordance with Article 6(5) of Regulation (EU) 2023/1114"),
+        (
+            "body",
+            "The crypto-asset may lose its value in part or in full and may not always be transferable.",
+        ),
+        ("large", f"Part I {DASH} Information on risks"),
+        ("body", RISK_TEXT),
+    ]
+    path = write(tmp_path / f"quillmoor{suffix}", blocks)
+
+    sections = load(path)
+    assert sorted(sections) == ["management_statement", "risks", "summary"]
+    # The PDF writer may wrap "crypto-asset" at its hyphen, so compare the parts of the statement.
+    statement = _words(sections["management_statement"])
+    assert "complies with Title II of Regulation (EU) 2023/1114" in statement
+    assert "fair, clear and not misleading" in statement
+    assert _words(sections["summary"]) == KEY_SUMMARY
+    findings = _findings(path)
+    assert findings["COMMON.MANAGEMENT_STATEMENT"].rule.severity is Severity.BLOCKER
+    assert findings["COMMON.MANAGEMENT_STATEMENT"].status == "pass"
+
+
 # A technology section that passes ANNEX_I.H only as a whole: the first half names the protocol and the
 # consensus, the second half the smart contracts and the audit.
 TECHNOLOGY_FIRST = (
