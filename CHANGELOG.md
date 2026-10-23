@@ -15,7 +15,6 @@ Citations and statements below were checked against the EUR-Lex texts of Regulat
 - German ART checks accept "Rücktausch", which follows German Art. 39 text reproduced in web search results and was not checked against the German Official Journal. Until it is, they still accept "Rücknahme" and "Rückzahlung", the terms used before 0.2.2. `ANNEX_II.I` asks German drafts for "Marktwert"; a German policy that redeems only by delivering the referenced assets cannot be recognised yet and is referred to review with a note saying so.
 - Term and pattern matching collapses whitespace, so a required phrase that wraps across lines in a PDF, Markdown or DOCX draft still matches.
 - The starter template (`templates/whitepaper-starter`) cites the ART provisions for its `art` type and no longer asks for redemption at par.
-
 - The audit log (`--audit-log`) and the review bundle's `compliance-checklist.md` no longer say "All automated checks passed" while a MAJOR or MINOR finding is open. When findings are open but none is a BLOCKER, the log shows a warning that gives the number of open findings by severity, for example "1 finding is still open (1 MAJOR) and no BLOCKER finding is open", and says that the draft still needs them resolved or reviewed and that substantive lawyer review is still required. The "All automated checks passed" note now appears only when every finding passes, the condition under which the text report says all required disclosures are present. The BLOCKER warning is unchanged. (#32)
 
 ### Added

@@ -1,6 +1,6 @@
 # Overview
 
-Audience, status and limits, the pilot study and related tools, moved out of the [README](../README.md) word for word. Setup and the GitHub Action are in [SETUP.md](SETUP.md); long-form usage and the full example output are in [DETAILS.md](DETAILS.md).
+Audience, status and limits, the pilot study and related tools, moved out of the [README](../README.md). Setup and the GitHub Action are in [SETUP.md](SETUP.md); long-form usage and the full example output are in [DETAILS.md](DETAILS.md).
 
 ## Who it's for
 
