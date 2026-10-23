@@ -303,7 +303,8 @@ class _Line:
 
 _HEADING, _BODY, _BREAK = "heading", "body", "break"
 # A list item in lower case after a heading: "a) Market risk", "(b) Liquidity risk", "iv. Custody risk".
-_LIST_MARKER = re.compile(r"^\(?(?:[a-z]|[ivx]{1,4})[.)]\s")
+# German abbreviations of single letters ("z. B.", "u. a.", "d. h.") continue a sentence instead.
+_LIST_MARKER = re.compile(r"^\(?(?:[a-z]|[ivx]{1,4})[.)]\s(?![^\W\d_]\.)")
 
 
 def _line_role(

@@ -319,6 +319,10 @@ PROJECT_LINES = {
         ["HOLDERS BEAR TECHNOLOGY RISKS AND", "MAY LOSE THE FULL AMOUNT INVESTED."],
         False,
     ),
+    "sentence running on after a german abbreviation": (
+        ["Anleger tragen die Risiken", "z. B. Markt- und Liquiditätsrisiken des Tokens."],
+        True,
+    ),
     "sentence-case lead-in": (["Note on the risks:"], True),
     "title-case lead-in": (["Holders Should Note These Risks:"], False),
     "title-case numbered list": (
