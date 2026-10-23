@@ -107,17 +107,25 @@ def _write_docx(path: Path, blocks: list[tuple[str, str]]) -> Path:
 PDF_FONTS = {"bold": "/F2 10 Tf", "large": "/F2 14 Tf"}
 
 
-def _write_pdf(path: Path, blocks: list[tuple[str, str]]) -> Path:
-    """A one-page PDF with one text line per block and body text wrapped at 90 characters."""
+def _shown(kind: str, line: str, next_line: str) -> str:
+    """The content stream operators of one block line; a "space" block only moves 20 pt further down."""
+    if kind == "space":
+        return "0 -20 Td"
+    escaped = line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+    return f"{PDF_FONTS.get(kind, '/F1 10 Tf')} ({escaped}) Tj {next_line}"
+
+
+def _write_pdf(path: Path, blocks: list[tuple[str, str]], next_line: str = "0 -13 Td") -> Path:
+    """A one-page PDF with one text line per block, 13 pt apart, and body text wrapped at 90 characters.
+
+    Each line moves to the next with next_line: Td, as word processors write, or T* after a TL leading.
+    """
     lines = [
         (kind, line)
         for kind, text in blocks
         for line in (textwrap.wrap(text, 90) if kind == "body" else [text])
     ]
-    escaped = (
-        (kind, line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")) for kind, line in lines
-    )
-    shown = " ".join(f"{PDF_FONTS.get(kind, '/F1 10 Tf')} ({line}) Tj T*" for kind, line in escaped)
+    shown = " ".join(_shown(kind, line, next_line) for kind, line in lines)
     content = f"BT 13 TL 50 770 Td {shown} ET".encode("cp1252")
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
@@ -397,7 +405,9 @@ UNNUMBERED_TITLES = {
 }  # fmt: skip
 
 
-@pytest.mark.parametrize("suffix,kind", [(".docx", "bold"), (".pdf", "large")], ids=["docx-bold", "pdf-14pt-bold"])
+@pytest.mark.parametrize(
+    "suffix,kind", [(".docx", "bold"), (".pdf", "large")], ids=["docx-bold", "pdf-14pt-bold"]
+)
 @pytest.mark.parametrize("part", sorted(UNNUMBERED_TITLES))
 def test_unnumbered_part_title_of_up_to_twenty_words_is_a_heading_when_marked(
     tmp_path: Path, suffix: str, kind: str, part: str
@@ -424,9 +434,179 @@ def test_unnumbered_part_title_of_up_to_twenty_words_is_a_heading_when_marked(
     assert _words(sections["project"]) == PROJECT
     findings = _findings(path)
     assert findings["ANNEX_I.D"].rule.severity is Severity.BLOCKER
-    assert (findings["ANNEX_I.D"].status, findings["ANNEX_I.D"].word_count) == ("review", len(PROJECT.split()))
+    assert (findings["ANNEX_I.D"].status, findings["ANNEX_I.D"].word_count) == (
+        "review",
+        len(PROJECT.split()),
+    )
     assert findings[rule_id].rule.severity is severity
     assert (findings[rule_id].status, findings[rule_id].word_count) == (status, len(text.split()))
+
+
+# Headings in a 14 pt bold heading font that wrap onto a second line, as LibreOffice and Chrome export the
+# long part titles: (first line, second line, sections, section text, rule, status of that rule).
+WRAPPED_HEADINGS = {
+    "numbered, lower case": (
+        "5. Information about the offer to the public of crypto-assets or their",
+        "admission to trading",
+        ["offer_or_admission"], OFFER, "ANNEX_I.E", "review",
+    ),
+    "unnumbered, lower case": (
+        "Information about the offer to the public of crypto-assets or their",
+        "admission to trading",
+        ["offer_or_admission"], OFFER, "ANNEX_I.E", "review",
+    ),
+    "title case, hyphen": (
+        "7. Information on the Rights and Obligations Attached to the Crypto-",
+        "Assets",
+        ["rights_and_obligations"], RIGHTS, "ANNEX_I.G", "pass",
+    ),
+    "title case, capital": (
+        f"Part B {DASH} Information About the Issuer, If Different From the Offeror or Person",
+        "Seeking Admission to Trading",
+        ["issuer", "offer_or_admission", "offeror"], ISSUER, "ANNEX_I.B", "review",
+    ),
+    "german": (
+        "6. Informationen über den Anbieter oder die Person, die die Zulassung zum",
+        "Handel beantragt",
+        ["offer_or_admission", "offeror"], GERMAN_OFFEROR, "ANNEX_I.A", "review",
+    ),
+}  # fmt: skip
+
+
+@pytest.mark.parametrize("next_line", ["0 -13 Td", "T*"])
+@pytest.mark.parametrize("case", sorted(WRAPPED_HEADINGS))
+def test_pdf_heading_wrapped_onto_two_lines_in_the_heading_font_is_one_heading(
+    tmp_path: Path, case: str, next_line: str
+):
+    first, second, keys, text, rule_id, status = WRAPPED_HEADINGS[case]
+    blocks = [
+        ("large", "Summary"),
+        ("body", SUMMARY),
+        ("large", "4. Information about the crypto-asset project"),
+        ("body", PROJECT),
+        ("large", first),
+        ("large", second),
+        ("body", text),
+        ("large", "8. Information on the underlying technology"),
+        ("body", TECHNOLOGY),
+    ]
+    # pypdf misreports the heights of lines laid out with T*, so there the font alone joins the lines.
+    path = _write_pdf(tmp_path / "quillmoor.pdf", blocks, next_line)
+
+    sections = load_from_pdf(path)
+    assert sorted(sections) == sorted({"summary", "project", "crypto_asset", "technology", *keys})
+    for key in keys:
+        assert _words(sections[key]) == _words(text)
+    # The thin project section before the wrapped heading does not pass on the part under it.
+    assert _words(sections["project"]) == PROJECT
+    findings = _findings(path)
+    assert findings["ANNEX_I.D"].rule.severity is Severity.BLOCKER
+    assert (findings["ANNEX_I.D"].status, findings["ANNEX_I.D"].word_count) == (
+        "review",
+        len(PROJECT.split()),
+    )
+    assert (findings[rule_id].status, findings[rule_id].word_count) == (status, len(text.split()))
+
+
+def test_pdf_headings_one_paragraph_apart_in_the_heading_font_stay_two_headings(tmp_path: Path):
+    # A heading with nothing under it, then the next heading: the space between paragraphs keeps them
+    # apart, so the risks section stays empty instead of passing on the text under the next heading
+    # (risk-like text here, so that a merged heading would pass ANNEX_I.I).
+    blocks = [
+        ("large", "Summary"),
+        ("body", SUMMARY),
+        ("large", "Risk Factors"),
+        ("space", ""),
+        ("large", "Information on the Underlying Technology"),
+        ("body", RISK_TEXT),
+    ]
+    path = _write_pdf(tmp_path / "quillmoor.pdf", blocks)
+
+    sections = load_from_pdf(path)
+    assert sorted(sections) == ["summary", "technology"]
+    assert _words(sections["technology"]) == _words(RISK_TEXT)
+    findings = _findings(path)
+    assert findings["ANNEX_I.I"].rule.severity is Severity.BLOCKER
+    assert findings["ANNEX_I.I"].status == "missing"
+
+
+# A risk section written as a list whose items start in lower case.
+RISK_ITEMS = [
+    "a) Market risk: prices can move sharply within a single day and holders may lose the full amount.",
+    "b) Liquidity risk: liquidity can disappear when few buyers are active, so holders may be unable to exit.",
+    "c) Regulatory risk: a change in regulatory treatment in any Member State could restrict transfers.",
+    "d) Operational risk: outages or faulty software updates at the service provider can delay transfers.",
+    "e) Software risk: code defects can freeze balances until a fix is deployed and accepted.",
+    "f) Custody risk: keys held by holders can be lost or stolen, and lost keys cannot be recovered by anyone.",
+]
+THIN_TECHNOLOGY = (
+    "Transfers settle on a permissioned ledger with a Byzantine fault tolerant consensus protocol. Smart "
+    "contracts implement the unit register, and an independent firm audits the code once a year."
+)
+
+
+@pytest.mark.parametrize(
+    "kind,technology,heading",
+    [
+        ("large", "4. Underlying Technology", "Risk Factors"),
+        ("large", "4. Technologie", "5. Risiken"),
+        # Without a heading font the shape decides, and a list item after a line does not make it body text.
+        ("heading", "Underlying Technology", "Risk Factors"),
+    ],
+    ids=["14pt-bold", "14pt-bold-german", "body-font"],
+)
+def test_pdf_heading_before_a_lower_case_list_item_is_a_heading(
+    tmp_path: Path, kind: str, technology: str, heading: str
+):
+    blocks = [
+        (kind, "Summary"),
+        ("body", SUMMARY),
+        (kind, technology),
+        ("body", THIN_TECHNOLOGY),
+        (kind, heading),
+        *(("line", item) for item in RISK_ITEMS),
+    ]
+    path = _write_pdf(tmp_path / "quillmoor.pdf", blocks)
+
+    sections = load_from_pdf(path)
+    assert sorted(sections) == ["risks", "summary", "technology"]
+    assert _words(sections["technology"]) == _words(THIN_TECHNOLOGY)
+    assert _words(sections["risks"]) == _words(" ".join(RISK_ITEMS))
+    findings = _findings(path)
+    # The thin technology section does not pass on the risk list, and the risk section is not missing.
+    assert findings["ANNEX_I.H"].rule.severity is Severity.BLOCKER
+    assert (findings["ANNEX_I.H"].status, findings["ANNEX_I.H"].word_count) == (
+        "review",
+        len(THIN_TECHNOLOGY.split()),
+    )
+    assert findings["ANNEX_I.I"].rule.severity is Severity.BLOCKER
+    assert findings["ANNEX_I.I"].status != "missing"
+
+
+def test_pdf_line_running_on_into_a_lower_case_line_is_read_with_it_by_shape(tmp_path: Path):
+    # Without a heading font: "or" runs on into "their admission to trading", and the two lines together
+    # are the numbered template title of Part E.
+    blocks = [
+        ("heading", "Summary"),
+        ("body", SUMMARY),
+        ("line", f"Part D {DASH} Information about the crypto-asset project"),
+        ("body", PROJECT),
+        ("line", f"Part E {DASH} Information about the offer to the public of crypto-assets or"),
+        ("line", "their admission to trading"),
+        ("body", OFFER),
+    ]
+    path = _write_pdf(tmp_path / "quillmoor.pdf", blocks)
+
+    sections = load_from_pdf(path)
+    assert sorted(sections) == ["crypto_asset", "offer_or_admission", "project", "summary"]
+    assert _words(sections["offer_or_admission"]) == _words(OFFER)
+    findings = _findings(path)
+    assert (findings["ANNEX_I.D"].status, findings["ANNEX_I.D"].word_count) == (
+        "review",
+        len(PROJECT.split()),
+    )
+    assert findings["ANNEX_I.E"].rule.severity is Severity.BLOCKER
+    assert (findings["ANNEX_I.E"].status, findings["ANNEX_I.E"].word_count) == ("review", len(OFFER.split()))
 
 
 def test_pdf_part_title_of_twenty_words_and_a_dash_is_a_heading(tmp_path: Path):

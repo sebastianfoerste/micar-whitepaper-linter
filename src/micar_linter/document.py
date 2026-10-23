@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import math
 import re
+import statistics
 from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass
 from functools import partial
+from itertools import pairwise
 from pathlib import Path
 
 from micar_linter.placeholders import is_not_applicable, is_placeholder
@@ -141,10 +143,11 @@ _TEMPLATE_NUMBERING = (
 _OUTLINE_NUMBERING = r"\d{1,2}(?:\.\d{1,2})*[.)]|\d{1,2}(?:\.\d{1,2})+|[A-Z]\.|[IVX]{1,5}\."
 _NUMBERING = re.compile(rf"^(?:(?P<template>{_TEMPLATE_NUMBERING})|{_OUTLINE_NUMBERING})\s+")
 # Words a title-case heading leaves in lower case: "Information about the Issuer", "Rechte und Pflichten".
+# None of them ends a sentence or a heading ("... crypto-assets or their" runs on to "admission to trading").
 _MINOR_WORD = re.compile(
-    r"a|about|against|among|an|and|as|at|between|by|for|from|in|into|of|on|or|over|per|than|the|to|under|via"
-    r"|with|within|without|am|auf|aus|bei|bzw|das|dem|den|der|des|die|ein|eine|einer|eines|für|im|mit|nach"
-    r"|oder|sowie|über|und|von|vom|zu|zum|zur"
+    r"a|about|against|among|an|and|as|at|between|by|for|from|in|into|its|of|on|or|over|per|than|the|their|to"
+    r"|under|via|with|within|without|am|auf|aus|bei|bzw|das|dem|den|der|des|die|ein|eine|einer|eines|für|im"
+    r"|mit|nach|oder|sowie|über|und|von|vom|zu|zum|zur"
 )
 # Dashes and quotation marks around heading words: en dash, em dash, curly single and double quotes.
 _DASHES = "-\u2013\u2014"
@@ -219,14 +222,19 @@ def _runs_on(line: str) -> bool:
 
 @dataclass(frozen=True)
 class _Line:
-    """A non-empty text line and, where the PDF reports it, the font its letters are set in."""
+    """A non-empty text line and, where the PDF reports them, the font its letters are set in and where
+    it sits on its page."""
 
     text: str
     size: float | None = None  # the size of its smallest letter, in points
     bold: bool = False  # every letter is set in a bold face
+    page: int | None = None  # the page it is on, counted from 0
+    y: float | None = None  # the height of its (last) baseline above the foot of the page, in points
 
 
 _HEADING, _BODY, _BREAK = "heading", "body", "break"
+# A list item in lower case after a heading: "a) Market risk", "(b) Liquidity risk", "iv. Custody risk".
+_LIST_MARKER = re.compile(r"^\(?(?:[a-z]|[ivx]{1,4})[.)]\s")
 
 
 def _line_role(
@@ -247,22 +255,33 @@ def _line_role(
     """
     numbering = _NUMBERING.match(line)
     title = line[numbering.end() :] if numbering else line
-    if not _is_label(line, _max_words(line, styled)) or not next((c for c in title if c.isalpha()), "").isupper():
+    if (
+        not _is_label(line, _max_words(line, styled))
+        or not next((c for c in title if c.isalpha()), "").isupper()
+    ):
         return _BODY
     # The template's own part and field labels, sentence case included ("Part I: Information on risks").
     if numbering and numbering.group("template"):
         return _HEADING
+    # A heading font marks a heading, whatever the lines around it, except in a numbered list set in that
+    # font: after a numbered body line in a heading font, a numbered line is the next list item, or the
+    # heading after an empty section, so it ends the section.
+    if styled:
+        if numbering and previous_role == _BODY and previous_styled and _NUMBERING.match(previous):
+            return _BREAK
+        return _HEADING
     title_like = _is_title_like(title)
     # A line ending with a colon is a lead-in, not a heading. In sentence case it stays in the current
-    # section; in title case or a heading font it may also be a heading written with a colon ("Risk
-    # Factors:"), so it ends the section rather than handing that section to the one before.
+    # section; in title case it may also be a heading written with a colon ("Risk Factors:"), so it ends
+    # the section rather than handing that section to the one before.
     if line.endswith(":"):
-        return _BREAK if title_like or styled else _BODY
+        return _BREAK if title_like else _BODY
     # Running text stays in the current section: the line a lead-in introduces, and a line that a
-    # sentence runs on into or out of.
+    # sentence runs on into or out of. A list item in lower case ("a) Market risk") may follow a heading.
     if previous is not None and previous.endswith(":"):
         return _BODY
-    if (previous_role == _BODY and _runs_on(previous)) or (following is not None and following[:1].islower()):
+    continued = following is not None and following[:1].islower() and not _LIST_MARKER.match(following)
+    if (previous_role == _BODY and _runs_on(previous)) or continued:
         return _BODY
     # A line that runs on into the next one is no heading, but it may be the first line of a wrapped
     # heading as well as of a paragraph, so it ends the section.
@@ -281,15 +300,10 @@ def _line_role(
         if following is not None and following.isupper() and len(_words(line)) >= 8:
             # Under a heading it starts the paragraph of that heading.
             return _BREAK if previous_role == _BODY else _BODY
-    # After a numbered body line, a numbered line is the next list item. In title case, or in the same
-    # heading font as that line, it may also be the heading after an empty section, so it ends the
-    # section; a font that sets it apart from that line makes it a heading.
+    # After a numbered body line, a numbered line is the next list item. In title case it may also be the
+    # heading after an empty section, so it ends the section.
     if numbering and previous_role == _BODY and _NUMBERING.match(previous):
-        if styled and not previous_styled:
-            return _HEADING
-        return _BREAK if title_like or styled else _BODY
-    if styled:
-        return _HEADING
+        return _BREAK if title_like else _BODY
     finished = (
         not started
         or previous_role != _BODY
@@ -304,12 +318,18 @@ def _line_role(
     return _BREAK
 
 
+def _font(line: _Line) -> tuple[float, bool] | None:
+    """The size, to a tenth of a point, and the weight of a line's font."""
+    return None if line.size is None else (round(line.size, 1), line.bold)
+
+
 def _body_font(lines: list[_Line]) -> tuple[float, bool] | None:
     """The font size and weight that most letters are set in."""
     letters: Counter[tuple[float, bool]] = Counter()
     for line in lines:
-        if line.size is not None:
-            letters[(round(line.size, 1), line.bold)] += sum(char.isalpha() for char in line.text)
+        font = _font(line)
+        if font is not None:
+            letters[font] += sum(char.isalpha() for char in line.text)
     return letters.most_common(1)[0][0] if letters else None
 
 
@@ -321,9 +341,89 @@ def _styled(line: _Line, body_font: tuple[float, bool] | None) -> bool:
     return line.size >= size * 1.15 or (line.bold and not bold and line.size >= size * 0.95)
 
 
+# Wrapped lines of one paragraph sit at most this many times their font size apart. A heading right
+# after another is set further down, by the space between paragraphs.
+_LINE_SPACING = 1.75
+
+
+def _joined(first: str, second: str) -> str:
+    """Two lines of a wrapped heading as one line: "crypto-" and "assets" make "crypto-assets"."""
+    return first + second if re.search(r"[^\W\d_]-$", first) else f"{first} {second}"
+
+
+def _heights_hold(lines: list[_Line], body_font: tuple[float, bool] | None) -> bool:
+    """Whether the heights pypdf reports place the lines where they are printed.
+
+    The lines of a body paragraph sit 1 to 2.5 times their font size apart. pypdf scales the leading of
+    the T* operator by the font size, so in a PDF laid out with T* the lines seem many times further apart.
+    """
+    gaps = [
+        first.y - line.y
+        for first, line in pairwise(lines)
+        if first.page == line.page
+        and first.y is not None
+        and line.y is not None
+        and first.y > line.y
+        and _font(first) == _font(line) == body_font
+    ]
+    return body_font is None or not gaps or statistics.median(gaps) <= 2.5 * body_font[0]
+
+
+def _wraps(first: _Line, line: _Line, first_styled: bool, styled: bool, heights: bool) -> bool:
+    """Whether line is the next line of the heading or label that first starts.
+
+    A line in the same heading font, set one line spacing below (where the heights hold), is the next
+    line of a wrapped heading. A line in the body font is the next line only where first runs on, line
+    starts in lower case and the two lines together are a label that names a section ("08 Characteristics
+    of the crypto-" and "asset"). A numbered line, a list item, and a line on another page or further
+    down start something new.
+    """
+    if (
+        first.page != line.page
+        or _NUMBERING.match(line.text)
+        or _BULLET.match(line.text)
+        or _LIST_MARKER.match(line.text)
+    ):
+        return False
+    if (
+        heights
+        and first.y is not None
+        and line.y is not None
+        and line.size is not None
+        and not 0 < first.y - line.y <= _LINE_SPACING * line.size
+    ):
+        return False
+    if first_styled or styled:
+        return first_styled and styled and _font(first) == _font(line)
+    joined = _joined(first.text, line.text)
+    return (
+        _runs_on(first.text)
+        and line.text[:1].islower()
+        and _is_label(joined, _max_words(joined))
+        and bool(match_heading_to_section(joined))
+    )
+
+
+def _merge_wrapped(lines: list[_Line], styled: list[bool], heights: bool) -> tuple[list[_Line], list[bool]]:
+    """The lines with the lines of each wrapped heading merged into one, and whether each is styled."""
+    merged: list[_Line] = []
+    merged_styled: list[bool] = []
+    for line, line_styled in zip(lines, styled, strict=True):
+        if merged and _wraps(merged[-1], line, merged_styled[-1], line_styled, heights):
+            first = merged[-1]
+            size = None if first.size is None or line.size is None else min(first.size, line.size)
+            text = _joined(first.text, line.text)
+            merged[-1] = _Line(text, size, first.bold and line.bold, line.page, line.y)
+        else:
+            merged.append(line)
+            merged_styled.append(line_styled)
+    return merged, merged_styled
+
+
 def _line_sections(lines: list[_Line]) -> DocumentSections:
     body_font = _body_font(lines)
     styled = [_styled(line, body_font) for line in lines]
+    lines, styled = _merge_wrapped(lines, styled, _heights_hold(lines, body_font))
     sections: dict[str, list[str]] = {}
     headings: list[str] = []
     current_keys: list[str] = []
@@ -502,28 +602,34 @@ def _bold_face(font) -> bool:
     return False
 
 
-def _font_style(cm, tm, font, size) -> tuple[float, bool] | None:
-    """The rendered size of a text run (its Tf size scaled by the text and graphics matrices) and its weight."""
+_RunStyle = tuple[float, bool, float]
+
+
+def _font_style(cm, tm, font, size) -> _RunStyle | None:
+    """The rendered size of a text run (its Tf size scaled by the text and graphics matrices), its weight
+    and the height of its baseline on the page."""
     try:
         scale = math.hypot(tm[2] * cm[0] + tm[3] * cm[2], tm[2] * cm[1] + tm[3] * cm[3])
-        return abs(float(size)) * scale, _bold_face(font)
+        y = tm[4] * cm[1] + tm[5] * cm[3] + cm[5]
+        return abs(float(size)) * scale, _bold_face(font), float(y)
     except Exception:
         return None
 
 
-def _record_run(runs: list[tuple[str, tuple[float, bool] | None]], text, cm, tm, font, size) -> None:
+def _record_run(runs: list[tuple[str, _RunStyle | None]], text, cm, tm, font, size) -> None:
     runs.append((str(text), _font_style(cm, tm, font, size)))
 
 
 def _pdf_lines(reader) -> list[_Line]:
-    """The non-empty text lines of a PDF, with the font of each where pypdf reports it.
+    """The non-empty text lines of a PDF, with the font and height of each where pypdf reports them.
 
-    The text visitor of pypdf reports each run of text with its font. Where the runs do not add up to
-    the extracted page text (form XObjects, right-to-left text), that page goes by line shape alone.
+    The text visitor of pypdf reports each run of text with its font and position. Where the runs do not
+    add up to the extracted page text (form XObjects, right-to-left text), that page goes by line shape
+    alone.
     """
     lines: list[_Line] = []
-    for page in reader.pages:
-        runs: list[tuple[str, tuple[float, bool] | None]] = []
+    for number, page in enumerate(reader.pages):
+        runs: list[tuple[str, _RunStyle | None]] = []
         text = page.extract_text(visitor_text=partial(_record_run, runs)) or ""
         styles = (
             [style for run, style in runs for _ in run] if "".join(run for run, _ in runs) == text else []
@@ -535,9 +641,11 @@ def _pdf_lines(reader) -> list[_Line]:
                 continue
             letters = [styles[i] for i in range(start, end) if text[i].isalpha()] if styles else []
             if letters and None not in letters:
-                lines.append(_Line(raw.strip(), min(s for s, _ in letters), all(b for _, b in letters)))
+                size = min(style[0] for style in letters)
+                bold = all(style[1] for style in letters)
+                lines.append(_Line(raw.strip(), size, bold, number, letters[0][2]))
             else:
-                lines.append(_Line(raw.strip()))
+                lines.append(_Line(raw.strip(), page=number))
     return lines
 
 
