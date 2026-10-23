@@ -110,9 +110,10 @@ def match_heading_to_section(heading: str) -> list[str]:
 # Formatting alone does not make a heading: a body sentence that mentions a section word
 # ("Note: purchasers bear market, liquidity and technology risks.") must not open that section.
 _MAX_HEADING_WORDS = 12
-# Numbered part titles of the Implementing Regulation (EU) 2024/2984 template run longer
-# ("Part E: Information about the offer to the public of crypto-assets or their admission to trading").
-_MAX_NUMBERED_HEADING_WORDS = 20
+# A label that its numbering or its font marks as a heading may run longer: the part titles of the
+# Implementing Regulation (EU) 2024/2984 template have up to 20 words, with or without the part letter
+# ("Information about the offer to the public of crypto-assets or their admission to trading").
+_MAX_MARKED_HEADING_WORDS = 20
 # A question mark may end a heading ("Risks: What Could Go Wrong?"); these marks end a sentence or a phrase.
 _SENTENCE_END = re.compile(r"[.!;,]$")
 # A word of four or more letters, a full stop and a capitalised word: "Risks. Holders may lose ...".
@@ -167,8 +168,10 @@ def _words(text: str) -> list[str]:
     return [word for word in text.split() if word.strip(_DASHES)]
 
 
-def _max_words(text: str) -> int:
-    return _MAX_NUMBERED_HEADING_WORDS if _NUMBERING.match(text) else _MAX_HEADING_WORDS
+def _max_words(text: str, marked: bool = False) -> int:
+    """The word limit of a heading: 20 when it is numbered or marked (entirely bold or in capitals in a
+    DOCX, set in a heading font in a PDF), 12 otherwise."""
+    return _MAX_MARKED_HEADING_WORDS if marked or _NUMBERING.match(text) else _MAX_HEADING_WORDS
 
 
 def _has_sentence_break(text: str) -> bool:
@@ -244,7 +247,7 @@ def _line_role(
     """
     numbering = _NUMBERING.match(line)
     title = line[numbering.end() :] if numbering else line
-    if not _is_label(line, _max_words(line)) or not next((c for c in title if c.isalpha()), "").isupper():
+    if not _is_label(line, _max_words(line, styled)) or not next((c for c in title if c.isalpha()), "").isupper():
         return _BODY
     # The template's own part and field labels, sentence case included ("Part I: Information on risks").
     if numbering and numbering.group("template"):
@@ -429,11 +432,10 @@ def _docx_fully_bold(paragraph) -> bool:
 
 
 def _docx_label_heading(paragraph, text: str) -> bool:
-    """A short label (up to 120 characters, or 200 when numbered) that is entirely bold or in capitals."""
-    max_words = _max_words(text)
+    """A label of up to 20 words and under 200 characters that is entirely bold or in capitals."""
     return (
-        len(text) < 10 * max_words
-        and _is_label(text, max_words)
+        len(text) < 10 * _MAX_MARKED_HEADING_WORDS
+        and _is_label(text, _max_words(text, marked=True))
         and (text.isupper() or _docx_fully_bold(paragraph))
     )
 

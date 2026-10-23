@@ -381,6 +381,54 @@ def test_docx_bold_part_title_of_the_template_is_a_heading(tmp_path: Path, part:
     assert findings["ANNEX_I.D"].word_count == len(PROJECT.split())
 
 
+# The same part titles without the part letter, as many drafts set them: 13 to 16 words, so only their
+# bold type (DOCX) or heading font (PDF) marks them as headings.
+GERMAN_OFFEROR = (
+    "Der Anbieter ist die Quillmoor Ledger S.A. mit Sitz in Luxemburg. Sie ist im Handelsregister unter der "
+    "Nummer B 123456 eingetragen und beschäftigt vierzig Mitarbeiter in Luxemburg und Hamburg. "
+) * 2
+UNNUMBERED_TITLES = {
+    "B": ("Information about the issuer, if different from the offeror or person seeking admission to trading",
+          ["issuer", "offer_or_admission", "offeror"], ISSUER, "ANNEX_I.B", Severity.MAJOR, "review"),
+    "E": ("Information about the offer to the public of crypto-assets or their admission to trading",
+          ["offer_or_admission"], OFFER, "ANNEX_I.E", Severity.BLOCKER, "review"),
+    "A-de": ("Informationen über den Anbieter oder die Person, die die Zulassung zum Handel beantragt",
+             ["offer_or_admission", "offeror"], GERMAN_OFFEROR, "ANNEX_I.A", Severity.BLOCKER, "review"),
+}  # fmt: skip
+
+
+@pytest.mark.parametrize("suffix,kind", [(".docx", "bold"), (".pdf", "large")], ids=["docx-bold", "pdf-14pt-bold"])
+@pytest.mark.parametrize("part", sorted(UNNUMBERED_TITLES))
+def test_unnumbered_part_title_of_up_to_twenty_words_is_a_heading_when_marked(
+    tmp_path: Path, suffix: str, kind: str, part: str
+):
+    title, keys, text, rule_id, severity, status = UNNUMBERED_TITLES[part]
+    write, load = WRITERS[suffix]
+    blocks = [
+        (kind, "Summary"),
+        ("body", SUMMARY),
+        (kind, "Information about the crypto-asset project"),
+        ("body", PROJECT),
+        (kind, title),
+        ("body", text),
+        (kind, "Information on the underlying technology"),
+        ("body", TECHNOLOGY),
+    ]
+    path = write(tmp_path / f"quillmoor{suffix}", blocks)
+
+    sections = load(path)
+    assert sorted(sections) == sorted({"summary", "project", "crypto_asset", "technology", *keys})
+    for key in keys:
+        assert _words(sections[key]) == _words(text)
+    # The thin project section keeps its own text and does not pass on the part after it.
+    assert _words(sections["project"]) == PROJECT
+    findings = _findings(path)
+    assert findings["ANNEX_I.D"].rule.severity is Severity.BLOCKER
+    assert (findings["ANNEX_I.D"].status, findings["ANNEX_I.D"].word_count) == ("review", len(PROJECT.split()))
+    assert findings[rule_id].rule.severity is severity
+    assert (findings[rule_id].status, findings[rule_id].word_count) == (status, len(text.split()))
+
+
 def test_pdf_part_title_of_twenty_words_and_a_dash_is_a_heading(tmp_path: Path):
     part_j = (
         f"Part J {DASH} Information on the sustainability indicators in relation to adverse impact on the climate "
