@@ -65,21 +65,17 @@ class Linter:
         text = whitepaper.section(rule.section)
         word_count = _count_words(text)
 
-        if not text.strip() or is_placeholder(text):
-            if not text.strip():
-                msg = "Abschnitt ist leer oder fehlt." if is_de else "Section is empty or absent."
-            else:
-                msg = (
-                    "Abschnitt enthält nur Platzhalter wie TBD oder TBC."
-                    if is_de
-                    else "Section holds only placeholder text such as TBD or TBC."
-                )
-            return Finding(
-                rule=rule,
-                status="missing",
-                word_count=0,
-                issues=(msg,),
+        absent = None
+        if not text.strip():
+            absent = "Abschnitt ist leer oder fehlt." if is_de else "Section is empty or absent."
+        elif is_placeholder(text):
+            absent = (
+                "Abschnitt enthält nur Platzhalter wie TBD oder TBC."
+                if is_de
+                else "Section holds only placeholder text such as TBD or TBC."
             )
+        if absent:
+            return Finding(rule=rule, status="missing", word_count=0, issues=(absent,))
 
         issues: list[str] = []
         normalized = text.lower()

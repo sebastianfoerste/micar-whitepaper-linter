@@ -15,7 +15,7 @@ from pathlib import Path
 
 from lxml import etree
 
-from micar_linter.placeholders import is_placeholder
+from micar_linter.placeholders import is_not_applicable, is_placeholder
 from micar_linter.whitepaper import WhitepaperType
 
 # A layout counts as numbered once fields from this many distinct parts carry content.
@@ -26,7 +26,6 @@ _FIELD_ID = re.compile(
     re.S,
 )
 _PART_HEADING = re.compile(r"^(?:part\s+[A-Z]\b|[A-Z]\.\s+\S)", re.I)
-_UNANSWERED = re.compile(r"^(?:n\s*/?\s*a|not\s+applicable|none|nil|[-\u2013\u2014]+)?\.?$", re.I)
 # Some authors run several fields together in one paragraph ("A.1 Name: N/A A.2 Legal form: N/A").
 # The colon requirement keeps cross-references such as "see F.14" from opening a field.
 _INLINE_FIELD = re.compile(r"(?<=\s)(?=[A-Z]\.\d{1,2}\s+(?:(?![A-Z]\.\d)[^:]){1,120}:)")
@@ -131,7 +130,7 @@ class NumberedField:
 
     @property
     def answered(self) -> bool:
-        return not (_UNANSWERED.match(self.content.strip()) or self.placeholder)
+        return not (is_not_applicable(self.content) or self.placeholder)
 
 
 def _clean(text: str | None) -> str:
@@ -231,22 +230,33 @@ def sections_from_numbered_fields(
     An answered field contributes "label: answer". A field answered "N/A" contributes
     "N/A" and a placeholder field ("TBD", "[●]") its placeholder, both without the label,
     so a part of unanswered fields cannot satisfy a rule through the wording of the
-    template alone, and a part of placeholders reads as missing.
+    template alone. In a part with no answered field, the "N/A" fields contribute nothing
+    when another field holds a placeholder, so a part of placeholders and "N/A" reads as
+    placeholders only and is reported missing.
     """
     parts = _PART_SECTIONS[whitepaper_type]
     summary = _SUMMARY_SECTIONS[whitepaper_type]
     lettered = [field for field in fields if field.part in parts and field.content.strip()]
+    answered_parts = {field.part for field in lettered if field.answered}
+    placeholder_parts = {field.part for field in lettered if field.placeholder} - answered_parts
 
     sections: dict[str, list[str]] = {}
     for field in fields:
         keys = parts.get(field.part) or summary.get(field.field_id, ())
         if not keys or not field.content.strip():
             continue
-        if field.part in parts and field.answered and _LANGUAGE_LABEL.search(field.label):
+        # A placeholder language field still names the language field, so its check reports the placeholder.
+        if (
+            field.part in parts
+            and (field.answered or field.placeholder)
+            and _LANGUAGE_LABEL.search(field.label)
+        ):
             keys = (*keys, "language")
         if field.placeholder:
             line = field.content
         elif not field.answered:
+            if field.part in placeholder_parts:
+                continue
             line = "N/A"
         elif field.label:
             line = f"{field.label}: {field.content}"
