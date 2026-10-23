@@ -4,7 +4,7 @@ A starter repository for drafting a MiCAR crypto-asset white paper with continuo
 
 Every push runs [micar-whitepaper-linter](https://github.com/sebastianfoerste/micar-whitepaper-linter) and reports each open finding with a pinpoint MiCAR citation in the **Actions** tab. The default workflow runs in report mode (`strict: 'false'`) so the check stays green while you draft. Flip `strict` to `'true'` in `.github/workflows/micar-lint.yml` when you want the build to **fail on any open BLOCKER** before you notify.
 
-Two items, reserve composition (Art. 36 MiCAR) and custody, are always staged for human review rather than auto-passed. That is deliberate: a green pipeline never means the white paper is lawful, complete, or ready to notify. That judgment stays with your lawyer.
+Two items are always staged for human review rather than auto-passed: reserve composition (Art. 36 MiCAR) and custody. That is deliberate: a green pipeline never means the white paper is lawful, complete, or ready to notify. That judgment stays with your lawyer.
 
 You can also lint drafts [live in the browser](https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/). Nothing you paste leaves the page.
 
