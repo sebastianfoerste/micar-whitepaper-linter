@@ -359,12 +359,15 @@ def sections_from_lines(lines: Iterable[str]) -> dict[str, str]:
 
 
 def _style_chain(style):
-    """The style and the styles it is based on, stopping where a malformed document loops back."""
+    """The style and the styles it is based on, stopping where a malformed document loops back.
+
+    A numbering (list) style has no base style in python-docx, so the chain ends there.
+    """
     seen = set()
     while style is not None and style.element not in seen:
         seen.add(style.element)
         yield style
-        style = style.base_style
+        style = getattr(style, "base_style", None)
 
 
 def _outline_level(ppr) -> int | None:
@@ -391,7 +394,9 @@ def _docx_style_heading(paragraph) -> bool:
 
 
 def _style_bold(style) -> bool | None:
-    return next((s.font.bold for s in _style_chain(style) if s.font.bold is not None), None)
+    """The bold setting of the first style in the chain that sets one; a numbering style has no font."""
+    fonts = (getattr(s, "font", None) for s in _style_chain(style))
+    return next((font.bold for font in fonts if font is not None and font.bold is not None), None)
 
 
 def _run_bold(run, paragraph_bold: bool) -> bool:
@@ -413,7 +418,11 @@ def _docx_fully_bold(paragraph) -> bool:
         for item in paragraph.iter_inner_content()
         for run in (item.runs if isinstance(item, Hyperlink) else (item,))
     ]
-    bold_letters = [_run_bold(run, paragraph_bold) for run in runs for char in run.text if char.isalpha()]
+    bold_letters: list[bool] = []
+    for run in runs:
+        letters = sum(char.isalpha() for char in run.text)
+        if letters:
+            bold_letters += [_run_bold(run, paragraph_bold)] * letters
     numbering = _NUMBERING.match(paragraph.text.lstrip())
     bold_letters = bold_letters[sum(char.isalpha() for char in numbering.group()) if numbering else 0 :]
     return bool(bold_letters) and all(bold_letters)

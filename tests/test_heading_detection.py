@@ -512,3 +512,26 @@ def test_docx_style_based_on_itself_through_a_cycle_loads(tmp_path: Path):
     worker.join(timeout=10)
     assert not worker.is_alive(), "load_from_docx did not return for a cyclic style chain"
     assert loaded == {"summary": SUMMARY}
+
+
+def test_docx_styles_based_on_a_numbering_style_load(tmp_path: Path):
+    # python-docx gives a numbering (list) style neither a base style nor a font.
+    doc = docx.Document()
+    numbering = doc.styles.add_style("Quillmoor List", WD_STYLE_TYPE.LIST)
+    body = doc.styles.add_style("Quillmoor Body", WD_STYLE_TYPE.PARAGRAPH)
+    body.base_style = numbering
+    strong = doc.styles.add_style("Quillmoor Strong", WD_STYLE_TYPE.CHARACTER)
+    strong.base_style = numbering
+    doc.add_heading("Summary", level=1)
+    doc.add_paragraph(SUMMARY, style="Quillmoor Body")
+    doc.add_paragraph(style="Quillmoor Body").add_run("Risk Factors", style="Quillmoor Strong").bold = True
+    doc.add_paragraph(RISK_TEXT, style="Quillmoor Body")
+    path = tmp_path / "quillmoor.docx"
+    doc.save(path)
+
+    sections = load_from_docx(path)
+    assert sorted(sections) == ["risks", "summary"]
+    assert _words(sections["risks"]) == _words(RISK_TEXT)
+    findings = _findings(path)
+    assert findings["ANNEX_I.I"].rule.severity is Severity.BLOCKER
+    assert findings["ANNEX_I.I"].status == "pass"
