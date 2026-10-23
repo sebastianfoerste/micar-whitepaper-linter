@@ -61,7 +61,7 @@ def test_load_document_txt_fallback(tmp_path: Path):
     assert loaded.pages is None
 
 
-def test_study_sections_use_the_heading_rule_of_micar_lint(tmp_path: Path):
+def test_study_sections_use_the_shape_rule_of_micar_lint(tmp_path: Path):
     path = tmp_path / "wp.txt"
     lines = [
         "Summary",

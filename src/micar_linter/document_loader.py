@@ -207,7 +207,7 @@ def _sections_from_html_tree(tree: Any) -> dict[str, str]:
 
 
 def _sections_from_lines(lines: list[str]) -> dict[str, str]:
-    """The same heading rule as micar-lint uses for PDF text, so a body line naming a section opens none."""
+    """The shape rule of micar-lint, without font information, so a body line naming a section opens none."""
     return sections_from_lines(_normalize_text(line) for line in lines)
 
 
