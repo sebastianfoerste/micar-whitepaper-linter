@@ -63,8 +63,10 @@ def _draft(*risk_heading: tuple[str, str]) -> list[tuple[str, str]]:
 def _write_docx(path: Path, blocks: list[tuple[str, str]]) -> Path:
     doc = docx.Document()
     for kind, text in blocks:
-        if kind == "heading":
+        if kind in ("heading", "large"):
             doc.add_heading(text, level=1)
+        elif kind == "subheading":
+            doc.add_heading(text, level=2)
         elif kind == "bold":
             doc.add_paragraph().add_run(text).bold = True
         elif kind == "outline":
@@ -103,8 +105,9 @@ def _write_docx(path: Path, blocks: list[tuple[str, str]]) -> Path:
     return path
 
 
-# 10 pt Helvetica for body text and plain lines, 10 pt Helvetica-Bold for "bold" lines, 14 pt for "large" ones.
-PDF_FONTS = {"bold": "/F2 10 Tf", "large": "/F2 14 Tf"}
+# 10 pt Helvetica for body text and plain lines; Helvetica-Bold in 10 pt for "bold" lines, 11 pt for
+# "subheading" lines and 14 pt for "large" ones. In a DOCX, "large" is a Heading 1 and "subheading" a Heading 2.
+PDF_FONTS = {"bold": "/F2 10 Tf", "subheading": "/F2 11 Tf", "large": "/F2 14 Tf"}
 
 
 def _shown(kind: str, line: str, next_line: str) -> str:
@@ -720,6 +723,142 @@ def test_abbreviation_in_a_heading_is_not_a_sentence_break(
 
     assert sorted(load(path)) == ["risks", "summary"]
     assert _findings(path)["ANNEX_I.I"].status == "pass"
+
+
+# Part F: its official title names the crypto-assets in the plural. The plural in the titles of Part E
+# and Part G does not make them crypto-asset sections.
+CRYPTO_ASSETS = (
+    "The QMT units are utility tokens on a permissioned ledger. Each unit entitles its holder to record one "
+    "hundred transfers. The units are fungible and transferable between onboarded holders. "
+) * 3
+
+
+@pytest.mark.parametrize("suffix", sorted(WRITERS))
+def test_part_f_title_with_crypto_assets_in_the_plural_opens_its_section(tmp_path: Path, suffix: str):
+    write, load = WRITERS[suffix]
+    blocks = [
+        ("large", "Summary"),
+        ("body", SUMMARY),
+        (
+            "large",
+            f"Part E {DASH} Information about the offer to the public of crypto-assets or their admission",
+        ),
+        ("body", OFFER),
+        ("large", f"Part F {DASH} Information about the crypto-assets"),
+        ("body", CRYPTO_ASSETS),
+        ("large", f"Part G {DASH} Information on the rights and obligations attached to the crypto-assets"),
+        ("body", RIGHTS),
+    ]
+    path = write(tmp_path / f"quillmoor{suffix}", blocks)
+
+    sections = load(path)
+    assert sorted(sections) == ["crypto_asset", "offer_or_admission", "rights_and_obligations", "summary"]
+    assert _words(sections["crypto_asset"]) == _words(CRYPTO_ASSETS)
+    assert _words(sections["offer_or_admission"]) == _words(OFFER)
+    findings = _findings(path)
+    assert findings["ANNEX_I.E"].rule.severity is Severity.BLOCKER
+    assert (findings["ANNEX_I.E"].status, findings["ANNEX_I.E"].word_count) == ("review", len(OFFER.split()))
+    assert findings["ANNEX_I.F"].rule.severity is Severity.BLOCKER
+    assert findings["ANNEX_I.F"].word_count == len(CRYPTO_ASSETS.split())
+
+
+THIN_RISKS = "Holders may lose the full amount they paid for their units."
+
+
+@pytest.mark.parametrize("suffix", sorted(WRITERS))
+@pytest.mark.parametrize(
+    "heading", ["Glossary", f"Part K {DASH} Glossary"], ids=["heading-font", "template-part"]
+)
+def test_heading_that_names_no_section_ends_the_section_before_it(tmp_path: Path, suffix: str, heading: str):
+    # The text under "Glossary" reads like risk text, so it would pass ANNEX_I.I if it joined the risks.
+    write, load = WRITERS[suffix]
+    blocks = [
+        ("large", "Summary"),
+        ("body", SUMMARY),
+        ("large", "Risk Factors"),
+        ("body", THIN_RISKS),
+        ("large", heading),
+        ("body", RISK_TEXT),
+    ]
+    path = write(tmp_path / f"quillmoor{suffix}", blocks)
+
+    sections = load(path)
+    assert sorted(sections) == ["risks", "summary"]
+    assert _words(sections["risks"]) == THIN_RISKS
+    findings = _findings(path)
+    assert findings["ANNEX_I.I"].rule.severity is Severity.BLOCKER
+    assert (findings["ANNEX_I.I"].status, findings["ANNEX_I.I"].word_count) == ("review", 11)
+
+
+@pytest.mark.parametrize("suffix", sorted(WRITERS))
+def test_sub_heading_that_names_no_section_stays_in_its_section(tmp_path: Path, suffix: str):
+    # A smaller heading font (PDF) or a Heading 2 (DOCX) under "Risk Factors" is part of the risks.
+    write, load = WRITERS[suffix]
+    blocks = [
+        ("large", "Summary"),
+        ("body", SUMMARY),
+        ("large", "Risk Factors"),
+        ("body", THIN_RISKS),
+        ("subheading", "Market Volatility"),
+        ("body", RISK_TEXT),
+        ("large", "Glossary"),
+        ("body", TECHNOLOGY),
+    ]
+    path = write(tmp_path / f"quillmoor{suffix}", blocks)
+
+    sections = load(path)
+    assert sorted(sections) == ["risks", "summary"]
+    assert _words(RISK_TEXT) in _words(sections["risks"])
+    assert TECHNOLOGY not in _words(sections["risks"])
+    assert _findings(path)["ANNEX_I.I"].status == "pass"
+
+
+# Rows of the summary table of Implementing Regulation (EU) 2024/2984 as pypdf reads them: the field
+# number, the label and a one-line answer on one line, or a wrapped label followed by its answer.
+SUMMARY_TABLE = [
+    "01 Date of notification 2 February 2026",
+    "02 Statement in accordance",
+    "with Article 6(3) of",
+    "Regulation (EU) 2023/1114",
+    "This crypto-asset white paper has not been approved by any competent authority in any Member State.",
+    "04 Statement in accordance",
+    "with Article 6(5) of",
+    "Regulation (EU) 2023/1114",
+    "The crypto-asset may lose its value in part or in full and may not always be transferable.",
+    "08 Characteristics of the crypto-",
+    "asset",
+    "The QMT units are utility tokens that give access to the shared ledger service.",
+]
+
+
+def test_pdf_summary_table_field_that_names_no_section_ends_the_field_before_it(tmp_path: Path):
+    blocks = [
+        ("large", "Summary"),
+        *(("line", line) for line in SUMMARY_TABLE),
+        ("large", f"Part A {DASH} Information about the offeror or the person seeking admission to trading"),
+        ("line", "A.1 Name Quillmoor Ledger S.A."),
+        ("line", "A.2 Legal form Societe anonyme"),
+        ("line", "A.3 Registered address 12 Rue de la Gare, L-1611 Luxembourg"),
+        ("large", f"Part I {DASH} Information on risks"),
+        ("body", RISK_TEXT),
+    ]
+    path = _write_pdf(tmp_path / "quillmoor.pdf", blocks)
+
+    sections = load_from_pdf(path)
+    # The answer on the field line stays usable; the statements of fields 02 and 04 are no answer to it.
+    assert sections["notification_date"] == "2 February 2026"
+    assert sections["crypto_asset"] == SUMMARY_TABLE[-1]
+    # The numbered fields of Part A belong to Part A.
+    assert "A.3 Registered address 12 Rue de la Gare" in sections["offeror"]
+    findings = _findings(path)
+    assert findings["COMMON.NOTIFICATION_DATE"].rule.severity is Severity.MAJOR
+    assert (findings["COMMON.NOTIFICATION_DATE"].status, findings["COMMON.NOTIFICATION_DATE"].word_count) == (
+        "review",
+        3,
+    )
+    assert findings["ANNEX_I.A"].rule.severity is Severity.BLOCKER
+    assert findings["ANNEX_I.A"].status != "missing"
+    assert findings["ANNEX_I.I"].status == "pass"
 
 
 def test_docx_style_based_on_itself_through_a_cycle_loads(tmp_path: Path):
