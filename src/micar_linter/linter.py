@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass, field
 
 from micar_linter.anchors import SourceAnchor, build_source_anchors
+from micar_linter.placeholders import is_placeholder
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Finding, Rule, Severity
 from micar_linter.whitepaper import Whitepaper, WhitepaperType
@@ -64,8 +65,15 @@ class Linter:
         text = whitepaper.section(rule.section)
         word_count = _count_words(text)
 
-        if not text.strip():
-            msg = "Abschnitt ist leer oder fehlt." if is_de else "Section is empty or absent."
+        if not text.strip() or is_placeholder(text):
+            if not text.strip():
+                msg = "Abschnitt ist leer oder fehlt." if is_de else "Section is empty or absent."
+            else:
+                msg = (
+                    "Abschnitt enthält nur Platzhalter wie TBD oder TBC."
+                    if is_de
+                    else "Section holds only placeholder text such as TBD or TBC."
+                )
             return Finding(
                 rule=rule,
                 status="missing",

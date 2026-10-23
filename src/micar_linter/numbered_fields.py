@@ -15,6 +15,7 @@ from pathlib import Path
 
 from lxml import etree
 
+from micar_linter.placeholders import is_placeholder
 from micar_linter.whitepaper import WhitepaperType
 
 # A layout counts as numbered once fields from this many distinct parts carry content.
@@ -124,8 +125,13 @@ class NumberedField:
         return self.field_id.split(".")[0]
 
     @property
+    def placeholder(self) -> bool:
+        """The content is a placeholder such as "TBD", "TBC", "[●]" or "to be confirmed"."""
+        return is_placeholder(self.content)
+
+    @property
     def answered(self) -> bool:
-        return not _UNANSWERED.match(self.content.strip())
+        return not (_UNANSWERED.match(self.content.strip()) or self.placeholder)
 
 
 def _clean(text: str | None) -> str:
@@ -223,8 +229,9 @@ def sections_from_numbered_fields(
     """Map numbered fields to section texts and extraction notes.
 
     An answered field contributes "label: answer". A field answered "N/A" contributes
-    "N/A" without its label, so a part of unanswered fields cannot satisfy a rule
-    through the wording of the template alone.
+    "N/A" and a placeholder field ("TBD", "[●]") its placeholder, both without the label,
+    so a part of unanswered fields cannot satisfy a rule through the wording of the
+    template alone, and a part of placeholders reads as missing.
     """
     parts = _PART_SECTIONS[whitepaper_type]
     summary = _SUMMARY_SECTIONS[whitepaper_type]
@@ -237,7 +244,9 @@ def sections_from_numbered_fields(
             continue
         if field.part in parts and field.answered and _LANGUAGE_LABEL.search(field.label):
             keys = (*keys, "language")
-        if not field.answered:
+        if field.placeholder:
+            line = field.content
+        elif not field.answered:
             line = "N/A"
         elif field.label:
             line = f"{field.label}: {field.content}"
@@ -264,7 +273,7 @@ def sections_from_numbered_fields(
         )
     for part in sorted({field.part for field in lettered}):
         in_part = [field for field in lettered if field.part == part]
-        if not any(field.answered for field in in_part):
+        if not any(field.answered or field.placeholder for field in in_part):
             notes.append(
                 f"Part {part}: all {len(in_part)} numbered fields are marked not applicable. "
                 "Confirm that the part does not apply."
