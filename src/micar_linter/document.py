@@ -366,15 +366,17 @@ def _line_role(
     styled: bool,
     previous_styled: bool,
     by_font: bool = False,
+    paragraph: bool = False,
 ) -> str:
     """The role of a line that names a section: a heading, body text, or a break that ends the section.
 
     previous and following are the neighbouring lines (None at either end), previous_role is the role of
     previous, started tells whether a heading or break came before, and styled and previous_styled whether
     the line and the one before are set larger or bolder than the body text. by_font tells whether the
-    draft sets its headings in a heading font and the font of this line is known.
+    draft sets its headings in a heading font and the font of this line is known. paragraph tells whether
+    the line is the first line of a paragraph set in its font (see _starts_paragraph).
     """
-    if not _heading_shaped(line, styled):
+    if not _heading_shaped(line, styled) or paragraph:
         return _BODY
     numbering = _NUMBERING.match(line)
     title = line[numbering.end() :] if numbering else line
@@ -493,15 +495,30 @@ def _heights_hold(lines: list[_Line], body_font: tuple[float, bool] | None) -> b
     return body_font is None or not gaps or statistics.median(gaps) <= 2.5 * body_font[0]
 
 
-def _wraps(first: _Line, line: _Line, first_styled: bool, styled: bool, heights: bool) -> bool:
-    """Whether line is the next line of the heading or label that first starts.
+# The first line of a heading that wraps without running on ("... From the Offeror or Person" over
+# "Seeking Admission to Trading") fills most of the column: at least this share of a full line of body
+# text, in characters scaled by the font sizes.
+_FULL_LINE_SHARE = 0.6
 
-    A line in the same heading font, set one line spacing below (where the heights hold), is the next
-    line of a wrapped heading. A line in the body font is the next line only where first runs on, line
-    starts in lower case and the two lines together are a label that names a section ("08 Characteristics
-    of the crypto-" and "asset"). A numbered line, a list item, and a line on another page or further
-    down start something new.
-    """
+
+def _full_line(lines: list[_Line], body_font: tuple[float, bool] | None) -> float | None:
+    """The number of characters on a full line of body text: the upper quartile of the lengths of the
+    lines in the body font, as the last line of a paragraph is shorter."""
+    lengths = [len(line.text) for line in lines if body_font is not None and _font(line) == body_font]
+    return statistics.quantiles(lengths, n=4)[2] if len(lengths) >= 2 else None
+
+
+def _fills_line(line: _Line, full_line: float | None, body_font: tuple[float, bool] | None) -> bool:
+    """Whether a line fills most of the column: at least 60 % of the characters of a full line of body
+    text, scaled by the body size over the size of the line, as a larger font fits fewer on a line."""
+    if line.size is None or full_line is None or body_font is None:
+        return False
+    return len(line.text) >= _FULL_LINE_SHARE * full_line * body_font[0] / line.size
+
+
+def _next_line(first: _Line, line: _Line, heights: bool) -> bool:
+    """Whether line can go on with the text of first: on the same page, not numbered, not a list item,
+    and set one line spacing below first where the heights hold."""
     if (
         first.page != line.page
         or _NUMBERING.match(line.text)
@@ -509,22 +526,57 @@ def _wraps(first: _Line, line: _Line, first_styled: bool, styled: bool, heights:
         or _LIST_MARKER.match(line.text)
     ):
         return False
-    if (
+    return not (
         heights
         and first.y is not None
         and line.y is not None
         and line.size is not None
         and not 0 < first.y - line.y <= _LINE_SPACING * line.size
-    ):
+    )
+
+
+def _wraps(first: _Line, line: _Line, first_styled: bool, styled: bool, heights: bool, fills: bool) -> bool:
+    """Whether line is the next line of the heading or label that first starts.
+
+    A line in the same heading font, set one line spacing below (where the heights hold), is the next
+    line of a wrapped heading where first does not end a sentence, the two lines together are still
+    shaped like a heading, and first runs on or fills most of the column (fills, see _fills_line). Where
+    a draft sets no space between paragraphs, a short heading is one line spacing above the paragraph or
+    the heading after it, and these start something new. A line in the body font is the next line only
+    where first runs on, line starts in lower case and the two lines together are a label that names a
+    section ("08 Characteristics of the crypto-" and "asset"). A numbered line, a list item, and a line on
+    another page or further down start something new.
+    """
+    if not _next_line(first, line, heights):
         return False
-    if first_styled or styled:
-        return first_styled and styled and _font(first) == _font(line)
     joined = _joined(first.text, line.text)
+    if first_styled or styled:
+        return (
+            first_styled
+            and styled
+            and _font(first) == _font(line)
+            and not _ends_sentence(first.text)
+            and _heading_shaped(joined, True)
+            and (_runs_on(first.text) or fills)
+        )
     return (
         _runs_on(first.text)
         and line.text[:1].islower()
         and _is_label(joined, _max_words(joined))
         and bool(match_heading_to_section(joined))
+    )
+
+
+def _starts_paragraph(line: _Line, following: _Line | None, heights: bool) -> bool:
+    """Whether a line is the first line of a paragraph set in its font: the line after it is in the same
+    font, goes on with its text (see _next_line) and starts in lower case, as a sentence does that runs
+    on ("... approved by any competent" over "authority in any Member State ..."). The lines of a heading
+    that wraps are already joined into one (see _wraps)."""
+    return (
+        following is not None
+        and _font(line) == _font(following)
+        and following.text[:1].islower()
+        and _next_line(line, following, heights)
     )
 
 
@@ -548,28 +600,33 @@ def _running(lines: list[_Line]) -> list[bool]:
 
 
 def _merge_wrapped(
-    lines: list[_Line], styled: list[bool], running: list[bool], heights: bool
+    lines: list[_Line], styled: list[bool], running: list[bool], fills: list[bool], heights: bool
 ) -> tuple[list[_Line], list[bool], list[bool]]:
     """The lines with the lines of each wrapped heading merged into one, and whether each is styled and
-    a running page header or footer. A running line is never merged."""
+    a running page header or footer. fills tells whether each line fills most of the column (see
+    _fills_line). A running line is never merged."""
     merged: list[_Line] = []
     merged_styled: list[bool] = []
     merged_running: list[bool] = []
-    for line, line_styled, line_running in zip(lines, styled, running, strict=True):
+    # Whether the last line merged into each line fills most of the column.
+    merged_fills: list[bool] = []
+    for line, line_styled, line_running, line_fills in zip(lines, styled, running, fills, strict=True):
         if (
             merged
             and not line_running
             and not merged_running[-1]
-            and _wraps(merged[-1], line, merged_styled[-1], line_styled, heights)
+            and _wraps(merged[-1], line, merged_styled[-1], line_styled, heights, merged_fills[-1])
         ):
             first = merged[-1]
             size = None if first.size is None or line.size is None else min(first.size, line.size)
             text = _joined(first.text, line.text)
             merged[-1] = _Line(text, size, first.bold and line.bold, line.page, line.y)
+            merged_fills[-1] = line_fills
         else:
             merged.append(line)
             merged_styled.append(line_styled)
             merged_running.append(line_running)
+            merged_fills.append(line_fills)
     return merged, merged_styled, merged_running
 
 
@@ -577,7 +634,10 @@ def _line_sections(lines: list[_Line]) -> DocumentSections:
     text = "\n".join(line.text for line in lines)
     body_font = _body_font(lines)
     styled = [_styled(line, body_font) for line in lines]
-    lines, styled, running = _merge_wrapped(lines, styled, _running(lines), _heights_hold(lines, body_font))
+    full_line = _full_line(lines, body_font)
+    fills = [_fills_line(line, full_line, body_font) for line in lines]
+    heights = _heights_hold(lines, body_font)
+    lines, styled, running = _merge_wrapped(lines, styled, _running(lines), fills, heights)
     # The draft sets its headings in a heading font if at least two lines in one name a section.
     by_font = (
         sum(
@@ -614,21 +674,25 @@ def _line_sections(lines: list[_Line]) -> DocumentSections:
         number = _outline_number(line.text)
         # A larger heading font is a higher level.
         level = -round(line.size, 1) if styled[index] and line.size is not None else None
+        following = lines[following_index[index]] if index in following_index else None
+        # The first line of a paragraph set in a heading font, such as a bold risk warning, is body text.
+        paragraph = styled[index] and _starts_paragraph(line, following, heights)
         role = _BODY
         if keys:
-            following = lines[following_index[index]].text if index in following_index else None
             role = _line_role(
                 line.text,
                 previous,
                 previous_role,
-                following,
+                following.text if following else None,
                 started=bool(headings),
                 styled=styled[index],
                 previous_styled=previous_styled,
                 by_font=by_font and line.size is not None,
+                paragraph=paragraph,
             )
         elif (
             (styled[index] or kind)
+            and not paragraph
             and _heading_shaped(line.text, styled[index])
             and _ends_section(
                 kind,

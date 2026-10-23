@@ -69,7 +69,7 @@ def _write_docx(path: Path, blocks: list[tuple[str, str]]) -> Path:
             doc.add_heading(text, level=1)
         elif kind == "subheading":
             doc.add_heading(text, level=2)
-        elif kind == "bold":
+        elif kind in ("bold", "bold body"):
             doc.add_paragraph().add_run(text).bold = True
         elif kind == "outline":
             # A Normal paragraph that Word lists in the navigation pane as a level 1 heading.
@@ -107,10 +107,16 @@ def _write_docx(path: Path, blocks: list[tuple[str, str]]) -> Path:
     return path
 
 
-# 10 pt Helvetica for body text and plain lines; Helvetica-Bold in 10 pt for "bold" lines, 11 pt for
-# "subheading" lines, 14 pt for "large" ones and 20 pt for a "title". In a DOCX, "large" is a Heading 1,
-# "subheading" a Heading 2 and "title" a Title-style paragraph.
-PDF_FONTS = {"bold": "/F2 10 Tf", "subheading": "/F2 11 Tf", "large": "/F2 14 Tf", "title": "/F2 20 Tf"}
+# 10 pt Helvetica for body text and plain lines; Helvetica-Bold in 10 pt for "bold" lines and "bold body"
+# text, 11 pt for "subheading" lines, 14 pt for "large" ones and 20 pt for a "title". In a DOCX, "large" is
+# a Heading 1, "subheading" a Heading 2 and "title" a Title-style paragraph.
+PDF_FONTS = {
+    "bold": "/F2 10 Tf",
+    "bold body": "/F2 10 Tf",
+    "subheading": "/F2 11 Tf",
+    "large": "/F2 14 Tf",
+    "title": "/F2 20 Tf",
+}
 
 
 def _shown(kind: str, line: str, next_line: str) -> str:
@@ -124,15 +130,17 @@ def _shown(kind: str, line: str, next_line: str) -> str:
 def _write_pdf(path: Path, blocks: list[tuple[str, str]], next_line: str = "0 -13 Td") -> Path:
     """A PDF with one text line per block, 13 pt apart, and body text wrapped at 90 characters.
 
-    Each line moves to the next with next_line: Td, as word processors write, or T* after a TL leading.
-    A "page" block starts a new page.
+    The lines of a paragraph and the paragraphs follow each other with no space between them, as in a
+    draft that sets none, unless a "space" block moves further down. Each line moves to the next with
+    next_line: Td, as word processors write, or T* after a TL leading. A "page" block starts a new page.
     """
     pages: list[list[tuple[str, str]]] = [[]]
     for kind, text in blocks:
         if kind == "page":
             pages.append([])
         else:
-            pages[-1].extend((kind, line) for line in (textwrap.wrap(text, 90) if kind == "body" else [text]))
+            wrapped = textwrap.wrap(text, 90) if kind in ("body", "bold body") else [text]
+            pages[-1].extend((kind, line) for line in wrapped)
     fonts = b"/Font << /F1 3 0 R /F2 4 0 R >>"
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
@@ -545,6 +553,88 @@ def test_pdf_headings_one_paragraph_apart_in_the_heading_font_stay_two_headings(
     findings = _findings(path)
     assert findings["ANNEX_I.I"].rule.severity is Severity.BLOCKER
     assert findings["ANNEX_I.I"].status == "missing"
+
+
+@pytest.mark.parametrize("next_line", ["0 -13 Td", "T*"])
+def test_pdf_short_heading_one_line_above_the_next_heading_stays_a_heading(tmp_path: Path, next_line: str):
+    # As above, but with no space between the paragraphs, and in a PDF laid out with T*, where the font
+    # alone decides: "Risk Factors" neither runs on nor fills the column, so it is not joined with the
+    # heading below it.
+    blocks = [
+        ("large", "Summary"),
+        ("body", SUMMARY),
+        ("large", "Risk Factors"),
+        ("large", "Information on the Underlying Technology"),
+        ("body", RISK_TEXT),
+    ]
+    path = _write_pdf(tmp_path / "quillmoor.pdf", blocks, next_line)
+
+    sections = load_from_pdf(path)
+    assert sorted(sections) == ["summary", "technology"]
+    assert _words(sections["technology"]) == _words(RISK_TEXT)
+    findings = _findings(path)
+    assert findings["ANNEX_I.I"].rule.severity is Severity.BLOCKER
+    assert findings["ANNEX_I.I"].status == "missing"
+
+
+# The opening statements of a white paper, set under bold headings in the body size. The summary alone is
+# too thin to pass COMMON.SUMMARY.
+KEY_SUMMARY = (
+    "This summary gives the key information about the Quillmoor Utility Token (QMT) in plain language. The "
+    "token gives holders access to a shared ledger service for logistics firms. Holders should read the "
+    "whole white paper before they buy units."
+)
+WARNING = (
+    "This crypto-asset white paper has not been reviewed or approved by any competent authority in any "
+    "Member State of the European Union. The offeror of the crypto-asset is solely responsible for the "
+    "content of this crypto-asset white paper. The crypto-asset may lose its value in part or in full, may "
+    "not always be transferable and may not be liquid."
+)
+STATEMENT = (
+    "The management body of Quillmoor Ledger S.A. confirms that this crypto-asset white paper complies "
+    "with Title II of Regulation (EU) 2023/1114 and that, to the best of its knowledge, the information "
+    "presented is fair, clear and not misleading and that the white paper makes no omission likely to "
+    "affect its import."
+)
+
+
+@pytest.mark.parametrize("suffix", sorted(WRITERS))
+@pytest.mark.parametrize("bold_statement", [False, True], ids=["bold-warning", "bold-warning-and-statement"])
+def test_heading_over_a_bold_paragraph_with_no_space_between_stays_a_heading(
+    tmp_path: Path, suffix: str, bold_statement: bool
+):
+    # With no space between paragraphs, the bold headings sit one line spacing above and below the bold
+    # risk warning. They are not joined with it: each heading opens its own section and the bold paragraph
+    # is the body of its heading, so the thin summary does not pass on the statements after it.
+    write, load = WRITERS[suffix]
+    blocks = [
+        ("bold", "Summary"),
+        ("body", KEY_SUMMARY),
+        ("bold", "Risk warning"),
+        ("bold body", WARNING),
+        ("bold", "Statement by the management body"),
+        ("bold body" if bold_statement else "body", STATEMENT),
+        ("bold", "Information on risks"),
+        ("body", RISK_TEXT),
+    ]
+    path = write(tmp_path / f"quillmoor{suffix}", blocks)
+
+    sections = load(path)
+    assert sorted(sections) == ["management_statement", "risk_warning", "risks", "summary"]
+    assert _words(sections["summary"]) == KEY_SUMMARY
+    assert _words(sections["risk_warning"]) == _words(WARNING)
+    assert _words(sections["management_statement"]) == _words(STATEMENT)
+    findings = _findings(path)
+    for rule_id, text in [
+        ("COMMON.SUMMARY", KEY_SUMMARY),
+        ("COMMON.RISK_WARNING", WARNING),
+        ("COMMON.MANAGEMENT_STATEMENT", STATEMENT),
+    ]:
+        assert findings[rule_id].rule.severity is Severity.BLOCKER
+        assert findings[rule_id].word_count == len(text.split())
+    assert findings["COMMON.SUMMARY"].status == "review"
+    assert findings["COMMON.MANAGEMENT_STATEMENT"].status == "pass"
+    assert findings["ANNEX_I.I"].status == "pass"
 
 
 # A risk section written as a list whose items start in lower case.
