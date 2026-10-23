@@ -126,15 +126,18 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
     ixbrl_issues = []
     ixbrl_validated = False
     extraction_notes: tuple[str, ...] = ()
+    headings: tuple[str, ...] = ()
     try:
         if suffix == ".pdf":
-            from micar_linter.document import load_from_pdf
+            from micar_linter.document import parse_pdf
 
-            sections = load_from_pdf(path)
+            parsed = parse_pdf(path)
+            sections, headings = parsed.sections, parsed.headings
         elif suffix == ".docx":
-            from micar_linter.document import load_from_docx
+            from micar_linter.document import parse_docx
 
-            sections = load_from_docx(path)
+            parsed = parse_docx(path)
+            sections, headings = parsed.sections, parsed.headings
         elif suffix == ".md":
             from micar_linter.document import load_from_markdown
 
@@ -167,7 +170,8 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
     except Exception as exc:
         raise SystemExit(f"Error reading document {path}: {exc}") from exc
 
-    full_text = "\n".join(sections.values()).lower()
+    # Heading text is not section body, but a heading ("Reserve of Assets") may be all that names the regime.
+    full_text = "\n".join([*sections.values(), *headings]).lower()
     art_markers = ("asset-referenced", "stabilisation mechanism", "reserve of assets")
     emt_markers = ("e-money token", "referenced currency", "safeguarding of funds")
     if whitepaper_type is not None:
