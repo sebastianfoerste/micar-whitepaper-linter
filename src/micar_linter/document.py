@@ -567,13 +567,16 @@ def _wraps(first: _Line, line: _Line, first_styled: bool, styled: bool, heights:
     )
 
 
-def _starts_paragraph(line: _Line, following: _Line | None, heights: bool) -> bool:
-    """Whether a line is the first line of a paragraph set in its font: the line after it is in the same
-    font, goes on with its text (see _next_line) and starts in lower case, as a sentence does that runs
-    on ("... approved by any competent" over "authority in any Member State ..."). The lines of a heading
-    that wraps are already joined into one (see _wraps)."""
+def _starts_paragraph(line: _Line, following: _Line | None, fills: bool, heights: bool) -> bool:
+    """Whether a line is the first line of a paragraph set in its font: it fills most of the column
+    (fills, see _fills_line), and the line after it is in the same font, goes on with its text (see
+    _next_line) and starts in lower case, as a sentence does that runs on ("... approved by any
+    competent" over "authority in any Member State ..."). The lines of a heading that wraps are already
+    joined into one (see _wraps), and a short heading over a lower-case line ("Risk Factors" over "and
+    Mitigation Measures") does not fill the column, so it stays a heading."""
     return (
-        following is not None
+        fills
+        and following is not None
         and _font(line) == _font(following)
         and following.text[:1].islower()
         and _next_line(line, following, heights)
@@ -601,9 +604,9 @@ def _running(lines: list[_Line]) -> list[bool]:
 
 def _merge_wrapped(
     lines: list[_Line], styled: list[bool], running: list[bool], fills: list[bool], heights: bool
-) -> tuple[list[_Line], list[bool], list[bool]]:
-    """The lines with the lines of each wrapped heading merged into one, and whether each is styled and
-    a running page header or footer. fills tells whether each line fills most of the column (see
+) -> tuple[list[_Line], list[bool], list[bool], list[bool]]:
+    """The lines with the lines of each wrapped heading merged into one, and whether each is styled, a
+    running page header or footer, and ends with a line that fills most of the column (fills, see
     _fills_line). A running line is never merged."""
     merged: list[_Line] = []
     merged_styled: list[bool] = []
@@ -627,7 +630,7 @@ def _merge_wrapped(
             merged_styled.append(line_styled)
             merged_running.append(line_running)
             merged_fills.append(line_fills)
-    return merged, merged_styled, merged_running
+    return merged, merged_styled, merged_running, merged_fills
 
 
 def _line_sections(lines: list[_Line]) -> DocumentSections:
@@ -637,7 +640,7 @@ def _line_sections(lines: list[_Line]) -> DocumentSections:
     full_line = _full_line(lines, body_font)
     fills = [_fills_line(line, full_line, body_font) for line in lines]
     heights = _heights_hold(lines, body_font)
-    lines, styled, running = _merge_wrapped(lines, styled, _running(lines), fills, heights)
+    lines, styled, running, fills = _merge_wrapped(lines, styled, _running(lines), fills, heights)
     # The draft sets its headings in a heading font if at least two lines in one name a section.
     by_font = (
         sum(
@@ -676,7 +679,7 @@ def _line_sections(lines: list[_Line]) -> DocumentSections:
         level = -round(line.size, 1) if styled[index] and line.size is not None else None
         following = lines[following_index[index]] if index in following_index else None
         # The first line of a paragraph set in a heading font, such as a bold risk warning, is body text.
-        paragraph = styled[index] and _starts_paragraph(line, following, heights)
+        paragraph = styled[index] and _starts_paragraph(line, following, fills[index], heights)
         role = _BODY
         if keys:
             role = _line_role(

@@ -577,6 +577,35 @@ def test_pdf_short_heading_one_line_above_the_next_heading_stays_a_heading(tmp_p
     assert findings["ANNEX_I.I"].status == "missing"
 
 
+def test_pdf_short_heading_over_a_lower_case_line_in_its_font_stays_a_heading(tmp_path: Path):
+    # A heading that wraps after a short first line, as in a narrow column. "Risk Factors" neither runs on
+    # nor fills the column, so it is not joined with "and Mitigation Measures"; it does not start a
+    # paragraph either, which fills the column. So it opens the risks, and the risk text below does not
+    # pass the thin technology section before it.
+    blocks = [
+        ("large", "Summary"),
+        ("body", SUMMARY),
+        ("large", "Information on the Underlying Technology"),
+        ("body", THIN_TECHNOLOGY),
+        ("large", "Risk Factors"),
+        ("large", "and Mitigation Measures"),
+        ("body", RISK_TEXT),
+    ]
+    path = _write_pdf(tmp_path / "quillmoor.pdf", blocks)
+
+    sections = load_from_pdf(path)
+    assert sorted(sections) == ["risks", "summary", "technology"]
+    assert _words(sections["technology"]) == _words(THIN_TECHNOLOGY)
+    assert _words(RISK_TEXT) in _words(sections["risks"])
+    findings = _findings(path)
+    assert findings["ANNEX_I.H"].rule.severity is Severity.BLOCKER
+    assert (findings["ANNEX_I.H"].status, findings["ANNEX_I.H"].word_count) == (
+        "review",
+        len(THIN_TECHNOLOGY.split()),
+    )
+    assert findings["ANNEX_I.I"].status == "pass"
+
+
 # The opening statements of a white paper, set under bold headings in the body size. The summary alone is
 # too thin to pass COMMON.SUMMARY.
 KEY_SUMMARY = (
