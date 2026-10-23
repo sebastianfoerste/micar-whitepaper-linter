@@ -100,8 +100,111 @@ def match_heading_to_section(heading: str) -> list[str]:
     return matched
 
 
+# Formatting alone does not make a heading: a body sentence that mentions a section word
+# ("Note: purchasers bear market, liquidity and technology risks.") must not open that section.
+_MAX_HEADING_WORDS = 12
+# Numbered part titles of the Implementing Regulation (EU) 2024/2984 template run longer
+# ("Part E: Information about the offer to the public of crypto-assets or their admission to trading").
+_MAX_NUMBERED_HEADING_WORDS = 20
+_SENTENCE_END = re.compile(r"[.!?;,]$")
+# A full stop after a word, followed by more text: "Risks. Holders may lose ..." ("A.1 Name" and "5.2 Risks" pass).
+_SENTENCE_BREAK = re.compile(r"[^\W\d_]{4,}[.!?]\s+\S")
+# "1. Risks", "5.2 Risks", "1) Risks", "A.1 Name", "I. Risks", "IV. Risks", "Part I: Risks", "Teil I Risiken".
+_NUMBERING = re.compile(
+    r"^(?:\d{1,2}(?:\.\d{1,2})*[.)]|\d{1,2}(?:\.\d{1,2})+|[A-Z]\.\d{1,2}(?:\.\d{1,2})*\.?|[A-Z]\.|[IVX]{1,5}\."
+    r"|(?:Part|PART|Teil|TEIL)\s+(?:[A-Z]|[IVX]{1,5}|\d{1,2})[.:)]?)\s+"
+)
+# Words a title-case heading leaves in lower case: "Information about the Issuer", "Rechte und Pflichten".
+_MINOR_WORD = re.compile(
+    r"a|about|against|among|an|and|as|at|between|by|for|from|in|into|of|on|or|over|per|than|the|to|under|via"
+    r"|with|within|without|am|auf|aus|bei|bzw|das|dem|den|der|des|die|ein|eine|einer|eines|für|im|mit|nach"
+    r"|oder|sowie|über|und|von|vom|zu|zum|zur"
+)
+# Dashes and quotation marks around heading words: en dash, em dash, curly single and double quotes.
+_DASHES = "-\u2013\u2014"
+_QUOTES = "\"'\u2018\u2019\u201c\u201d"
+
+
+def _is_label(text: str, max_words: int = _MAX_HEADING_WORDS) -> bool:
+    """A short label rather than a sentence: few words and no sentence punctuation after a word."""
+    return (
+        len(text.split()) <= max_words and not _SENTENCE_END.search(text) and not _SENTENCE_BREAK.search(text)
+    )
+
+
+def _is_title_like(text: str) -> bool:
+    """All capitals, or every word other than a short connective starts with a capital."""
+    words = [word.strip(f"()[]{_QUOTES},:;") for word in text.split()]
+    words = [word for word in words if word[:1].isalpha()]
+    if not words or not words[0][0].isupper():
+        return False
+    return all(not word.islower() or _MINOR_WORD.fullmatch(word) for word in words[1:])
+
+
+def _is_pdf_heading(line: str) -> bool:
+    """A PDF line is a heading only if shaped like one: numbered with a capital after the number,
+    or in title case or capitals; a wrapped body line mentioning a section word is neither."""
+    numbering = _NUMBERING.match(line)
+    if numbering:
+        title = line[numbering.end() :].lstrip(f"{_DASHES}:. ")
+        return title[:1].isupper() and _is_label(line, _MAX_NUMBERED_HEADING_WORDS)
+    return _is_title_like(line) and _is_label(line)
+
+
+def _style_chain(style):
+    while style is not None:
+        yield style
+        style = style.base_style
+
+
+def _outline_level(ppr) -> int | None:
+    """The w:outlineLvl of a paragraph or style: 0 to 8 are heading levels 1 to 9, 9 is body text."""
+    from docx.oxml.ns import qn
+
+    level = ppr.find(qn("w:outlineLvl")) if ppr is not None else None
+    value = level.get(qn("w:val")) if level is not None else None
+    return int(value) if value is not None and value.isdigit() else None
+
+
+def _docx_style_heading(paragraph) -> bool:
+    """A Heading style or an outline level, set on the paragraph or on the style it is based on."""
+    level = _outline_level(paragraph._p.pPr)
+    if level is not None:
+        return level < 9
+    for style in _style_chain(paragraph.style):
+        if (style.name or "").startswith("Heading"):
+            return True
+        level = _outline_level(style.element.pPr)
+        if level is not None:
+            return level < 9
+    return False
+
+
+def _style_bold(style) -> bool | None:
+    return next((s.font.bold for s in _style_chain(style) if s.font.bold is not None), None)
+
+
+def _run_bold(run, paragraph_bold: bool) -> bool:
+    """Direct formatting first, then the character style, then the paragraph style."""
+    for bold in (run.bold, _style_bold(run.style)):
+        if bold is not None:
+            return bold
+    return paragraph_bold
+
+
+def _docx_fully_bold(paragraph) -> bool:
+    """True if every non-whitespace character sits in a bold run, not just a bold lead-in label."""
+    paragraph_bold = bool(_style_bold(paragraph.style))
+    bold = "".join(run.text for run in paragraph.runs if _run_bold(run, paragraph_bold))
+    return bool(bold.strip()) and re.sub(r"\s+", "", bold) == re.sub(r"\s+", "", paragraph.text)
+
+
 def load_from_docx(path: Path) -> dict[str, str]:
-    """Parse a DOCX file and group text paragraphs under identified section headings."""
+    """Parse a DOCX file and group text paragraphs under identified section headings.
+
+    A heading has a Heading style or an outline level, or is a short label that is entirely bold
+    or in capitals. Heading text is not section body.
+    """
     try:
         import docx
     except ImportError as exc:
@@ -118,16 +221,19 @@ def load_from_docx(path: Path) -> dict[str, str]:
         if not text:
             continue
 
-        is_heading = (
-            para.style.name.startswith("Heading")
-            or (any(run.bold for run in para.runs) and len(text) < 120)
-            or (text.isupper() and len(text) < 120)
+        # The Title style names the white paper, not one of its sections.
+        if para.style is not None and para.style.name == "Title":
+            continue
+
+        is_heading = _docx_style_heading(para) or (
+            len(text) < 120 and _is_label(text) and (text.isupper() or _docx_fully_bold(para))
         )
 
         if is_heading:
             matched_keys = match_heading_to_section(text)
             if matched_keys:
                 current_keys = matched_keys
+            continue
 
         if current_keys:
             for k in current_keys:
@@ -137,7 +243,11 @@ def load_from_docx(path: Path) -> dict[str, str]:
 
 
 def load_from_pdf(path: Path) -> dict[str, str]:
-    """Parse a PDF file and extract text grouped under identified section headings."""
+    """Parse a PDF file and extract text grouped under identified section headings.
+
+    PDF text carries no styles, so a heading is a line that names a section and is shaped like a
+    heading (see _is_pdf_heading). Heading text is not section body.
+    """
     try:
         import pypdf
     except ImportError as exc:
@@ -161,17 +271,10 @@ def load_from_pdf(path: Path) -> dict[str, str]:
         if not line_clean:
             continue
 
-        # Heuristics for PDF line headings
-        is_heading = False
-        if len(line_clean) < 120:
-            matched_keys = match_heading_to_section(line_clean)
-            if matched_keys:
-                is_heading = True
-
-        if is_heading:
-            matched_keys = match_heading_to_section(line_clean)
-            if matched_keys:
-                current_keys = matched_keys
+        matched_keys = match_heading_to_section(line_clean)
+        if matched_keys and _is_pdf_heading(line_clean):
+            current_keys = matched_keys
+            continue
 
         if current_keys:
             for k in current_keys:

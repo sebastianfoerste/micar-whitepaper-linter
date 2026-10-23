@@ -82,10 +82,11 @@ def test_load_whitepaper_pdf_type_inference(mock_reader_cls, tmp_path: Path):
 
     mock_reader = MagicMock()
     mock_page1 = MagicMock()
-    # Add keywords that trigger ART type inference
+    # Add keywords that trigger ART type inference. The token section opens at its heading line;
+    # body sentences that mention the token or the reserve do not open a section.
     mock_page1.extract_text.return_value = (
         "Zusammenfassung\nThis is a summary of the asset-referenced token.\n"
-        "Reserve of assets stabilisation mechanism composition."
+        "Information about the Token\nReserve of assets stabilisation mechanism composition."
     )
 
     mock_reader.pages = [mock_page1]
