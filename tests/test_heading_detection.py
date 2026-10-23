@@ -297,6 +297,10 @@ PROJECT_LINES = {
         ],
         True,
     ),
+    "capitals line running on": (
+        ["HOLDERS BEAR TECHNOLOGY RISKS AND", "MAY LOSE THE FULL AMOUNT INVESTED."],
+        False,
+    ),
     "sentence-case lead-in": (["Note on the risks:"], True),
     "title-case lead-in": (["Holders Should Note These Risks:"], False),
     "title-case numbered list": (

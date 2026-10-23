@@ -261,6 +261,10 @@ def _line_role(
         return _BODY
     if (previous_role == _BODY and _runs_on(previous)) or (following is not None and following[:1].islower()):
         return _BODY
+    # A line that runs on into the next one is no heading, but it may be the first line of a wrapped
+    # heading as well as of a paragraph, so it ends the section.
+    if _runs_on(line):
+        return _BREAK
     # In a capitals paragraph, a line after a long or unfinished capitals line is a wrapped line of it; a
     # long capitals line over more capitals may start one, or be a long title over one, so it ends the section.
     if line.isupper():
