@@ -312,12 +312,14 @@ def _line_role(
     started: bool,
     styled: bool,
     previous_styled: bool,
+    by_font: bool = False,
 ) -> str:
     """The role of a line that names a section: a heading, body text, or a break that ends the section.
 
     previous and following are the neighbouring lines (None at either end), previous_role is the role of
     previous, started tells whether a heading or break came before, and styled and previous_styled whether
-    the line and the one before are set larger or bolder than the body text.
+    the line and the one before are set larger or bolder than the body text. by_font tells whether the
+    draft sets its headings in a heading font and the font of this line is known.
     """
     if not _heading_shaped(line, styled):
         return _BODY
@@ -375,7 +377,8 @@ def _line_role(
         or is_not_applicable(previous)
     )
     if title_like and (not numbering or finished):
-        return _HEADING
+        # Where the draft sets its headings in a heading font, a line in the body font is no heading.
+        return _BREAK if by_font else _HEADING
     # Shaped like a heading but in sentence case ("Risk factors"), or numbered after an unfinished line:
     # the text below is credited to no section rather than to the section before.
     return _BREAK
@@ -467,12 +470,40 @@ def _wraps(first: _Line, line: _Line, first_styled: bool, styled: bool, heights:
     )
 
 
-def _merge_wrapped(lines: list[_Line], styled: list[bool], heights: bool) -> tuple[list[_Line], list[bool]]:
-    """The lines with the lines of each wrapped heading merged into one, and whether each is styled."""
+def _page_text(text: str) -> str:
+    """The text of a line with its numbers left out, to compare page headers and footers across pages."""
+    return " ".join(re.sub(r"\d+", " ", text).casefold().split())
+
+
+def _running(lines: list[_Line]) -> list[bool]:
+    """Whether each line is a running page header or footer: among the first or last two lines of its
+    page, and with the same text, numbers aside, among the first or last two lines of another page."""
+    pages: dict[int, list[int]] = {}
+    for index, line in enumerate(lines):
+        if line.page is not None:
+            pages.setdefault(line.page, []).append(index)
+    edges = {index for indices in pages.values() for index in (*indices[:2], *indices[-2:])}
+    edge_pages: dict[str, set[int | None]] = {}
+    for index in edges:
+        edge_pages.setdefault(_page_text(lines[index].text), set()).add(lines[index].page)
+    return [index in edges and len(edge_pages[_page_text(line.text)]) > 1 for index, line in enumerate(lines)]
+
+
+def _merge_wrapped(
+    lines: list[_Line], styled: list[bool], running: list[bool], heights: bool
+) -> tuple[list[_Line], list[bool], list[bool]]:
+    """The lines with the lines of each wrapped heading merged into one, and whether each is styled and
+    a running page header or footer. A running line is never merged."""
     merged: list[_Line] = []
     merged_styled: list[bool] = []
-    for line, line_styled in zip(lines, styled, strict=True):
-        if merged and _wraps(merged[-1], line, merged_styled[-1], line_styled, heights):
+    merged_running: list[bool] = []
+    for line, line_styled, line_running in zip(lines, styled, running, strict=True):
+        if (
+            merged
+            and not line_running
+            and not merged_running[-1]
+            and _wraps(merged[-1], line, merged_styled[-1], line_styled, heights)
+        ):
             first = merged[-1]
             size = None if first.size is None or line.size is None else min(first.size, line.size)
             text = _joined(first.text, line.text)
@@ -480,13 +511,29 @@ def _merge_wrapped(lines: list[_Line], styled: list[bool], heights: bool) -> tup
         else:
             merged.append(line)
             merged_styled.append(line_styled)
-    return merged, merged_styled
+            merged_running.append(line_running)
+    return merged, merged_styled, merged_running
 
 
 def _line_sections(lines: list[_Line]) -> DocumentSections:
     body_font = _body_font(lines)
     styled = [_styled(line, body_font) for line in lines]
-    lines, styled = _merge_wrapped(lines, styled, _heights_hold(lines, body_font))
+    lines, styled, running = _merge_wrapped(lines, styled, _running(lines), _heights_hold(lines, body_font))
+    # The draft sets its headings in a heading font if at least two lines in one name a section.
+    by_font = (
+        sum(
+            1
+            for line, line_styled, line_running in zip(lines, styled, running, strict=True)
+            if line_styled
+            and not line_running
+            and _heading_shaped(line.text, True)
+            and match_heading_to_section(line.text)
+        )
+        >= 2
+    )
+    # A running page header or footer is body text that is not read as context for the lines around it.
+    content = [index for index, line_running in enumerate(running) if not line_running]
+    following_index = dict(pairwise(content))
     sections: dict[str, list[str]] = {}
     headings: list[str] = []
     current_keys: list[str] = []
@@ -495,14 +542,19 @@ def _line_sections(lines: list[_Line]) -> DocumentSections:
     section_level: float | None = None
     previous: str | None = None
     previous_role: str | None = None
+    previous_styled = False
     for index, line in enumerate(lines):
+        if running[index]:
+            for key in current_keys:
+                sections.setdefault(key, []).append(line.text)
+            continue
         keys = match_heading_to_section(line.text)
         kind = _template_kind(line.text)
         # A larger heading font is a higher level.
         level = -round(line.size, 1) if styled[index] and line.size is not None else None
         role = _BODY
         if keys:
-            following = lines[index + 1].text if index + 1 < len(lines) else None
+            following = lines[following_index[index]].text if index in following_index else None
             role = _line_role(
                 line.text,
                 previous,
@@ -510,7 +562,8 @@ def _line_sections(lines: list[_Line]) -> DocumentSections:
                 following,
                 started=bool(headings),
                 styled=styled[index],
-                previous_styled=index > 0 and styled[index - 1],
+                previous_styled=previous_styled,
+                by_font=by_font and line.size is not None,
             )
         elif (
             (styled[index] or kind)
@@ -534,7 +587,7 @@ def _line_sections(lines: list[_Line]) -> DocumentSections:
                 section_level = level
                 current_keys = []
             opener = kind
-        previous, previous_role = line.text, role
+        previous, previous_role, previous_styled = line.text, role, styled[index]
     return DocumentSections({k: "\n".join(v) for k, v in sections.items()}, tuple(headings))
 
 
@@ -758,8 +811,10 @@ def parse_pdf(path: Path) -> DocumentSections:
     """Parse a PDF file and extract text grouped under identified section headings.
 
     A heading is a line that names a section and is set larger or bolder than the body text, or is
-    shaped like a heading (see _line_role). A short line that names a section but is not accepted as
-    a heading ends the current section. Heading text is not section body.
+    shaped like a heading (see _line_role); where the draft sets its headings in a heading font, a line
+    in the body font is a heading only if numbered as in the template. A short line that names a section
+    but is not accepted as a heading ends the current section, and so does a heading that names no
+    section. A running page header or footer is body text. Heading text is not section body.
     """
     try:
         import pypdf

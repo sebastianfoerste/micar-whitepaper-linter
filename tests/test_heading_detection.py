@@ -119,26 +119,33 @@ def _shown(kind: str, line: str, next_line: str) -> str:
 
 
 def _write_pdf(path: Path, blocks: list[tuple[str, str]], next_line: str = "0 -13 Td") -> Path:
-    """A one-page PDF with one text line per block, 13 pt apart, and body text wrapped at 90 characters.
+    """A PDF with one text line per block, 13 pt apart, and body text wrapped at 90 characters.
 
     Each line moves to the next with next_line: Td, as word processors write, or T* after a TL leading.
+    A "page" block starts a new page.
     """
-    lines = [
-        (kind, line)
-        for kind, text in blocks
-        for line in (textwrap.wrap(text, 90) if kind == "body" else [text])
-    ]
-    shown = " ".join(_shown(kind, line, next_line) for kind, line in lines)
-    content = f"BT 13 TL 50 770 Td {shown} ET".encode("cp1252")
+    pages: list[list[tuple[str, str]]] = [[]]
+    for kind, text in blocks:
+        if kind == "page":
+            pages.append([])
+        else:
+            pages[-1].extend((kind, line) for line in (textwrap.wrap(text, 90) if kind == "body" else [text]))
+    fonts = b"/Font << /F1 3 0 R /F2 4 0 R >>"
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
-        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1000 792] "
-        b"/Resources << /Font << /F1 4 0 R /F2 6 0 R >> >> /Contents 5 0 R >>",
+        b"<< /Type /Pages /Kids [%s] /Count %d >>"
+        % (b" ".join(b"%d 0 R" % (5 + 2 * number) for number in range(len(pages))), len(pages)),
         b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
-        b"<< /Length %d >>\nstream\n" % len(content) + content + b"\nendstream",
         b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>",
     ]
+    for number, lines in enumerate(pages):
+        shown = " ".join(_shown(kind, line, next_line) for kind, line in lines)
+        content = f"BT 13 TL 50 770 Td {shown} ET".encode("cp1252")
+        objects.append(
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1000 792] /Resources << %s >> /Contents %d 0 R >>"
+            % (fonts, 6 + 2 * number)
+        )
+        objects.append(b"<< /Length %d >>\nstream\n" % len(content) + content + b"\nendstream")
     pdf = bytearray(b"%PDF-1.4\n")
     offsets = []
     for number, body in enumerate(objects, 1):
@@ -859,6 +866,74 @@ def test_pdf_summary_table_field_that_names_no_section_ends_the_field_before_it(
     assert findings["ANNEX_I.A"].rule.severity is Severity.BLOCKER
     assert findings["ANNEX_I.A"].status != "missing"
     assert findings["ANNEX_I.I"].status == "pass"
+
+
+# A technology section that passes ANNEX_I.H only as a whole: the first half names the protocol and the
+# consensus, the second half the smart contracts and the audit.
+TECHNOLOGY_FIRST = (
+    "Transfers settle on a permissioned ledger based on a Byzantine fault tolerant consensus protocol run "
+    "by five validating nodes. Each node is operated by a different partner firm in a different Member State."
+)
+TECHNOLOGY_SECOND = (
+    "Smart contracts implement the unit register and the fee settlement. The source code is audited once a "
+    "year by an independent firm, and the audit reports are published on the website."
+)
+RUNNING_HEADER = f"Quillmoor Utility Token (QMT) {DASH} Crypto-Asset White Paper"
+
+
+@pytest.mark.parametrize("kind", ["large", "heading"], ids=["14pt-bold", "body-font"])
+def test_pdf_running_page_header_that_names_a_section_is_body_text(tmp_path: Path, kind: str):
+    # The header names the crypto-asset section on every page; it must not open that section and take
+    # the technology text that runs on to the next page.
+    blocks = [
+        ("line", RUNNING_HEADER),
+        (kind, "Summary"),
+        ("body", SUMMARY),
+        (kind, "Information on the Underlying Technology"),
+        ("body", TECHNOLOGY_FIRST),
+        ("page", ""),
+        ("line", RUNNING_HEADER),
+        ("body", TECHNOLOGY_SECOND),
+        (kind, "Risk Factors"),
+        ("body", RISK_TEXT),
+    ]
+    path = _write_pdf(tmp_path / "quillmoor.pdf", blocks)
+
+    sections = load_from_pdf(path)
+    assert sorted(sections) == ["risks", "summary", "technology"]
+    assert _words(TECHNOLOGY_SECOND) in _words(sections["technology"])
+    findings = _findings(path)
+    assert findings["ANNEX_I.F"].rule.severity is Severity.BLOCKER
+    assert findings["ANNEX_I.F"].status == "missing"
+    assert findings["ANNEX_I.H"].rule.severity is Severity.BLOCKER
+    assert findings["ANNEX_I.H"].status == "pass"
+
+
+def test_pdf_body_font_line_is_no_heading_where_headings_have_a_heading_font(tmp_path: Path):
+    # The draft sets its headings in 14 pt bold, so the title-case line "Technology Roadmap" in the body
+    # font is no heading: the roadmap must not pass the thin technology section.
+    blocks = [
+        ("large", "Summary"),
+        ("body", SUMMARY),
+        ("large", "Information about the Project"),
+        ("body", PROJECT),
+        ("line", "Technology Roadmap"),
+        ("body", f"{TECHNOLOGY_FIRST} {TECHNOLOGY_SECOND}"),
+        ("large", "Information on the Underlying Technology"),
+        ("body", THIN_TECHNOLOGY),
+    ]
+    path = _write_pdf(tmp_path / "quillmoor.pdf", blocks)
+
+    sections = load_from_pdf(path)
+    assert sorted(sections) == ["project", "summary", "technology"]
+    assert _words(sections["project"]) == PROJECT
+    assert _words(sections["technology"]) == _words(THIN_TECHNOLOGY)
+    findings = _findings(path)
+    assert findings["ANNEX_I.H"].rule.severity is Severity.BLOCKER
+    assert (findings["ANNEX_I.H"].status, findings["ANNEX_I.H"].word_count) == (
+        "review",
+        len(THIN_TECHNOLOGY.split()),
+    )
 
 
 def test_docx_style_based_on_itself_through_a_cycle_loads(tmp_path: Path):
