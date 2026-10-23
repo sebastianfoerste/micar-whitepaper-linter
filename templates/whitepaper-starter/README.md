@@ -6,19 +6,19 @@ Every push runs [micar-whitepaper-linter](https://github.com/sebastianfoerste/mi
 
 One item, the deposit floor for an asset-referenced token's reserve, is always staged for human review rather than auto-passed. The iXBRL format check also stays open for a JSON draft, because notification requires XHTML with Inline XBRL tagging. A JSON draft therefore never gets a green build in strict mode. That is deliberate: a green pipeline never means the white paper is lawful, complete, or ready to notify. That judgment stays with your lawyer.
 
-You can also lint drafts [live in the browser](https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/) — nothing you paste leaves the page.
+You can also lint drafts [live in the browser](https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/). Nothing you paste leaves the page.
 
 ## How to use it
 
 1. **Use this template** → create your repository (private is fine).
 2. Edit `whitepaper.json`. Replace every `REPLACE:` placeholder; each one states the disclosure the section must carry and its MiCAR basis.
-3. Set `"type"` to `art`, `emt`, or `other` depending on your token. Section requirements follow the type (Anhang I–III MiCAR).
+3. Set `"type"` to `art`, `emt`, or `other` depending on your token. Section requirements follow the type (Anhang I-III MiCAR).
 4. Push. Open the **Actions** tab: the `micar-lint` run lists every open finding with a pinpoint citation (article, paragraph, annex).
 5. Work the findings down, then hand the draft to counsel. The linter checks structure and required disclosure elements, not legal sufficiency.
 
 ## What the linter checks
 
-Deterministic rules — no LLM, same input, same findings. For each mandatory section (summary, risk warning, management-body statement, redemption, reserve of assets, …) and each annex-specific item for the token type, the linter checks that the section exists, meets a minimum length and contains the expected keywords. It does not compare your text with the wording MiCAR prescribes (from linter v1.2.0, the one exception is the English first-page statement for Title II and e-money token white papers under Art. 6 Abs. 3 and Art. 51 Abs. 3 MiCAR), and it does not judge whether a disclosure is accurate or adequate. Findings are staged pass / review / missing.
+Deterministic rules (no LLM, same input, same findings). For each mandatory section (summary, risk warning, management-body statement, redemption, reserve of assets, …) and each annex-specific item for the token type, the linter checks that the section exists, meets a minimum length and contains the expected keywords. It does not compare your text with the wording MiCAR prescribes (from linter v1.2.0, the one exception is the English first-page statement for Title II and e-money token white papers under Art. 6 Abs. 3 and Art. 51 Abs. 3 MiCAR), and it does not judge whether a disclosure is accurate or adequate. Findings are staged pass / review / missing.
 
 The rules, their citations and their tests live in [micar-whitepaper-linter](https://github.com/sebastianfoerste/micar-whitepaper-linter), which is the source of truth; this README only summarises them.
 

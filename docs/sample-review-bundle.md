@@ -16,11 +16,13 @@ The following review artifacts have been generated in the [examples/review-bundl
 3. **[coverage-matrix.json](../examples/review-bundle/coverage-matrix.json)**: A detailed JSON matrix mapping individual sections to word counts, rule IDs, and specific text matches/missing phrases.
 4. **[manifest.json](../examples/review-bundle/manifest.json)**: A manifest recording document metadata (title, type, checksums, and linter version).
 
+The bundle files cite each rule in its canonical German form, which is what `--citation-style de` prints in the text report (for example "Art. 6 Abs. 7 MiCAR"). The CLI text report below uses the default English style.
+
 ---
 
 ## CLI Linter Output
 
-The linter was run on `examples/art-stablecoin.json` to produce the following output:
+The linter was run on `examples/art-stablecoin.json` with the default English citation style to produce the following output (regenerate it with `make sample-reports`):
 
 ```
 MiCAR Whitepaper Linter - Synthetic EuroStable ART White Paper
@@ -125,7 +127,7 @@ Pass: 14  |  Review: 3  |  Missing: 1  |  Blockers: 4
            Section: 'redemption'  (169 words)
 
 ==============================================================================
-First-pass screening only. The draft is not package-ready. The white paper notification or submission for approval (Art. 8 Abs. 1, Art. 16 Abs. 2 UAbs. 2, Art. 17 Abs. 1 Buchst. a, Art. 18 Abs. 2 Buchst. k, Art. 51 Abs. 11 MiCAR) should not enter an external review or filing workflow until BLOCKER items are cured and a lawyer has signed off.
+First-pass screening only. The draft is not package-ready. The white paper notification or submission for approval (Art. 8(1), Art. 16(2), second subparagraph, Art. 17(1), point (a), Art. 18(2), point (k), Art. 51(11) MiCAR) should not enter an external review or filing workflow until BLOCKER items are cured and a lawyer has signed off.
 This tool is not legal advice.
 ```
 
@@ -135,7 +137,7 @@ This tool is not legal advice.
 
 - **Total Checked Rules**: 18
 - **Passed Rules**: 14
-- **Rules Requiring Review**: 3 (reserve disclosure, the fact-dependent deposit floor, and custody under Annex II Teil G)
+- **Rules Requiring Review**: 3 (reserve disclosure, the fact-dependent deposit floor, and custody under Annex II, Part G)
 - **Missing Sections**: 1 (format: a JSON draft cannot satisfy the XHTML/iXBRL notification format)
 - **Open Blockers**: 4 (`COMMON.IXBRL_TAGGING`, `ANNEX_II.G.COMPOSITION_DISCLOSURE`, `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW`, `ANNEX_II.G.CUSTODY`)
 

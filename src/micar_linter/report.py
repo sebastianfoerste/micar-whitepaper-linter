@@ -6,9 +6,15 @@ import json
 
 from micar_linter import citations
 from micar_linter.linter import Report
+from micar_linter.rules.base import Severity
 
 _STATUS_ICON = {"pass": "PASS  ", "review": "REVIEW", "missing": "MISS  "}
 _TITLE_BAR = "=" * 78
+# Notification and approval provisions named in the blocker footer, in canonical German form.
+_FILING_CITATION = (
+    "Art. 8 Abs. 1, Art. 16 Abs. 2 UAbs. 2, Art. 17 Abs. 1 Buchst. a, Art. 18 Abs. 2 Buchst. k, "
+    "Art. 51 Abs. 11 MiCAR"
+)
 
 
 def render_text(report: Report, citation_style: str = "en") -> str:
@@ -51,10 +57,9 @@ def render_text(report: Report, citation_style: str = "en") -> str:
     else:
         lines.append(
             "First-pass screening only. The draft is not package-ready. The white paper "
-            "notification or submission for approval (Art. 8 Abs. 1, Art. 16 Abs. 2 UAbs. 2, "
-            "Art. 17 Abs. 1 Buchst. a, Art. 18 Abs. 2 Buchst. k, Art. 51 Abs. 11 MiCAR) should not "
-            "enter an external review or filing workflow until BLOCKER items are cured and a lawyer "
-            "has signed off."
+            f"notification or submission for approval ({citations.render(_FILING_CITATION, citation_style)}) "
+            "should not enter an external review or filing workflow until BLOCKER items are cured and a "
+            "lawyer has signed off."
         )
     lines.append("This tool is not legal advice.")
     return "\n".join(lines)
@@ -137,6 +142,10 @@ def render_audit_log(report: Report, source_file: str, sha256: str) -> str:
             "and a lawyer has signed off."
         )
         lines.append("")
+    elif not report.is_clean:
+        lines.append("> [!WARNING]")
+        lines.append(_open_findings_note(report))
+        lines.append("")
     else:
         lines.append("> [!NOTE]")
         lines.append("> All automated checks passed. Substantive lawyer review is still required.")
@@ -157,6 +166,23 @@ def render_audit_log(report: Report, source_file: str, sha256: str) -> str:
     lines.append("```")
 
     return "\n".join(lines)
+
+
+def _open_findings_note(report: Report) -> str:
+    """The audit log note while findings are open but none is a BLOCKER: how many are open, by severity."""
+    open_findings = [f for f in report.findings if not f.passed]
+    by_severity = ", ".join(
+        f"{count} {severity.label}"
+        for severity in sorted(Severity, reverse=True)
+        if (count := sum(f.rule.severity is severity for f in open_findings))
+    )
+    one = len(open_findings) == 1
+    return (
+        f"> **{len(open_findings)} {'finding is' if one else 'findings are'} still open ({by_severity}) "
+        "and no BLOCKER finding is open.** The draft still needs the open "
+        f"{'finding' if one else 'findings'} resolved or reviewed, and substantive lawyer review "
+        "is still required."
+    )
 
 
 def render_coverage_table(report: Report) -> str:

@@ -109,8 +109,13 @@ def test_text_report_styles_and_json_fields(capsys: pytest.CaptureFixture[str]) 
     main(["examples/incomplete.json"])
     text = capsys.readouterr().out
     assert "Cite:  Art. 6(7)" in text and "Text:  https://eur-lex.europa.eu/" in text
+    # The blocker footer follows the style too, not only the per-finding citations.
+    assert "(Art. 8(1), Art. 16(2), second subparagraph, Art. 17(1), point (a)," in text
+    assert "Abs." not in text
     main(["--citation-style", "de", "examples/incomplete.json"])
-    assert "Art. 6 Abs. 7" in capsys.readouterr().out
+    text = capsys.readouterr().out
+    assert "Art. 6 Abs. 7" in text
+    assert "(Art. 8 Abs. 1, Art. 16 Abs. 2 UAbs. 2, Art. 17 Abs. 1 Buchst. a," in text
     main(["--json", "examples/incomplete.json"])
     finding = json.loads(capsys.readouterr().out)["findings"][0]
     assert finding["citation"].startswith("Art. 6 Abs. 7")

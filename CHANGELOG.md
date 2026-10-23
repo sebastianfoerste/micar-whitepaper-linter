@@ -16,6 +16,8 @@ Citations and statements below were checked against the EUR-Lex texts of Regulat
 - Term and pattern matching collapses whitespace, so a required phrase that wraps across lines in a PDF, Markdown or DOCX draft still matches.
 - The starter template (`templates/whitepaper-starter`) cites the ART provisions for its `art` type and no longer asks for redemption at par.
 
+- The audit log (`--audit-log`) and the review bundle's `compliance-checklist.md` no longer say "All automated checks passed" while a MAJOR or MINOR finding is open. When findings are open but none is a BLOCKER, the log shows a warning that gives the number of open findings by severity, for example "1 finding is still open (1 MAJOR) and no BLOCKER finding is open", and says that the draft still needs them resolved or reviewed and that substantive lawyer review is still required. The "All automated checks passed" note now appears only when every finding passes, the condition under which the text report says all required disclosures are present. The BLOCKER warning is unchanged. (#32)
+
 ### Added
 
 - `ANNEX_I.NOT_APPROVED_STATEMENT` (Art. 6(3) MiCAR) and `ANNEX_III.NOT_APPROVED_STATEMENT` (Art. 51(3) MiCAR) check the English first-page statement that no competent authority has approved the white paper, and fail closed when it is absent. The Title II check also requires the statement to name the offeror, the person seeking admission to trading or the operator of the trading platform (Art. 6(3), second subparagraph). A statement without a heading is routed by its content. First-page placement is not checked. German drafts are referred to review until the German wording is checked against the Official Journal. The ART ruleset has no such rule because Art. 19 MiCAR prescribes no such statement (Table 3 field I.02 of Implementing Regulation (EU) 2024/2984 holds the Art. 19(4) warning instead). The white paper of an authorised ART issuer is deemed approved (Art. 21(1) MiCAR) and that of a credit institution is approved (Art. 17(1)(a)), but an issuer exempt under Art. 16(2) only notifies it.
@@ -26,7 +28,10 @@ Citations and statements below were checked against the EUR-Lex texts of Regulat
 ### Changed
 
 - The human-review sheets of the Title II study use the detector's current rule IDs. None of the 150 cells has been reviewed.
-- README and docs describe the checks as keyword, minimum-length and structure checks and no longer call them audits or a pass compliance. The README image is a rendering of the real `make demo` output; it predates the English citation style and still shows the German form.
+- README and docs describe the checks as keyword, minimum-length and structure checks and no longer call them audits or a pass compliance.
+- The README is trimmed to the 350-word limit that `tests/test_readme.py` enforces; the removed sections moved to `docs/SETUP.md`, `docs/DETAILS.md` and `docs/overview.md`. `reports/*.txt` and the CLI block in `docs/sample-review-bundle.md` are regenerated from the CLI by `scripts/build_sample_reports.py`, and a test fails when they go stale. (#31)
+- The README links a capture of the real CLI output, `docs/demo.png`, rendered with its text `docs/demo.txt` by `scripts/render_demo.py`; a test fails when it drifts from the CLI. The text report's blocker footer follows the citation style. (#29)
+- The starter template uses no en or em dashes. (#33)
 - The English citation style lists several paragraphs of one article in EU form, for example "Art. 36(7), (9), (11) and (12)" and "Art. 39(2) and (3)", so the corrected `ANNEX_II.G.VALUATION_AUDIT` and `ANNEX_II.I` citations render correctly.
 - The docs pin `--python 3.13` where the extras are installed with uvx (#27), and the README screenshot placeholder is removed (#28).
 - The playground wheel is rebuilt as `micar_whitepaper_linter-0.2.2-py3-none-any.whl`.
