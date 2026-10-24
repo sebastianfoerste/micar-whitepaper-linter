@@ -9,13 +9,28 @@ from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
-ALLOWED_LABELS = {
-    "pending",
+# The label vocabulary, in the order of the labels table in section 3 of the study codebook. The
+# review workbook offers the labels in this order. Tests check the codebook and the Labels table of
+# review-protocol.md against it. ALLOWED_LABELS is derived from it, so the vocabulary is defined once.
+LABEL_ORDER: tuple[str, ...] = (
     "present",
     "missing",
+    "not_applicable",
     "uncertain",
     "extraction_failure",
-    "not_applicable",
+    "pending",
+)
+ALLOWED_LABELS = set(LABEL_ORDER)
+PENDING_LABEL = "pending"
+# The review field that each final label must carry: a source pinpoint for present and missing
+# (review-protocol.md, First review, step 5), and an explanation in review_note for the other
+# labels (step 7; codebook section 3, "Required fields").
+LABEL_REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
+    "present": ("source_pinpoint",),
+    "missing": ("source_pinpoint",),
+    "not_applicable": ("review_note",),
+    "uncertain": ("review_note",),
+    "extraction_failure": ("review_note",),
 }
 EVALUABLE_LABELS = {"present", "missing"}
 ALLOWED_DETECTOR_STATUSES = {"flagged", "not_flagged"}

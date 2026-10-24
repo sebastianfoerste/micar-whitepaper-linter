@@ -40,14 +40,13 @@ from pathlib import Path
 from typing import Any
 
 from micar_linter.batch import STUDY_RULES, StudyRule
-from micar_linter.review_validation import ALLOWED_LABELS
+from micar_linter.review_validation import ALLOWED_LABELS, PENDING_LABEL
 
 SHEETS_SCHEMA = "micar-study-review-sheets.v1"
 DEFAULT_SEED = 20261014
 DEFAULT_REVIEWERS: tuple[str, ...] = ("r1",)
 MATRIX_FILENAME = "human-review-matrix.csv"
 SHEETS_RECORD_FILENAME = "human-review-sheets.json"
-PENDING_LABEL = "pending"
 
 REVIEW_FIELDS: tuple[str, ...] = (
     "human_label",
