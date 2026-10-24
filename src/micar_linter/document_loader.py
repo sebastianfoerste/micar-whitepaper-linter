@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from micar_linter.document import match_heading_to_section
+from micar_linter.document import match_heading_to_section, sections_from_lines
 
 MIN_TEXT_WORDS = 80
 
@@ -136,7 +136,8 @@ def _load_pdf(path: Path) -> LoadedDocument:
             page_text.append(extracted)
 
     text = _normalize_text("\n".join(page_text))
-    sections = _sections_from_lines(text.splitlines())
+    # The normalized text is one line, so the sections are read from the page lines.
+    sections = _sections_from_lines("\n".join(page_text).splitlines())
     extraction, extraction_warnings = _quality(text)
     warnings.extend(extraction_warnings)
     if reader.pages and pages_with_text == 0:
@@ -206,20 +207,8 @@ def _sections_from_html_tree(tree: Any) -> dict[str, str]:
 
 
 def _sections_from_lines(lines: list[str]) -> dict[str, str]:
-    sections: dict[str, list[str]] = {}
-    current_keys: list[str] = []
-    for line in lines:
-        text = _normalize_text(line)
-        if not text:
-            continue
-        matched = match_heading_to_section(text)
-        if matched and len(text) < 140:
-            current_keys = matched
-            continue
-        if current_keys:
-            for key in current_keys:
-                sections.setdefault(key, []).append(text)
-    return {key: "\n".join(values) for key, values in sections.items()}
+    """The shape rule of micar-lint, without font information, so a body line naming a section opens none."""
+    return sections_from_lines(_normalize_text(line) for line in lines)
 
 
 def _ixbrl_tag_names(tree: Any) -> list[str]:
