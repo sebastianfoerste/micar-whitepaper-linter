@@ -41,7 +41,7 @@ from micar_linter.review_sheets import (
     REVIEW_FIELDS,
     read_sheets_record,
 )
-from micar_linter.review_validation import LABEL_ORDER, LABEL_REQUIRED_FIELDS, summarize_rows
+from micar_linter.review_validation import LABEL_ORDER, LABEL_REQUIRED_FIELDS, summarize_matrix
 from micar_linter.review_workbook import (
     CHECK_COLUMN,
     META_SHEET,
@@ -307,7 +307,8 @@ def test_round_trip_from_workbook_to_matrix(study_dir: Path):
         }
 
     summary = json.loads((study_dir / "human-review-summary.json").read_text(encoding="utf-8"))
-    assert summary == summarize_rows(matrix)
+    assert summary == summarize_matrix(study_dir / MATRIX_FILENAME, study_dir)
+    assert summary["schema_version"] == "micar-study-human-validation.v2"
     assert summary["publication_ready"] is True
     assert summary["rows_pending"] == 0
     assert review_sheets.main(check) == 0

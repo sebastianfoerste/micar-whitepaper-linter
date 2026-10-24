@@ -1,29 +1,1119 @@
 {
-  "schema_version": "micar-study-human-validation.v1",
+  "schema_version": "micar-study-human-validation.v2",
   "rows_total": 150,
   "rows_completed": 0,
   "rows_pending": 150,
   "completion_rate": 0.0,
   "label_counts": {
-    "extraction_failure": 0,
+    "present": 0,
     "missing": 0,
     "not_applicable": 0,
-    "pending": 150,
-    "present": 0,
-    "uncertain": 0
-  },
-  "confusion_matrix": {
-    "tp": 0,
-    "fp": 0,
-    "fn": 0,
-    "tn": 0
-  },
-  "metrics": {
-    "precision": null,
-    "recall": null,
-    "f1": null,
-    "evaluable_rows": 0
+    "uncertain": 0,
+    "extraction_failure": 0,
+    "pending": 150
   },
   "publication_ready": false,
-  "metric_note": "Precision, recall, and F1 use only human labels 'present' and 'missing'. Uncertain, extraction-failure, not-applicable, and pending rows are excluded."
+  "documents_total": 10,
+  "rules_per_document": 15,
+  "reviewers": [
+    "r1"
+  ],
+  "metric_note": "Precision, recall and specificity use only the human labels 'present' and 'missing'. Uncertain, extraction-failure, not-applicable and pending cells are counted and excluded. Definitions: analysis-plan.md, sections 7 to 10; settings.analysis_plan records whether the plan is adopted.",
+  "detector": {
+    "findings_file": "findings-pseudonymous.json",
+    "findings_sha256": "3e9c867574a2e38a7ef98a901b6e8480a26a64ecad8790b6956ab1eb7c6825ed",
+    "findings_schema": "micar-whitepaper-linter.title-ii-annex-i-study-findings.v1",
+    "findings_digest": "a0f8a82a135f22738357799c40420a45446b1cef839780859f285d9b958f79c1",
+    "findings_generated_at": "2026-07-06T07:52:42.712075+00:00",
+    "commit": null,
+    "commit_source": null,
+    "commit_status": "not recorded: findings-pseudonymous.json names no detector commit, and the Detector row of analysis-plan.md section 2 names no generating commit yet (step 0.4)"
+  },
+  "settings": {
+    "definitions": "analysis-plan.md sections 7 to 10 (DRAFT, not adopted)",
+    "analysis_plan": {
+      "file": "analysis-plan.md",
+      "status": "draft",
+      "adopted_on": null,
+      "preregistration_commit": null,
+      "reason": "the banner of analysis-plan.md says 'DRAFT, not adopted'"
+    },
+    "evaluable_labels": [
+      "present",
+      "missing"
+    ],
+    "excluded_labels": [
+      "not_applicable",
+      "uncertain",
+      "extraction_failure"
+    ],
+    "confidence_level": 0.95,
+    "wilson_z": 1.959964,
+    "clopper_pearson": "exact binomial tails, 0.025 in each tail",
+    "f1": "2TP / (2TP + FP + FN), which equals the harmonic mean of precision and recall where both are defined and positive; undefined only when 2TP + FP + FN = 0",
+    "bootstrap": {
+      "replicates": 10000,
+      "seed": 20261014,
+      "resampling": "percentile bootstrap: each replicate draws as many clusters (documents, or offerors in S2a) as the set has, with replacement, by random.Random(seed).randrange, and pools their cells; clusters in ascending order of their lowest WP number; a new generator with the same seed for every bootstrap",
+      "quantiles": "linear interpolation between order statistics (Hyndman and Fan 1996, type 7, the default of R's quantile() and numpy.percentile) at 0.025 and 0.975",
+      "zero_denominator": "replicates with a zero denominator are dropped and counted per proportion"
+    },
+    "max_dropped_fraction": 0.1,
+    "max_dropped_fraction_status": "draft value '[10]%' of analysis-plan.md section 9",
+    "headline_rule": "The headline interval is the wider of the Wilson interval and the document-cluster bootstrap interval (upper minus lower bound, rounded to six decimals; the Wilson interval on a tie). If more than the maximum fraction of bootstrap replicates is dropped for a zero denominator, or the bootstrap is undefined, the Wilson interval is the headline (analysis-plan.md section 9).",
+    "primary_exclusions": [
+      "WP-007"
+    ],
+    "calibration_rule": "an in-sample calibration document is the document whose every cell carries the note 'calibration' (analysis-plan.md section 4); it is excluded from every analysis set",
+    "sensitivity_base": "S2 to S4 vary the primary set",
+    "per_rule_published_for": "the primary set only; S1's per-rule counts go to --internal-out, because S1 differs from the primary set only by WP-007"
+  },
+  "exclusions": {
+    "primary": [
+      {
+        "study_doc_id": "WP-007",
+        "ground": "analysis-plan.md section 5 (DRAFT, not adopted)",
+        "cells": 15,
+        "detector_flags": null,
+        "detector_flags_total": null,
+        "detector_flags_reason": "withheld while any cell is pending: analysis-plan.md section 5 takes this count from the findings file after labelling, and the summary carries no detector outcome while labelling is open"
+      }
+    ],
+    "calibration_document": {
+      "study_doc_id": null,
+      "cells": 0,
+      "note": "no document is marked 'calibration'"
+    }
+  },
+  "analyses": {
+    "primary": {
+      "description": "Primary: every processed document except WP-007 (analysis-plan.md section 5) and an in-sample calibration document.",
+      "documents": [
+        "WP-001",
+        "WP-002",
+        "WP-003",
+        "WP-004",
+        "WP-005",
+        "WP-009",
+        "WP-010",
+        "WP-011",
+        "WP-012"
+      ],
+      "cells": 135,
+      "label_counts": {
+        "present": 0,
+        "missing": 0,
+        "not_applicable": 0,
+        "uncertain": 0,
+        "extraction_failure": 0,
+        "pending": 135
+      },
+      "evaluable_cells": 0,
+      "excluded_cells": 0,
+      "pending_cells": 135,
+      "confusion_matrix": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "tn": 0
+      },
+      "metrics": {
+        "precision": {
+          "estimate": null,
+          "numerator": 0,
+          "denominator": 0,
+          "undefined_reason": "TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (135 of 135 cells in this set pending)",
+          "wilson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (135 of 135 cells in this set pending)"
+          },
+          "clopper_pearson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (135 of 135 cells in this set pending)"
+          },
+          "document_cluster_bootstrap": {
+            "lower": null,
+            "upper": null,
+            "replicates": 10000,
+            "dropped": null,
+            "dropped_fraction": null,
+            "clusters": 9,
+            "seed": 20261014,
+            "undefined_reason": "point estimate undefined (TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (135 of 135 cells in this set pending)); not resampled",
+            "exceeds_dropped_limit": null
+          },
+          "headline": {
+            "method": null,
+            "label": null,
+            "lower": null,
+            "upper": null,
+            "reason": "TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (135 of 135 cells in this set pending)"
+          }
+        },
+        "recall": {
+          "estimate": null,
+          "numerator": 0,
+          "denominator": 0,
+          "undefined_reason": "TP + FN = 0 so far: no cell is labelled missing yet (135 of 135 cells in this set pending)",
+          "wilson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TP + FN = 0 so far: no cell is labelled missing yet (135 of 135 cells in this set pending)"
+          },
+          "clopper_pearson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TP + FN = 0 so far: no cell is labelled missing yet (135 of 135 cells in this set pending)"
+          },
+          "document_cluster_bootstrap": {
+            "lower": null,
+            "upper": null,
+            "replicates": 10000,
+            "dropped": null,
+            "dropped_fraction": null,
+            "clusters": 9,
+            "seed": 20261014,
+            "undefined_reason": "point estimate undefined (TP + FN = 0 so far: no cell is labelled missing yet (135 of 135 cells in this set pending)); not resampled",
+            "exceeds_dropped_limit": null
+          },
+          "headline": {
+            "method": null,
+            "label": null,
+            "lower": null,
+            "upper": null,
+            "reason": "TP + FN = 0 so far: no cell is labelled missing yet (135 of 135 cells in this set pending)"
+          }
+        },
+        "specificity": {
+          "estimate": null,
+          "numerator": 0,
+          "denominator": 0,
+          "undefined_reason": "TN + FP = 0 so far: no cell is labelled present yet (135 of 135 cells in this set pending)",
+          "wilson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TN + FP = 0 so far: no cell is labelled present yet (135 of 135 cells in this set pending)"
+          },
+          "clopper_pearson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TN + FP = 0 so far: no cell is labelled present yet (135 of 135 cells in this set pending)"
+          },
+          "document_cluster_bootstrap": {
+            "lower": null,
+            "upper": null,
+            "replicates": 10000,
+            "dropped": null,
+            "dropped_fraction": null,
+            "clusters": 9,
+            "seed": 20261014,
+            "undefined_reason": "point estimate undefined (TN + FP = 0 so far: no cell is labelled present yet (135 of 135 cells in this set pending)); not resampled",
+            "exceeds_dropped_limit": null
+          },
+          "headline": {
+            "method": null,
+            "label": null,
+            "lower": null,
+            "upper": null,
+            "reason": "TN + FP = 0 so far: no cell is labelled present yet (135 of 135 cells in this set pending)"
+          }
+        },
+        "f1": {
+          "estimate": null,
+          "numerator": 0,
+          "denominator": 0,
+          "undefined_reason": "2TP + FP + FN = 0 so far: no cell is labelled missing and no detector-flagged cell is labelled present yet (135 of 135 cells in this set pending)"
+        }
+      },
+      "per_rule": [
+        {
+          "rule_id": "ANNEX_I_PART_A_02_LEGAL_FORM",
+          "cells": 9,
+          "label_counts": {
+            "present": 0,
+            "missing": 0,
+            "not_applicable": 0,
+            "uncertain": 0,
+            "extraction_failure": 0,
+            "pending": 9
+          },
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "tn": 0
+        },
+        {
+          "rule_id": "ANNEX_I_PART_A_03_REGISTERED_ADDRESS",
+          "cells": 9,
+          "label_counts": {
+            "present": 0,
+            "missing": 0,
+            "not_applicable": 0,
+            "uncertain": 0,
+            "extraction_failure": 0,
+            "pending": 9
+          },
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "tn": 0
+        },
+        {
+          "rule_id": "ANNEX_I_PART_A_04_REGISTRATION_DATE",
+          "cells": 9,
+          "label_counts": {
+            "present": 0,
+            "missing": 0,
+            "not_applicable": 0,
+            "uncertain": 0,
+            "extraction_failure": 0,
+            "pending": 9
+          },
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "tn": 0
+        },
+        {
+          "rule_id": "ANNEX_I_PART_A_05_LEI_OR_IDENTIFIER",
+          "cells": 9,
+          "label_counts": {
+            "present": 0,
+            "missing": 0,
+            "not_applicable": 0,
+            "uncertain": 0,
+            "extraction_failure": 0,
+            "pending": 9
+          },
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "tn": 0
+        },
+        {
+          "rule_id": "ANNEX_I_PART_A_06_CONTACT_PHONE_EMAIL",
+          "cells": 9,
+          "label_counts": {
+            "present": 0,
+            "missing": 0,
+            "not_applicable": 0,
+            "uncertain": 0,
+            "extraction_failure": 0,
+            "pending": 9
+          },
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "tn": 0
+        },
+        {
+          "rule_id": "ANNEX_I_PART_A_06_CONTACT_RESPONSE_PERIOD",
+          "cells": 9,
+          "label_counts": {
+            "present": 0,
+            "missing": 0,
+            "not_applicable": 0,
+            "uncertain": 0,
+            "extraction_failure": 0,
+            "pending": 9
+          },
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "tn": 0
+        },
+        {
+          "rule_id": "ANNEX_I_PART_A_08_MANAGEMENT_BODY",
+          "cells": 9,
+          "label_counts": {
+            "present": 0,
+            "missing": 0,
+            "not_applicable": 0,
+            "uncertain": 0,
+            "extraction_failure": 0,
+            "pending": 9
+          },
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "tn": 0
+        },
+        {
+          "rule_id": "ANNEX_I_PART_E_18_CONFLICTS_OF_INTEREST",
+          "cells": 9,
+          "label_counts": {
+            "present": 0,
+            "missing": 0,
+            "not_applicable": 0,
+            "uncertain": 0,
+            "extraction_failure": 0,
+            "pending": 9
+          },
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "tn": 0
+        },
+        {
+          "rule_id": "ANNEX_I_PART_A_10_FINANCIAL_CONDITION",
+          "cells": 9,
+          "label_counts": {
+            "present": 0,
+            "missing": 0,
+            "not_applicable": 0,
+            "uncertain": 0,
+            "extraction_failure": 0,
+            "pending": 9
+          },
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "tn": 0
+        },
+        {
+          "rule_id": "ANNEX_I_PART_D_01_ASSET_NAME_ABBREVIATION",
+          "cells": 9,
+          "label_counts": {
+            "present": 0,
+            "missing": 0,
+            "not_applicable": 0,
+            "uncertain": 0,
+            "extraction_failure": 0,
+            "pending": 9
+          },
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "tn": 0
+        },
+        {
+          "rule_id": "ANNEX_I_PART_D_03_IMPLEMENTATION_PERSONS",
+          "cells": 9,
+          "label_counts": {
+            "present": 0,
+            "missing": 0,
+            "not_applicable": 0,
+            "uncertain": 0,
+            "extraction_failure": 0,
+            "pending": 9
+          },
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "tn": 0
+        },
+        {
+          "rule_id": "ANNEX_I_PART_F_02_CHARACTERISTICS_FUNCTIONALITY",
+          "cells": 9,
+          "label_counts": {
+            "present": 0,
+            "missing": 0,
+            "not_applicable": 0,
+            "uncertain": 0,
+            "extraction_failure": 0,
+            "pending": 9
+          },
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "tn": 0
+        },
+        {
+          "rule_id": "ARTICLE_6_05_MANDATORY_WARNINGS",
+          "cells": 9,
+          "label_counts": {
+            "present": 0,
+            "missing": 0,
+            "not_applicable": 0,
+            "uncertain": 0,
+            "extraction_failure": 0,
+            "pending": 9
+          },
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "tn": 0
+        },
+        {
+          "rule_id": "ARTICLE_6_06_MANAGEMENT_BODY_STATEMENT",
+          "cells": 9,
+          "label_counts": {
+            "present": 0,
+            "missing": 0,
+            "not_applicable": 0,
+            "uncertain": 0,
+            "extraction_failure": 0,
+            "pending": 9
+          },
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "tn": 0
+        },
+        {
+          "rule_id": "ARTICLE_6_07_SUMMARY",
+          "cells": 9,
+          "label_counts": {
+            "present": 0,
+            "missing": 0,
+            "not_applicable": 0,
+            "uncertain": 0,
+            "extraction_failure": 0,
+            "pending": 9
+          },
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "tn": 0
+        }
+      ]
+    },
+    "S1": {
+      "description": "S1, full set: every processed document, including WP-007, except an in-sample calibration document.",
+      "documents": [
+        "WP-001",
+        "WP-002",
+        "WP-003",
+        "WP-004",
+        "WP-005",
+        "WP-007",
+        "WP-009",
+        "WP-010",
+        "WP-011",
+        "WP-012"
+      ],
+      "cells": 150,
+      "label_counts": {
+        "present": 0,
+        "missing": 0,
+        "not_applicable": 0,
+        "uncertain": 0,
+        "extraction_failure": 0,
+        "pending": 150
+      },
+      "evaluable_cells": 0,
+      "excluded_cells": 0,
+      "pending_cells": 150,
+      "confusion_matrix": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "tn": 0
+      },
+      "metrics": {
+        "precision": {
+          "estimate": null,
+          "numerator": 0,
+          "denominator": 0,
+          "undefined_reason": "TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (150 of 150 cells in this set pending)",
+          "wilson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (150 of 150 cells in this set pending)"
+          },
+          "clopper_pearson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (150 of 150 cells in this set pending)"
+          },
+          "document_cluster_bootstrap": {
+            "lower": null,
+            "upper": null,
+            "replicates": 10000,
+            "dropped": null,
+            "dropped_fraction": null,
+            "clusters": 10,
+            "seed": 20261014,
+            "undefined_reason": "point estimate undefined (TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (150 of 150 cells in this set pending)); not resampled",
+            "exceeds_dropped_limit": null
+          },
+          "headline": {
+            "method": null,
+            "label": null,
+            "lower": null,
+            "upper": null,
+            "reason": "TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (150 of 150 cells in this set pending)"
+          }
+        },
+        "recall": {
+          "estimate": null,
+          "numerator": 0,
+          "denominator": 0,
+          "undefined_reason": "TP + FN = 0 so far: no cell is labelled missing yet (150 of 150 cells in this set pending)",
+          "wilson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TP + FN = 0 so far: no cell is labelled missing yet (150 of 150 cells in this set pending)"
+          },
+          "clopper_pearson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TP + FN = 0 so far: no cell is labelled missing yet (150 of 150 cells in this set pending)"
+          },
+          "document_cluster_bootstrap": {
+            "lower": null,
+            "upper": null,
+            "replicates": 10000,
+            "dropped": null,
+            "dropped_fraction": null,
+            "clusters": 10,
+            "seed": 20261014,
+            "undefined_reason": "point estimate undefined (TP + FN = 0 so far: no cell is labelled missing yet (150 of 150 cells in this set pending)); not resampled",
+            "exceeds_dropped_limit": null
+          },
+          "headline": {
+            "method": null,
+            "label": null,
+            "lower": null,
+            "upper": null,
+            "reason": "TP + FN = 0 so far: no cell is labelled missing yet (150 of 150 cells in this set pending)"
+          }
+        },
+        "specificity": {
+          "estimate": null,
+          "numerator": 0,
+          "denominator": 0,
+          "undefined_reason": "TN + FP = 0 so far: no cell is labelled present yet (150 of 150 cells in this set pending)",
+          "wilson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TN + FP = 0 so far: no cell is labelled present yet (150 of 150 cells in this set pending)"
+          },
+          "clopper_pearson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TN + FP = 0 so far: no cell is labelled present yet (150 of 150 cells in this set pending)"
+          },
+          "document_cluster_bootstrap": {
+            "lower": null,
+            "upper": null,
+            "replicates": 10000,
+            "dropped": null,
+            "dropped_fraction": null,
+            "clusters": 10,
+            "seed": 20261014,
+            "undefined_reason": "point estimate undefined (TN + FP = 0 so far: no cell is labelled present yet (150 of 150 cells in this set pending)); not resampled",
+            "exceeds_dropped_limit": null
+          },
+          "headline": {
+            "method": null,
+            "label": null,
+            "lower": null,
+            "upper": null,
+            "reason": "TN + FP = 0 so far: no cell is labelled present yet (150 of 150 cells in this set pending)"
+          }
+        },
+        "f1": {
+          "estimate": null,
+          "numerator": 0,
+          "denominator": 0,
+          "undefined_reason": "2TP + FP + FN = 0 so far: no cell is labelled missing and no detector-flagged cell is labelled present yet (150 of 150 cells in this set pending)"
+        }
+      }
+    },
+    "S2a": {
+      "description": "S2(a): offeror-cluster percentile bootstrap over the primary set; the documents of one offeror (source-manifest.json, offeror_or_issuer) are resampled together.",
+      "documents": [
+        "WP-001",
+        "WP-002",
+        "WP-003",
+        "WP-004",
+        "WP-005",
+        "WP-009",
+        "WP-010",
+        "WP-011",
+        "WP-012"
+      ],
+      "cells": 135,
+      "offeror_clusters": 6,
+      "metrics": {
+        "precision": {
+          "estimate": null,
+          "undefined_reason": "TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (135 of 135 cells in this set pending)",
+          "offeror_cluster_bootstrap": {
+            "lower": null,
+            "upper": null,
+            "replicates": 10000,
+            "dropped": null,
+            "dropped_fraction": null,
+            "clusters": 6,
+            "seed": 20261014,
+            "undefined_reason": "point estimate undefined (TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (135 of 135 cells in this set pending)); not resampled",
+            "exceeds_dropped_limit": null
+          }
+        },
+        "recall": {
+          "estimate": null,
+          "undefined_reason": "TP + FN = 0 so far: no cell is labelled missing yet (135 of 135 cells in this set pending)",
+          "offeror_cluster_bootstrap": {
+            "lower": null,
+            "upper": null,
+            "replicates": 10000,
+            "dropped": null,
+            "dropped_fraction": null,
+            "clusters": 6,
+            "seed": 20261014,
+            "undefined_reason": "point estimate undefined (TP + FN = 0 so far: no cell is labelled missing yet (135 of 135 cells in this set pending)); not resampled",
+            "exceeds_dropped_limit": null
+          }
+        },
+        "specificity": {
+          "estimate": null,
+          "undefined_reason": "TN + FP = 0 so far: no cell is labelled present yet (135 of 135 cells in this set pending)",
+          "offeror_cluster_bootstrap": {
+            "lower": null,
+            "upper": null,
+            "replicates": 10000,
+            "dropped": null,
+            "dropped_fraction": null,
+            "clusters": 6,
+            "seed": 20261014,
+            "undefined_reason": "point estimate undefined (TN + FP = 0 so far: no cell is labelled present yet (135 of 135 cells in this set pending)); not resampled",
+            "exceeds_dropped_limit": null
+          }
+        }
+      }
+    },
+    "S2b": {
+      "description": "S2(b): the primary set with only the lowest-numbered document of each offeror.",
+      "documents": [
+        "WP-001",
+        "WP-002",
+        "WP-003",
+        "WP-009",
+        "WP-010",
+        "WP-011"
+      ],
+      "cells": 90,
+      "label_counts": {
+        "present": 0,
+        "missing": 0,
+        "not_applicable": 0,
+        "uncertain": 0,
+        "extraction_failure": 0,
+        "pending": 90
+      },
+      "evaluable_cells": 0,
+      "excluded_cells": 0,
+      "pending_cells": 90,
+      "confusion_matrix": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "tn": 0
+      },
+      "metrics": {
+        "precision": {
+          "estimate": null,
+          "numerator": 0,
+          "denominator": 0,
+          "undefined_reason": "TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (90 of 90 cells in this set pending)",
+          "wilson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (90 of 90 cells in this set pending)"
+          },
+          "clopper_pearson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (90 of 90 cells in this set pending)"
+          },
+          "document_cluster_bootstrap": {
+            "lower": null,
+            "upper": null,
+            "replicates": 10000,
+            "dropped": null,
+            "dropped_fraction": null,
+            "clusters": 6,
+            "seed": 20261014,
+            "undefined_reason": "point estimate undefined (TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (90 of 90 cells in this set pending)); not resampled",
+            "exceeds_dropped_limit": null
+          },
+          "headline": {
+            "method": null,
+            "label": null,
+            "lower": null,
+            "upper": null,
+            "reason": "TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (90 of 90 cells in this set pending)"
+          }
+        },
+        "recall": {
+          "estimate": null,
+          "numerator": 0,
+          "denominator": 0,
+          "undefined_reason": "TP + FN = 0 so far: no cell is labelled missing yet (90 of 90 cells in this set pending)",
+          "wilson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TP + FN = 0 so far: no cell is labelled missing yet (90 of 90 cells in this set pending)"
+          },
+          "clopper_pearson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TP + FN = 0 so far: no cell is labelled missing yet (90 of 90 cells in this set pending)"
+          },
+          "document_cluster_bootstrap": {
+            "lower": null,
+            "upper": null,
+            "replicates": 10000,
+            "dropped": null,
+            "dropped_fraction": null,
+            "clusters": 6,
+            "seed": 20261014,
+            "undefined_reason": "point estimate undefined (TP + FN = 0 so far: no cell is labelled missing yet (90 of 90 cells in this set pending)); not resampled",
+            "exceeds_dropped_limit": null
+          },
+          "headline": {
+            "method": null,
+            "label": null,
+            "lower": null,
+            "upper": null,
+            "reason": "TP + FN = 0 so far: no cell is labelled missing yet (90 of 90 cells in this set pending)"
+          }
+        },
+        "specificity": {
+          "estimate": null,
+          "numerator": 0,
+          "denominator": 0,
+          "undefined_reason": "TN + FP = 0 so far: no cell is labelled present yet (90 of 90 cells in this set pending)",
+          "wilson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TN + FP = 0 so far: no cell is labelled present yet (90 of 90 cells in this set pending)"
+          },
+          "clopper_pearson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TN + FP = 0 so far: no cell is labelled present yet (90 of 90 cells in this set pending)"
+          },
+          "document_cluster_bootstrap": {
+            "lower": null,
+            "upper": null,
+            "replicates": 10000,
+            "dropped": null,
+            "dropped_fraction": null,
+            "clusters": 6,
+            "seed": 20261014,
+            "undefined_reason": "point estimate undefined (TN + FP = 0 so far: no cell is labelled present yet (90 of 90 cells in this set pending)); not resampled",
+            "exceeds_dropped_limit": null
+          },
+          "headline": {
+            "method": null,
+            "label": null,
+            "lower": null,
+            "upper": null,
+            "reason": "TN + FP = 0 so far: no cell is labelled present yet (90 of 90 cells in this set pending)"
+          }
+        },
+        "f1": {
+          "estimate": null,
+          "numerator": 0,
+          "denominator": 0,
+          "undefined_reason": "2TP + FP + FN = 0 so far: no cell is labelled missing and no detector-flagged cell is labelled present yet (90 of 90 cells in this set pending)"
+        }
+      }
+    },
+    "S3": {
+      "description": "S3: the primary set with 'uncertain' counted as 'missing'.",
+      "documents": [
+        "WP-001",
+        "WP-002",
+        "WP-003",
+        "WP-004",
+        "WP-005",
+        "WP-009",
+        "WP-010",
+        "WP-011",
+        "WP-012"
+      ],
+      "cells": 135,
+      "uncertain_counted_as": "missing",
+      "label_counts": {
+        "present": 0,
+        "missing": 0,
+        "not_applicable": 0,
+        "uncertain": 0,
+        "extraction_failure": 0,
+        "pending": 135
+      },
+      "evaluable_cells": 0,
+      "excluded_cells": 0,
+      "pending_cells": 135,
+      "confusion_matrix": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "tn": 0
+      },
+      "metrics": {
+        "precision": {
+          "estimate": null,
+          "numerator": 0,
+          "denominator": 0,
+          "undefined_reason": "TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (135 of 135 cells in this set pending)",
+          "wilson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (135 of 135 cells in this set pending)"
+          },
+          "clopper_pearson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (135 of 135 cells in this set pending)"
+          },
+          "document_cluster_bootstrap": {
+            "lower": null,
+            "upper": null,
+            "replicates": 10000,
+            "dropped": null,
+            "dropped_fraction": null,
+            "clusters": 9,
+            "seed": 20261014,
+            "undefined_reason": "point estimate undefined (TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (135 of 135 cells in this set pending)); not resampled",
+            "exceeds_dropped_limit": null
+          },
+          "headline": {
+            "method": null,
+            "label": null,
+            "lower": null,
+            "upper": null,
+            "reason": "TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (135 of 135 cells in this set pending)"
+          }
+        },
+        "recall": {
+          "estimate": null,
+          "numerator": 0,
+          "denominator": 0,
+          "undefined_reason": "TP + FN = 0 so far: no cell is labelled missing yet (135 of 135 cells in this set pending)",
+          "wilson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TP + FN = 0 so far: no cell is labelled missing yet (135 of 135 cells in this set pending)"
+          },
+          "clopper_pearson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TP + FN = 0 so far: no cell is labelled missing yet (135 of 135 cells in this set pending)"
+          },
+          "document_cluster_bootstrap": {
+            "lower": null,
+            "upper": null,
+            "replicates": 10000,
+            "dropped": null,
+            "dropped_fraction": null,
+            "clusters": 9,
+            "seed": 20261014,
+            "undefined_reason": "point estimate undefined (TP + FN = 0 so far: no cell is labelled missing yet (135 of 135 cells in this set pending)); not resampled",
+            "exceeds_dropped_limit": null
+          },
+          "headline": {
+            "method": null,
+            "label": null,
+            "lower": null,
+            "upper": null,
+            "reason": "TP + FN = 0 so far: no cell is labelled missing yet (135 of 135 cells in this set pending)"
+          }
+        },
+        "specificity": {
+          "estimate": null,
+          "numerator": 0,
+          "denominator": 0,
+          "undefined_reason": "TN + FP = 0 so far: no cell is labelled present yet (135 of 135 cells in this set pending)",
+          "wilson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TN + FP = 0 so far: no cell is labelled present yet (135 of 135 cells in this set pending)"
+          },
+          "clopper_pearson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TN + FP = 0 so far: no cell is labelled present yet (135 of 135 cells in this set pending)"
+          },
+          "document_cluster_bootstrap": {
+            "lower": null,
+            "upper": null,
+            "replicates": 10000,
+            "dropped": null,
+            "dropped_fraction": null,
+            "clusters": 9,
+            "seed": 20261014,
+            "undefined_reason": "point estimate undefined (TN + FP = 0 so far: no cell is labelled present yet (135 of 135 cells in this set pending)); not resampled",
+            "exceeds_dropped_limit": null
+          },
+          "headline": {
+            "method": null,
+            "label": null,
+            "lower": null,
+            "upper": null,
+            "reason": "TN + FP = 0 so far: no cell is labelled present yet (135 of 135 cells in this set pending)"
+          }
+        },
+        "f1": {
+          "estimate": null,
+          "numerator": 0,
+          "denominator": 0,
+          "undefined_reason": "2TP + FP + FN = 0 so far: no cell is labelled missing and no detector-flagged cell is labelled present yet (135 of 135 cells in this set pending)"
+        }
+      }
+    },
+    "S4": {
+      "description": "S4: the primary set with 'uncertain' counted as 'present'.",
+      "documents": [
+        "WP-001",
+        "WP-002",
+        "WP-003",
+        "WP-004",
+        "WP-005",
+        "WP-009",
+        "WP-010",
+        "WP-011",
+        "WP-012"
+      ],
+      "cells": 135,
+      "uncertain_counted_as": "present",
+      "label_counts": {
+        "present": 0,
+        "missing": 0,
+        "not_applicable": 0,
+        "uncertain": 0,
+        "extraction_failure": 0,
+        "pending": 135
+      },
+      "evaluable_cells": 0,
+      "excluded_cells": 0,
+      "pending_cells": 135,
+      "confusion_matrix": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "tn": 0
+      },
+      "metrics": {
+        "precision": {
+          "estimate": null,
+          "numerator": 0,
+          "denominator": 0,
+          "undefined_reason": "TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (135 of 135 cells in this set pending)",
+          "wilson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (135 of 135 cells in this set pending)"
+          },
+          "clopper_pearson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (135 of 135 cells in this set pending)"
+          },
+          "document_cluster_bootstrap": {
+            "lower": null,
+            "upper": null,
+            "replicates": 10000,
+            "dropped": null,
+            "dropped_fraction": null,
+            "clusters": 9,
+            "seed": 20261014,
+            "undefined_reason": "point estimate undefined (TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (135 of 135 cells in this set pending)); not resampled",
+            "exceeds_dropped_limit": null
+          },
+          "headline": {
+            "method": null,
+            "label": null,
+            "lower": null,
+            "upper": null,
+            "reason": "TP + FP = 0 so far: no detector-flagged cell is labelled present or missing yet (135 of 135 cells in this set pending)"
+          }
+        },
+        "recall": {
+          "estimate": null,
+          "numerator": 0,
+          "denominator": 0,
+          "undefined_reason": "TP + FN = 0 so far: no cell is labelled missing yet (135 of 135 cells in this set pending)",
+          "wilson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TP + FN = 0 so far: no cell is labelled missing yet (135 of 135 cells in this set pending)"
+          },
+          "clopper_pearson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TP + FN = 0 so far: no cell is labelled missing yet (135 of 135 cells in this set pending)"
+          },
+          "document_cluster_bootstrap": {
+            "lower": null,
+            "upper": null,
+            "replicates": 10000,
+            "dropped": null,
+            "dropped_fraction": null,
+            "clusters": 9,
+            "seed": 20261014,
+            "undefined_reason": "point estimate undefined (TP + FN = 0 so far: no cell is labelled missing yet (135 of 135 cells in this set pending)); not resampled",
+            "exceeds_dropped_limit": null
+          },
+          "headline": {
+            "method": null,
+            "label": null,
+            "lower": null,
+            "upper": null,
+            "reason": "TP + FN = 0 so far: no cell is labelled missing yet (135 of 135 cells in this set pending)"
+          }
+        },
+        "specificity": {
+          "estimate": null,
+          "numerator": 0,
+          "denominator": 0,
+          "undefined_reason": "TN + FP = 0 so far: no cell is labelled present yet (135 of 135 cells in this set pending)",
+          "wilson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TN + FP = 0 so far: no cell is labelled present yet (135 of 135 cells in this set pending)"
+          },
+          "clopper_pearson": {
+            "lower": null,
+            "upper": null,
+            "undefined_reason": "TN + FP = 0 so far: no cell is labelled present yet (135 of 135 cells in this set pending)"
+          },
+          "document_cluster_bootstrap": {
+            "lower": null,
+            "upper": null,
+            "replicates": 10000,
+            "dropped": null,
+            "dropped_fraction": null,
+            "clusters": 9,
+            "seed": 20261014,
+            "undefined_reason": "point estimate undefined (TN + FP = 0 so far: no cell is labelled present yet (135 of 135 cells in this set pending)); not resampled",
+            "exceeds_dropped_limit": null
+          },
+          "headline": {
+            "method": null,
+            "label": null,
+            "lower": null,
+            "upper": null,
+            "reason": "TN + FP = 0 so far: no cell is labelled present yet (135 of 135 cells in this set pending)"
+          }
+        },
+        "f1": {
+          "estimate": null,
+          "numerator": 0,
+          "denominator": 0,
+          "undefined_reason": "2TP + FP + FN = 0 so far: no cell is labelled missing and no detector-flagged cell is labelled present yet (135 of 135 cells in this set pending)"
+        }
+      }
+    },
+    "S5": {
+      "description": "S5: the stricter readings recorded in notes under codebook.md P4 and the [OJ check] items.",
+      "computed": false,
+      "undefined_reason": "neither the codebook nor the analysis plan defines a machine-readable form for the stricter readings recorded in review notes, so the tool cannot apply them"
+    }
+  },
+  "agreement": {
+    "reviewers": [
+      "r1"
+    ],
+    "double_reviewed": false,
+    "status": "single_reviewer",
+    "reason": "one reviewer (r1) is recorded in human-review-sheets.json: the labels are single-reviewed and no agreement is computed",
+    "pairs": []
+  }
 }
