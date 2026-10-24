@@ -1,0 +1,144 @@
+{
+  "schema_version": "micar-study-review-sheets.v1",
+  "generator": "micar-review-sheets",
+  "findings_file": "findings-pseudonymous.json",
+  "findings_sha256": "3e9c867574a2e38a7ef98a901b6e8480a26a64ecad8790b6956ab1eb7c6825ed",
+  "findings_schema": "micar-whitepaper-linter.title-ii-annex-i-study-findings.v1",
+  "findings_digest": "a0f8a82a135f22738357799c40420a45446b1cef839780859f285d9b958f79c1",
+  "rule_source": "micar_linter.batch.STUDY_RULES",
+  "rules": [
+    {
+      "rule_id": "ANNEX_I_PART_A_02_LEGAL_FORM",
+      "annex_item": "Annex I, Part A, item 2",
+      "rule_label": "Legal form"
+    },
+    {
+      "rule_id": "ANNEX_I_PART_A_03_REGISTERED_ADDRESS",
+      "annex_item": "Annex I, Part A, item 3",
+      "rule_label": "Registered address or head office"
+    },
+    {
+      "rule_id": "ANNEX_I_PART_A_04_REGISTRATION_DATE",
+      "annex_item": "Annex I, Part A, item 4",
+      "rule_label": "Registration date"
+    },
+    {
+      "rule_id": "ANNEX_I_PART_A_05_LEI_OR_IDENTIFIER",
+      "annex_item": "Annex I, Part A, item 5",
+      "rule_label": "LEI or other identifier"
+    },
+    {
+      "rule_id": "ANNEX_I_PART_A_06_CONTACT_PHONE_EMAIL",
+      "annex_item": "Annex I, Part A, item 6",
+      "rule_label": "Contact telephone number and email"
+    },
+    {
+      "rule_id": "ANNEX_I_PART_A_06_CONTACT_RESPONSE_PERIOD",
+      "annex_item": "Annex I, Part A, item 6",
+      "rule_label": "Response period for investor contact"
+    },
+    {
+      "rule_id": "ANNEX_I_PART_A_08_MANAGEMENT_BODY",
+      "annex_item": "Annex I, Part A, item 8",
+      "rule_label": "Management body identity and functions"
+    },
+    {
+      "rule_id": "ANNEX_I_PART_E_18_CONFLICTS_OF_INTEREST",
+      "annex_item": "Annex I, Part E, item 18",
+      "rule_label": "Conflicts of interest"
+    },
+    {
+      "rule_id": "ANNEX_I_PART_A_10_FINANCIAL_CONDITION",
+      "annex_item": "Annex I, Part A, item 10",
+      "rule_label": "Financial condition"
+    },
+    {
+      "rule_id": "ANNEX_I_PART_D_01_ASSET_NAME_ABBREVIATION",
+      "annex_item": "Annex I, Part D, item 1",
+      "rule_label": "Crypto-asset name and abbreviation"
+    },
+    {
+      "rule_id": "ANNEX_I_PART_D_03_IMPLEMENTATION_PERSONS",
+      "annex_item": "Annex I, Part D, item 3",
+      "rule_label": "Persons involved in crypto-asset project implementation"
+    },
+    {
+      "rule_id": "ANNEX_I_PART_F_02_CHARACTERISTICS_FUNCTIONALITY",
+      "annex_item": "Annex I, Part F, item 2",
+      "rule_label": "Characteristics and functionality"
+    },
+    {
+      "rule_id": "ARTICLE_6_05_MANDATORY_WARNINGS",
+      "annex_item": "Article 6",
+      "rule_label": "Mandatory warning statements"
+    },
+    {
+      "rule_id": "ARTICLE_6_06_MANAGEMENT_BODY_STATEMENT",
+      "annex_item": "Article 6",
+      "rule_label": "Management body statement"
+    },
+    {
+      "rule_id": "ARTICLE_6_07_SUMMARY",
+      "annex_item": "Article 6",
+      "rule_label": "Summary"
+    }
+  ],
+  "documents": [
+    "WP-001",
+    "WP-002",
+    "WP-003",
+    "WP-004",
+    "WP-005",
+    "WP-007",
+    "WP-009",
+    "WP-010",
+    "WP-011",
+    "WP-012"
+  ],
+  "rows_per_sheet": 150,
+  "seed": 20261014,
+  "row_order": "Documents appear in the order of the findings file. Within each document, rows are sorted by the SHA-256 hex digest of '<seed>|<reviewer_id>|<study_doc_id>|<rule_id>'. The order depends only on those four values, never on detector output. The matrix keeps the canonical STUDY_RULES order.",
+  "requirement_text_status": "Draft wording derived from MiCAR Article 6 and Annex I as encoded in this repository; not verified against the Official Journal text. codebook.md governs.",
+  "blinded_columns": [
+    "study_doc_id",
+    "document_hash_sha256",
+    "rule_id",
+    "annex_item",
+    "rule_label",
+    "requirement",
+    "human_label",
+    "reviewer_id",
+    "reviewed_at",
+    "source_pinpoint",
+    "review_note"
+  ],
+  "matrix_columns": [
+    "study_doc_id",
+    "document_hash_sha256",
+    "rule_id",
+    "annex_item",
+    "rule_label",
+    "requirement",
+    "detector_status",
+    "detector_confidence",
+    "detector_context",
+    "human_label",
+    "reviewer_id",
+    "reviewed_at",
+    "source_pinpoint",
+    "review_note"
+  ],
+  "initial_review_state": "every human_label is 'pending'; every other review field is blank",
+  "sheet_sha256_policy": "Each sha256 below is the hash of the file as generated, with every label pending. Once labels are entered, a sheet differs from it in the review columns only; 'micar-review-sheets --check' verifies the other columns and the row order.",
+  "sheets": [
+    {
+      "reviewer_id": "r1",
+      "file": "human-review-r1.csv",
+      "sha256": "4da7e17f0549f0fce1905f6a6878ca94b91274126b5c6bc0b2c7664bc144b09b"
+    }
+  ],
+  "matrix": {
+    "file": "human-review-matrix.csv",
+    "sha256": "8ad16b83b71a50c3aeaf5e53ee44bf06f205c9dedad7109c526b8c4212270862"
+  }
+}
