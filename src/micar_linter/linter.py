@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass, field
 
 from micar_linter.anchors import SourceAnchor, build_source_anchors
+from micar_linter.placeholders import is_placeholder
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Finding, Rule, Severity
 from micar_linter.whitepaper import Whitepaper, WhitepaperType
@@ -69,14 +70,17 @@ class Linter:
         text = whitepaper.section(rule.section)
         word_count = _count_words(text)
 
+        absent = None
         if not text.strip():
-            msg = "Abschnitt ist leer oder fehlt." if is_de else "Section is empty or absent."
-            return Finding(
-                rule=rule,
-                status="missing",
-                word_count=0,
-                issues=(msg,),
+            absent = "Abschnitt ist leer oder fehlt." if is_de else "Section is empty or absent."
+        elif is_placeholder(text):
+            absent = (
+                "Abschnitt enthält nur Platzhalter wie TBD oder TBC."
+                if is_de
+                else "Section holds only placeholder text such as TBD or TBC."
             )
+        if absent:
+            return Finding(rule=rule, status="missing", word_count=0, issues=(absent,))
 
         issues: list[str] = []
         # PDF, Markdown and DOCX loaders keep line breaks, so a statutory sentence that wraps

@@ -353,7 +353,7 @@ def test_docx_heading_ends_the_statement_even_before_a_responsibility_sentence(t
     document.save(path)
     whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
     assert whitepaper.section("not_approved_statement") == APPROVAL
-    assert whitepaper.section("summary").startswith("Summary")
+    assert whitepaper.section("summary").startswith("The issuer is responsible for the token.")
 
 
 def test_incomplete_markdown_statement_does_not_swallow_the_next_sections(tmp_path: Path):
@@ -368,6 +368,8 @@ def test_incomplete_markdown_statement_does_not_swallow_the_next_sections(tmp_pa
 
 
 def _pdf_whitepaper(mock_reader_cls, tmp_path: Path, text: str):
+    # The mocked reader reports no fonts, so a PDF heading must be in title case or capitals
+    # ("Risk Warning"), as for any PDF without font information.
     page = MagicMock()
     page.extract_text.return_value = text
     mock_reader_cls.return_value = MagicMock(pages=[page])
@@ -383,7 +385,7 @@ def test_incomplete_pdf_statement_does_not_swallow_the_next_sections(mock_reader
         tmp_path,
         "This crypto-asset white paper has not been approved by any competent authority in any\n"
         "Member State of the European Union.\n"
-        f"Summary\n{SUMMARY_BODY}\nRisk warning\n{RISK_BODY}\n",
+        f"Summary\n{SUMMARY_BODY}\nRisk Warning\n{RISK_BODY}\n",
     )
     _sections_after_incomplete_statement(whitepaper)
 
@@ -394,7 +396,7 @@ def test_pdf_statement_cut_off_mid_sentence_ends_at_the_heading(mock_reader_cls,
         mock_reader_cls,
         tmp_path,
         "This crypto-asset white paper has not been approved\n"
-        f"Summary\n{SUMMARY_BODY}\nRisk warning\n{RISK_BODY}\n",
+        f"Summary\n{SUMMARY_BODY}\nRisk Warning\n{RISK_BODY}\n",
     )
     assert (
         whitepaper.section("not_approved_statement") == "This crypto-asset white paper has not been approved"
@@ -420,4 +422,4 @@ def test_statement_wrapped_in_a_narrow_pdf_column_passes(mock_reader_cls, tmp_pa
     )
     statement = next(f for f in lint_whitepaper(whitepaper).findings if f.rule.rule_id == TITLE_II)
     assert statement.status == "pass", statement.issues
-    assert whitepaper.section("summary").startswith("Summary")
+    assert whitepaper.section("summary").startswith("The summary gives key information")

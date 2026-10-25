@@ -1,7 +1,7 @@
 MiCAR Whitepaper Linter - Incomplete Synthetic EuroStable ART Draft
 Whitepaper type: ART
 ==============================================================================
-Pass: 0  |  Review: 13  |  Missing: 5  |  Blockers: 15
+Pass: 0  |  Review: 12  |  Missing: 6  |  Blockers: 15
 
 [REVIEW] [BLOCKER] COMMON.SUMMARY  Plain-language summary
            Cite:  Art. 6(7), Art. 19(6), Art. 51(6) MiCAR
@@ -23,12 +23,11 @@ Pass: 0  |  Review: 13  |  Missing: 5  |  Blockers: 15
            -  Section is thin: 1 words, expected at least 40.
            -  Missing review terms: management body, complies, fair, clear, not misleading.
 
-[REVIEW] [MAJOR  ] COMMON.NOTIFICATION_DATE  Date of notification to the competent authority
+[MISS  ] [MAJOR  ] COMMON.NOTIFICATION_DATE  Date of notification to the competent authority
            Cite:  Art. 6(8), Art. 19(7), Art. 51(7) MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'notification_date'  (1 words)
-           -  Section is thin: 1 words, expected at least 5.
-           -  Missing review terms: date.
+           Section: 'notification_date'  (0 words)
+           -  Section holds only placeholder text such as TBD or TBC.
 
 [REVIEW] [MAJOR  ] COMMON.LANGUAGE  Language of the white paper (home Member State official language or customary in international finance)
            Cite:  Art. 6(9), Art. 19(8), Art. 51(8) MiCAR
