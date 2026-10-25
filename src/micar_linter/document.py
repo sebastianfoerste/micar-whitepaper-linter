@@ -150,8 +150,10 @@ def statement_extent(lines: list[str], start: int, is_heading: Callable[[int], b
     who is responsible. It never runs past a heading, so an incomplete or reworded
     statement cannot swallow the sections that follow it.
 
-    is_heading(index) reports a heading the loader knows for certain, such as a DOCX
-    paragraph in a Heading style.
+    is_heading(index) reports a heading the loader reads from the layout, such as a DOCX
+    paragraph in a Heading style or a PDF line in a heading font. A statement set in bold,
+    capitals or a larger font carries the same marks, so a marked line counts only where it
+    starts with a capital and is not the responsibility sentence without its full stop.
     """
     window = lines[start : start + _STATEMENT_MAX_LINES]
     text = " ".join(window)
@@ -162,7 +164,14 @@ def statement_extent(lines: list[str], start: int, is_heading: Callable[[int], b
         offset += len(line) + 1
 
     def firm_heading(i: int) -> bool:
-        return window[i].lstrip().startswith("#") or (is_heading is not None and is_heading(start + i))
+        if window[i].lstrip().startswith("#"):
+            return True
+        if is_heading is None or not is_heading(start + i):
+            return False
+        line = window[i].strip()
+        return not line[:1].islower() and not (
+            _RESPONSIBILITY.search(line) and len(line.split()) > _HEADING_MAX_WORDS
+        )
 
     def line_at(position: int) -> int:
         return next(i for i, line_end in enumerate(line_ends) if line_end >= position)
@@ -765,34 +774,58 @@ def _line_sections(lines: list[_Line], statement: bool = False) -> DocumentSecti
     previous_styled = False
     line_texts = [line.text for line in lines]
     statement_end = 0
+    statement_role = _BODY
+    # The first and last two lines of each page, where a page header or footer sits (see _running).
+    page_lines: dict[int, list[int]] = {}
+    for position, page_line in enumerate(lines):
+        if page_line.page is not None:
+            page_lines.setdefault(page_line.page, []).append(position)
+    page_edges = {i for indices in page_lines.values() for i in (*indices[:2], *indices[-2:])}
 
-    def statement_heading(index: int, statement_font: tuple[float, bool] | None) -> bool:
-        # A heading for certain inside the statement's lines (see statement_extent): a template part or
-        # field title, or a line shaped like a heading in a heading font other than the statement's own,
-        # since a statement may be set in bold. The first line of a bold paragraph is no heading.
+    def statement_heading(index: int, statement_line: _Line) -> bool:
+        # A heading inside the statement's lines (see statement_extent): a template part or field title,
+        # or a line shaped like a heading in a heading font other than the statement's own, since a
+        # statement may be set in bold. A template line set smaller than the statement, or at the edge of
+        # a later page in the body font, is a page header that names the current part, not running
+        # because its text changes from page to page. The first line of a sentence that goes on in its
+        # own font, filling the column or over a lower-case line, is no heading.
         line = lines[index]
+        statement_font = _font(statement_line)
         if running[index]:
             return False
+        smaller = (
+            line.size is not None and statement_font is not None and round(line.size, 1) < statement_font[0]
+        )
+        page_header = index in page_edges and line.page != statement_line.page and not styled[index]
         if _template_kind(line.text) and _heading_shaped(line.text, styled[index]):
-            return True
+            return not (smaller or page_header)
         following = lines[following_index[index]] if index in following_index else None
+        goes_on = (
+            following is not None
+            and _font(line) == _font(following)
+            and _next_line(line, following, heights)
+            and (fills[index] or following.text[:1].islower())
+        )
         return (
             styled[index]
             and _font(line) != statement_font
             and _heading_shaped(line.text, True)
-            and not _starts_paragraph(line, following, fills[index], heights)
+            and not goes_on
         )
 
     for index, line in enumerate(lines):
         if statement and (index < statement_end or is_statement_start(line.text)):
             if index >= statement_end:
                 statement_end = statement_extent(
-                    line_texts, index, partial(statement_heading, statement_font=_font(line))
+                    line_texts, index, partial(statement_heading, statement_line=line)
                 )
+                # A statement cut off before its first full stop ends at a line read as a heading, which
+                # does not continue its sentence ("approved by the"). A statement that ends with a full
+                # sentence may share its last line with the next sentence, which runs on as body text.
+                cut = not _STATEMENT_SENTENCE_END.search(" ".join(line_texts[index:statement_end]))
+                statement_role = _BREAK if cut else _BODY
             sections.setdefault("not_approved_statement", []).append(line.text)
-            # statement_extent ends the statement at a line it reads as a heading, so a statement cut off
-            # mid-sentence ("approved by the") does not run on into that line.
-            previous, previous_role, previous_styled = line.text, _BREAK, styled[index]
+            previous, previous_role, previous_styled = line.text, statement_role, styled[index]
             continue
         if running[index]:
             for key in current_keys:
@@ -980,13 +1013,18 @@ def parse_docx(path: Path) -> DocumentSections:
         if index < statement_end or is_statement_start(text):
             if index >= statement_end:
                 # A heading as parse_docx reads one below: a Heading style, an outline level, or a label
-                # that is entirely bold or in capitals.
+                # that is entirely bold or in capitals. A label marked as the statement's first paragraph
+                # is one of its lines, as a statement may be set in bold or capitals a paragraph per line.
+                marks = (text.isupper(), _docx_fully_bold(para))
                 statement_end = statement_extent(
                     paragraph_texts,
                     index,
-                    lambda i: (
+                    lambda i, marks=marks: (
                         _docx_heading_level(paragraphs[i][0]) is not None
-                        or _docx_label_heading(*paragraphs[i])
+                        or (
+                            _docx_label_heading(*paragraphs[i])
+                            and (paragraphs[i][1].isupper(), _docx_fully_bold(paragraphs[i][0])) != marks
+                        )
                     ),
                 )
             sections.setdefault("not_approved_statement", []).append(text)
