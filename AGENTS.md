@@ -36,7 +36,7 @@ Ensure you run commands using `uv` or inside your virtual environment. `make che
 - `make check`: Run ruff, pytest, the CLI smoke run and the review-bundle build (through `uv run --extra dev`), then the playground checks (`node --check`, `node --test`) and the starter-template check (with the system `python3`).
 - `uv run micar-lint <file>`: Run linter against a document. XHTML in the numbered-field layout needs `--type other|art|emt`; `--type` and `--lang` apply only to a single-file run. `--compare-review-table-output` and the workspace, workflow and collaboration-bundle modes therefore stop on numbered-field XHTML with exit 2, while the directory batch (`--batch-output`) skips such a file with a `lint-failed:` warning, counts it in neither `supported_files` nor `blocked_files`, and can still exit 0, even with `--strict`. DOCX needs the `docx` extra, e.g. `uv run --extra docx micar-lint draft.docx`. `--coverage` (without `--review-bundle-dir`) prints its table and exits 0 before `--strict` is applied and before any output file (SARIF, summary, annotations, audit log, remediation, manifest) is written.
 - `uv run --extra dev pytest`: Run test suite with dev tooling available.
-- `uv run --extra dev ruff check src tests`: Lint code with dev tooling available.
+- `uv run --extra dev ruff check src tests scripts`: Lint code with dev tooling available.
 
 ---
 
