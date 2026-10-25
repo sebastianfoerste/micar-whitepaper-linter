@@ -144,7 +144,9 @@ _PERSON_TO_CLAUSE = re.compile(
 # The words that end the clause, "of this crypto-asset white paper" ("dieses Kryptowerte-Whitepapers"), with
 # any stop, quote or note mark attached, and however a line break or a hyphen at a line end splits them.
 _CLAUSE_WORDS = re.compile(
-    r"\s+(?:of\s+this\s+crypto-\s*asset\s+white\s+paper|dieses\s+kryptowerte-\s*whitepapers?)\b\S*",
+    r"\s+(?:of\s+this\s+crypto-\s*asset\s+white\s+paper|dieses\s+kryptowerte-\s*whitepapers?)"
+    # A letter may not follow ("papers"); a note mark stuck to the word may ("paper2", "paper\u00b2").
+    r"(?![^\W\d_\u00b9\u00b2\u00b3\u2070-\u2079])\S*",
     re.IGNORECASE,
 )
 # Where the clause ends in other words, the rest of its sentence up to the stop.

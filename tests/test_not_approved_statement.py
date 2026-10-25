@@ -1063,9 +1063,11 @@ def test_pdf_tail_on_its_own_line_before_a_heading_stays_in_the_statement(
     assert findings["COMMON.SUMMARY"].status != "missing"
 
 
+@pytest.mark.parametrize("mark", ["", "2", "\u00b2"], ids=["none", "digit", "superscript"])
 @patch("pypdf.PdfReader")
-def test_pdf_note_marked_statement_without_final_stop_before_a_heading(mock_reader_cls, tmp_path: Path):
-    statement = RESPONSIBILITY[:-1].join([APPROVAL.replace("Union.", "Union.1") + " ", ""])
+def test_pdf_note_marked_statement_without_final_stop_before_a_heading(mock_reader_cls, tmp_path: Path, mark):
+    # pypdf reads a superscript note mark as a digit stuck to the word ("Union.1", "white paper2").
+    statement = APPROVAL.replace("Union.", "Union.1") + " " + RESPONSIBILITY[:-1] + mark
     lines = [*textwrap.wrap(statement, 90), "Summary", *textwrap.wrap(SUMMARY_BODY, 90)]
     whitepaper = _pdf_whitepaper(mock_reader_cls, tmp_path, "\n".join(lines) + "\n")
     findings = _section_findings(whitepaper)
