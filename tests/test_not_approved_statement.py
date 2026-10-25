@@ -737,3 +737,171 @@ def test_pdf_responsibility_sentence_without_full_stop_stays_in_the_statement(tm
     whitepaper = load_whitepaper(_write_pdf(tmp_path / "draft.pdf", blocks), WhitepaperType.OTHER)
     statement = _section_findings(whitepaper)[TITLE_II]
     assert statement.status == "pass", statement.issues
+
+
+# The statutory responsibility sentence is recognised by its words, so its lines stay in the statement
+# whatever their layout; every other line the loaders mark as a heading still ends the statement.
+APPROVAL_LINES = [
+    "This crypto-asset white paper has not been approved by any competent authority in any Member",
+    "State of the European Union.",
+]
+OFFEROR_BODY = "Example Ledger S.A. is a public limited company registered in Luxembourg. " * 4
+
+
+@pytest.mark.parametrize("kind", ["bold", "large"])
+@pytest.mark.parametrize("responsibility", [FULL_WIDTH, NARROW], ids=["full-width", "narrow"])
+def test_pdf_responsibility_sentence_set_apart_with_wide_line_spacing_stays_in_the_statement(
+    tmp_path: Path, kind, responsibility
+):
+    # A "space" block between the lines puts them about two and a half lines apart, as double spacing does.
+    spaced = [block for line in responsibility for block in ((kind, line), ("space", ""))]
+    path = _write_pdf(
+        tmp_path / "draft.pdf",
+        [
+            *[("plain", line) for line in APPROVAL_LINES],
+            *spaced,
+            ("large", "Summary"),
+            ("body", SUMMARY_BODY),
+        ],
+    )
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    statement = _section_findings(whitepaper)[TITLE_II]
+    assert statement.status == "pass", statement.issues
+    assert whitepaper.section("offeror") == whitepaper.section("crypto_asset") == ""
+
+
+def test_pdf_heading_between_the_two_sentences_ends_the_statement(tmp_path: Path):
+    path = _write_pdf(
+        tmp_path / "draft.pdf",
+        [
+            ("body", APPROVAL),
+            ("large", "Summary"),
+            ("body", _statement("The offeror").removeprefix(APPROVAL + " ") + " " + SUMMARY_BODY),
+        ],
+    )
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    assert " ".join(whitepaper.section("not_approved_statement").split()) == APPROVAL
+    assert _section_findings(whitepaper)["COMMON.SUMMARY"].status == "pass"
+
+
+def test_pdf_wrapped_heading_ends_an_incomplete_statement(tmp_path: Path):
+    path = _write_pdf(
+        tmp_path / "draft.pdf",
+        [
+            ("body", APPROVAL),
+            ("large", "Summary"),
+            ("large", "and Key Information"),
+            ("body", "The issuer is responsible for the token. " + SUMMARY_BODY),
+        ],
+    )
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    assert " ".join(whitepaper.section("not_approved_statement").split()) == APPROVAL
+    # main reads the lower-case second line of the heading as summary text, so only its place is checked.
+    assert "The issuer is responsible for the token." in whitepaper.section("summary")
+
+
+def test_pdf_part_title_smaller_than_the_statement_ends_it_on_the_same_page(tmp_path: Path, monkeypatch):
+    monkeypatch.setitem(test_heading_detection.PDF_FONTS, "plain11", "/F1 11 Tf")
+    path = _write_pdf(
+        tmp_path / "draft.pdf",
+        [
+            *[("plain11", line) for line in APPROVAL_LINES],
+            ("bold", "Part A Information about the Offeror"),
+            ("body", "The offeror is responsible for the offer. " + OFFEROR_BODY),
+            ("large", "Summary"),
+            ("body", SUMMARY_BODY),
+        ],
+    )
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    assert " ".join(whitepaper.section("not_approved_statement").split()) == APPROVAL
+    assert _section_findings(whitepaper)["ANNEX_I.A"].status != "missing"
+
+
+@pytest.mark.parametrize("repeated", [True, False], ids=["page-header", "heading"])
+def test_pdf_bold_line_at_the_top_of_the_next_page(tmp_path: Path, repeated):
+    # A bold page header that repeats the heading its page opens does not end the statement; a bold
+    # heading that opens the page does.
+    page_two = [("bold", "Part A Information about the Offeror")]
+    if repeated:
+        page_two += [
+            (
+                "plain",
+                "The offeror of the crypto-asset is solely responsible for the content of this crypto-asset",
+            ),
+            ("plain", "white paper."),
+            ("large", "Part A Information about the Offeror"),
+        ]
+    else:
+        page_two += [("plain", "The offeror is responsible for the offer.")]
+    blocks = [
+        ("large", "Summary"),
+        ("body", SUMMARY_BODY),
+        *[("plain", line) for line in APPROVAL_LINES],
+        ("plain", "Page 1"),
+        ("page", ""),
+        *page_two,
+        ("body", OFFEROR_BODY),
+        ("plain", "Page 2"),
+    ]
+    whitepaper = load_whitepaper(_write_pdf(tmp_path / "draft.pdf", blocks), WhitepaperType.OTHER)
+    findings = _section_findings(whitepaper)
+    assert findings[TITLE_II].status == ("pass" if repeated else "review"), findings[TITLE_II].issues
+    assert findings["ANNEX_I.A"].status != "missing"
+
+
+@pytest.mark.parametrize("kind", ["subheading", "outline"])
+def test_docx_heading_in_lower_case_ends_an_incomplete_statement(tmp_path: Path, kind):
+    path = _write_docx(
+        tmp_path / "draft.docx",
+        [
+            ("plain", APPROVAL),
+            (kind, "a) Summary"),
+            ("plain", "The issuer is responsible for the token. " + SUMMARY_BODY),
+        ],
+    )
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    assert whitepaper.section("not_approved_statement") == APPROVAL
+    assert whitepaper.section("summary").startswith("The issuer is responsible for the token.")
+
+
+def test_docx_long_heading_naming_the_persons_responsible_ends_an_incomplete_statement(tmp_path: Path):
+    heading = "Information about the offeror and the persons responsible for drawing up this white paper"
+    path = _write_docx(
+        tmp_path / "draft.docx",
+        [("plain", APPROVAL), ("heading", heading), ("plain", "The offeror is responsible. " + OFFEROR_BODY)],
+    )
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    assert whitepaper.section("not_approved_statement") == APPROVAL
+    assert _section_findings(whitepaper)["ANNEX_I.A"].status != "missing"
+
+
+@pytest.mark.parametrize(
+    ("kind", "responsibility"),
+    [
+        (
+            "bold",
+            [
+                "The offeror of the crypto-asset is solely responsible for",
+                "the content of this crypto-asset",
+                "white paper.",
+            ],
+        ),
+        (
+            "plain",
+            [
+                "THE OFFEROR OF THE CRYPTO-ASSET IS SOLELY",
+                "RESPONSIBLE FOR THE CONTENT OF THIS CRYPTO-ASSET",
+                "WHITE PAPER.",
+            ],
+        ),
+    ],
+    ids=["bold", "capitals"],
+)
+def test_docx_responsibility_sentence_set_apart_a_paragraph_per_line_passes(
+    tmp_path: Path, kind, responsibility
+):
+    blocks = [("plain", line) for line in APPROVAL_LINES] + [(kind, line) for line in responsibility]
+    path = _write_docx(tmp_path / "draft.docx", [*blocks, ("large", "Summary"), ("plain", SUMMARY_BODY)])
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    statement = _section_findings(whitepaper)[TITLE_II]
+    assert statement.status == "pass", statement.issues

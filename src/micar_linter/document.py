@@ -119,6 +119,19 @@ _STATEMENT_START = re.compile(
 # The statement has two sentences: the one opening above, then the one naming who is solely
 # responsible for the content. Each is about 20 words in Art. 6(3) and Art. 51(3).
 _RESPONSIBILITY = re.compile(r"\b(?:responsib|verantwort)\w*", re.IGNORECASE)
+# The responsibility sentence as Art. 6(3) and Art. 51(3) word it: the person it names, then the clause
+# "is solely responsible for the content of this crypto-asset white paper". The German pair is a
+# routing heuristic, like the German opening.
+_RESPONSIBILITY_CLAUSE = re.compile(
+    r"\bsolely\s+responsible\s+for\s+the\s+content\b|\balleinige\s+verantwortung\s+für\s+den\s+inhalt\b",
+    re.IGNORECASE,
+)
+_RESPONSIBLE_PERSON = re.compile(
+    r"\bthe\s+(?:offeror|issuer|person|operator)\b|\b(?:der|die)\s+(?:anbieter|emittent|betreiber|person)\b",
+    re.IGNORECASE,
+)
+# "of this crypto-asset white paper." after the clause; "dieses Kryptowerte-Whitepapers." in German.
+_CLAUSE_TAIL_MAX_WORDS = 8
 _STATEMENT_SENTENCE_END = re.compile(r"[.!?](?=\s|$)")
 _STATEMENT_MAX_LINES = 12
 _SENTENCE_MAX_WORDS = 30
@@ -151,9 +164,10 @@ def statement_extent(lines: list[str], start: int, is_heading: Callable[[int], b
     statement cannot swallow the sections that follow it.
 
     is_heading(index) reports a heading the loader reads from the layout, such as a DOCX
-    paragraph in a Heading style or a PDF line in a heading font. A statement set in bold,
-    capitals or a larger font carries the same marks, so a marked line counts only where it
-    starts with a capital and is not the responsibility sentence without its full stop.
+    paragraph in a Heading style or a PDF line in a heading font. A statement may be set
+    apart in bold, capitals or a larger font, so the lines of the statutory responsibility
+    sentence, from the person it names to the end of the clause, are recognised by their
+    words and never read as a heading, whatever their layout or spacing.
     """
     window = lines[start : start + _STATEMENT_MAX_LINES]
     text = " ".join(window)
@@ -163,18 +177,23 @@ def statement_extent(lines: list[str], start: int, is_heading: Callable[[int], b
         line_ends.append(offset + len(line))
         offset += len(line) + 1
 
-    def firm_heading(i: int) -> bool:
-        if window[i].lstrip().startswith("#"):
-            return True
-        if is_heading is None or not is_heading(start + i):
-            return False
-        line = window[i].strip()
-        return not line[:1].islower() and not (
-            _RESPONSIBILITY.search(line) and len(line.split()) > _HEADING_MAX_WORDS
-        )
-
     def line_at(position: int) -> int:
         return next(i for i, line_end in enumerate(line_ends) if line_end >= position)
+
+    own: range = range(0)
+    clause = _RESPONSIBILITY_CLAUSE.search(text)
+    if clause:
+        persons = list(_RESPONSIBLE_PERSON.finditer(text, 0, clause.start()))
+        clause_end = clause.end()
+        tail = _STATEMENT_SENTENCE_END.search(text, clause_end)
+        if tail and len(text[clause_end : tail.end()].split()) <= _CLAUSE_TAIL_MAX_WORDS:
+            clause_end = tail.end()
+        own = range(line_at((persons[-1] if persons else clause).start() + 1), line_at(clause_end) + 1)
+
+    def firm_heading(i: int) -> bool:
+        if i in own:
+            return False
+        return window[i].lstrip().startswith("#") or (is_heading is not None and is_heading(start + i))
 
     # Continuation lines of the opening sentence never name a section, so a line that ends
     # inside it and looks like a heading means the sentence was cut short. The line where
@@ -183,7 +202,7 @@ def statement_extent(lines: list[str], start: int, is_heading: Callable[[int], b
     first = _STATEMENT_SENTENCE_END.search(text)
     first_end = first.end() if first else len(text) + 1
     for i in range(1, len(window)):
-        if line_ends[i] < first_end and (looks_like_heading(window[i]) or firm_heading(i)):
+        if line_ends[i] < first_end and i not in own and (looks_like_heading(window[i]) or firm_heading(i)):
             return start + i
     if first is None:
         return start + 1
@@ -781,36 +800,38 @@ def _line_sections(lines: list[_Line], statement: bool = False) -> DocumentSecti
         if page_line.page is not None:
             page_lines.setdefault(page_line.page, []).append(position)
     page_edges = {i for indices in page_lines.values() for i in (*indices[:2], *indices[-2:])}
+    line_counts = Counter(_page_text(page_line.text) for page_line in lines)
 
     def statement_heading(index: int, statement_line: _Line) -> bool:
         # A heading inside the statement's lines (see statement_extent): a template part or field title,
         # or a line shaped like a heading in a heading font other than the statement's own, since a
-        # statement may be set in bold. A template line set smaller than the statement, or at the edge of
-        # a later page in the body font, is a page header that names the current part, not running
-        # because its text changes from page to page. The first line of a sentence that goes on in its
-        # own font, filling the column or over a lower-case line, is no heading.
+        # statement may be set in bold. Where the statement runs over a page break, a line at the edge
+        # of the next page may be a page header that names the current part ("Part A ..."), not running
+        # because it changes from page to page: one in the body font, one set smaller than the
+        # statement, or one that repeats another line of the draft, as a header repeats its heading.
         line = lines[index]
         statement_font = _font(statement_line)
         if running[index]:
             return False
+        later_page = line.page != statement_line.page
         smaller = (
-            line.size is not None and statement_font is not None and round(line.size, 1) < statement_font[0]
+            later_page
+            and line.size is not None
+            and statement_font is not None
+            and round(line.size, 1) < statement_font[0]
         )
-        page_header = index in page_edges and line.page != statement_line.page and not styled[index]
+        page_header = (
+            index in page_edges
+            and later_page
+            and (not styled[index] or line_counts[_page_text(line.text)] > 1)
+        )
         if _template_kind(line.text) and _heading_shaped(line.text, styled[index]):
             return not (smaller or page_header)
-        following = lines[following_index[index]] if index in following_index else None
-        goes_on = (
-            following is not None
-            and _font(line) == _font(following)
-            and _next_line(line, following, heights)
-            and (fills[index] or following.text[:1].islower())
-        )
         return (
             styled[index]
             and _font(line) != statement_font
             and _heading_shaped(line.text, True)
-            and not goes_on
+            and not page_header
         )
 
     for index, line in enumerate(lines):
