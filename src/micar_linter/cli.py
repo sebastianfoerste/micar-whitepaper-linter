@@ -134,7 +134,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--coverage",
         action="store_true",
-        help="Print a clean, console-formatted coverage summary table to stdout.",
+        help=("Print a console coverage table instead of the report. Output files and --strict still apply."),
     )
     parser.add_argument(
         "--review-bundle-dir",
@@ -243,11 +243,10 @@ def main(argv: list[str] | None = None) -> int:
 
     report = lint_whitepaper(whitepaper)
 
+    # --coverage only changes what is printed: output files and --strict still apply.
     if args.coverage and not args.review_bundle_dir:
         print(render_coverage_table(report))
-        return 0
-
-    if args.json:
+    elif args.json:
         print(render_json(report))
     else:
         print(render_text(report, args.citation_style))
@@ -426,14 +425,17 @@ def _run_batch(args: argparse.Namespace) -> int:
     else:
         print(
             (
-                "Batch review pack written to {path}. Supported files: {supported}. Blocked files: {blocked}."
+                "Batch review pack written to {path}. Supported files: {supported}. "
+                "Blocked files: {blocked}. Failed files: {failed}."
             ).format(
                 path=args.batch_output,
                 supported=pack["summary"]["supported_files"],
                 blocked=pack["summary"]["blocked_files"],
+                failed=pack["summary"]["failed_files"],
             )
         )
 
-    if args.strict and pack["summary"]["blocked_files"]:
+    # A file that could not be linted was not checked, so --strict fails closed on it.
+    if args.strict and (pack["summary"]["blocked_files"] or pack["summary"]["failed_files"]):
         return 1
     return 0

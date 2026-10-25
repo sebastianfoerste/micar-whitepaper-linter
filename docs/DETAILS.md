@@ -67,7 +67,7 @@ Inputs:
 |---|---|---|
 | `whitepaper` | required | Path to a JSON, XHTML or DOCX draft |
 | `strict` | `true` | Fail the job while BLOCKER findings are open |
-| `extra-args` | `''` | More CLI arguments, e.g. `--json`, `--type art` |
+| `extra-args` | `''` | More CLI arguments, e.g. `--json`, `--coverage`, `--type art` |
 | `summary` | `true` | Append a table of open findings to the job summary: rule, status, severity, citation, `file:line`, rule page |
 | `annotations` | `true` | Annotate up to 10 open findings on the draft file (open blockers first) |
 | `upload-sarif` | `false` | Upload a SARIF log to GitHub code scanning |

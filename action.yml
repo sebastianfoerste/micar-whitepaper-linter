@@ -14,7 +14,7 @@ inputs:
     required: false
     default: 'true'
   extra-args:
-    description: 'Additional CLI arguments passed to micar-lint (e.g. --json, --coverage).'
+    description: 'Additional CLI arguments passed to micar-lint (e.g. --json, --coverage, --type art).'
     required: false
     default: ''
   summary:
@@ -65,7 +65,8 @@ runs:
         # The CLI writes every output before it returns, so a strict failure still reports.
         # --no-cache: uv keys a path build on pyproject.toml, so a moved v1 tag could reuse a stale build.
         set +e
-        uvx --no-cache --from "${GITHUB_ACTION_PATH}" micar-lint "${INPUT_WHITEPAPER}" "${STRICT_ARGS[@]}" "${EXTRA_ARGS[@]}" \
+        # [docx]: the whitepaper input accepts DOCX, which needs the optional python-docx extra.
+        uvx --no-cache --from "${GITHUB_ACTION_PATH}[docx]" micar-lint "${INPUT_WHITEPAPER}" "${STRICT_ARGS[@]}" "${EXTRA_ARGS[@]}" \
           --sarif-output "${OUT_DIR}/micar-lint.sarif" \
           --summary-output "${OUT_DIR}/summary.md" \
           --annotations-output "${OUT_DIR}/annotations.txt"

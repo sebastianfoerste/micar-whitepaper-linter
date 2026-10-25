@@ -71,6 +71,8 @@ def load_whitepaper(path: Path, whitepaper_type: WhitepaperType | None = None) -
 
 
 _RESERVED_METADATA_KEYS = (
+    # Set only by the document loaders: anchors and the iXBRL message read it, and anchors parse the file.
+    "source_file",
     "ixbrl_validated",
     "ixbrl_issues",
     "extraction_notes",
