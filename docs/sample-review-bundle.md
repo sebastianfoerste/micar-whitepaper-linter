@@ -28,7 +28,7 @@ The linter was run on `examples/art-stablecoin.json` with the default English ci
 MiCAR Whitepaper Linter - Synthetic EuroStable ART White Paper
 Whitepaper type: ART
 ==============================================================================
-Pass: 14  |  Review: 3  |  Missing: 1  |  Blockers: 4
+Pass: 16  |  Review: 3  |  Missing: 1  |  Blockers: 4
 
 [PASS  ] [BLOCKER] COMMON.SUMMARY  Plain-language summary
            Cite:  Art. 6(7), Art. 19(6), Art. 51(6) MiCAR
@@ -61,10 +61,20 @@ Pass: 14  |  Review: 3  |  Missing: 1  |  Blockers: 4
            Section: 'ixbrl_tagging'  (0 words)
            -  Draft format: notification requires XHTML with Inline XBRL tagging. This format cannot satisfy that requirement; the content checks still apply.
 
+[PASS  ] [MAJOR  ] COMMON.LEI_CHECK_DIGITS  Legal Entity Identifier format and check digits (ISO 17442, ISO/IEC 7064 MOD 97-10)
+           Cite:  Annex I, Part A, Annex II, Part A, Annex III, Part A MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'issuer'  (0 words)
+
+[PASS  ] [MAJOR  ] COMMON.LEI_CONSISTENCY  Legal Entity Identifiers agree across the party sections and the rest of the draft
+           Cite:  Annex I, Part A, Annex II, Part A, Annex III, Part A MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'issuer'  (0 words)
+
 [PASS  ] [BLOCKER] ANNEX_II.A  Information about the issuer of the ART (legal form, governance, prudential profile)
            Cite:  Annex II, Part A MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'issuer'  (94 words)
+           Section: 'issuer'  (106 words)
 
 [PASS  ] [BLOCKER] ANNEX_II.B  Information about the asset-referenced token (reference assets, stabilisation mechanism)
            Cite:  Annex II, Part B MiCAR
@@ -135,8 +145,8 @@ This tool is not legal advice.
 
 ## Compliance Coverage Statistics
 
-- **Total Checked Rules**: 18
-- **Passed Rules**: 14
+- **Total Checked Rules**: 20
+- **Passed Rules**: 16
 - **Rules Requiring Review**: 3 (reserve disclosure, the fact-dependent deposit floor, and custody under Annex II, Part G)
 - **Missing Sections**: 1 (format: a JSON draft cannot satisfy the XHTML/iXBRL notification format)
 - **Total Blocker Violations**: 4 blockers (`COMMON.IXBRL_TAGGING`, `ANNEX_II.G.COMPOSITION_DISCLOSURE`, `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW`, `ANNEX_II.G.CUSTODY`)
