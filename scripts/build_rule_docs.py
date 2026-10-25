@@ -38,9 +38,9 @@ SOURCE_MODULES = {
     "ANNEX_II": "annex_ii.py",
     "ANNEX_III": "annex_iii.py",
 }
-# Citations were not re-read against the Official Journal when these pages were generated.
+# Citations have not been re-read against the Official Journal since these pages were introduced.
 VERIFICATION_NOTE = (
-    "Not re-verified when these pages were generated (2026-10-20): EUR-Lex was unreachable from the "
+    "Not re-verified since these pages were introduced (2026-10-20): EUR-Lex was unreachable from the "
     "build environment. The citation is the rule's own, unchanged."
 )
 FILLER = "This synthetic sentence only adds length and states no fact about any issuer or token."
@@ -376,7 +376,7 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
 <dt>Minimum words</dt><dd>{rule.min_words}</dd>
 <dt>Listed terms (English)</dt><dd>{_terms(rule.required_terms)}</dd>
 <dt>Listed terms (German)</dt><dd lang="de">{_terms(rule.required_terms_de)}</dd>
-<dt>Present in</dt><dd>Release {_e(__version__)}</dd>
+<dt>Package version</dt><dd>{_e(__version__)}, built from source that may include unreleased changes</dd>
 <dt>Source</dt><dd><a href="{REPO}/blob/main/src/micar_linter/rules/{SOURCE_MODULES[family]}">rules/{SOURCE_MODULES[family]}</a></dd>
 </dl></div>
 <h2>How the status is set</h2>
