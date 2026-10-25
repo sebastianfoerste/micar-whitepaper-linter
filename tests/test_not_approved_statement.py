@@ -1021,3 +1021,168 @@ def test_docx_capitals_responsibility_sentence_split_before_solely_passes(tmp_pa
     path = _write_docx(tmp_path / "draft.docx", [*blocks, ("large", "Summary"), ("plain", SUMMARY_BODY)])
     whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
     assert _section_findings(whitepaper)[TITLE_II].status == "pass"
+
+
+# A responsibility sentence with every statutory word ends the statement with its last word, whatever
+# follows: no stop, a note mark, a heading in any form, body text or a run-on.
+RESPONSIBILITY = (
+    "The offeror of the crypto-asset is solely responsible for the content of this crypto-asset white paper."
+)
+
+
+@pytest.mark.parametrize(
+    "tail", ["", ".\u2020", ".[1]", ".(1)"], ids=["no-stop", "dagger", "bracket", "paren"]
+)
+@pytest.mark.parametrize(
+    ("wp_type", "rule_id", "subject"),
+    [(WhitepaperType.OTHER, TITLE_II, "offeror"), (WhitepaperType.EMT, EMT, "issuer")],
+)
+def test_pdf_tail_on_its_own_line_before_a_heading_stays_in_the_statement(
+    tmp_path: Path, tail, wp_type, rule_id, subject
+):
+    path = _write_pdf(
+        tmp_path / "draft.pdf",
+        [
+            (
+                "plain",
+                "This crypto-asset white paper has not been approved by any competent authority in any Member State",
+            ),
+            (
+                "plain",
+                f"of the European Union. The {subject} of the crypto-asset is solely responsible for the content of this",
+            ),
+            ("plain", f"crypto-asset white paper{tail}"),
+            ("large", "Summary"),
+            ("body", SUMMARY_BODY),
+        ],
+    )
+    whitepaper = load_whitepaper(path, wp_type)
+    findings = _section_findings(whitepaper)
+    assert findings[rule_id].status == "pass", findings[rule_id].issues
+    assert whitepaper.section("not_approved_statement").endswith(f"crypto-asset white paper{tail}")
+    assert findings["COMMON.SUMMARY"].status != "missing"
+
+
+@patch("pypdf.PdfReader")
+def test_pdf_note_marked_statement_without_final_stop_before_a_heading(mock_reader_cls, tmp_path: Path):
+    statement = RESPONSIBILITY[:-1].join([APPROVAL.replace("Union.", "Union.1") + " ", ""])
+    lines = [*textwrap.wrap(statement, 90), "Summary", *textwrap.wrap(SUMMARY_BODY, 90)]
+    whitepaper = _pdf_whitepaper(mock_reader_cls, tmp_path, "\n".join(lines) + "\n")
+    findings = _section_findings(whitepaper)
+    assert findings[TITLE_II].status == "pass", findings[TITLE_II].issues
+    assert findings["COMMON.SUMMARY"].status == "pass"
+
+
+@pytest.mark.parametrize("heading", ["## A.1 Name of the offeror", "## II.3 Summary"])
+def test_markdown_field_number_after_a_statement_without_stop_stays_a_heading(tmp_path: Path, heading):
+    path = tmp_path / "draft.md"
+    body = "Example Ledger AG is a public limited company registered in Luxembourg. " * 3
+    path.write_text(f"{APPROVAL[:-1]}\n\n{heading}\n\n{body}\n", encoding="utf-8")
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    assert heading.removeprefix("## ").split()[0] not in whitepaper.section("not_approved_statement")
+    assert whitepaper.section("offeror" if "A.1" in heading else "summary").startswith("Example Ledger AG")
+
+
+@pytest.mark.parametrize("mark", ["**", "*", "\u201c"], ids=["bold", "italic", "quoted"])
+@pytest.mark.parametrize(
+    "after",
+    [
+        "## Summary\n\n" + SUMMARY_TEXT,
+        "**Part A \u2013 Information about the offeror**\n\n" + OFFEROR_BODY,
+        SUMMARY_TEXT,
+    ],
+    ids=["heading", "label", "body"],
+)
+def test_markdown_two_paragraph_statement_without_final_stop(tmp_path: Path, mark, after):
+    close = "\u201d" if mark == "\u201c" else mark
+    path = tmp_path / "draft.md"
+    path.write_text(
+        f"{mark}{APPROVAL}{close}\n\n{mark}{RESPONSIBILITY[:-1]}{close}\n\n{after}\n", encoding="utf-8"
+    )
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    statement = _section_findings(whitepaper)[TITLE_II]
+    assert statement.status == "pass", statement.issues
+    assert "Summary" not in whitepaper.section("not_approved_statement")
+    if after.startswith("## Summary"):
+        assert whitepaper.section("summary").startswith("This summary should be read")
+
+
+def test_markdown_responsibility_sentence_running_on_past_the_statutory_words(tmp_path: Path):
+    run_on = (
+        RESPONSIBILITY[:-1]
+        + " and any supplements thereto, as notified to the competent authority of the home Member State."
+    )
+    path = tmp_path / "draft.md"
+    path.write_text(f"**{APPROVAL} {run_on}**\n\n## Summary\n\n{SUMMARY_TEXT}\n", encoding="utf-8")
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    assert _section_findings(whitepaper)[TITLE_II].status == "pass"
+    assert whitepaper.section("summary").startswith("This summary should be read")
+
+
+@pytest.mark.parametrize(
+    ("kind", "lines", "wp_type", "rule_id"),
+    [
+        (
+            "bold",
+            [
+                "The person seeking admission to trading of the crypto-",
+                "asset is solely responsible for the content of this",
+                "crypto-asset white paper.",
+            ],
+            WhitepaperType.OTHER,
+            TITLE_II,
+        ),
+        (
+            "plain",
+            [
+                "THE OFFEROR OF THE CRYPTO-",
+                "ASSET IS SOLELY RESPONSIBLE",
+                "FOR THE CONTENT OF THIS",
+                "CRYPTO-ASSET WHITE PAPER.",
+            ],
+            WhitepaperType.OTHER,
+            TITLE_II,
+        ),
+        (
+            "bold",
+            [
+                "The issuer of the crypto-",
+                "asset is solely responsible for the",
+                "content of this crypto-asset white paper.",
+            ],
+            WhitepaperType.EMT,
+            EMT,
+        ),
+        (
+            "plain",
+            [
+                "The offeror of the crypto-asset is solely",
+                "responsible for the content of this",
+                "crypto-asset white paper",
+            ],
+            WhitepaperType.OTHER,
+            TITLE_II,
+        ),
+        (
+            "bold",
+            [
+                "The offeror of the crypto-asset is solely",
+                "responsible for the content of this",
+                "crypto-asset white paper",
+            ],
+            WhitepaperType.OTHER,
+            TITLE_II,
+        ),
+    ],
+    ids=["hyphen-bold", "hyphen-capitals", "hyphen-emt", "no-stop-plain", "no-stop-bold"],
+)
+def test_docx_responsibility_sentence_a_paragraph_per_line_ends_with_its_last_line(
+    tmp_path: Path, kind, lines, wp_type, rule_id
+):
+    blocks = [("plain", line) for line in APPROVAL_LINES] + [(kind, line) for line in lines]
+    path = _write_docx(tmp_path / "draft.docx", [*blocks, ("bold", "Summary"), ("plain", SUMMARY_BODY)])
+    whitepaper = load_whitepaper(path, wp_type)
+    statement = _section_findings(whitepaper)[rule_id]
+    assert statement.status == "pass", statement.issues
+    assert whitepaper.section("not_approved_statement").splitlines()[-1] == lines[-1]
+    assert whitepaper.section("summary").startswith("The summary gives key information")

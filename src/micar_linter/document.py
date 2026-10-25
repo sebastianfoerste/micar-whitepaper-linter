@@ -136,17 +136,25 @@ _RESPONSIBLE_PERSON = re.compile(
 # ("Example AG is solely responsible ..."), is not the one the clause makes responsible.
 _PERSON_TO_CLAUSE = re.compile(
     r"(?:\s+(?:seeking\s+admission\s+to\s+trading|of\s+the\s+trading\s+platform))?"
-    r"(?:\s+of\s+the\s+[\w-]+(?:\s+tokens?)?)?\s+is\s+"
-    r"|(?:\s+(?:des|der)\s+[\w-]+)?(?:,\s+die\s+die\s+zulassung\s+zum\s+handel\s+beantragt,)?\s+trägt\s+die\s+",
+    r"(?:\s+of\s+the\s+[\w-]+(?:(?<=-)\s+[\w-]+)?(?:\s+tokens?)?)?\s+is\s+"
+    r"|(?:\s+(?:des|der)\s+[\w-]+(?:(?<=-)\s+[\w-]+)?)?"
+    r"(?:,\s+die\s+die\s+zulassung\s+zum\s+handel\s+beantragt,)?\s+trägt\s+die\s+",
     re.IGNORECASE,
 )
-# "of this crypto-asset white paper." after the clause; "dieses Kryptowerte-Whitepapers." in German.
+# The words that end the clause, "of this crypto-asset white paper" ("dieses Kryptowerte-Whitepapers"), with
+# any stop, quote or note mark attached, and however a line break or a hyphen at a line end splits them.
+_CLAUSE_WORDS = re.compile(
+    r"\s+(?:of\s+this\s+crypto-\s*asset\s+white\s+paper|dieses\s+kryptowerte-\s*whitepapers?)\b\S*",
+    re.IGNORECASE,
+)
+# Where the clause ends in other words, the rest of its sentence up to the stop.
 _CLAUSE_TAIL_MAX_WORDS = 8
 # A full stop may sit inside closing quotes, brackets or Markdown emphasis, or before a note mark:
 # 'paper.”', 'Whitepapers.“', 'paper.**', 'paper.[^1]', 'paper.¹', and 'Union.1' in extracted PDF text.
+# A note mark follows a word, never a field or outline number such as "A.1", "I.03" or "IV.2".
 _STATEMENT_SENTENCE_END = re.compile(
     r"[.!?](?:[\"'\u2018\u2019\u201c\u201d\u00ab\u00bb)\]*_]|\[\^\w+\]|[\u00b9\u00b2\u00b3\u2070-\u2079])*"
-    r"(?:(?<=[^\W\d_][.!?])\d{1,2})?(?=\s|$)"
+    r"(?:(?<=[^\W\d_]{2}[.!?])(?<!\b[IVX]{2}[.!?])(?<!\b[IVX]{3}[.!?])(?<!\b[IVX]{4}[.!?])\d{1,2})?(?=\s|$)"
 )
 _STATEMENT_MAX_LINES = 12
 _SENTENCE_MAX_WORDS = 30
@@ -199,6 +207,8 @@ def statement_extent(lines: list[str], start: int, is_heading: Callable[[int], b
         return window[i].lstrip().startswith("#") or (is_heading is not None and is_heading(start + i))
 
     own: range = range(0)
+    # Whether the responsibility sentence holds every statutory word, so the statement is whole at its end.
+    complete = False
     clause = _RESPONSIBILITY_CLAUSE.search(text)
     if clause:
         persons = [
@@ -207,8 +217,12 @@ def statement_extent(lines: list[str], start: int, is_heading: Callable[[int], b
             if _PERSON_TO_CLAUSE.fullmatch(text, person.end(), clause.start())
         ]
         own_end = line_at(clause.end())
+        words = _CLAUSE_WORDS.match(text, clause.end())
         tail = _STATEMENT_SENTENCE_END.search(text, clause.end())
-        if tail and len(text[clause.end() : tail.end()].split()) <= _CLAUSE_TAIL_MAX_WORDS:
+        if words:
+            # The statutory words, however they are set, with or without the stop.
+            own_end, complete = line_at(words.end()), True
+        elif tail and len(text[clause.end() : tail.end()].split()) <= _CLAUSE_TAIL_MAX_WORDS:
             # The rest of the sentence ("of this crypto-asset white paper."), but never a line that opens a
             # heading or a numbered label: a sentence that has lost its stop ends before it.
             own_end = next(
@@ -233,9 +247,17 @@ def statement_extent(lines: list[str], start: int, is_heading: Callable[[int], b
     for i in range(1, len(window)):
         if line_ends[i] < first_end and i not in own and (looks_like_heading(window[i]) or firm_heading(i)):
             return start + i
-    if first is None:
+    last = line_at(first_end) if first else None
+    # A responsibility sentence with every statutory word, right after the opening one, ends the statement
+    # with its last word, whatever follows it: no stop, a heading, a label, a note or a run-on.
+    if (
+        complete
+        and (last is None or own.start <= last + 1)
+        and not any(firm_heading(i) for i in range(1, own.start))
+    ):
+        return start + own.stop
+    if first is None or last is None:
         return start + 1
-    last = line_at(first_end)
 
     # The responsibility sentence of a narrow PDF column can look like a heading
     # ("The offeror of the crypto-asset is solely"), so only firm headings end it early.
