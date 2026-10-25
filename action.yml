@@ -14,7 +14,7 @@ inputs:
     required: false
     default: 'true'
   extra-args:
-    description: 'Additional CLI arguments passed to micar-lint (e.g. --json, --coverage, --type art).'
+    description: 'Additional CLI arguments passed to micar-lint (e.g. --json, --coverage, or --type art for a draft that is not JSON).'
     required: false
     default: ''
   summary:

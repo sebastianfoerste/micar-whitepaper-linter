@@ -21,7 +21,7 @@ from micar_linter.lei import check_digits_for
 from micar_linter.linter import Linter
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Rule
-from micar_linter.whitepaper import Whitepaper, WhitepaperType
+from micar_linter.whitepaper import _RESERVED_METADATA_KEYS, Whitepaper, WhitepaperType
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "rules"
@@ -221,7 +221,12 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
 
 def lint_example(rule: Rule, example: Example) -> str:
     draft = example.draft
-    metadata = {k: v for k, v in draft.items() if k not in ("title", "type", "sections")}
+    # The same filter as the JSON loader: a draft cannot set the reserved keys.
+    metadata = {
+        k: v
+        for k, v in draft.items()
+        if k not in ("title", "type", "sections") and k not in _RESERVED_METADATA_KEYS
+    }
     metadata["ixbrl_validated"] = False
     whitepaper = Whitepaper(
         title=draft["title"],
