@@ -20,6 +20,7 @@ from unittest.mock import MagicMock, patch
 
 import docx
 import pytest
+from test_heading_detection import _write_docx, _write_pdf
 
 from micar_linter.linter import Linter, lint_whitepaper
 from micar_linter.rules import RULESETS
@@ -423,3 +424,110 @@ def test_statement_wrapped_in_a_narrow_pdf_column_passes(mock_reader_cls, tmp_pa
     statement = next(f for f in lint_whitepaper(whitepaper).findings if f.rule.rule_id == TITLE_II)
     assert statement.status == "pass", statement.issues
     assert whitepaper.section("summary").startswith("The summary gives key information")
+
+
+# The statement next to the headings that the DOCX and PDF loaders read from Heading styles, bold or
+# capitals labels, heading fonts and template numbering: an incomplete statement stops at such a heading
+# even where the next sentence names who is responsible.
+@pytest.mark.parametrize("label", [("bold", "Summary"), ("plain", "SUMMARY")])
+def test_docx_label_ends_the_statement_even_before_a_responsibility_sentence(tmp_path: Path, label):
+    path = _write_docx(
+        tmp_path / "draft.docx",
+        [
+            ("plain", APPROVAL),
+            label,
+            ("plain", "The issuer is responsible for the token. " + SUMMARY_BODY),
+            ("bold", "Risk Warning"),
+            ("plain", RISK_BODY),
+        ],
+    )
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    assert whitepaper.section("not_approved_statement") == APPROVAL
+    assert whitepaper.section("summary").startswith("The issuer is responsible for the token.")
+    assert whitepaper.section("risk_warning") == RISK_BODY
+
+
+def test_docx_statement_set_in_bold_passes(tmp_path: Path):
+    path = _write_docx(
+        tmp_path / "draft.docx",
+        [
+            ("bold", APPROVAL),
+            (
+                "bold",
+                "The offeror of the crypto-asset is solely responsible for the content of this crypto-asset white paper.",
+            ),
+            ("large", "Summary"),
+            ("plain", SUMMARY_BODY),
+        ],
+    )
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    statement = next(f for f in lint_whitepaper(whitepaper).findings if f.rule.rule_id == TITLE_II)
+    assert statement.status == "pass", statement.issues
+
+
+def test_pdf_heading_font_ends_the_statement_even_before_a_responsibility_sentence(tmp_path: Path):
+    path = _write_pdf(
+        tmp_path / "draft.pdf",
+        [
+            ("body", APPROVAL),
+            ("large", "Summary"),
+            ("body", "The issuer is responsible for the token. " + SUMMARY_BODY),
+            ("large", "Risk Warning"),
+            ("body", RISK_BODY),
+        ],
+    )
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    assert " ".join(whitepaper.section("not_approved_statement").split()) == APPROVAL
+    assert whitepaper.section("summary").startswith("The issuer is responsible for the token.")
+    _sections_after_incomplete_statement(whitepaper)
+
+
+def test_pdf_statement_set_in_bold_passes(tmp_path: Path):
+    # Each line of the statement is in the bold font, so a short one ("The offeror of the crypto-asset
+    # is solely") must not be read as a heading that ends it.
+    path = _write_pdf(
+        tmp_path / "draft.pdf",
+        [
+            ("bold", APPROVAL),
+            ("bold", "The offeror of the crypto-asset is solely"),
+            ("bold", "responsible for the content of this crypto-asset white paper."),
+            ("large", "Summary"),
+            ("body", SUMMARY_BODY),
+        ],
+    )
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    statement = next(f for f in lint_whitepaper(whitepaper).findings if f.rule.rule_id == TITLE_II)
+    assert statement.status == "pass", statement.issues
+    assert whitepaper.section("summary").startswith("The summary gives key information")
+
+
+@pytest.mark.parametrize(
+    "cut",
+    [
+        "This crypto-asset white paper has not been approved by the",
+        "This crypto-asset white paper has not been approved by any compe-",
+        "This crypto-asset white paper has not been approved by any competent authority in",
+        "This crypto-asset white paper has not been approved by any competent authority,",
+    ],
+)
+@patch("pypdf.PdfReader")
+def test_pdf_statement_cut_off_after_a_connective_ends_at_the_heading(mock_reader_cls, tmp_path: Path, cut):
+    # The heading the statement stops at is read as a heading, not as the rest of the cut sentence.
+    whitepaper = _pdf_whitepaper(
+        mock_reader_cls, tmp_path, f"{cut}\nSummary\n{SUMMARY_BODY}\nRisk Warning\n{RISK_BODY}\n"
+    )
+    assert whitepaper.section("not_approved_statement") == cut
+    assert whitepaper.section("summary").startswith("The summary gives key information")
+    _sections_after_incomplete_statement(whitepaper)
+
+
+# A statement field left as a placeholder is reported missing, as any placeholder-only section is,
+# also in a German draft, whose real statement is referred to review.
+@pytest.mark.parametrize("text", ["TBD", "[\u25cf]", "noch offen"])
+@pytest.mark.parametrize(
+    ("wp_type", "rule_id"), [(WhitepaperType.OTHER, TITLE_II), (WhitepaperType.EMT, EMT)]
+)
+def test_placeholder_statement_in_a_german_draft_is_missing(wp_type, rule_id, text):
+    finding = _finding(wp_type, rule_id, {"not_approved_statement": text}, language="de")
+    assert (finding.status, finding.word_count) == ("missing", 0)
+    assert finding.issues == ("Abschnitt enthält nur Platzhalter wie TBD oder TBC.",)

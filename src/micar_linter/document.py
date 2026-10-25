@@ -765,12 +765,34 @@ def _line_sections(lines: list[_Line], statement: bool = False) -> DocumentSecti
     previous_styled = False
     line_texts = [line.text for line in lines]
     statement_end = 0
+
+    def statement_heading(index: int, statement_font: tuple[float, bool] | None) -> bool:
+        # A heading for certain inside the statement's lines (see statement_extent): a template part or
+        # field title, or a line shaped like a heading in a heading font other than the statement's own,
+        # since a statement may be set in bold. The first line of a bold paragraph is no heading.
+        line = lines[index]
+        if running[index]:
+            return False
+        if _template_kind(line.text) and _heading_shaped(line.text, styled[index]):
+            return True
+        following = lines[following_index[index]] if index in following_index else None
+        return (
+            styled[index]
+            and _font(line) != statement_font
+            and _heading_shaped(line.text, True)
+            and not _starts_paragraph(line, following, fills[index], heights)
+        )
+
     for index, line in enumerate(lines):
         if statement and (index < statement_end or is_statement_start(line.text)):
             if index >= statement_end:
-                statement_end = statement_extent(line_texts, index)
+                statement_end = statement_extent(
+                    line_texts, index, partial(statement_heading, statement_font=_font(line))
+                )
             sections.setdefault("not_approved_statement", []).append(line.text)
-            previous, previous_role, previous_styled = line.text, _BODY, styled[index]
+            # statement_extent ends the statement at a line it reads as a heading, so a statement cut off
+            # mid-sentence ("approved by the") does not run on into that line.
+            previous, previous_role, previous_styled = line.text, _BREAK, styled[index]
             continue
         if running[index]:
             for key in current_keys:
@@ -957,8 +979,15 @@ def parse_docx(path: Path) -> DocumentSections:
         texts.append(text)
         if index < statement_end or is_statement_start(text):
             if index >= statement_end:
+                # A heading as parse_docx reads one below: a Heading style, an outline level, or a label
+                # that is entirely bold or in capitals.
                 statement_end = statement_extent(
-                    paragraph_texts, index, lambda i: _docx_heading_level(paragraphs[i][0]) is not None
+                    paragraph_texts,
+                    index,
+                    lambda i: (
+                        _docx_heading_level(paragraphs[i][0]) is not None
+                        or _docx_label_heading(*paragraphs[i])
+                    ),
                 )
             sections.setdefault("not_approved_statement", []).append(text)
             continue

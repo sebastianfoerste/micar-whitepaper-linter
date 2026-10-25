@@ -209,7 +209,8 @@ def _not_approved_statement_finding(rule: Rule, whitepaper: Whitepaper) -> Findi
     """Return the finding where the generic term check would mislead, otherwise None."""
     is_de = whitepaper.language == "de"
     text = whitepaper.section(rule.section)
-    if not text.strip():
+    # Empty and placeholder-only text go to the shared checks, which report them missing.
+    if not text.strip() or is_placeholder(text):
         return None
     words = _count_words(text)
     emt = rule.rule_id.startswith("ANNEX_III.")
