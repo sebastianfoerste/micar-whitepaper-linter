@@ -304,7 +304,8 @@ def status_logic(rule: Rule) -> str:
             "confirmation, not trusted facts.</li></ul>"
         )
     parts = [
-        f"<li><strong>Missing</strong>: section <code>{_e(rule.section)}</code> is absent or empty.</li>",
+        f"<li><strong>Missing</strong>: section <code>{_e(rule.section)}</code> is absent or empty, or holds "
+        "only placeholder text such as TBD or TBC.</li>",
         "<li><strong>Review</strong>: the section has fewer than "
         f"{rule.min_words} words, or a listed term does not appear (case-insensitive substring match).</li>",
     ]
