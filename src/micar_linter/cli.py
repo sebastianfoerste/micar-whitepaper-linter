@@ -75,7 +75,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--strict",
         action="store_true",
-        help="Exit with status 1 if any BLOCKER-severity finding is open.",
+        help=(
+            "Exit with status 1 if any BLOCKER-severity finding is open. For a directory, also if a file "
+            "could not be linted or no file was linted."
+        ),
     )
     parser.add_argument(
         "--lang",
@@ -435,7 +438,11 @@ def _run_batch(args: argparse.Namespace) -> int:
             )
         )
 
-    # A file that could not be linted was not checked, so --strict fails closed on it.
-    if args.strict and (pack["summary"]["blocked_files"] or pack["summary"]["failed_files"]):
+    # A file that could not be linted was not checked, so --strict fails closed on it, and on a run that
+    # linted no file at all.
+    summary = pack["summary"]
+    if args.strict and (
+        summary["blocked_files"] or summary["failed_files"] or not summary["supported_files"]
+    ):
         return 1
     return 0

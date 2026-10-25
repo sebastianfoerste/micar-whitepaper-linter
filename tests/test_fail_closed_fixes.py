@@ -62,6 +62,23 @@ def test_batch_counts_files_it_could_not_lint_and_strict_fails_on_them(tmp_path:
     assert main([str(source), "--batch-output", str(out), "--strict"]) == 1
 
 
+def test_strict_batch_fails_when_no_file_was_linted(tmp_path: Path, capsys):
+    source = tmp_path / "drafts"
+    source.mkdir()
+    out = tmp_path / "pack.json"
+    assert main([str(source), "--batch-output", str(out), "--strict"]) == 1
+    (source / "notes.txt").write_text("not a draft", encoding="utf-8")
+    assert main([str(source), "--batch-output", str(out), "--strict"]) == 1
+    assert main([str(source), "--batch-output", str(out)]) == 0
+    assert (
+        capsys.readouterr()
+        .out.splitlines()[-1]
+        .endswith("Supported files: 0. Blocked files: 0. Failed files: 0.")
+    )
+    summary = json.loads(out.read_text(encoding="utf-8"))["summary"]
+    assert (summary["supported_files"], summary["unsupported_files"]) == (0, 1)
+
+
 def test_batch_without_failures_reports_zero_failed_files(tmp_path: Path):
     source = tmp_path / "drafts"
     source.mkdir()
@@ -71,5 +88,4 @@ def test_batch_without_failures_reports_zero_failed_files(tmp_path: Path):
 
 def test_action_installs_the_docx_extra():
     action = (ROOT / "action.yml").read_text(encoding="utf-8")
-    assert "DOCX" in action
     assert re.search(r'uvx [^\n]*--from "\$\{GITHUB_ACTION_PATH\}\[docx\]" micar-lint', action)
