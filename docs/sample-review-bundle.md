@@ -11,10 +11,12 @@ This document provides a **sample compliance review bundle** showing the outputs
 
 The following review artifacts have been generated in the [examples/review-bundle/](../examples/review-bundle/) directory:
 
-1. **[compliance-checklist.md](../examples/review-bundle/compliance-checklist.md)**: A markdown checklist mapping the white paper's sections against specific MiCAR articles (e.g., Art. 6, 19, 51, and Annex II), with automated pass/review/fail determinations and a lawyer sign-off block.
-2. **[remediation-checklist.json](../examples/review-bundle/remediation-checklist.json)**: A machine-readable JSON object mapping failed checks to specific remediation steps, citations, and severities.
-3. **[coverage-matrix.json](../examples/review-bundle/coverage-matrix.json)**: A detailed JSON matrix mapping individual sections to word counts, rule IDs, and specific text matches/missing phrases.
-4. **[manifest.json](../examples/review-bundle/manifest.json)**: A manifest recording document metadata (title, type, checksums, and linter version).
+1. **[compliance-checklist.md](../examples/review-bundle/compliance-checklist.md)**: A markdown checklist mapping the white paper's sections against specific MiCAR articles (e.g., Art. 6, 19, 51, and Annex II), with automated pass/review/missing statuses and a lawyer sign-off block.
+2. **[remediation-checklist.json](../examples/review-bundle/remediation-checklist.json)**: A machine-readable JSON object listing each open finding with its citation, severity, issues and next action.
+3. **[coverage-matrix.json](../examples/review-bundle/coverage-matrix.json)**: A JSON matrix giving each rule's section, citation, severity, status, word count and next action.
+4. **[review-table.json](../examples/review-bundle/review-table.json)** and **[review-table.md](../examples/review-bundle/review-table.md)**: The review table, one row per rule, for lawyer review.
+5. **[reviewer-signoff.md](../examples/review-bundle/reviewer-signoff.md)**: A draft review record for a qualified lawyer, with the review steps and the open blockers. It certifies nothing.
+6. **[manifest.json](../examples/review-bundle/manifest.json)**: A manifest recording the source file's checksum, the report counts and blockers, the checksum of each bundle file, export eligibility and an overall digest.
 
 The bundle files cite each rule in its canonical German form, which is what `--citation-style de` prints in the text report (for example "Art. 6 Abs. 7 MiCAR"). The CLI text report below uses the default English style.
 
