@@ -905,3 +905,119 @@ def test_docx_responsibility_sentence_set_apart_a_paragraph_per_line_passes(
     whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
     statement = _section_findings(whitepaper)[TITLE_II]
     assert statement.status == "pass", statement.issues
+
+
+# The end of the statement: a full stop inside closing quotes, emphasis or before a note mark ends the
+# sentence, a numbered heading after the statement stays a heading, and a part title that names the
+# offeror is not the person the responsibility sentence names.
+STATUTORY = _statement("The offeror")
+SUMMARY_TEXT = "This summary should be read as an introduction to the crypto-asset white paper. " * 3
+RISK_TEXT = "The crypto-asset may lose its value in part or in full and may not be transferable."
+
+
+def _markdown(tmp_path: Path, statement: str, heading: str = "## 1. Summary") -> Whitepaper:
+    path = tmp_path / "draft.md"
+    path.write_text(
+        f"# Example Token White Paper\n\n{statement}\n\n{heading}\n\n{SUMMARY_TEXT}\n\n## 2. Risk Warning\n\n{RISK_TEXT}\n",
+        encoding="utf-8",
+    )
+    return load_whitepaper(path, WhitepaperType.OTHER)
+
+
+@pytest.mark.parametrize(
+    "statement",
+    [f"**{STATUTORY}**", f"*{STATUTORY}*", f"\u201c{STATUTORY}\u201d", f"{STATUTORY}[^1]", STATUTORY[:-1]],
+    ids=["bold", "italic", "quoted", "footnote", "no-final-stop"],
+)
+@pytest.mark.parametrize("heading", ["## 1. Summary", "## A. Summary", "## I. Summary"])
+def test_markdown_numbered_heading_after_the_statement_stays_a_heading(tmp_path: Path, statement, heading):
+    whitepaper = _markdown(tmp_path, statement, heading)
+    findings = _section_findings(whitepaper)
+    assert findings[TITLE_II].status == "pass", findings[TITLE_II].issues
+    assert "Summary" not in whitepaper.section("not_approved_statement")
+    assert whitepaper.section("summary").startswith("This summary should be read")
+
+
+def test_markdown_hard_wrapped_bold_statement_before_a_numbered_heading(tmp_path: Path):
+    whitepaper = _markdown(tmp_path, "\n".join(textwrap.wrap(f"**{STATUTORY}**", 90)))
+    assert _section_findings(whitepaper)[TITLE_II].status == "pass"
+    assert whitepaper.section("summary").startswith("This summary should be read")
+
+
+@pytest.mark.parametrize(
+    "statement", [f"\u201c{STATUTORY}\u201d", STATUTORY[:-1]], ids=["quoted", "no-final-stop"]
+)
+def test_docx_numbered_heading_after_the_statement_stays_a_heading(tmp_path: Path, statement):
+    path = _write_docx(
+        tmp_path / "draft.docx", [("plain", statement), ("heading", "1. Summary"), ("plain", SUMMARY_TEXT)]
+    )
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    assert _section_findings(whitepaper)[TITLE_II].status == "pass"
+    assert whitepaper.section("summary").startswith("This summary should be read")
+
+
+def test_pdf_quoted_statement_before_a_heading_passes_whole(tmp_path: Path):
+    path = _write_pdf(
+        tmp_path / "draft.pdf",
+        [
+            ("body", f"\u201c{STATUTORY}\u201d"),
+            ("large", "Summary"),
+            ("body", SUMMARY_BODY),
+            ("large", "Risk Warning"),
+            ("body", RISK_BODY),
+        ],
+    )
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    findings = _section_findings(whitepaper)
+    assert findings[TITLE_II].status == "pass", findings[TITLE_II].issues
+    assert whitepaper.section("not_approved_statement").endswith("white paper.\u201d")
+    assert findings["COMMON.SUMMARY"].status == "pass"
+
+
+@patch("pypdf.PdfReader")
+def test_pdf_statement_with_note_marks_before_a_numbered_heading(mock_reader_cls, tmp_path: Path):
+    marked_statement = STATUTORY.replace("European Union.", "European Union.1") + "2"
+    lines = [*textwrap.wrap(marked_statement, 90), "1. Summary", *textwrap.wrap(SUMMARY_BODY, 90)]
+    whitepaper = _pdf_whitepaper(mock_reader_cls, tmp_path, "\n".join(lines) + "\n")
+    assert _section_findings(whitepaper)[TITLE_II].status == "pass"
+    assert "1. Summary" not in whitepaper.section("not_approved_statement")
+
+
+PART_A = "Part A \u2013 Information about the offeror or the person seeking admission to trading"
+PART_A_FIELDS = "A.1 Name: Example Ledger AG. A.2 Legal form: public limited company. " * 4
+
+
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        "Example Ledger AG is solely responsible for the content of this crypto-asset white paper.",
+        "We are solely responsible for the content of this crypto-asset white paper.",
+    ],
+    ids=["company", "we"],
+)
+def test_part_title_naming_the_offeror_ends_an_incomplete_statement(tmp_path: Path, sentence):
+    path = tmp_path / "draft.md"
+    path.write_text(f"{APPROVAL}\n\n## {PART_A}\n\n{sentence} {PART_A_FIELDS}\n", encoding="utf-8")
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    assert whitepaper.section("not_approved_statement") == APPROVAL
+    assert _section_findings(whitepaper)["ANNEX_I.A"].status != "missing"
+
+    docx_path = _write_docx(
+        tmp_path / "draft.docx",
+        [("plain", APPROVAL), ("heading", PART_A), ("plain", f"{sentence} {PART_A_FIELDS}")],
+    )
+    whitepaper = load_whitepaper(docx_path, WhitepaperType.OTHER)
+    assert whitepaper.section("not_approved_statement") == APPROVAL
+    assert _section_findings(whitepaper)["ANNEX_I.A"].status != "missing"
+
+
+def test_docx_capitals_responsibility_sentence_split_before_solely_passes(tmp_path: Path):
+    lines = [
+        "THE OFFEROR OF THE CRYPTO-ASSET IS",
+        "SOLELY RESPONSIBLE FOR THE CONTENT OF THIS",
+        "CRYPTO-ASSET WHITE PAPER.",
+    ]
+    blocks = [("plain", line) for line in APPROVAL_LINES] + [("plain", line) for line in lines]
+    path = _write_docx(tmp_path / "draft.docx", [*blocks, ("large", "Summary"), ("plain", SUMMARY_BODY)])
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    assert _section_findings(whitepaper)[TITLE_II].status == "pass"

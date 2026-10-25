@@ -130,9 +130,24 @@ _RESPONSIBLE_PERSON = re.compile(
     r"\bthe\s+(?:offeror|issuer|person|operator)\b|\b(?:der|die)\s+(?:anbieter|emittent|betreiber|person)\b",
     re.IGNORECASE,
 )
+# The words the statutory sentence puts between the person and the clause: "of the crypto-asset is",
+# "seeking admission to trading of the crypto-asset is", "of the e-money token is", "des Kryptowerts
+# trägt die". A person named elsewhere, as in a part title above a sentence with a subject of its own
+# ("Example AG is solely responsible ..."), is not the one the clause makes responsible.
+_PERSON_TO_CLAUSE = re.compile(
+    r"(?:\s+(?:seeking\s+admission\s+to\s+trading|of\s+the\s+trading\s+platform))?"
+    r"(?:\s+of\s+the\s+[\w-]+(?:\s+tokens?)?)?\s+is\s+"
+    r"|(?:\s+(?:des|der)\s+[\w-]+)?(?:,\s+die\s+die\s+zulassung\s+zum\s+handel\s+beantragt,)?\s+trägt\s+die\s+",
+    re.IGNORECASE,
+)
 # "of this crypto-asset white paper." after the clause; "dieses Kryptowerte-Whitepapers." in German.
 _CLAUSE_TAIL_MAX_WORDS = 8
-_STATEMENT_SENTENCE_END = re.compile(r"[.!?](?=\s|$)")
+# A full stop may sit inside closing quotes, brackets or Markdown emphasis, or before a note mark:
+# 'paper.”', 'Whitepapers.“', 'paper.**', 'paper.[^1]', 'paper.¹', and 'Union.1' in extracted PDF text.
+_STATEMENT_SENTENCE_END = re.compile(
+    r"[.!?](?:[\"'\u2018\u2019\u201c\u201d\u00ab\u00bb)\]*_]|\[\^\w+\]|[\u00b9\u00b2\u00b3\u2070-\u2079])*"
+    r"(?:(?<=[^\W\d_][.!?])\d{1,2})?(?=\s|$)"
+)
 _STATEMENT_MAX_LINES = 12
 _SENTENCE_MAX_WORDS = 30
 _HEADING_MAX_WORDS = 12
@@ -180,20 +195,34 @@ def statement_extent(lines: list[str], start: int, is_heading: Callable[[int], b
     def line_at(position: int) -> int:
         return next(i for i, line_end in enumerate(line_ends) if line_end >= position)
 
+    def marked(i: int) -> bool:
+        return window[i].lstrip().startswith("#") or (is_heading is not None and is_heading(start + i))
+
     own: range = range(0)
     clause = _RESPONSIBILITY_CLAUSE.search(text)
     if clause:
-        persons = list(_RESPONSIBLE_PERSON.finditer(text, 0, clause.start()))
-        clause_end = clause.end()
-        tail = _STATEMENT_SENTENCE_END.search(text, clause_end)
-        if tail and len(text[clause_end : tail.end()].split()) <= _CLAUSE_TAIL_MAX_WORDS:
-            clause_end = tail.end()
-        own = range(line_at((persons[-1] if persons else clause).start() + 1), line_at(clause_end) + 1)
+        persons = [
+            person
+            for person in _RESPONSIBLE_PERSON.finditer(text, 0, clause.start())
+            if _PERSON_TO_CLAUSE.fullmatch(text, person.end(), clause.start())
+        ]
+        own_end = line_at(clause.end())
+        tail = _STATEMENT_SENTENCE_END.search(text, clause.end())
+        if tail and len(text[clause.end() : tail.end()].split()) <= _CLAUSE_TAIL_MAX_WORDS:
+            # The rest of the sentence ("of this crypto-asset white paper."), but never a line that opens a
+            # heading or a numbered label: a sentence that has lost its stop ends before it.
+            own_end = next(
+                (
+                    i - 1
+                    for i in range(own_end + 1, line_at(tail.end()) + 1)
+                    if marked(i) or _NUMBERING.match(window[i].lstrip())
+                ),
+                line_at(tail.end()),
+            )
+        own = range(line_at((persons[-1] if persons else clause).start() + 1), own_end + 1)
 
     def firm_heading(i: int) -> bool:
-        if i in own:
-            return False
-        return window[i].lstrip().startswith("#") or (is_heading is not None and is_heading(start + i))
+        return i not in own and marked(i)
 
     # Continuation lines of the opening sentence never name a section, so a line that ends
     # inside it and looks like a heading means the sentence was cut short. The line where
@@ -217,8 +246,12 @@ def statement_extent(lines: list[str], start: int, is_heading: Callable[[int], b
     if len(sentence.split()) > _SENTENCE_MAX_WORDS or not _RESPONSIBILITY.search(sentence):
         return start + last + 1
     closing = line_at(second.end())
-    if any(firm_heading(i) for i in range(last + 1, closing + 1)):
-        return start + last + 1
+    heading = next((i for i in range(last + 1, closing + 1) if firm_heading(i)), None)
+    if heading is not None:
+        # A responsibility sentence that has lost its stop ends with its own lines, before the heading.
+        return start + (
+            own.stop if own and own.start <= last + 1 and last < own.stop <= heading else last + 1
+        )
     return start + closing + 1
 
 
