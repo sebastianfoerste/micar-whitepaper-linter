@@ -321,6 +321,41 @@ def test_xhtml_statement_paragraph_without_heading_is_routed(tmp_path: Path):
     assert "not been approved" not in whitepaper.section("summary")
 
 
+# Regression: the XHTML loader routed only the paragraph that opens the statement, so a
+# statement with its responsibility sentence in a paragraph of its own stayed under review,
+# and a bold responsibility sentence was read as an "offeror" heading.
+@pytest.mark.parametrize(
+    ("wp_type", "rule_id", "subject"),
+    [(WhitepaperType.OTHER, TITLE_II, "The offeror"), (WhitepaperType.EMT, EMT, "The issuer")],
+)
+@pytest.mark.parametrize(
+    ("block", "heading"),
+    [
+        ("<p>{}</p>", "<h2>Summary</h2>"),
+        ("<p><b>{}</b></p>", "<p><b>Summary</b></p>"),
+        ("<div>{}</div>", "<h2>Summary</h2>"),
+    ],
+)
+def test_xhtml_statement_split_over_two_paragraphs_is_read_whole(
+    tmp_path: Path, wp_type, rule_id, subject, block, heading
+):
+    responsibility = _statement(subject)[len(APPROVAL) + 1 :]
+    path = tmp_path / "draft.xhtml"
+    path.write_text(
+        "<html><body><h1>Example Token White Paper</h1>"
+        + block.format(APPROVAL)
+        + block.format(responsibility)
+        + f"{heading}<p>Key information.</p></body></html>",
+        encoding="utf-8",
+    )
+    whitepaper = load_whitepaper(path, wp_type)
+    assert whitepaper.section("not_approved_statement") == f"{APPROVAL}\n{responsibility}"
+    assert whitepaper.section("summary") == "Key information."
+    assert "offeror" not in whitepaper.sections
+    statement = next(f for f in lint_whitepaper(whitepaper).findings if f.rule.rule_id == rule_id)
+    assert statement.status == "pass", statement.issues
+
+
 # Regression: an incomplete statement swallowed the sections that followed it, so a draft
 # that has a summary and a risk warning got MISSING blockers for both.
 SUMMARY_BODY = " ".join(["The summary gives key information about the offer and the token."] * 15)
@@ -363,6 +398,18 @@ def test_incomplete_markdown_statement_does_not_swallow_the_next_sections(tmp_pa
     path = tmp_path / "draft.md"
     path.write_text(
         f"{APPROVAL}\n\nSummary\n{SUMMARY_BODY}\n\n# Summary\n{SUMMARY_BODY}\n\n# Risk warning\n{RISK_BODY}\n",
+        encoding="utf-8",
+    )
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    assert whitepaper.section("not_approved_statement") == APPROVAL
+    _sections_after_incomplete_statement(whitepaper)
+
+
+def test_incomplete_xhtml_statement_does_not_swallow_the_next_sections(tmp_path: Path):
+    path = tmp_path / "draft.xhtml"
+    path.write_text(
+        f"<html><body><p>{APPROVAL}</p><p>Example AG, a fictional company, prepared this draft.</p>"
+        f"<h2>Summary</h2><p>{SUMMARY_BODY}</p><h2>Risk warning</h2><p>{RISK_BODY}</p></body></html>",
         encoding="utf-8",
     )
     whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
@@ -482,6 +529,41 @@ def test_pdf_heading_font_ends_the_statement_even_before_a_responsibility_senten
     assert " ".join(whitepaper.section("not_approved_statement").split()) == APPROVAL
     assert whitepaper.section("summary").startswith("The issuer is responsible for the token.")
     _sections_after_incomplete_statement(whitepaper)
+
+
+# Regression: where pypdf read field 02's number, label and the start of its answer as one line of the
+# summary table, "crypto-asset" in the answer also opened the crypto-asset section, and the answer was cut
+# after that word ("white paper has not been"), so a complete statement stayed under review.
+@pytest.mark.parametrize(
+    ("wp_type", "rule_id", "field", "article", "subject"),
+    [
+        (WhitepaperType.OTHER, TITLE_II, "02", "6(3)", "The offeror"),
+        (WhitepaperType.EMT, EMT, "I.02", "51(3)", "The issuer"),
+    ],
+)
+def test_pdf_statement_on_the_line_of_its_summary_field_passes(
+    tmp_path: Path, wp_type, rule_id, field, article, subject
+):
+    statement = _statement(subject)
+    opening = "This crypto-asset white paper has not been"
+    path = _write_pdf(
+        tmp_path / "draft.pdf",
+        [
+            ("large", "Summary"),
+            ("line", "01 Date of notification 2 February 2026"),
+            (
+                "line",
+                f"{field} Statement in accordance with Article {article} of Regulation (EU) 2023/1114 {opening}",
+            ),
+            ("line", f"{APPROVAL[len(opening) + 1 :]} {subject}"),
+            ("line", statement[len(APPROVAL) + len(subject) + 2 :]),
+        ],
+    )
+    whitepaper = load_whitepaper(path, wp_type)
+    assert statement in " ".join(whitepaper.section("not_approved_statement").split())
+    assert "crypto_asset" not in whitepaper.sections
+    finding = next(f for f in lint_whitepaper(whitepaper).findings if f.rule.rule_id == rule_id)
+    assert finding.status == "pass", finding.issues
 
 
 def test_pdf_statement_set_in_bold_passes(tmp_path: Path):

@@ -235,8 +235,8 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
                 "No redemption basis stated",
                 "review",
                 _draft(rule, regime, f"{listed} Holders cannot choose delivery of the referenced assets."),
-                "Every listed term appears and the length is met, but neither basis of Art. 39(2) MiCAR is "
-                "stated affirmatively. A negated mention of delivery does not count.",
+                "Every listed term appears and the length is met, but neither redemption-basis phrase does: "
+                "“delivery of the referenced assets” without “by” does not count, negated or not.",
             ),
             Example(
                 "Redemption at par",
@@ -249,8 +249,8 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
                 "Section that matches",
                 "pass",
                 _draft(rule, regime, f"{listed} {market_value}"),
-                "This text passes and shows what the check measures: listed terms, length and an affirmative "
-                "redemption basis. It is not model disclosure wording and does not meet MiCAR.",
+                "This text passes and shows what the check measures: listed terms, length and one of the two "
+                "redemption-basis phrases. It is not model disclosure wording and does not meet MiCAR.",
             ),
         ]
     if rule.rule_id == "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW":
@@ -405,18 +405,30 @@ def status_logic(rule: Rule) -> str:
     )
     if rule.rule_id in NOT_APPROVED_STATEMENT_RULE_IDS:
         emt = rule.rule_id.startswith("ANNEX_III.")
-        roles = "the offeror, the person seeking admission to trading or the operator of the trading platform"
+        roles = "“offeror”, “person seeking admission to trading” or “operator of the trading platform”"
+        clause = "“of the crypto-asset is solely responsible”"
         return (
             f'<ul class="plain">{missing}'
             "<li><strong>Review</strong>: the draft is German, because the German wording has not been checked "
             "against the German Official Journal; the section holds only a yes or no value; a listed English "
             "term does not appear"
-            + ("" if emt else f"; or the responsibility sentence names someone other than {roles}")
+            + (
+                ""
+                if emt
+                else f"; or {clause} appears without {roles} directly before it, as where the statement names the "
+                "issuer or puts the offeror's name in between (“The offeror, Example AG, of the crypto-asset”)"
+            )
             + ".</li><li><strong>Pass</strong>: an English draft holds both listed terms"
-            + ("" if emt else f", and the responsibility sentence names {roles}")
-            + ". Matching ignores case, reads any run of spaces and line breaks as one space and joins a word "
-            "hyphenated at a line end, so “crypto-” and “asset” on two lines match “crypto-asset”. Placement on "
-            "the first page is not checked.</li></ul>"
+            + (
+                ""
+                if emt
+                else f", and somewhere in the section {roles} comes directly before {clause}. Another person "
+                "named elsewhere in the section is not checked"
+            )
+            + ". Matching ignores case and reads any run of spaces and line breaks as one space. A compound broken "
+            "after its hyphen at a line end keeps the hyphen, so “crypto-” and “asset” on two lines match "
+            "“crypto-asset”; a word split only for the line break (“Mem-”, “ber”) does not match and goes to "
+            "review. Placement on the first page is not checked.</li></ul>"
         )
     parts = [
         missing,
@@ -426,9 +438,11 @@ def status_logic(rule: Rule) -> str:
     ]
     if rule.rule_id == "ANNEX_II.I":
         parts.append(
-            "<li>Review also follows when an English section states neither basis of Art. 39(2) MiCAR "
-            "affirmatively (“market value of the referenced assets” or “by delivering the referenced assets”), or "
-            "mentions redemption at par, the e-money token rule (Art. 49(4) MiCAR). A German section needs "
+            "<li>Review also follows when an English section contains neither “market value of the (referenced) "
+            "assets” nor “by delivering” or “by delivery of” (the or those) (referenced) assets, the wording of the "
+            "two bases of Art. 39(2) MiCAR, or mentions redemption at par, the e-money token rule (Art. 49(4) "
+            "MiCAR). The phrases are matched as written: negation is not detected, and “delivery of the referenced "
+            "assets” without “by” does not count. A German section needs "
             "“Rücktausch”, “Rücknahme” or “Rückzahlung”, and “Marktwert”: a German policy that redeems only by "
             "delivery goes to review, because the German wording of that alternative has not been checked.</li>"
         )
@@ -482,15 +496,24 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
     if rule.rule_id in LEI_RULES:
         limitations.append(LEI_VERIFICATION_NOTE)
     if rule.rule_id in NOT_APPROVED_STATEMENT_RULE_IDS:
+        emt = rule.rule_id.startswith("ANNEX_III.")
+        field = "I.02" if emt else "02"
         limitations.append(
-            "PDF, DOCX and Markdown drafts fill the section from a heading such as “Statement in accordance with "
-            f"Article {'51' if rule.rule_id.startswith('ANNEX_III.') else '6'}(3)”, from field "
-            f"{'I.02 of Table 4' if rule.rule_id.startswith('ANNEX_III.') else '02 of Table 2'} of Implementing "
-            "Regulation (EU) 2024/2984, or, where the statement has no heading, from its own words."
+            "PDF, DOCX, Markdown and heading-based XHTML drafts fill the section from a heading or field label "
+            f"such as “Statement in accordance with Article {'51' if emt else '6'}(3)”, the label of field {field} "
+            f"of Table {'4' if emt else '2'} of Implementing Regulation (EU) 2024/2984, or, without one, from a "
+            "line or paragraph that opens with the statement's first words. Numbered-field XHTML fills it from "
+            f"field {field}. DOCX table cells are not read, so a statement kept only in a Word table is reported "
+            "missing."
         )
         limitations.append(
             "A German draft never passes: the German wording has not been checked against the German Official "
             "Journal."
+        )
+    if rule.rule_id == "ANNEX_II.I":
+        limitations.append(
+            "The redemption-basis phrases are matched as written, so a negated one such as “never redeems by "
+            "delivering the referenced assets” still counts."
         )
     if _german_redemption_terms(rule):
         limitations.append(

@@ -7,7 +7,7 @@ import re
 import statistics
 from collections import Counter
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import partial
 from itertools import pairwise
 from pathlib import Path
@@ -812,6 +812,40 @@ def _merge_wrapped(
     return merged, merged_styled, merged_running, merged_fills
 
 
+# The statement's first words as the answer of field 02 (Table 2) or I.02 (Table 4) of 2024/2984, where pypdf
+# reads the field number, the label and the start of the answer as one line.
+_STATEMENT_ANSWER = re.compile(
+    r"\b(?:this\s+crypto-asset\s+white\s+paper|dieses\s+kryptowerte-whitepaper)\b", re.IGNORECASE
+)
+
+
+def _split_statement_fields(
+    lines: list[_Line], styled: list[bool], running: list[bool], fills: list[bool]
+) -> tuple[list[_Line], list[bool], list[bool], list[bool], set[int]]:
+    """Split a summary-table line whose answer is the statement, such as "02 Statement in accordance with
+    Article 6(3) of Regulation (EU) 2023/1114 This crypto-asset white paper has not been", into its label
+    and the statement's first line. The statement is then routed as one that starts a line of its own,
+    and its words ("crypto-asset") do not add a section to the label. Returns the lines, their flags and
+    the indices of the statement lines split off."""
+    result: tuple[list[_Line], list[bool], list[bool], list[bool]] = ([], [], [], [])
+    starts: set[int] = set()
+    for line, *flags in zip(lines, styled, running, fills, strict=True):
+        answer = _STATEMENT_ANSWER.search(line.text)
+        label = line.text[: answer.start()].rstrip() if answer else ""
+        parts = [line]
+        if (
+            answer
+            and _template_kind(line.text) in ("field", "summary")
+            and "not_approved_statement" in match_heading_to_section(label)
+        ):
+            parts = [replace(line, text=label), replace(line, text=line.text[answer.start() :])]
+            starts.add(len(result[0]) + 1)
+        for part in parts:
+            for values, value in zip(result, (part, *flags), strict=True):
+                values.append(value)
+    return (*result, starts)
+
+
 def _line_sections(lines: list[_Line], statement: bool = False) -> DocumentSections:
     """The sections of a draft read line by line. With statement, the Art. 6(3) / Art. 51(3) statement is
     routed by its content to not_approved_statement (see statement_extent), as in the other loaders."""
@@ -822,6 +856,11 @@ def _line_sections(lines: list[_Line], statement: bool = False) -> DocumentSecti
     fills = [_fills_line(line, full_line, body_font) for line in lines]
     heights = _heights_hold(lines, body_font)
     lines, styled, running, fills = _merge_wrapped(lines, styled, _running(lines), fills, heights)
+    statement_starts: set[int] = set()
+    if statement:
+        lines, styled, running, fills, statement_starts = _split_statement_fields(
+            lines, styled, running, fills
+        )
     # The draft sets its headings in a heading font if at least two lines in one name a section.
     by_font = (
         sum(
@@ -892,7 +931,9 @@ def _line_sections(lines: list[_Line], statement: bool = False) -> DocumentSecti
         )
 
     for index, line in enumerate(lines):
-        if statement and (index < statement_end or is_statement_start(line.text)):
+        if statement and (
+            index < statement_end or index in statement_starts or is_statement_start(line.text)
+        ):
             if index >= statement_end:
                 statement_end = statement_extent(
                     line_texts, index, partial(statement_heading, statement_line=line)

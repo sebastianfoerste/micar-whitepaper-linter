@@ -35,7 +35,7 @@ Normalizes inputs into structural sections:
 
 ### 2. Regulatory Regimes (`rules/`)
 Each rule is a `Rule` record from `rules/base.py` (section, keywords, minimum length, severity, citation):
-- **`common.py`**: Checks for disclosures required in every white paper (summary, risk warning, management-body statement, notification date, language, iXBRL format).
+- **`common.py`**: Checks for disclosures required in every white paper (summary, risk warning, management-body statement, notification date, language, iXBRL format, and the LEI check-digit and consistency checks).
 - **`annex_i.py`**: Specific to Other Crypto-Assets.
 - **`annex_ii.py`**: Specific to Asset-Referenced Tokens (checks for reserve-of-assets and redemption disclosures).
 - **`annex_iii.py`**: Specific to E-Money Tokens (checks for issuer licensing and redemption disclosures).

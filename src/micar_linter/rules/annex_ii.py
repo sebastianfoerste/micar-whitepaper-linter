@@ -25,9 +25,9 @@ _REDEMPTION_DE = r"rücktausch|rücknahme|rückzahlung"
 # Art. 39(2) MiCAR: the issuer redeems "either by paying an amount in funds, other than
 # electronic money, equivalent to the market value of the assets referenced by the
 # asset-referenced token held or by delivering the assets referenced by the token". The
-# pattern asks for the affirmative wording of either basis, so that "Holders cannot choose
-# delivery of the referenced assets" or "No market value redemption is offered" does not
-# satisfy it.
+# pattern asks for the wording of either basis, so that "Holders cannot choose delivery of
+# the referenced assets" or "No market value redemption is offered" does not satisfy it. It
+# does not detect negation: "never redeems by delivering the referenced assets" satisfies it.
 _ART_REDEMPTION_BASIS = (
     r"\bmarket\s+value\s+of\s+the\s+(?:referenced\s+)?assets\b"
     r"|\bby\s+deliver(?:ing|y\s+of)\s+(?:(?:the|those)\s+)?(?:referenced\s+)?assets\b"

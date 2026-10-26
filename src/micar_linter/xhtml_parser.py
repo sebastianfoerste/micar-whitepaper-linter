@@ -7,7 +7,7 @@ from pathlib import Path
 
 from lxml import etree
 
-from micar_linter.document import is_statement_start, match_heading_to_section
+from micar_linter.document import is_statement_start, match_heading_to_section, statement_extent
 
 
 def _is_fully_bold(elem: etree._Element, text: str) -> bool:
@@ -41,25 +41,38 @@ def load_from_xhtml(path: Path) -> dict[str, str]:
         " or self::p or self::li or self::div or self::b or self::strong])]"
     )
 
+    # Each non-empty block: its text, whether it is a heading tag and whether it is entirely bold.
+    blocks: list[tuple[str, bool, bool]] = []
     for elem in elements:
         text = "".join(elem.itertext()).strip()
         text = re.sub(r"\s+", " ", text)
-        if not text:
+        if text:
+            is_tag_heading = elem.tag in ("h1", "h2", "h3", "h4", "h5", "h6")
+            blocks.append((text, is_tag_heading, _is_fully_bold(elem, text)))
+    texts = [text for text, _, _ in blocks]
+    statement_end = 0
+
+    for index, (text, is_tag_heading, is_bold) in enumerate(blocks):
+        is_bold_heading = len(text) < 120 and is_bold
+        if index < statement_end or is_statement_start(text):
+            # The Art. 6(3) / 51(3) statement carries no heading of its own, and its sentences may sit
+            # in separate blocks. A bold label is a heading only where the statement's first block is
+            # not bold, as a statement may be set in bold a sentence per paragraph.
+            if index >= statement_end:
+                statement_end = statement_extent(
+                    texts,
+                    index,
+                    lambda i, bold=is_bold: (
+                        blocks[i][1] or (blocks[i][2] and not bold and len(texts[i]) < 120)
+                    ),
+                )
+            sections.setdefault("not_approved_statement", []).append(text)
             continue
 
-        is_heading = False
-        is_tag_heading = elem.tag in ("h1", "h2", "h3", "h4", "h5", "h6")
-        is_bold_heading = len(text) < 120 and _is_fully_bold(elem, text)
         if is_tag_heading or is_bold_heading:
-            is_heading = True
-
-        if is_heading:
             matched_keys = match_heading_to_section(text)
             if matched_keys:
                 current_keys = matched_keys
-        elif is_statement_start(text):
-            # The Art. 6(3) / 51(3) statement carries no heading of its own.
-            sections.setdefault("not_approved_statement", []).append(text)
         else:
             if current_keys:
                 for k in current_keys:
