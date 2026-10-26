@@ -156,7 +156,10 @@ def test_docx_partial_paragraph_match_keeps_surrounding_text(tmp_path) -> None:
     source = tmp_path / "partial-source.docx"
     document = docx.Document()
     paragraph = document.add_paragraph("The issuer ", style="List Bullet")
-    paragraph.add_run("Example Issuer AG").bold = True
+    bold = paragraph.add_run("Example Issuer AG")
+    bold.bold = True
+    revision = bold._r.get_or_add_rPr().makeelement(qn("w:rPrChange"), {qn("w:id"): "3", qn("w:author"): "Other"})
+    bold._r.get_or_add_rPr().append(revision)
     paragraph.add_run(" is TBD and will notify BaFin.")
     document.add_paragraph("Next paragraph stays.")
     document.save(source)
@@ -178,6 +181,8 @@ def test_docx_partial_paragraph_match_keeps_surrounding_text(tmp_path) -> None:
     assert "".join(kept_bold) == "Example Issuer "
     deleted_bold = paragraphs[0].xpath(".//w:del/w:r[w:rPr/w:b]/w:delText/text()", namespaces=ns)
     assert "".join(deleted_bold) == "AG"
+    assert paragraphs[0].xpath("count(w:ins/w:r/w:rPr/w:b)", namespaces=ns) == 1
+    assert paragraphs[0].xpath("count(w:ins//w:rPrChange)", namespaces=ns) == 0
     ids = xml.xpath(".//w:ins/@w:id | .//w:del/@w:id", namespaces=ns)
     assert len(ids) == len(set(ids))
 
@@ -565,6 +570,10 @@ def test_docx_redline_deletes_a_link_at_either_end_of_the_match(tmp_path) -> Non
         _run("Published at ") + link + _run("."),
         link + _run(" is the offeror website."),
         _run("Mirror at ") + link + _run(" and ") + link + _run("."),
+        _run("Mail: ")
+        + f'<w:hyperlink r:id="{target}"><w:sdt><w:sdtPr><w:tag w:val="contact"/></w:sdtPr><w:sdtContent>'
+        + _run("info@old.invalid")
+        + "</w:sdtContent></w:sdt></w:hyperlink>",
     ):
         body.insert(len(body) - 1, parse_xml(f"<w:p {_DECLARATIONS}>{paragraph}</w:p>"))
     document.save(source)
@@ -572,6 +581,7 @@ def test_docx_redline_deletes_a_link_at_either_end_of_the_match(tmp_path) -> Non
         ("Published at www.old.invalid", "Published at www.new.invalid"),
         ("www.old.invalid is the offeror", "www.new.invalid is the issuer"),
         ("old.invalid and www.old", "new.invalid and www.new"),
+        ("info@old.invalid", "info@new.invalid"),
     ]
     xml = _render(tmp_path, source, changes)
     ns = {"w": _W}
@@ -584,5 +594,7 @@ def test_docx_redline_deletes_a_link_at_either_end_of_the_match(tmp_path) -> Non
     for replaced in paragraphs[:2]:
         assert replaced.xpath("count(w:hyperlink//w:ins | w:hyperlink//w:t)", namespaces=ns) == 0
         assert replaced.xpath("count(w:ins//w:rStyle)", namespaces=ns) == 0
-    assert paragraphs[2].xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
-    assert "".join(paragraphs[3].xpath("w:del//w:delText/text()", namespaces=ns)) == "old.invalid and www.old"
+    for untouched in paragraphs[2:4]:
+        assert untouched.xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
+    fallbacks = ["".join(p.xpath("w:del//w:delText/text()", namespaces=ns)) for p in paragraphs[4:]]
+    assert fallbacks == ["old.invalid and www.old", "info@old.invalid"]

@@ -337,7 +337,13 @@ def _external(link: etree._Element | None) -> bool:
 
 
 def _whole_plain(link: etree._Element, covered: list[tuple[etree._Element, int, int]]) -> bool:
-    """Whether the match covers all of ``link``'s content, and that content is plain text."""
+    """Whether the match covers all of ``link``'s content, and that content is plain text.
+
+    A link that wraps a content control, custom XML or a bidi element does not qualify: the replacement goes
+    after the link and would leave that element empty.
+    """
+    if link.xpath(".//w:sdt | .//w:customXml | .//w:dir | .//w:bdo", namespaces=NSMAP):
+        return False
     runs = link.xpath(".//w:r[not(ancestor::w:del) and not(ancestor::w:moveFrom)]", namespaces=NSMAP)
     if not all(child.tag in _SPANNABLE for run in runs for child in run):
         return False
@@ -467,11 +473,13 @@ def _redline_match(
         anchor = outer
     inserted = _revision("ins", ids, author, date)
     # The replacement takes the formatting of the first replaced character, as Word does when text is typed
-    # over a selection.
+    # over a selection, without another author's pending formatting revision.
     inserted_run = _sibling_run(deleted_runs[0], ids)
+    dropped = "w:rPr/w:rPrChange"
     if first_link is not None and not inside_link:
-        for look in inserted_run.xpath("w:rPr/w:rStyle | w:rPr/w:color | w:rPr/w:u", namespaces=NSMAP):
-            look.getparent().remove(look)
+        dropped += " | w:rPr/w:rStyle | w:rPr/w:color | w:rPr/w:u"
+    for prop in inserted_run.xpath(dropped, namespaces=NSMAP):
+        prop.getparent().remove(prop)
     inserted_run.append(_text_element("t", proposed))
     inserted.append(inserted_run)
     anchor.addnext(inserted)
