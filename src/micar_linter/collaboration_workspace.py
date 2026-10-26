@@ -21,7 +21,8 @@ MC_NS = "http://schemas.openxmlformats.org/markup-compatibility/2006"
 NSMAP = {"w": W_NS}
 # Paragraph content that holds no live text: deleted or moved-away text and the hidden VML copy of a drawing.
 _NOT_LIVE = {f"{{{W_NS}}}del", f"{{{W_NS}}}moveFrom", f"{{{W_NS}}}pPr", f"{{{MC_NS}}}Fallback"}
-# Run content a match may span. Other run content (tabs, breaks, field characters, drawings) ends a match.
+# Run content a match may span. Other run content (tabs, breaks, field characters, drawings) ends a match,
+# as do hidden runs, regenerated text and this export's own insertions.
 _SPANNABLE = {
     f"{{{W_NS}}}{name}"
     for name in ("rPr", "t", "lastRenderedPageBreak", "softHyphen", "commentReference", "annotationRef")
@@ -219,9 +220,17 @@ def _sibling_run(run: etree._Element, ids: Iterator[int]) -> etree._Element:
     return sibling
 
 
-def _field_text(body: etree._Element) -> set[etree._Element]:
-    """``w:t`` nodes inside a field. Word regenerates them, so a redline there is lost."""
-    inside = set(body.xpath(".//w:fldSimple//w:t", namespaces=NSMAP))
+def _regenerated_text(body: etree._Element) -> set[etree._Element]:
+    """``w:t`` nodes Word fills in itself: field results and content controls bound to a data store.
+
+    Word and LibreOffice regenerate that text, so a redline placed there is lost.
+    """
+    inside = set(
+        body.xpath(
+            ".//w:fldSimple//w:t | .//w:sdt[w:sdtPr/*[local-name()='dataBinding']]/w:sdtContent//w:t",
+            namespaces=NSMAP,
+        )
+    )
     depth = 0
     for element in body.iter(f"{{{W_NS}}}fldChar", f"{{{W_NS}}}t"):
         if element.tag == f"{{{W_NS}}}t":
@@ -234,6 +243,11 @@ def _field_text(body: etree._Element) -> set[etree._Element]:
     return inside
 
 
+def _hidden(element: etree._Element) -> bool:
+    vanish = element.find("w:rPr/w:vanish", NSMAP) if element.tag == f"{{{W_NS}}}r" else None
+    return vanish is not None and vanish.get(f"{{{W_NS}}}val", "true") not in {"0", "false", "off"}
+
+
 def _text_segments(
     element: etree._Element, excluded: set[etree._Element], segments: list[list[etree._Element]]
 ) -> list[list[etree._Element]]:
@@ -241,7 +255,7 @@ def _text_segments(
     for child in element:
         if child.tag in _NOT_LIVE:
             continue
-        if child in excluded:
+        if child in excluded or _hidden(child):
             segments.append([])
         elif child.tag == f"{{{W_NS}}}r":
             for item in child:
@@ -362,7 +376,7 @@ def render_tracked_docx(
         section = body.find("w:sectPr", NSMAP)
         used_ids = [int(value) for value in tree.xpath("//@w:id", namespaces=NSMAP) if value.isdigit()]
         ids = itertools.count(max(used_ids, default=0) + 1)
-        excluded = _field_text(body)
+        excluded = _regenerated_text(body)
         paragraphs = ".//w:p[not(ancestor::mc:Fallback)]"
         namespaces = {**NSMAP, "mc": MC_NS}
         for change in (item for item in change_set["changes"] if item["decision"] == "accepted"):

@@ -329,3 +329,25 @@ def test_docx_redline_skips_moved_away_text_and_splits_the_move(tmp_path) -> Non
     assert accepted == "Moved here: Issuer Example AG here"
     ids = xml.xpath("//@w:id", namespaces=ns)
     assert len(ids) == len(set(ids))
+
+
+def test_docx_redline_skips_bound_content_controls_and_hidden_text(tmp_path) -> None:
+    source = tmp_path / "bound.docx"
+    binding = (
+        '<w:dataBinding w:xpath="/ns1:coreProperties[1]/ns0:title[1]" '
+        'w:storeItemID="{6C3C8BC8-F283-45AE-878A-BAB7291924A1}"/>'
+    )
+    _docx_with_paragraphs(
+        source,
+        _run("Title: ") + f"<w:sdt><w:sdtPr>{binding}</w:sdtPr><w:sdtContent>" + _run("Token TBD") + "</w:sdtContent></w:sdt>",
+        '<w:r><w:rPr><w:vanish/></w:rPr><w:t xml:space="preserve">Guidance: replace Token TBD.</w:t></w:r>',
+        _run("Token ") + '<w:r><w:rPr><w:vanish w:val="1"/></w:rPr><w:t>[note] </w:t></w:r>' + _run("TBD is pending."),
+        _run("The Token TBD is offered."),
+    )
+    xml = _render(tmp_path, source, [("Token TBD", "Token EXT")])
+    ns = {"w": _W}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    for untouched in paragraphs[:3]:
+        assert untouched.xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
+    assert _paragraph_views(paragraphs[3]) == ("The Token EXT is offered.", "The Token TBD is offered.")
+    assert xml.xpath("count(//w:ins//w:vanish)", namespaces=ns) == 0
