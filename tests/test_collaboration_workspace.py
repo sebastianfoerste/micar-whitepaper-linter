@@ -232,7 +232,8 @@ def test_docx_redline_splits_pending_insertion_of_another_author(tmp_path) -> No
 _W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 _DECLARATIONS = (
     f'xmlns:w="{_W}" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" '
-    'xmlns:v="urn:schemas-microsoft-com:vml"'
+    'xmlns:v="urn:schemas-microsoft-com:vml" '
+    'xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"'
 )
 
 
@@ -351,3 +352,32 @@ def test_docx_redline_skips_bound_content_controls_and_hidden_text(tmp_path) -> 
         assert untouched.xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
     assert _paragraph_views(paragraphs[3]) == ("The Token EXT is offered.", "The Token TBD is offered.")
     assert xml.xpath("count(//w:ins//w:vanish)", namespaces=ns) == 0
+
+
+def test_docx_redline_skips_managed_content_controls_and_equations(tmp_path) -> None:
+    source = tmp_path / "controls.docx"
+    _docx_with_paragraphs(
+        source,
+        _run("Issuer: ")
+        + "<w:sdt><w:sdtPr><w:showingPlcHdr/><w:text/></w:sdtPr><w:sdtContent>"
+        + '<w:r><w:rPr><w:rStyle w:val="PlaceholderText"/></w:rPr><w:t>Issuer name TBD</w:t></w:r>'
+        + "</w:sdtContent></w:sdt>"
+        + _run(" (registered)."),
+        _run("Date: ")
+        + '<w:sdt><w:sdtPr><w:date><w:dateFormat w:val="dd.MM.yyyy"/></w:date></w:sdtPr><w:sdtContent>'
+        + _run("01.01.2026")
+        + "</w:sdtContent></w:sdt>",
+        _run("The reserve rate ") + "<m:oMath><m:r><m:t>r=0.05</m:t></m:r></m:oMath>" + _run(" is TBD for holders."),
+        _run("Issuer name TBD") + '<w:bookmarkStart w:id="40" w:name="Offer"/>' + _run(" offers from 01.01.2026."),
+    )
+    changes = [("Issuer name TBD", "Example Issuer AG"), ("01.01.2026", "31.12.2026"), ("rate  is TBD", "rate is set")]
+    xml = _render(tmp_path, source, changes)
+    ns = {"w": _W}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    for untouched in paragraphs[:3]:
+        assert untouched.xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
+    assert _paragraph_views(paragraphs[3]) == (
+        "Example Issuer AG offers from 31.12.2026.",
+        "Issuer name TBD offers from 01.01.2026.",
+    )
+    assert paragraphs[-1].xpath("string(w:del//w:delText)", namespaces=ns) == "rate  is TBD"

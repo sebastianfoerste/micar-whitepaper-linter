@@ -19,8 +19,47 @@ from lxml import etree
 W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 MC_NS = "http://schemas.openxmlformats.org/markup-compatibility/2006"
 NSMAP = {"w": W_NS}
-# Paragraph content that holds no live text: deleted or moved-away text and the hidden VML copy of a drawing.
-_NOT_LIVE = {f"{{{W_NS}}}del", f"{{{W_NS}}}moveFrom", f"{{{W_NS}}}pPr", f"{{{MC_NS}}}Fallback"}
+# Paragraph content skipped without ending a match: deleted or moved-away text, the hidden VML copy of a
+# drawing, properties and range markers.
+_SKIPPED = {f"{{{MC_NS}}}Fallback"} | {
+    f"{{{W_NS}}}{name}"
+    for name in [
+        "del",
+        "moveFrom",
+        "pPr",
+        "sdtPr",
+        "sdtEndPr",
+        "smartTagPr",
+        "customXmlPr",
+        "proofErr",
+        "bookmarkStart",
+        "bookmarkEnd",
+        "commentRangeStart",
+        "commentRangeEnd",
+        "permStart",
+        "permEnd",
+        "moveFromRangeStart",
+        "moveFromRangeEnd",
+        "moveToRangeStart",
+        "moveToRangeEnd",
+    ]
+}
+# Containers whose runs a match may enter. Other paragraph content (an equation, for example) ends a match.
+_CONTAINERS = {
+    f"{{{W_NS}}}{name}"
+    for name in [
+        "hyperlink",
+        "ins",
+        "moveTo",
+        "smartTag",
+        "customXml",
+        "sdt",
+        "sdtContent",
+        "dir",
+        "bdo",
+        "fldSimple",
+    ]
+}
 # Run content a match may span. Other run content (tabs, breaks, field characters, drawings) ends a match,
 # as do hidden runs, regenerated text and this export's own insertions.
 _SPANNABLE = {
@@ -221,16 +260,17 @@ def _sibling_run(run: etree._Element, ids: Iterator[int]) -> etree._Element:
 
 
 def _regenerated_text(body: etree._Element) -> set[etree._Element]:
-    """``w:t`` nodes Word fills in itself: field results and content controls bound to a data store.
+    """``w:t`` nodes Word manages itself: field results and the text of content controls that are bound to a
+    data store, show their placeholder, or hold a date, list or checkbox value.
 
-    Word and LibreOffice regenerate that text, so a redline placed there is lost.
+    Word and LibreOffice regenerate or reset that text, so a redline placed there is lost or misread.
     """
-    inside = set(
-        body.xpath(
-            ".//w:fldSimple//w:t | .//w:sdt[w:sdtPr/*[local-name()='dataBinding']]/w:sdtContent//w:t",
-            namespaces=NSMAP,
-        )
+    managed = " or ".join(
+        f"local-name()='{name}'"
+        for name in ("dataBinding", "showingPlcHdr", "date", "dropDownList", "comboBox", "checkbox")
     )
+    query = f".//w:fldSimple//w:t | .//w:sdt[w:sdtPr/*[{managed}]]/w:sdtContent//w:t"
+    inside = set(body.xpath(query, namespaces=NSMAP))
     depth = 0
     for element in body.iter(f"{{{W_NS}}}fldChar", f"{{{W_NS}}}t"):
         if element.tag == f"{{{W_NS}}}t":
@@ -253,7 +293,7 @@ def _text_segments(
 ) -> list[list[etree._Element]]:
     """Group the live ``w:t`` nodes of a paragraph into stretches that a match may span."""
     for child in element:
-        if child.tag in _NOT_LIVE:
+        if child.tag in _SKIPPED:
             continue
         if child in excluded or _hidden(child):
             segments.append([])
@@ -263,8 +303,10 @@ def _text_segments(
                     segments[-1].append(item)
                 elif item.tag not in _SPANNABLE or item.tag == f"{{{W_NS}}}t":
                     segments.append([])
-        else:
+        elif child.tag in _CONTAINERS:
             _text_segments(child, excluded, segments)
+        else:
+            segments.append([])
     return segments
 
 
