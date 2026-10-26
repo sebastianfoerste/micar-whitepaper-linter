@@ -4,8 +4,8 @@ title: "micar-whitepaper-linter: deterministic MiCAR crypto-asset whitepaper che
 authors:
   - family-names: Förste
     given-names: Sebastian
-version: 0.2.1
-date-released: 2026-10-15
+version: 1.2.0
+date-released: 2026-10-26
 license: MIT
 repository-code: https://github.com/sebastianfoerste/micar-whitepaper-linter
 url: https://pypi.org/project/micar-whitepaper-linter/
