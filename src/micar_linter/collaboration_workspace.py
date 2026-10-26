@@ -486,6 +486,23 @@ def _redline_match(
     excluded.add(inserted)
 
 
+def _contents_styles(styles_path: Path, parser: etree.XMLParser) -> set[str]:
+    """Ids of the table-of-contents paragraph styles: Word's built-in ids, and any style named "toc 1" to
+    "toc 9" or "contents 1" to "contents 9", whatever id the document language gives it."""
+    levels = range(1, 10)
+    ids = {f"TOC{level}" for level in levels}
+    if not styles_path.exists():
+        return ids
+    names = {f"{prefix} {level}" for prefix in ("toc", "contents") for level in levels}
+    return ids | {
+        style.get(f"{{{W_NS}}}styleId")
+        for style in etree.parse(str(styles_path), parser=parser).xpath(
+            "w:style[@w:type='paragraph']", namespaces=NSMAP
+        )
+        if style.xpath("string(w:name/@w:val)", namespaces=NSMAP).lower() in names
+    }
+
+
 def render_tracked_docx(
     source: Path, output: Path, change_set: dict[str, Any], author: str = "MiCAR reviewer"
 ) -> Path:
@@ -515,15 +532,28 @@ def render_tracked_docx(
         ]
         ids = itertools.count(max(used_ids, default=0) + 1)
         excluded = _regenerated_text(body)
-        paragraphs = ".//w:p[not(ancestor::mc:Fallback)]"
         namespaces = {**NSMAP, "mc": MC_NS}
+        # A table of contents that is not a field repeats the headings as plain text: try its paragraphs last,
+        # so a change to a heading reaches the heading.
+        candidates = body.xpath(".//w:p[not(ancestor::mc:Fallback)]", namespaces=namespaces)
+        contents_styles = _contents_styles(extracted / "word" / "styles.xml", parser)
+        contents = {
+            paragraph
+            for paragraph in candidates
+            if paragraph.xpath("string(w:pPr/w:pStyle/@w:val)", namespaces=NSMAP) in contents_styles
+            or paragraph.xpath(
+                "ancestor::w:sdt[w:sdtPr/w:docPartObj/w:docPartGallery/@w:val='Table of Contents']",
+                namespaces=NSMAP,
+            )
+        }
+        candidates = [p for p in candidates if p not in contents] + [p for p in candidates if p in contents]
         for change in (item for item in change_set["changes"] if item["decision"] == "accepted"):
             original = change["original_text"]
             proposed = change.get("proposed_text") or ""
             match = next(
                 (
                     found
-                    for candidate in (body.xpath(paragraphs, namespaces=namespaces) if original else [])
+                    for candidate in (candidates if original else [])
                     if original in "".join(candidate.xpath(_LIVE_TEXT, namespaces=namespaces))
                     and (found := _find_match(candidate, original, excluded))
                 ),

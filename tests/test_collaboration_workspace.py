@@ -598,3 +598,30 @@ def test_docx_redline_deletes_a_link_at_either_end_of_the_match(tmp_path) -> Non
         assert untouched.xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
     fallbacks = ["".join(p.xpath("w:del//w:delText/text()", namespaces=ns)) for p in paragraphs[4:]]
     assert fallbacks == ["old.invalid and www.old", "info@old.invalid"]
+
+
+def test_docx_redline_reaches_the_heading_before_a_static_table_of_contents(tmp_path) -> None:
+    source = tmp_path / "static-toc.docx"
+    document = docx.Document()
+    document.styles.element.append(
+        parse_xml(f'<w:style {_DECLARATIONS} w:type="paragraph" w:styleId="Verzeichnis1"><w:name w:val="toc 1"/></w:style>')
+    )
+    body = document.element.body
+    toc = '<w:docPartObj><w:docPartGallery w:val="Table of Contents"/></w:docPartObj>'
+    for block in (
+        f"<w:sdt {_DECLARATIONS}><w:sdtPr>{toc}</w:sdtPr><w:sdtContent>"
+        f'<w:p><w:hyperlink w:anchor="_Toc1">{_run("Risk factors")}</w:hyperlink></w:p></w:sdtContent></w:sdt>',
+        f'<w:p {_DECLARATIONS}><w:pPr><w:pStyle w:val="Verzeichnis1"/></w:pPr>{_run("Information on the issuer")}</w:p>',
+        f"<w:p {_DECLARATIONS}>{_run('Risk factors')}</w:p>",
+        f"<w:p {_DECLARATIONS}>{_run('Information on the issuer')}</w:p>",
+    ):
+        body.insert(len(body) - 1, parse_xml(block))
+    document.save(source)
+    changes = [("Risk factors", "Risk factors and mitigation"), ("Information on the issuer", "Information about the issuer")]
+    xml = _render(tmp_path, source, changes)
+    ns = {"w": _W}
+    assert xml.xpath("count(//w:sdt//w:del | //w:sdt//w:ins)", namespaces=ns) == 0
+    paragraphs = xml.xpath("w:body/w:p", namespaces=ns)
+    assert paragraphs[0].xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
+    assert _paragraph_views(paragraphs[1]) == ("Risk factors and mitigation", "Risk factors")
+    assert _paragraph_views(paragraphs[2]) == ("Information about the issuer", "Information on the issuer")
