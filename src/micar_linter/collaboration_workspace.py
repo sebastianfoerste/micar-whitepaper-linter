@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
+import itertools
 import json
 import os
 import tempfile
 import zipfile
+from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -180,6 +183,115 @@ def decide_change(change_set: dict[str, Any], change_id: str, decision: str) -> 
     return result
 
 
+def _revision(tag: str, ids: Iterator[int], author: str, date: str) -> etree._Element:
+    return etree.Element(
+        f"{{{W_NS}}}{tag}",
+        {f"{{{W_NS}}}id": str(next(ids)), f"{{{W_NS}}}author": author, f"{{{W_NS}}}date": date},
+    )
+
+
+def _text_element(tag: str, text: str) -> etree._Element:
+    element = etree.Element(f"{{{W_NS}}}{tag}")
+    element.text = text
+    element.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+    return element
+
+
+def _sibling_run(run: etree._Element, ids: Iterator[int]) -> etree._Element:
+    sibling = etree.Element(run.tag, dict(run.attrib))
+    properties = run.find("w:rPr", NSMAP)
+    if properties is not None:
+        properties = copy.deepcopy(properties)
+        for change in properties.iter(f"{{{W_NS}}}rPrChange"):
+            change.set(f"{{{W_NS}}}id", str(next(ids)))
+        sibling.append(properties)
+    return sibling
+
+
+def _paragraph_text_nodes(paragraph: etree._Element, skip: set[etree._Element]) -> list[etree._Element]:
+    return [
+        node
+        for node in paragraph.xpath(".//w:t[not(ancestor::w:del)]", namespaces=NSMAP)
+        if node.xpath("ancestor::w:p[1]", namespaces=NSMAP)[0] is paragraph
+        and not any(ancestor in skip for ancestor in node.iterancestors())
+    ]
+
+
+def _isolate_text(node: etree._Element, start: int, end: int, ids: Iterator[int]) -> etree._Element:
+    """Split the run of ``node`` so that a run of its own holds ``node.text[start:end]``; return that run."""
+    run = node.getparent()
+    content = [child for child in run if child.tag != f"{{{W_NS}}}rPr"]
+    position = content.index(node)
+    text = node.text or ""
+    if content[:position]:
+        before = _sibling_run(run, ids)
+        before.extend(content[:position])
+        run.addprevious(before)
+    if text[:start]:
+        prefix = _sibling_run(run, ids)
+        prefix.append(_text_element("t", text[:start]))
+        run.addprevious(prefix)
+    if content[position + 1 :]:
+        after = _sibling_run(run, ids)
+        after.extend(content[position + 1 :])
+        run.addnext(after)
+    if text[end:]:
+        suffix = _sibling_run(run, ids)
+        suffix.append(_text_element("t", text[end:]))
+        run.addnext(suffix)
+    node.text = text[start:end]
+    node.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+    return run
+
+
+def _redline_paragraph(
+    paragraph: etree._Element,
+    original: str,
+    proposed: str,
+    ids: Iterator[int],
+    author: str,
+    date: str,
+    skip: set[etree._Element],
+) -> None:
+    """Track the deletion of the first ``original`` in ``paragraph`` and the insertion of ``proposed``.
+
+    Text before and after the match, the paragraph properties and the run formatting stay as they are,
+    so rejecting the change in Word restores the paragraph.
+    """
+    nodes = _paragraph_text_nodes(paragraph, skip)
+    match_start = "".join(node.text or "" for node in nodes).find(original)
+    match_end = match_start + len(original)
+    deleted_runs = []
+    offset = 0
+    for node in nodes:
+        length = len(node.text or "")
+        overlap_start, overlap_end = max(match_start, offset), min(match_end, offset + length)
+        if overlap_start < overlap_end:
+            deleted_runs.append(_isolate_text(node, overlap_start - offset, overlap_end - offset, ids))
+            node.tag = f"{{{W_NS}}}delText"
+        offset += length
+    anchor = None
+    for run in deleted_runs:
+        anchor = _revision("del", ids, author, date)
+        run.addprevious(anchor)
+        anchor.append(run)
+    while anchor.getparent().tag == f"{{{W_NS}}}ins":
+        outer = anchor.getparent()
+        following = list(anchor.itersiblings())
+        if following:
+            rest = etree.Element(outer.tag, dict(outer.attrib))
+            rest.set(f"{{{W_NS}}}id", str(next(ids)))
+            rest.extend(following)
+            outer.addnext(rest)
+        anchor = outer
+    inserted = _revision("ins", ids, author, date)
+    inserted_run = _sibling_run(deleted_runs[0], ids)
+    inserted_run.append(_text_element("t", proposed))
+    inserted.append(inserted_run)
+    anchor.addnext(inserted)
+    skip.add(inserted)
+
+
 def render_tracked_docx(
     source: Path, output: Path, change_set: dict[str, Any], author: str = "MiCAR reviewer"
 ) -> Path:
@@ -202,47 +314,37 @@ def render_tracked_docx(
         if body is None:
             raise ValueError("DOCX is missing word/document.xml body")
         section = body.find("w:sectPr", NSMAP)
-        for index, change in enumerate(
-            (item for item in change_set["changes"] if item["decision"] == "accepted"), start=1
-        ):
-            paragraph = etree.Element(f"{{{W_NS}}}p")
-            deleted = etree.SubElement(
-                paragraph,
-                f"{{{W_NS}}}del",
-                {
-                    f"{{{W_NS}}}id": str(index * 2),
-                    f"{{{W_NS}}}author": author,
-                    f"{{{W_NS}}}date": change_timestamp,
-                },
-            )
-            deleted_run = etree.SubElement(deleted, f"{{{W_NS}}}r")
-            etree.SubElement(deleted_run, f"{{{W_NS}}}delText").text = (
-                change["original_text"] or "Missing disclosure"
-            )
-            inserted = etree.SubElement(
-                paragraph,
-                f"{{{W_NS}}}ins",
-                {
-                    f"{{{W_NS}}}id": str(index * 2 + 1),
-                    f"{{{W_NS}}}author": author,
-                    f"{{{W_NS}}}date": change_timestamp,
-                },
-            )
-            inserted_run = etree.SubElement(inserted, f"{{{W_NS}}}r")
-            etree.SubElement(inserted_run, f"{{{W_NS}}}t").text = change.get("proposed_text") or ""
+        used_ids = [int(value) for value in tree.xpath("//@w:id", namespaces=NSMAP) if value.isdigit()]
+        ids = itertools.count(max(used_ids, default=0) + 1)
+        inserted: set[etree._Element] = set()
+        for change in (item for item in change_set["changes"] if item["decision"] == "accepted"):
+            original = change["original_text"]
+            proposed = change.get("proposed_text") or ""
             source_paragraph = next(
                 (
                     candidate
                     for candidate in body.xpath(".//w:p", namespaces=NSMAP)
-                    if change["original_text"]
-                    and change["original_text"] in "".join(candidate.xpath(".//w:t/text()", namespaces=NSMAP))
+                    if original
+                    and original
+                    in "".join(node.text or "" for node in _paragraph_text_nodes(candidate, inserted))
                 ),
                 None,
             )
             if source_paragraph is not None:
-                source_paragraph.getparent().replace(source_paragraph, paragraph)
-            else:
-                body.insert(body.index(section) if section is not None else len(body), paragraph)
+                _redline_paragraph(
+                    source_paragraph, original, proposed, ids, author, change_timestamp, inserted
+                )
+                continue
+            deletion = _revision("del", ids, author, change_timestamp)
+            deleted_run = etree.SubElement(deletion, f"{{{W_NS}}}r")
+            etree.SubElement(deleted_run, f"{{{W_NS}}}delText").text = original or "Missing disclosure"
+            insertion = _revision("ins", ids, author, change_timestamp)
+            inserted_run = etree.SubElement(insertion, f"{{{W_NS}}}r")
+            etree.SubElement(inserted_run, f"{{{W_NS}}}t").text = proposed
+            inserted.add(insertion)
+            paragraph = etree.Element(f"{{{W_NS}}}p")
+            paragraph.extend([deletion, insertion])
+            body.insert(body.index(section) if section is not None else len(body), paragraph)
         tree.write(str(document_path), xml_declaration=True, encoding="UTF-8", standalone=True)
         output.parent.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as target:

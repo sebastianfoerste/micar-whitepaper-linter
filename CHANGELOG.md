@@ -21,6 +21,7 @@
 
 ### Fixed
 
+- Tracked DOCX export (`render_tracked_docx`): an accepted change whose original text is only part of a paragraph now marks just that text as a tracked deletion and inserts the replacement after it, in the formatting of the deleted text. Before, the export replaced the whole paragraph with the deletion and the insertion, so the rest of the paragraph, its style and its run formatting were dropped without a tracked deletion, and rejecting the change in Word could not restore them. Revision IDs now start above the IDs already in the document, a match inside another author's pending insertion splits that insertion instead of being placed after it, and a later change no longer matches text inserted by an earlier one.
 - The playground brand link's accessible name now matches its visible text (axe `label-content-name-mismatch`).
 - The GitHub Action installs the `docx` extra, so a DOCX `whitepaper` input is linted. Before, the run stopped with "DOCX support requires the optional 'docx' extra".
 - `--coverage` now changes only what is printed. `--strict` and the output files (SARIF, summary, annotations, audit log, remediation, coverage matrix, manifest, review table) still apply. Before, it printed the table and exited 0 before writing them, so `--coverage` in the Action's `extra-args` turned off the strict gate and the CI outputs.

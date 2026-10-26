@@ -5,6 +5,7 @@ from pathlib import Path
 
 import docx
 import pytest
+from docx.oxml.ns import qn
 from lxml import etree
 
 from micar_linter.collaboration_workspace import (
@@ -129,3 +130,99 @@ def test_workflow_pack_blocks_unreviewed_cells() -> None:
     pack = build_workflow_pack(workspace, sidecar, build_change_set(workspace))
     assert pack["run"]["status"] == "blocked"
     assert pack["run"]["external_action_allowed"] is False
+
+
+def _accepted_change_set(source: Path, original: str, proposed: str) -> dict:
+    return {
+        "source_digests": {"source": hashlib.sha256(source.read_bytes()).hexdigest()},
+        "export_allowed": True,
+        "changes": [{"decision": "accepted", "original_text": original, "proposed_text": proposed}],
+    }
+
+
+def _paragraph_views(paragraph) -> tuple[str, str]:
+    """Text of the paragraph with every change accepted, and with every change rejected."""
+    ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+    accepted = "".join(paragraph.xpath(".//w:t[not(ancestor::w:del)]/text()", namespaces=ns))
+    rejected = "".join(
+        paragraph.xpath(".//w:t[not(ancestor::w:ins)]/text() | .//w:delText/text()", namespaces=ns)
+    )
+    return accepted, rejected
+
+
+def test_docx_partial_paragraph_match_keeps_surrounding_text(tmp_path) -> None:
+    source = tmp_path / "partial-source.docx"
+    document = docx.Document()
+    paragraph = document.add_paragraph("The issuer ", style="List Bullet")
+    paragraph.add_run("Example Issuer AG").bold = True
+    paragraph.add_run(" is TBD and will notify BaFin.")
+    document.add_paragraph("Next paragraph stays.")
+    document.save(source)
+    change_set = _accepted_change_set(source, "AG is TBD", "AG is incorporated in Germany")
+    output = render_tracked_docx(source, tmp_path / "partial-reviewed.docx", change_set)
+    with zipfile.ZipFile(output) as package:
+        xml = etree.fromstring(package.read("word/document.xml"))
+    ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    assert _paragraph_views(paragraphs[0]) == (
+        "The issuer Example Issuer AG is incorporated in Germany and will notify BaFin.",
+        "The issuer Example Issuer AG is TBD and will notify BaFin.",
+    )
+    assert _paragraph_views(paragraphs[1]) == ("Next paragraph stays.", "Next paragraph stays.")
+    assert paragraphs[0].xpath("string(w:pPr/w:pStyle/@w:val)", namespaces=ns) == "ListBullet"
+    kept_bold = paragraphs[0].xpath(
+        ".//w:r[not(ancestor::w:del) and not(ancestor::w:ins)][w:rPr/w:b]//w:t/text()", namespaces=ns
+    )
+    assert "".join(kept_bold) == "Example Issuer "
+    deleted_bold = paragraphs[0].xpath(".//w:del/w:r[w:rPr/w:b]/w:delText/text()", namespaces=ns)
+    assert "".join(deleted_bold) == "AG"
+    ids = xml.xpath(".//w:ins/@w:id | .//w:del/@w:id", namespaces=ns)
+    assert len(ids) == len(set(ids))
+
+
+def test_docx_redlines_two_changes_in_one_paragraph(tmp_path) -> None:
+    source = tmp_path / "two-source.docx"
+    document = docx.Document()
+    document.add_paragraph("Name TBD, address TBC, LEI pending.")
+    document.save(source)
+    change_set = _accepted_change_set(source, "Name TBD", "Name Example AG")
+    change_set["changes"].append(
+        {"decision": "accepted", "original_text": "address TBC", "proposed_text": "address Berlin"}
+    )
+    output = render_tracked_docx(source, tmp_path / "two-reviewed.docx", change_set)
+    with zipfile.ZipFile(output) as package:
+        xml = etree.fromstring(package.read("word/document.xml"))
+    ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    assert len(paragraphs) == 1
+    assert _paragraph_views(paragraphs[0]) == (
+        "Name Example AG, address Berlin, LEI pending.",
+        "Name TBD, address TBC, LEI pending.",
+    )
+
+
+def test_docx_redline_splits_pending_insertion_of_another_author(tmp_path) -> None:
+    source = tmp_path / "pending-source.docx"
+    document = docx.Document()
+    paragraph = document.add_paragraph("Start ")
+    pending = paragraph._p.makeelement(qn("w:ins"), {qn("w:id"): "7", qn("w:author"): "Other reviewer"})
+    pending_run = paragraph._p.makeelement(qn("w:r"), {})
+    pending_run.append(paragraph._p.makeelement(qn("w:t"), {}))
+    pending_run[0].text = "inserted words"
+    pending.append(pending_run)
+    paragraph._p.append(pending)
+    paragraph.add_run(" end.")
+    document.save(source)
+    change_set = _accepted_change_set(source, "inserted", "added")
+    output = render_tracked_docx(source, tmp_path / "pending-reviewed.docx", change_set)
+    with zipfile.ZipFile(output) as package:
+        xml = etree.fromstring(package.read("word/document.xml"))
+    ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+    paragraph_xml = xml.xpath(".//w:body/w:p", namespaces=ns)[0]
+    assert "".join(paragraph_xml.xpath(".//w:t[not(ancestor::w:del)]/text()", namespaces=ns)) == (
+        "Start added words end."
+    )
+    assert xml.xpath("count(//w:ins//w:ins)", namespaces=ns) == 0
+    assert xml.xpath("string(//w:ins[@w:author='Other reviewer']//w:delText)", namespaces=ns) == "inserted"
+    ids = xml.xpath("//w:ins/@w:id | //w:del/@w:id", namespaces=ns)
+    assert len(ids) == len(set(ids))
