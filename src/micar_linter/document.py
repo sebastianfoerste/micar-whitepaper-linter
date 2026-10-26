@@ -13,6 +13,7 @@ from itertools import pairwise
 from pathlib import Path
 
 from micar_linter.placeholders import is_not_applicable, is_placeholder
+from micar_linter.rules.annex_i import NOT_APPROVED_STATEMENT_EN
 
 # Common patterns (in English and German) matching whitepaper section headings.
 # Word boundaries are used to avoid false positives.
@@ -277,6 +278,25 @@ def statement_extent(lines: list[str], start: int, is_heading: Callable[[int], b
             own.stop if own and own.start <= last + 1 and last < own.stop <= heading else last + 1
         )
     return start + closing + 1
+
+
+def paragraph_statement_extent(
+    paragraphs: list[str], start: int, is_heading: Callable[[int], bool] | None = None
+) -> int:
+    """statement_extent for a loader that reads paragraphs (DOCX, XHTML) rather than wrapped lines.
+
+    An opening paragraph without a full stop was cut off, unless the paragraphs after it carry on the
+    English opening sentence word for word, as a statement set a line per paragraph does. So the paragraph
+    after a cut-off opening is not taken in, whatever its first sentence.
+    """
+    end = statement_extent(paragraphs, start, is_heading)
+    for index in range(start + 1, end):
+        if _STATEMENT_SENTENCE_END.search(" ".join(paragraphs[start:index])):
+            break
+        joined = re.sub(r"^\W+", "", " ".join(" ".join(paragraphs[start : index + 1]).split()).lower())
+        if not (NOT_APPROVED_STATEMENT_EN.startswith(joined) or joined.startswith(NOT_APPROVED_STATEMENT_EN)):
+            return index
+    return end
 
 
 def match_heading_to_section(heading: str) -> list[str]:
@@ -856,11 +876,6 @@ def _line_sections(lines: list[_Line], statement: bool = False) -> DocumentSecti
     fills = [_fills_line(line, full_line, body_font) for line in lines]
     heights = _heights_hold(lines, body_font)
     lines, styled, running, fills = _merge_wrapped(lines, styled, _running(lines), fills, heights)
-    statement_starts: set[int] = set()
-    if statement:
-        lines, styled, running, fills, statement_starts = _split_statement_fields(
-            lines, styled, running, fills
-        )
     # The draft sets its headings in a heading font if at least two lines in one name a section.
     by_font = (
         sum(
@@ -873,6 +888,12 @@ def _line_sections(lines: list[_Line], statement: bool = False) -> DocumentSecti
         )
         >= 2
     )
+    # Split after the heading-font count, which a statement in a heading font must not tip.
+    statement_starts: set[int] = set()
+    if statement:
+        lines, styled, running, fills, statement_starts = _split_statement_fields(
+            lines, styled, running, fills
+        )
     # A running page header or footer is body text that is not read as context for the lines around it.
     content = [index for index, line_running in enumerate(running) if not line_running]
     following_index = dict(pairwise(content))
@@ -1135,7 +1156,7 @@ def parse_docx(path: Path) -> DocumentSections:
                 # that is entirely bold or in capitals. A label marked as the statement's first paragraph
                 # is one of its lines, as a statement may be set in bold or capitals a paragraph per line.
                 marks = (text.isupper(), _docx_fully_bold(para))
-                statement_end = statement_extent(
+                statement_end = paragraph_statement_extent(
                     paragraph_texts,
                     index,
                     lambda i, marks=marks: (

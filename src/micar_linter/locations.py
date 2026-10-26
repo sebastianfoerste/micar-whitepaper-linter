@@ -135,15 +135,18 @@ def _xhtml_heading_lines(path: Path) -> dict[str, int]:
         from lxml import etree
 
         from micar_linter.document import match_heading_to_section
+        from micar_linter.xhtml_parser import load_from_xhtml
 
         tree = etree.parse(str(path), etree.HTMLParser(encoding="utf-8"))
         headings = tree.xpath("//h1 | //h2 | //h3 | //h4 | //h5 | //h6")
+        # A heading element that the loader reads as part of the first-page statement opens no section.
+        statement = set(load_from_xhtml(path).get("not_approved_statement", "").split("\n"))
     except Exception:
         return {}
     lines: dict[str, int] = {}
     for heading in headings:
         text = " ".join("".join(heading.itertext()).split())
-        if not text or not heading.sourceline:
+        if not text or not heading.sourceline or text in statement:
             continue
         for section_key in match_heading_to_section(text):
             lines.setdefault(section_key, heading.sourceline)

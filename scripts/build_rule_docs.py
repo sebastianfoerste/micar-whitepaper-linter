@@ -499,12 +499,14 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
         emt = rule.rule_id.startswith("ANNEX_III.")
         field = "I.02" if emt else "02"
         limitations.append(
-            "PDF, DOCX, Markdown and heading-based XHTML drafts fill the section from a heading or field label "
-            f"such as “Statement in accordance with Article {'51' if emt else '6'}(3)”, the label of field {field} "
-            f"of Table {'4' if emt else '2'} of Implementing Regulation (EU) 2024/2984, or, without one, from a "
-            "line or paragraph that opens with the statement's first words. Numbered-field XHTML fills it from "
-            f"field {field}. DOCX table cells are not read, so a statement kept only in a Word table is reported "
-            "missing."
+            "PDF, DOCX, Markdown and heading-based XHTML drafts fill the section from a heading such as “Statement "
+            f"in accordance with Article {'51' if emt else '6'}(3)”, the label of field {field} of Table "
+            f"{'4' if emt else '2'} of Implementing Regulation (EU) 2024/2984, where the label is set as one (a "
+            "Markdown “#” heading, an XHTML h1 to h6 or bold label, a DOCX heading or bold or capitals label, a PDF "
+            "heading or field line), or, without one, from a line or paragraph that opens with the statement's "
+            f"first words. Numbered-field XHTML fills it from field {field}. Table cells are not read in DOCX, nor "
+            "in heading-based XHTML where the text sits directly in a td or th element rather than in a p, div, li "
+            "or bold element inside it, so a statement kept only there is reported missing."
         )
         limitations.append(
             "A German draft never passes: the German wording has not been checked against the German Official "

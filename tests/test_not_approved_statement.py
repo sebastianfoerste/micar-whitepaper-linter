@@ -405,6 +405,67 @@ def test_incomplete_markdown_statement_does_not_swallow_the_next_sections(tmp_pa
     _sections_after_incomplete_statement(whitepaper)
 
 
+# Regression: an opening cut off before its full stop took in the paragraph after it, here the first
+# paragraph of the summary, until a full stop, so the summary was reported missing.
+CUT_OPENING = "This crypto-asset white paper has not been approved by any competent"
+
+
+def test_cut_off_xhtml_opening_leaves_the_next_paragraph(tmp_path: Path):
+    path = tmp_path / "draft.xhtml"
+    path.write_text(
+        f"<html><body><h2>Summary</h2><p>{CUT_OPENING}</p><p>Key information about the token.</p></body></html>",
+        encoding="utf-8",
+    )
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    assert whitepaper.section("not_approved_statement") == CUT_OPENING
+    assert whitepaper.section("summary") == "Key information about the token."
+
+
+def test_cut_off_docx_opening_leaves_the_next_paragraph(tmp_path: Path):
+    path = tmp_path / "draft.docx"
+    document = docx.Document()
+    document.add_heading("Summary", level=1)
+    document.add_paragraph(CUT_OPENING)
+    document.add_paragraph("Key information about the token.")
+    document.save(path)
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    assert whitepaper.section("not_approved_statement") == CUT_OPENING
+    assert whitepaper.section("summary") == "Key information about the token."
+
+
+def test_xhtml_statement_set_a_line_per_paragraph_is_read_whole(tmp_path: Path):
+    lines = [
+        "This crypto-asset white paper has not been approved by any competent authority in any",
+        "Member State of the European Union.",
+        "The offeror of the crypto-asset is solely responsible for the content of this crypto-asset white paper.",
+    ]
+    path = tmp_path / "draft.xhtml"
+    path.write_text(
+        "<html><body>"
+        + "".join(f"<div>{line}</div>" for line in lines)
+        + "<h2>Summary</h2><p>Key information.</p></body></html>",
+        encoding="utf-8",
+    )
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    assert whitepaper.section("not_approved_statement") == "\n".join(lines)
+    assert whitepaper.section("summary") == "Key information."
+
+
+# Regression: after a bold opening, a bold label was never a heading, so a label that names a section
+# and a short sentence on responsibility after it were taken into an incomplete statement.
+def test_bold_xhtml_label_after_a_bold_opening_opens_its_section(tmp_path: Path):
+    body = "The management body of Example AG is responsible for this white paper."
+    path = tmp_path / "draft.xhtml"
+    path.write_text(
+        f"<html><body><p><b>{APPROVAL}</b></p><p><b>Statement of the management body</b></p>"
+        f"<p>{body}</p></body></html>",
+        encoding="utf-8",
+    )
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    assert whitepaper.section("not_approved_statement") == APPROVAL
+    assert whitepaper.section("management_statement") == body
+
+
 def test_incomplete_xhtml_statement_does_not_swallow_the_next_sections(tmp_path: Path):
     path = tmp_path / "draft.xhtml"
     path.write_text(
@@ -563,6 +624,47 @@ def test_pdf_statement_on_the_line_of_its_summary_field_passes(
     assert statement in " ".join(whitepaper.section("not_approved_statement").split())
     assert "crypto_asset" not in whitepaper.sections
     finding = next(f for f in lint_whitepaper(whitepaper).findings if f.rule.rule_id == rule_id)
+    assert finding.status == "pass", finding.issues
+
+
+# Regression: splitting a bold field 02 row added a second section-naming line in the bold font, so the
+# draft was read as one that sets its headings in a heading font and lost its body-font headings.
+@pytest.mark.parametrize("one_row", [False, True])
+def test_pdf_bold_summary_row_keeps_the_body_font_headings(tmp_path: Path, one_row: bool):
+    label = "02 Statement in accordance with Article 6(3) of Regulation (EU) 2023/1114"
+    opening = "This crypto-asset white paper has not been"
+    statement = _statement("The offeror")
+    rows = (
+        [
+            ("large", "Example Token Crypto-Asset White Paper"),
+            ("line", "Summary"),
+            ("bold", f"{label} {statement}"),
+        ]
+        if one_row
+        else [
+            ("line", "Summary"),
+            ("bold", f"{label} {opening}"),
+            ("bold", f"{APPROVAL[len(opening) + 1 :]} The offeror"),
+            ("bold", statement[len(APPROVAL) + len("The offeror") + 2 :]),
+        ]
+    )
+    path = _write_pdf(
+        tmp_path / "draft.pdf",
+        [
+            *rows,
+            ("line", "Information about the Offeror"),
+            (
+                "body",
+                "Example AG is a fictional public limited company with its registered address in Berlin.",
+            ),
+            ("line", "Risk Factors"),
+            ("body", test_heading_detection.RISK_DETAIL),
+        ],
+    )
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    assert "risks" in whitepaper.sections
+    assert "Example AG" in whitepaper.section("offeror")
+    finding = next(f for f in lint_whitepaper(whitepaper).findings if f.rule.rule_id == TITLE_II)
     assert finding.status == "pass", finding.issues
 
 

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from lxml import etree
 
-from micar_linter.document import is_statement_start, match_heading_to_section, statement_extent
+from micar_linter.document import is_statement_start, match_heading_to_section, paragraph_statement_extent
 
 
 def _is_fully_bold(elem: etree._Element, text: str) -> bool:
@@ -56,14 +56,19 @@ def load_from_xhtml(path: Path) -> dict[str, str]:
         is_bold_heading = len(text) < 120 and is_bold
         if index < statement_end or is_statement_start(text):
             # The Art. 6(3) / 51(3) statement carries no heading of its own, and its sentences may sit
-            # in separate blocks. A bold label is a heading only where the statement's first block is
-            # not bold, as a statement may be set in bold a sentence per paragraph.
+            # in separate blocks. After a bold first block, a bold label is a heading only where it names
+            # a section, as a statement may be set in bold a sentence per paragraph.
             if index >= statement_end:
-                statement_end = statement_extent(
+                statement_end = paragraph_statement_extent(
                     texts,
                     index,
                     lambda i, bold=is_bold: (
-                        blocks[i][1] or (blocks[i][2] and not bold and len(texts[i]) < 120)
+                        blocks[i][1]
+                        or (
+                            blocks[i][2]
+                            and len(texts[i]) < 120
+                            and (not bold or bool(match_heading_to_section(texts[i])))
+                        )
                     ),
                 )
             sections.setdefault("not_approved_statement", []).append(text)
