@@ -22,7 +22,7 @@ R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 NSMAP = {"w": W_NS}
 # Paragraph content skipped without ending a match: deleted or moved-away text, properties and range markers.
 # A drawing, including its hidden mc:Fallback copy, ends a match; paragraphs inside mc:Fallback are never
-# candidates (see render_tracked_docx and _LIVE_TEXT).
+# candidates (see render_tracked_docx).
 _SKIPPED = {
     f"{{{W_NS}}}{name}"
     for name in [
@@ -59,9 +59,7 @@ _SPANNABLE = {
     f"{{{W_NS}}}{name}"
     for name in ("rPr", "t", "lastRenderedPageBreak", "softHyphen", "commentReference", "annotationRef")
 }
-_LIVE_TEXT = (
-    ".//w:t[not(ancestor::w:del) and not(ancestor::w:moveFrom) and not(ancestor::mc:Fallback)]/text()"
-)
+_LIVE_TEXT = ".//w:t[not(ancestor::w:del) and not(ancestor::w:moveFrom)]/text()"
 
 
 def _reproducible_timestamp() -> str:
@@ -253,8 +251,9 @@ def _sibling_run(run: etree._Element, ids: Iterator[int]) -> etree._Element:
 
 
 def _regenerated_text(body: etree._Element) -> set[etree._Element]:
-    """``w:t`` nodes Word manages itself: field results and the text of content controls that are bound to a
-    data store, show their placeholder, or hold a date, list or checkbox value.
+    """``w:t`` nodes Word manages itself: complex field results and the text of content controls that are
+    bound to a data store, show their placeholder, or hold a date, list or checkbox value. A simple field
+    (``w:fldSimple``) needs no entry, because _text_segments ends a match at it without entering it.
 
     Word and LibreOffice regenerate or reset that text, so a redline placed there is lost or misread.
     """
@@ -262,7 +261,7 @@ def _regenerated_text(body: etree._Element) -> set[etree._Element]:
         f"local-name()='{name}'"
         for name in ("dataBinding", "showingPlcHdr", "date", "dropDownList", "comboBox", "checkbox")
     )
-    query = f".//w:fldSimple//w:t | .//w:sdt[w:sdtPr/*[{managed}]]/w:sdtContent//w:t"
+    query = f".//w:sdt[w:sdtPr/*[{managed}]]/w:sdtContent//w:t"
     inside = set(body.xpath(query, namespaces=NSMAP))
     depth = 0
     for element in body.iter(f"{{{W_NS}}}fldChar", f"{{{W_NS}}}t"):
