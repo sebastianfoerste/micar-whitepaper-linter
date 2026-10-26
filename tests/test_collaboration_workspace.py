@@ -5,6 +5,7 @@ from pathlib import Path
 
 import docx
 import pytest
+from docx.opc.constants import RELATIONSHIP_TYPE
 from docx.oxml import parse_xml
 from docx.oxml.ns import qn
 from lxml import etree
@@ -233,7 +234,8 @@ _W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 _DECLARATIONS = (
     f'xmlns:w="{_W}" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" '
     'xmlns:v="urn:schemas-microsoft-com:vml" '
-    'xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"'
+    'xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" '
+    'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'
 )
 
 
@@ -442,3 +444,32 @@ def test_docx_redline_runs_through_a_whole_link_and_smart_tags(tmp_path) -> None
         "The offer starts on 1 April 2027 in Leipzig.",
         "The offer starts on 1 March 2027 in Berlin.",
     )
+
+
+def test_docx_redline_replaces_external_link_after_it_and_keeps_custom_xml_extent(tmp_path) -> None:
+    source = tmp_path / "external.docx"
+    document = docx.Document()
+    target = document.part.relate_to("mailto:info@old.invalid", RELATIONSHIP_TYPE.HYPERLINK, is_external=True)
+    link = (
+        f'<w:hyperlink r:id="{target}"><w:r><w:rPr><w:rStyle w:val="Hyperlink"/></w:rPr>'
+        "<w:t>info@old.invalid</w:t></w:r></w:hyperlink>"
+    )
+    body = document.element.body
+    for paragraph in (
+        '<w:bookmarkStart w:id="\u00b2" w:name="Odd"/>' + _run("Contact: ") + link + _run("."),
+        _run("Mail ") + link + _run(" today."),
+        _run("The fee is ") + '<w:customXml w:element="feeAmount">' + _run("EUR 5") + "</w:customXml>" + _run(" per token."),
+    ):
+        body.insert(len(body) - 1, parse_xml(f"<w:p {_DECLARATIONS}>{paragraph}</w:p>"))
+    document.save(source)
+    changes = [("info@old.invalid", "info@new.invalid"), ("old.invalid", "new.invalid"), ("EUR 5 per token", "EUR 7 per token")]
+    xml = _render(tmp_path, source, changes)
+    ns = {"w": _W}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    assert _paragraph_views(paragraphs[0]) == ("Contact: info@new.invalid.", "Contact: info@old.invalid.")
+    assert paragraphs[0].xpath("count(w:hyperlink//w:ins)", namespaces=ns) == 0
+    assert paragraphs[0].xpath("count(w:ins/w:r/w:rPr)", namespaces=ns) == 0
+    for untouched in paragraphs[1:3]:
+        assert untouched.xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
+    fallbacks = ["".join(p.xpath("w:del//w:delText/text()", namespaces=ns)) for p in paragraphs[3:]]
+    assert fallbacks == ["old.invalid", "EUR 5 per token"]

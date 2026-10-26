@@ -18,6 +18,7 @@ from lxml import etree
 
 W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 MC_NS = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 NSMAP = {"w": W_NS}
 # Paragraph content skipped without ending a match: deleted or moved-away text, the hidden VML copy of a
 # drawing, properties and range markers.
@@ -45,7 +46,8 @@ _SKIPPED = {f"{{{MC_NS}}}Fallback"} | {
     ]
 }
 # Containers a match runs through: pending insertions and moves, smart tags, custom XML and hyperlinks. A
-# match must start and end in the same hyperlink, or outside any, so a link keeps its extent.
+# match must start and end in the same hyperlink and custom XML element, or outside any, so they keep their
+# extent; inside a link to an external target it must cover the link's whole text (see _redline_match).
 _TRANSPARENT = {f"{{{W_NS}}}{name}" for name in ["ins", "moveTo", "smartTag", "customXml", "hyperlink"]}
 # Containers a match may lie inside but not cross, so a content control keeps its value. Other paragraph
 # content (an equation, for example) ends a match.
@@ -317,8 +319,20 @@ def _covered(nodes: list[etree._Element], start: int, end: int) -> list[tuple[et
     return covered
 
 
-def _link(node: etree._Element) -> etree._Element | None:
-    return next(node.iterancestors(f"{{{W_NS}}}hyperlink"), None)
+def _bounds(node: etree._Element) -> tuple[etree._Element | None, etree._Element | None]:
+    """The nearest hyperlink and custom XML element around ``node``."""
+    return (
+        next(node.iterancestors(f"{{{W_NS}}}hyperlink"), None),
+        next(node.iterancestors(f"{{{W_NS}}}customXml"), None),
+    )
+
+
+def _external_link_text(link: etree._Element | None) -> str | None:
+    if link is None or link.get(f"{{{R_NS}}}id") is None:
+        return None
+    return "".join(
+        link.xpath(".//w:t[not(ancestor::w:del) and not(ancestor::w:moveFrom)]/text()", namespaces=NSMAP)
+    )
 
 
 def _find_match(
@@ -329,7 +343,8 @@ def _find_match(
         start = text.find(original)
         while start >= 0:
             covered = _covered(nodes, start, start + len(original))
-            if _link(covered[0][0]) is _link(covered[-1][0]):
+            bounds = _bounds(covered[0][0])
+            if bounds == _bounds(covered[-1][0]) and _external_link_text(bounds[0]) in {None, original}:
                 return nodes, start
             start = text.find(original, start + 1)
     return None
@@ -405,6 +420,11 @@ def _redline_match(
         anchor = _revision("del", ids, author, date)
         run.addprevious(anchor)
         anchor.append(run)
+    # A match that is the whole text of a link to an external target is replaced after the link, in the
+    # paragraph's own formatting, so the new text does not keep the old target.
+    replaces_link = _external_link_text(_bounds(first)[0]) is not None
+    if replaces_link:
+        anchor = _bounds(first)[0]
     while anchor.getparent().tag in {f"{{{W_NS}}}ins", f"{{{W_NS}}}moveTo"}:
         outer = anchor.getparent()
         following = list(anchor.itersiblings())
@@ -415,7 +435,7 @@ def _redline_match(
             outer.addnext(rest)
         anchor = outer
     inserted = _revision("ins", ids, author, date)
-    inserted_run = _sibling_run(deleted_runs[0], ids)
+    inserted_run = etree.Element(f"{{{W_NS}}}r") if replaces_link else _sibling_run(deleted_runs[0], ids)
     inserted_run.append(_text_element("t", proposed))
     inserted.append(inserted_run)
     anchor.addnext(inserted)
@@ -444,7 +464,11 @@ def render_tracked_docx(
         if body is None:
             raise ValueError("DOCX is missing word/document.xml body")
         section = body.find("w:sectPr", NSMAP)
-        used_ids = [int(value) for value in tree.xpath("//@w:id", namespaces=NSMAP) if value.isdigit()]
+        used_ids = [
+            int(value)
+            for value in tree.xpath("//@w:id", namespaces=NSMAP)
+            if value.isascii() and value.isdigit()
+        ]
         ids = itertools.count(max(used_ids, default=0) + 1)
         excluded = _regenerated_text(body)
         paragraphs = ".//w:p[not(ancestor::mc:Fallback)]"
