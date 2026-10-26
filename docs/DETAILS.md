@@ -110,8 +110,8 @@ This route keeps the human-review boundary visible while showing the determinist
 
 ## Features
 
-- Deterministic regulatory audits for MiCAR Annex I, II and III.
-- JSON, XHTML and DOCX parsing.
+- Deterministic first-pass checks for MiCAR Annex I, II and III.
+- JSON, XHTML or HTML, DOCX, PDF and Markdown parsing.
 - Rules-as-code severity engine.
 - JSON reports for automated checks.
 - Local artifact manifests and remediation reports.

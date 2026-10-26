@@ -7,13 +7,16 @@ This document details the functional features implemented in the MiCAR Whitepape
 ## 1. Multiple Document Input Formats
 - **Description**: Reads white papers saved as JSON, XHTML or HTML (including Inline XBRL and the numbered-field layout of Implementing Regulation (EU) 2024/2984), DOCX, PDF or Markdown.
 - **Related Files**:
+  - [src/micar_linter/whitepaper.py](../src/micar_linter/whitepaper.py)
   - [src/micar_linter/document.py](../src/micar_linter/document.py)
   - [src/micar_linter/xhtml_parser.py](../src/micar_linter/xhtml_parser.py)
+  - [src/micar_linter/numbered_fields.py](../src/micar_linter/numbered_fields.py)
 - **Status**: Fully Implemented.
 
 ## 2. Regime-Specific Annex Audits
 - **Description**: Applies the rules for the regime of the crypto-asset: other crypto-assets (Annex I), asset-referenced tokens (Annex II) or e-money tokens (Annex III), each with the rules every regime shares (`common.py`).
 - **Related Files**:
+  - [src/micar_linter/rules/common.py](../src/micar_linter/rules/common.py)
   - [src/micar_linter/rules/annex_i.py](../src/micar_linter/rules/annex_i.py)
   - [src/micar_linter/rules/annex_ii.py](../src/micar_linter/rules/annex_ii.py)
   - [src/micar_linter/rules/annex_iii.py](../src/micar_linter/rules/annex_iii.py)
@@ -24,9 +27,10 @@ This document details the functional features implemented in the MiCAR Whitepape
   - **Blocker**: the rule covers a disclosure or format requirement the white paper cannot be notified or submitted for approval without. Every BLOCKER finding that has not passed counts as a blocker and makes `--strict` exit 1. The draft should not enter an external review or filing workflow until the blockers are cured and a lawyer has signed off.
   - **Major**: the rule covers a disclosure that, if incomplete, is likely to mislead or need substantive review.
   - **Minor**: a drafting gap to cure before publication; it does not gate notification.
-  - **Statuses**: `missing`, `review` (present but thin, without a listed term, or otherwise flagged) or `pass`. On the generic checks, `missing` means the section is empty, absent or holds only placeholders. The rules with their own logic also return `missing` when the section has text: `COMMON.IXBRL_TAGGING` for every draft that is not XHTML or HTML, the two LEI rules when the draft contains no LEI, and `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW` when it finds no percentage. On the generic checks a pass means the listed terms appear and the section is long enough; `COMMON.IXBRL_TAGGING` and `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW` never pass. A pass is not a compliance opinion.
+  - **Statuses**: `missing`, `review` (present but thin, without a listed term, or otherwise flagged) or `pass`. On the generic checks, `missing` means the section is empty, absent or holds only placeholders. The rules with their own logic can also return `missing` when the section has text: `COMMON.IXBRL_TAGGING` for every draft that is not XHTML or HTML; `COMMON.LEI_CHECK_DIGITS` when the draft contains no LEI; `COMMON.LEI_CONSISTENCY` when no issuer, offeror or trading platform operator section holds an LEI with valid check digits; and `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW` when the draft's reserve characterisation determines a candidate floor and the section states no percentage. With that characterisation missing or invalid, or with the token stated not to reference an official currency, the deposit-floor rule returns `review`, even for an empty section. On the generic checks a pass means the listed terms appear and the section is long enough. `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW` never passes, and `COMMON.IXBRL_TAGGING` never passes for a loaded draft. A pass is not a compliance opinion.
 - **Related Files**:
   - [src/micar_linter/rules/base.py](../src/micar_linter/rules/base.py)
+  - [src/micar_linter/linter.py](../src/micar_linter/linter.py)
 - **Status**: Fully Implemented.
 
 ## 4. Multi-Format Report Exporter

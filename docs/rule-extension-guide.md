@@ -13,15 +13,15 @@ Required fields:
 3. `section`: the section key the generic checks read, as in the `sections` of a JSON draft (`COMMON.IXBRL_TAGGING` reads no section, and the two LEI rules read every section).
 4. `label`: Human-readable description of the disclosure requirement.
 5. `severity`: `BLOCKER`, `MAJOR` or `MINOR`.
-6. `min_words`, required terms, required patterns or prohibited patterns, each with an optional German variant (`required_terms_de` and so on); without one, a German draft is checked against the English list.
+6. `min_words` (default 30, for drafts in both languages), required terms, required patterns or prohibited patterns. The three lists each have an optional German variant (`required_terms_de`, `required_patterns_de`, `prohibited_patterns_de`); without one, a German draft is checked against the English list.
 
 ## Severity Contract
 
-Use the existing severity contract:
+Use the existing severity contract. Severity belongs to the rule: it says what is at stake if the check fails, not whether the section is there, so a BLOCKER rule can give a `review` finding and a MAJOR rule a `missing` one.
 
-1. `BLOCKER`: a mandatory disclosure is absent or the issue blocks notification without remediation.
-2. `MAJOR`: disclosure exists but is materially incomplete or likely to require substantive review.
-3. `MINOR`: drafting or presentation issue that should be cured before publication.
+1. `BLOCKER`: the rule covers a disclosure or format requirement the white paper cannot be notified or submitted for approval without.
+2. `MAJOR`: the rule covers a disclosure that, if incomplete, is likely to mislead or need substantive review.
+3. `MINOR`: the rule covers a drafting or presentation point that should be cured before publication.
 
 The ranking is tested in `tests/test_linter.py`. Do not change numeric severity values without updating the tests and explaining the legal consequence.
 
