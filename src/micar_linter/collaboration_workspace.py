@@ -20,9 +20,10 @@ W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 MC_NS = "http://schemas.openxmlformats.org/markup-compatibility/2006"
 R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 NSMAP = {"w": W_NS}
-# Paragraph content skipped without ending a match: deleted or moved-away text, the hidden VML copy of a
-# drawing, properties and range markers.
-_SKIPPED = {f"{{{MC_NS}}}Fallback"} | {
+# Paragraph content skipped without ending a match: deleted or moved-away text, properties and range markers.
+# A drawing, including its hidden mc:Fallback copy, ends a match; paragraphs inside mc:Fallback are never
+# candidates (see render_tracked_docx and _LIVE_TEXT).
+_SKIPPED = {
     f"{{{W_NS}}}{name}"
     for name in [
         "del",
@@ -47,11 +48,12 @@ _SKIPPED = {f"{{{MC_NS}}}Fallback"} | {
 }
 # Containers a match runs through: pending insertions and moves, smart tags, custom XML and hyperlinks. A
 # match must start and end in the same hyperlink and custom XML element, or outside any, so they keep their
-# extent; inside a link to an external target it must cover the link's whole text (see _redline_match).
+# extent, and inside a link to an external target it must be the link's whole content (both checked in
+# _find_match).
 _TRANSPARENT = {f"{{{W_NS}}}{name}" for name in ["ins", "moveTo", "smartTag", "customXml", "hyperlink"]}
 # Containers a match may lie inside but not cross, so a content control keeps its value. Other paragraph
-# content (an equation, for example) ends a match.
-_CONTAINERS = {f"{{{W_NS}}}{name}" for name in ["sdt", "sdtContent", "dir", "bdo", "fldSimple"]}
+# content (an equation or a simple field, for example) ends a match.
+_CONTAINERS = {f"{{{W_NS}}}{name}" for name in ["sdt", "sdtContent", "dir", "bdo"]}
 # Run content a match may span. Other run content (tabs, breaks, field characters, drawings) ends a match,
 # as do hidden runs, regenerated text and this export's own insertions.
 _SPANNABLE = {
@@ -320,19 +322,33 @@ def _covered(nodes: list[etree._Element], start: int, end: int) -> list[tuple[et
 
 
 def _bounds(node: etree._Element) -> tuple[etree._Element | None, etree._Element | None]:
-    """The nearest hyperlink and custom XML element around ``node``."""
-    return (
-        next(node.iterancestors(f"{{{W_NS}}}hyperlink"), None),
-        next(node.iterancestors(f"{{{W_NS}}}customXml"), None),
-    )
+    """The nearest hyperlink and custom XML element around ``node`` within its paragraph."""
+    link = tagged = None
+    for ancestor in node.iterancestors():
+        if ancestor.tag == f"{{{W_NS}}}p":
+            break
+        if ancestor.tag == f"{{{W_NS}}}hyperlink" and link is None:
+            link = ancestor
+        elif ancestor.tag == f"{{{W_NS}}}customXml" and tagged is None:
+            tagged = ancestor
+    return link, tagged
 
 
-def _external_link_text(link: etree._Element | None) -> str | None:
-    if link is None or link.get(f"{{{R_NS}}}id") is None:
-        return None
-    return "".join(
-        link.xpath(".//w:t[not(ancestor::w:del) and not(ancestor::w:moveFrom)]/text()", namespaces=NSMAP)
-    )
+def _external(link: etree._Element | None) -> bool:
+    return link is not None and link.get(f"{{{R_NS}}}id") is not None
+
+
+def _replaceable(link: etree._Element | None, original: str) -> bool:
+    """Whether a match of ``original`` inside ``link`` can be redlined without leaving a stale target.
+
+    A link to an external target qualifies only when ``original`` is its whole content and that content is
+    plain text, so the replacement can go after the link and nothing is left pointing to the old target.
+    """
+    if not _external(link):
+        return True
+    runs = link.xpath(".//w:r[not(ancestor::w:del) and not(ancestor::w:moveFrom)]", namespaces=NSMAP)
+    text = "".join(node.text or "" for run in runs for node in run.iterchildren(f"{{{W_NS}}}t"))
+    return text == original and all(child.tag in _SPANNABLE for run in runs for child in run)
 
 
 def _find_match(
@@ -344,7 +360,7 @@ def _find_match(
         while start >= 0:
             covered = _covered(nodes, start, start + len(original))
             bounds = _bounds(covered[0][0])
-            if bounds == _bounds(covered[-1][0]) and _external_link_text(bounds[0]) in {None, original}:
+            if bounds == _bounds(covered[-1][0]) and _replaceable(bounds[0], original):
                 return nodes, start
             start = text.find(original, start + 1)
     return None
@@ -420,11 +436,11 @@ def _redline_match(
         anchor = _revision("del", ids, author, date)
         run.addprevious(anchor)
         anchor.append(run)
-    # A match that is the whole text of a link to an external target is replaced after the link, in the
-    # paragraph's own formatting, so the new text does not keep the old target.
-    replaces_link = _external_link_text(_bounds(first)[0]) is not None
-    if replaces_link:
-        anchor = _bounds(first)[0]
+    # A match that is the whole content of a link to an external target is replaced after the link, in the
+    # formatting of the text next to it, so the new text does not keep the old target.
+    link = _bounds(first)[0]
+    if _external(link):
+        anchor = link
     while anchor.getparent().tag in {f"{{{W_NS}}}ins", f"{{{W_NS}}}moveTo"}:
         outer = anchor.getparent()
         following = list(anchor.itersiblings())
@@ -435,7 +451,15 @@ def _redline_match(
             outer.addnext(rest)
         anchor = outer
     inserted = _revision("ins", ids, author, date)
-    inserted_run = etree.Element(f"{{{W_NS}}}r") if replaces_link else _sibling_run(deleted_runs[0], ids)
+    if _external(link):
+        neighbours = link.xpath("preceding-sibling::w:r[1]", namespaces=NSMAP) or link.xpath(
+            "following-sibling::w:r[1]", namespaces=NSMAP
+        )
+        inserted_run = _sibling_run(neighbours[0], ids) if neighbours else etree.Element(f"{{{W_NS}}}r")
+        for hidden in inserted_run.xpath("w:rPr/w:vanish | w:rPr/w:specVanish", namespaces=NSMAP):
+            hidden.getparent().remove(hidden)
+    else:
+        inserted_run = _sibling_run(deleted_runs[0], ids)
     inserted_run.append(_text_element("t", proposed))
     inserted.append(inserted_run)
     anchor.addnext(inserted)

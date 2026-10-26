@@ -207,7 +207,7 @@ def test_docx_redline_splits_pending_insertion_of_another_author(tmp_path) -> No
     source = tmp_path / "pending-source.docx"
     document = docx.Document()
     paragraph = document.add_paragraph("Start ")
-    pending = paragraph._p.makeelement(qn("w:ins"), {qn("w:id"): "7", qn("w:author"): "Other reviewer"})
+    pending = paragraph._p.makeelement(qn("w:ins"), {qn("w:id"): "1", qn("w:author"): "Other reviewer"})
     pending_run = paragraph._p.makeelement(qn("w:r"), {})
     pending_run.append(paragraph._p.makeelement(qn("w:t"), {}))
     pending_run[0].text = "inserted words"
@@ -450,26 +450,95 @@ def test_docx_redline_replaces_external_link_after_it_and_keeps_custom_xml_exten
     source = tmp_path / "external.docx"
     document = docx.Document()
     target = document.part.relate_to("mailto:info@old.invalid", RELATIONSHIP_TYPE.HYPERLINK, is_external=True)
-    link = (
-        f'<w:hyperlink r:id="{target}"><w:r><w:rPr><w:rStyle w:val="Hyperlink"/></w:rPr>'
-        "<w:t>info@old.invalid</w:t></w:r></w:hyperlink>"
-    )
+    website = document.part.relate_to("https://www.old.invalid", RELATIONSHIP_TYPE.HYPERLINK, is_external=True)
+    style = '<w:rPr><w:rStyle w:val="Hyperlink"/></w:rPr>'
+    link = f'<w:hyperlink r:id="{target}"><w:r>{style}<w:t>info@old.invalid</w:t></w:r></w:hyperlink>'
     body = document.element.body
     for paragraph in (
-        '<w:bookmarkStart w:id="\u00b2" w:name="Odd"/>' + _run("Contact: ") + link + _run("."),
+        '<w:bookmarkStart w:id="\u00b2" w:name="Odd"/>'
+        + '<w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">Contact: </w:t></w:r>'
+        + link
+        + _run("."),
         _run("Mail ") + link + _run(" today."),
         _run("The fee is ") + '<w:customXml w:element="feeAmount">' + _run("EUR 5") + "</w:customXml>" + _run(" per token."),
+        _run("Web: ")
+        + f'<w:hyperlink r:id="{website}"><w:r>{style}<w:t>www.old.invalid</w:t></w:r><w:r><w:br/></w:r></w:hyperlink>'
+        + _run("Phone: 000"),
     ):
         body.insert(len(body) - 1, parse_xml(f"<w:p {_DECLARATIONS}>{paragraph}</w:p>"))
     document.save(source)
-    changes = [("info@old.invalid", "info@new.invalid"), ("old.invalid", "new.invalid"), ("EUR 5 per token", "EUR 7 per token")]
+    changes = [
+        ("info@old.invalid", "info@new.invalid"),
+        ("old.invalid", "new.invalid"),
+        ("EUR 5 per token", "EUR 7 per token"),
+        ("www.old.invalid", "www.new.invalid"),
+    ]
     xml = _render(tmp_path, source, changes)
     ns = {"w": _W}
     paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
     assert _paragraph_views(paragraphs[0]) == ("Contact: info@new.invalid.", "Contact: info@old.invalid.")
     assert paragraphs[0].xpath("count(w:hyperlink//w:ins)", namespaces=ns) == 0
-    assert paragraphs[0].xpath("count(w:ins/w:r/w:rPr)", namespaces=ns) == 0
-    for untouched in paragraphs[1:3]:
+    assert paragraphs[0].xpath("count(w:ins/w:r/w:rPr/w:b)", namespaces=ns) == 1
+    assert paragraphs[0].xpath("count(w:ins//w:rStyle)", namespaces=ns) == 0
+    for untouched in paragraphs[1:4]:
         assert untouched.xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
-    fallbacks = ["".join(p.xpath("w:del//w:delText/text()", namespaces=ns)) for p in paragraphs[3:]]
-    assert fallbacks == ["old.invalid", "EUR 5 per token"]
+    fallbacks = ["".join(p.xpath("w:del//w:delText/text()", namespaces=ns)) for p in paragraphs[4:]]
+    assert fallbacks == ["old.invalid", "EUR 5 per token", "www.old.invalid"]
+
+
+def test_docx_later_change_does_not_match_an_earlier_insertion(tmp_path) -> None:
+    source = tmp_path / "chain.docx"
+    _docx_with_paragraphs(source, _run("The issuer is TBD."))
+    changes = [("is TBD", "is Example AG, seat TBC"), ("TBC", "Berlin"), ("Missing clause", "Seat TBA"), ("TBA", "Leipzig")]
+    xml = _render(tmp_path, source, changes)
+    ns = {"w": _W}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    assert _paragraph_views(paragraphs[0]) == ("The issuer is Example AG, seat TBC.", "The issuer is TBD.")
+    fallbacks = ["".join(p.xpath("w:del//w:delText/text()", namespaces=ns)) for p in paragraphs[1:]]
+    assert fallbacks == ["TBC", "Missing clause", "TBA"]
+
+
+def test_docx_redline_spans_markers_and_stays_inside_tagged_controls_and_custom_xml(tmp_path) -> None:
+    source = tmp_path / "markers.docx"
+    _docx_with_paragraphs(
+        source,
+        _run("The Tokken ")
+        + '<w:proofErr w:type="spellStart"/>'
+        + _run("Exmple")
+        + '<w:proofErr w:type="spellEnd"/>'
+        + '<w:bookmarkStart w:id="5" w:name="Term"/><w:commentRangeStart w:id="6"/>'
+        + _run(" is")
+        + '<w:bookmarkEnd w:id="5"/><w:commentRangeEnd w:id="6"/>'
+        + '<w:r><w:t xml:space="preserve"> offered</w:t><w:lastRenderedPageBreak/><w:commentReference w:id="6"/>'
+        + "<w:t> now.</w:t></w:r>",
+        _run("Issuer: ")
+        + '<w:sdt><w:sdtPr><w:tag w:val="issuer_name"/></w:sdtPr><w:sdtContent>'
+        + _run("Example Issuer AG")
+        + "</w:sdtContent></w:sdt>",
+        _run("The fee is ") + '<w:customXml w:element="feeAmount">' + _run("EUR 5") + "</w:customXml>" + _run(" per token."),
+        _run("Kind: ")
+        + "<w:sdt><w:sdtPr><w:dropDownList/></w:sdtPr><w:sdtContent>"
+        + _run("Utility token")
+        + "</w:sdtContent></w:sdt>"
+        + "<w:sdt><w:sdtPr><w:comboBox/></w:sdtPr><w:sdtContent>"
+        + _run(" (Utility token)")
+        + "</w:sdtContent></w:sdt>"
+        + '<w:sdt><w:sdtPr><w14:checkbox xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"/>'
+        + "</w:sdtPr><w:sdtContent>"
+        + _run(" Utility token")
+        + "</w:sdtContent></w:sdt>",
+    )
+    changes = [
+        ("Tokken Exmple is offered now", "Token Example is offered today"),
+        ("Example Issuer", "Sample Issuer"),
+        ("fee is EUR 5 per", "fee is EUR 7 per"),
+        ("Utility token", "Payment token"),
+    ]
+    xml = _render(tmp_path, source, changes)
+    ns = {"w": _W}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    assert _paragraph_views(paragraphs[0]) == ("The Token Example is offered today.", "The Tokken Exmple is offered now.")
+    assert paragraphs[1].xpath("string(w:sdt/w:sdtContent/w:ins)", namespaces=ns) == "Sample Issuer"
+    assert _paragraph_views(paragraphs[2]) == ("The fee is EUR 7 per token.", "The fee is EUR 5 per token.")
+    assert paragraphs[3].xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
+    assert "".join(paragraphs[4].xpath("w:del//w:delText/text()", namespaces=ns)) == "Utility token"
