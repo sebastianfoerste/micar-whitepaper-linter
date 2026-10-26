@@ -410,3 +410,35 @@ def test_docx_redline_stays_within_links_and_content_controls_and_deletes_soft_h
     assert paragraphs[3].xpath("count(.//w:softHyphen[not(ancestor::w:del)])", namespaces=ns) == 0
     fallbacks = ["".join(p.xpath("w:del//w:delText/text()", namespaces=ns)) for p in paragraphs[4:]]
     assert fallbacks == ["published at example.invalid", "Example Issuer AG is"]
+
+
+def test_docx_redline_runs_through_a_whole_link_and_smart_tags(tmp_path) -> None:
+    source = tmp_path / "whole-link.docx"
+    mail = '<w:hyperlink w:anchor="Contact"><w:r><w:rPr><w:rStyle w:val="Hyperlink"/></w:rPr>'
+    _docx_with_paragraphs(
+        source,
+        _run("Write to ") + mail + "<w:t>info@example.invalid</w:t></w:r></w:hyperlink>" + _run(" within ten days."),
+        _run("The offer starts on ")
+        + '<w:smartTag w:uri="urn:schemas-microsoft-com:office:smarttags" w:element="date">'
+        + _run("1 March 2027")
+        + "</w:smartTag>"
+        + _run(" in Berlin."),
+    )
+    changes = [
+        ("Write to info@example.invalid within ten days", "Write to the complaints desk within five days"),
+        ("March 2027 in Berlin", "April 2027 in Leipzig"),
+    ]
+    xml = _render(tmp_path, source, changes)
+    ns = {"w": _W}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    assert len(paragraphs) == 2
+    assert _paragraph_views(paragraphs[0]) == (
+        "Write to the complaints desk within five days.",
+        "Write to info@example.invalid within ten days.",
+    )
+    assert paragraphs[0].xpath("string(w:hyperlink/w:del//w:delText)", namespaces=ns) == "info@example.invalid"
+    assert paragraphs[0].xpath("count(w:ins//w:rStyle)", namespaces=ns) == 0
+    assert _paragraph_views(paragraphs[1]) == (
+        "The offer starts on 1 April 2027 in Leipzig.",
+        "The offer starts on 1 March 2027 in Berlin.",
+    )

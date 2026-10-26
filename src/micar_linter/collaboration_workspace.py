@@ -44,23 +44,12 @@ _SKIPPED = {f"{{{MC_NS}}}Fallback"} | {
         "moveToRangeEnd",
     ]
 }
-# Containers whose runs a match may enter. A match does not cross the edge of one, except of an insertion or
-# move, and other paragraph content (an equation, for example) ends a match.
-_CONTAINERS = {
-    f"{{{W_NS}}}{name}"
-    for name in [
-        "hyperlink",
-        "ins",
-        "moveTo",
-        "smartTag",
-        "customXml",
-        "sdt",
-        "sdtContent",
-        "dir",
-        "bdo",
-        "fldSimple",
-    ]
-}
+# Containers a match runs through: pending insertions and moves, smart tags, custom XML and hyperlinks. A
+# match must start and end in the same hyperlink, or outside any, so a link keeps its extent.
+_TRANSPARENT = {f"{{{W_NS}}}{name}" for name in ["ins", "moveTo", "smartTag", "customXml", "hyperlink"]}
+# Containers a match may lie inside but not cross, so a content control keeps its value. Other paragraph
+# content (an equation, for example) ends a match.
+_CONTAINERS = {f"{{{W_NS}}}{name}" for name in ["sdt", "sdtContent", "dir", "bdo", "fldSimple"]}
 # Run content a match may span. Other run content (tabs, breaks, field characters, drawings) ends a match,
 # as do hidden runs, regenerated text and this export's own insertions.
 _SPANNABLE = {
@@ -304,7 +293,7 @@ def _text_segments(
                     segments[-1].append(item)
                 elif item.tag not in _SPANNABLE or item.tag == f"{{{W_NS}}}t":
                     segments.append([])
-        elif child.tag in {f"{{{W_NS}}}ins", f"{{{W_NS}}}moveTo"}:
+        elif child.tag in _TRANSPARENT:
             _text_segments(child, excluded, segments)
         elif child.tag in _CONTAINERS:
             segments.append([])
@@ -315,13 +304,34 @@ def _text_segments(
     return segments
 
 
+def _covered(nodes: list[etree._Element], start: int, end: int) -> list[tuple[etree._Element, int, int]]:
+    """The nodes that ``[start, end)`` of their joined text covers, with the covered slice of each."""
+    covered = []
+    offset = 0
+    for node in nodes:
+        length = len(node.text or "")
+        overlap_start, overlap_end = max(start, offset), min(end, offset + length)
+        if overlap_start < overlap_end:
+            covered.append((node, overlap_start - offset, overlap_end - offset))
+        offset += length
+    return covered
+
+
+def _link(node: etree._Element) -> etree._Element | None:
+    return next(node.iterancestors(f"{{{W_NS}}}hyperlink"), None)
+
+
 def _find_match(
     paragraph: etree._Element, original: str, excluded: set[etree._Element]
 ) -> tuple[list[etree._Element], int] | None:
     for nodes in _text_segments(paragraph, excluded, [[]]):
-        start = "".join(node.text or "" for node in nodes).find(original)
-        if start >= 0:
-            return nodes, start
+        text = "".join(node.text or "" for node in nodes)
+        start = text.find(original)
+        while start >= 0:
+            covered = _covered(nodes, start, start + len(original))
+            if _link(covered[0][0]) is _link(covered[-1][0]):
+                return nodes, start
+            start = text.find(original, start + 1)
     return None
 
 
@@ -373,15 +383,7 @@ def _redline_match(
     Text before and after the match, the paragraph properties and the run formatting stay as they are,
     so rejecting the change in Word restores the paragraph.
     """
-    match_end = match_start + len(original)
-    matched = []
-    offset = 0
-    for node in nodes:
-        length = len(node.text or "")
-        overlap_start, overlap_end = max(match_start, offset), min(match_end, offset + length)
-        if overlap_start < overlap_end:
-            matched.append((node, overlap_start - offset, overlap_end - offset))
-        offset += length
+    matched = _covered(nodes, match_start, match_start + len(original))
     first, last = matched[0][0], matched[-1][0]
     soft_hyphens, inside = [], False
     for element in next(first.iterancestors(f"{{{W_NS}}}p")).iter(f"{{{W_NS}}}t", f"{{{W_NS}}}softHyphen"):
