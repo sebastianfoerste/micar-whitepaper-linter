@@ -33,7 +33,7 @@ For `@v1` users this is the first Action release since v1.1.1. Besides the chang
 ### Changed
 
 - Version 1.2.0 for the package and the Action. `docs/DETAILS.md` marks the Action inputs and the DOCX input that need v1.2.0 and explains the shared version number.
-- The Action pins `astral-sh/setup-uv` to v5.4.2 by commit SHA and runs `uvx --no-cache`, so a moved `v1` tag cannot reuse a stale build.
+- The Action pins `astral-sh/setup-uv` to v10.3.0 by commit SHA. v1.1.1 used the floating `v5` tag, which runs on Node.js 20, so every run showed GitHub's Node.js 20 deprecation warning. The Action turns off the `setup-uv` cache and runs `uvx --no-cache`, so a moved `v1` tag cannot reuse a stale build, and it no longer saves an empty cache entry in the calling repository.
 - All CLI flags are documented in `docs/API.md`.
 
 ### Fixed
