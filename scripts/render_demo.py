@@ -4,6 +4,8 @@ Run with `make demo-image` or `uv run python scripts/render_demo.py`. The screen
 Chrome or Chromium; set CHROME to its path or name if it is not /usr/bin/google-chrome. Chrome does not
 start as root (the default user in many containers) without `--no-sandbox`; run the script as a regular
 user, or point CHROME at a wrapper that adds the flag.
+Chromium's new headless mode (`chrome`) has left the bottom of the page unpainted on a page this tall;
+check that the closing notice is visible, or point CHROME at `chrome-headless-shell`.
 
 Both files are written only after the screenshot succeeds. The PNG carries a tEXt chunk with the sha256
 of the page, window size and flags Chrome was given, so tests/test_demo_capture.py detects a stale image

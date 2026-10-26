@@ -61,7 +61,36 @@ jobs:
           strict: 'true'
 ```
 
-Inputs: `whitepaper` (path to a JSON/XHTML/DOCX draft), `strict` (default `true`), `extra-args` (e.g. `--json`, `--coverage`). The job fails while BLOCKER-severity findings are open. A failing job means open blockers to review, not a legal conclusion.
+Inputs:
+
+| Input | Default | Effect |
+|---|---|---|
+| `whitepaper` | required | Path to a JSON or XHTML draft, or a DOCX draft from the next `v1` release |
+| `strict` | `true` | Fail the job while BLOCKER findings are open |
+| `extra-args` | `''` | More CLI arguments, e.g. `--json`, `--lang de` |
+| `summary` | `true` | Append a table of open findings to the job summary: rule, status, severity, citation, `file:line`, rule page |
+| `annotations` | `true` | Annotate up to 10 open findings on the draft file (open blockers first) |
+| `upload-sarif` | `false` | Upload a SARIF log to GitHub code scanning |
+
+Output: `sarif-file`, the path of the SARIF log, for other uploaders such as reviewdog.
+
+The job fails while BLOCKER-severity findings are open. A failing job means open blockers to review, not a legal conclusion. The summary, annotations and SARIF log carry rule IDs, statuses, citations and line numbers, never draft text or the draft title, and they change no status or exit code. The job log still prints the full text report, which includes the draft title and quoted figures such as reserve percentages; treat the log as being as sensitive as the draft. The `summary`, `annotations` and `upload-sarif` inputs and the `sarif-file` output ship with the next `v1` release. The iXBRL format check (`COMMON.IXBRL_TAGGING`) never passes, so it is listed in its own summary section and not annotated.
+
+Line numbers point at the section key in a JSON draft or the matching heading in an XHTML draft; numbered-field XHTML, DOCX and absent sections point at line 1.
+
+Code scanning needs extra permissions and works on public repositories, or private ones with GitHub Code Security. Uploads from fork pull requests fail with the default read-only token:
+
+```yaml
+permissions:
+  contents: read
+  security-events: write
+steps:
+  - uses: actions/checkout@v4
+  - uses: sebastianfoerste/micar-whitepaper-linter@v1
+    with:
+      whitepaper: drafts/whitepaper.json
+      upload-sarif: 'true'
+```
 
 Fastest start: the [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template) repo ships this workflow preconfigured — click **Use this template**.
 
@@ -125,7 +154,7 @@ Real output of `uv run micar-lint examples/incomplete.json` (a synthetic, delibe
 MiCAR Whitepaper Linter - Incomplete Synthetic EuroStable ART Draft
 Whitepaper type: ART
 ==============================================================================
-Pass: 0  |  Review: 12  |  Missing: 6  |  Blockers: 15
+Pass: 0  |  Review: 12  |  Missing: 8  |  Blockers: 15
 
 [REVIEW] [BLOCKER] COMMON.SUMMARY  Plain-language summary
            Cite:  Art. 6(7), Art. 19(6), Art. 51(6) MiCAR

@@ -75,7 +75,7 @@ Run the tool using the CLI command `micar-lint`. To check your own draft, pass i
 On the first two routes, DOCX needs the `docx` extra ([From PyPI](#from-pypi)).
 
 - A JSON draft states its regime in its `type` field, and `--type` does not change it. For any other format, the linter infers the regime from the text and `--type other|art|emt` overrides it; the numbered-field XHTML or HTML layout requires it.
-- `--strict` exits with status 1 while any BLOCKER finding is open.
+- `--strict` exits with status 1 while any BLOCKER finding is open. For a directory, it also exits 1 when a file could not be linted or no file was linted.
 - `--json` prints machine-readable JSON instead of text.
 
 The examples below lint the sample drafts in `examples/` from a clone.
