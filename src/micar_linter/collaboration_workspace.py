@@ -17,7 +17,18 @@ from typing import Any
 from lxml import etree
 
 W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+MC_NS = "http://schemas.openxmlformats.org/markup-compatibility/2006"
 NSMAP = {"w": W_NS}
+# Paragraph content that holds no live text: deleted or moved-away text and the hidden VML copy of a drawing.
+_NOT_LIVE = {f"{{{W_NS}}}del", f"{{{W_NS}}}moveFrom", f"{{{W_NS}}}pPr", f"{{{MC_NS}}}Fallback"}
+# Run content a match may span. Other run content (tabs, breaks, field characters, drawings) ends a match.
+_SPANNABLE = {
+    f"{{{W_NS}}}{name}"
+    for name in ("rPr", "t", "lastRenderedPageBreak", "softHyphen", "commentReference", "annotationRef")
+}
+_LIVE_TEXT = (
+    ".//w:t[not(ancestor::w:del) and not(ancestor::w:moveFrom) and not(ancestor::mc:Fallback)]/text()"
+)
 
 
 def _reproducible_timestamp() -> str:
@@ -208,13 +219,49 @@ def _sibling_run(run: etree._Element, ids: Iterator[int]) -> etree._Element:
     return sibling
 
 
-def _paragraph_text_nodes(paragraph: etree._Element, skip: set[etree._Element]) -> list[etree._Element]:
-    return [
-        node
-        for node in paragraph.xpath(".//w:t[not(ancestor::w:del)]", namespaces=NSMAP)
-        if node.xpath("ancestor::w:p[1]", namespaces=NSMAP)[0] is paragraph
-        and not any(ancestor in skip for ancestor in node.iterancestors())
-    ]
+def _field_text(body: etree._Element) -> set[etree._Element]:
+    """``w:t`` nodes inside a field. Word regenerates them, so a redline there is lost."""
+    inside = set(body.xpath(".//w:fldSimple//w:t", namespaces=NSMAP))
+    depth = 0
+    for element in body.iter(f"{{{W_NS}}}fldChar", f"{{{W_NS}}}t"):
+        if element.tag == f"{{{W_NS}}}t":
+            if depth:
+                inside.add(element)
+        elif element.get(f"{{{W_NS}}}fldCharType") == "begin":
+            depth += 1
+        elif element.get(f"{{{W_NS}}}fldCharType") == "end":
+            depth = max(depth - 1, 0)
+    return inside
+
+
+def _text_segments(
+    element: etree._Element, excluded: set[etree._Element], segments: list[list[etree._Element]]
+) -> list[list[etree._Element]]:
+    """Group the live ``w:t`` nodes of a paragraph into stretches that a match may span."""
+    for child in element:
+        if child.tag in _NOT_LIVE:
+            continue
+        if child in excluded:
+            segments.append([])
+        elif child.tag == f"{{{W_NS}}}r":
+            for item in child:
+                if item.tag == f"{{{W_NS}}}t" and item not in excluded:
+                    segments[-1].append(item)
+                elif item.tag not in _SPANNABLE or item.tag == f"{{{W_NS}}}t":
+                    segments.append([])
+        else:
+            _text_segments(child, excluded, segments)
+    return segments
+
+
+def _find_match(
+    paragraph: etree._Element, original: str, excluded: set[etree._Element]
+) -> tuple[list[etree._Element], int] | None:
+    for nodes in _text_segments(paragraph, excluded, [[]]):
+        start = "".join(node.text or "" for node in nodes).find(original)
+        if start >= 0:
+            return nodes, start
+    return None
 
 
 def _isolate_text(node: etree._Element, start: int, end: int, ids: Iterator[int]) -> etree._Element:
@@ -244,22 +291,21 @@ def _isolate_text(node: etree._Element, start: int, end: int, ids: Iterator[int]
     return run
 
 
-def _redline_paragraph(
-    paragraph: etree._Element,
+def _redline_match(
+    nodes: list[etree._Element],
+    match_start: int,
     original: str,
     proposed: str,
     ids: Iterator[int],
     author: str,
     date: str,
-    skip: set[etree._Element],
+    excluded: set[etree._Element],
 ) -> None:
-    """Track the deletion of the first ``original`` in ``paragraph`` and the insertion of ``proposed``.
+    """Track the deletion of ``original`` at ``match_start`` in ``nodes`` and the insertion of ``proposed``.
 
     Text before and after the match, the paragraph properties and the run formatting stay as they are,
     so rejecting the change in Word restores the paragraph.
     """
-    nodes = _paragraph_text_nodes(paragraph, skip)
-    match_start = "".join(node.text or "" for node in nodes).find(original)
     match_end = match_start + len(original)
     deleted_runs = []
     offset = 0
@@ -275,7 +321,7 @@ def _redline_paragraph(
         anchor = _revision("del", ids, author, date)
         run.addprevious(anchor)
         anchor.append(run)
-    while anchor.getparent().tag == f"{{{W_NS}}}ins":
+    while anchor.getparent().tag in {f"{{{W_NS}}}ins", f"{{{W_NS}}}moveTo"}:
         outer = anchor.getparent()
         following = list(anchor.itersiblings())
         if following:
@@ -289,7 +335,7 @@ def _redline_paragraph(
     inserted_run.append(_text_element("t", proposed))
     inserted.append(inserted_run)
     anchor.addnext(inserted)
-    skip.add(inserted)
+    excluded.add(inserted)
 
 
 def render_tracked_docx(
@@ -316,24 +362,23 @@ def render_tracked_docx(
         section = body.find("w:sectPr", NSMAP)
         used_ids = [int(value) for value in tree.xpath("//@w:id", namespaces=NSMAP) if value.isdigit()]
         ids = itertools.count(max(used_ids, default=0) + 1)
-        inserted: set[etree._Element] = set()
+        excluded = _field_text(body)
+        paragraphs = ".//w:p[not(ancestor::mc:Fallback)]"
+        namespaces = {**NSMAP, "mc": MC_NS}
         for change in (item for item in change_set["changes"] if item["decision"] == "accepted"):
             original = change["original_text"]
             proposed = change.get("proposed_text") or ""
-            source_paragraph = next(
+            match = next(
                 (
-                    candidate
-                    for candidate in body.xpath(".//w:p", namespaces=NSMAP)
-                    if original
-                    and original
-                    in "".join(node.text or "" for node in _paragraph_text_nodes(candidate, inserted))
+                    found
+                    for candidate in (body.xpath(paragraphs, namespaces=namespaces) if original else [])
+                    if original in "".join(candidate.xpath(_LIVE_TEXT, namespaces=namespaces))
+                    and (found := _find_match(candidate, original, excluded))
                 ),
                 None,
             )
-            if source_paragraph is not None:
-                _redline_paragraph(
-                    source_paragraph, original, proposed, ids, author, change_timestamp, inserted
-                )
+            if match is not None:
+                _redline_match(*match, original, proposed, ids, author, change_timestamp, excluded)
                 continue
             deletion = _revision("del", ids, author, change_timestamp)
             deleted_run = etree.SubElement(deletion, f"{{{W_NS}}}r")
@@ -341,7 +386,7 @@ def render_tracked_docx(
             insertion = _revision("ins", ids, author, change_timestamp)
             inserted_run = etree.SubElement(insertion, f"{{{W_NS}}}r")
             etree.SubElement(inserted_run, f"{{{W_NS}}}t").text = proposed
-            inserted.add(insertion)
+            excluded.add(insertion)
             paragraph = etree.Element(f"{{{W_NS}}}p")
             paragraph.extend([deletion, insertion])
             body.insert(body.index(section) if section is not None else len(body), paragraph)

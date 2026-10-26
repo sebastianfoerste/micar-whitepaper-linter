@@ -5,6 +5,7 @@ from pathlib import Path
 
 import docx
 import pytest
+from docx.oxml import parse_xml
 from docx.oxml.ns import qn
 from lxml import etree
 
@@ -225,4 +226,106 @@ def test_docx_redline_splits_pending_insertion_of_another_author(tmp_path) -> No
     assert xml.xpath("count(//w:ins//w:ins)", namespaces=ns) == 0
     assert xml.xpath("string(//w:ins[@w:author='Other reviewer']//w:delText)", namespaces=ns) == "inserted"
     ids = xml.xpath("//w:ins/@w:id | //w:del/@w:id", namespaces=ns)
+    assert len(ids) == len(set(ids))
+
+
+_W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+_DECLARATIONS = (
+    f'xmlns:w="{_W}" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" '
+    'xmlns:v="urn:schemas-microsoft-com:vml"'
+)
+
+
+def _docx_with_paragraphs(path: Path, *paragraphs: str) -> None:
+    document = docx.Document()
+    body = document.element.body
+    for paragraph in paragraphs:
+        body.insert(len(body) - 1, parse_xml(f"<w:p {_DECLARATIONS}>{paragraph}</w:p>"))
+    document.save(path)
+
+
+def _run(text: str) -> str:
+    return f'<w:r><w:t xml:space="preserve">{text}</w:t></w:r>'
+
+
+def _field_char(kind: str) -> str:
+    return f'<w:r><w:fldChar w:fldCharType="{kind}"/></w:r>'
+
+
+def _render(tmp_path: Path, source: Path, changes: list[tuple[str, str]]) -> etree._Element:
+    change_set = _accepted_change_set(source, *changes[0])
+    for original, proposed in changes[1:]:
+        change_set["changes"].append({"decision": "accepted", "original_text": original, "proposed_text": proposed})
+    output = render_tracked_docx(source, tmp_path / f"{source.stem}-reviewed.docx", change_set)
+    with zipfile.ZipFile(output) as package:
+        return etree.fromstring(package.read("word/document.xml"))
+
+
+def test_docx_redline_leaves_field_results_and_codes_alone(tmp_path) -> None:
+    source = tmp_path / "fields.docx"
+    _docx_with_paragraphs(
+        source,
+        _run("Issuer: ")
+        + '<w:fldSimple w:instr=" DOCPROPERTY IssuerName ">'
+        + _run("TBD")
+        + "</w:fldSimple>"
+        + _run(" is registered."),
+        _run("Name ")
+        + _field_char("begin")
+        + '<w:r><w:instrText xml:space="preserve"> REF _RefIssuer \\h </w:instrText></w:r>'
+        + _field_char("separate")
+        + _run("TBD")
+        + _field_char("end")
+        + _run(" is pending."),
+        _run("Status TBD."),
+    )
+    xml = _render(tmp_path, source, [("TBD", "confirmed"), ("Name TBD is pending", "Name confirmed")])
+    ns = {"w": _W}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    for field_paragraph in paragraphs[:2]:
+        assert field_paragraph.xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
+    assert _paragraph_views(paragraphs[2]) == ("Status confirmed.", "Status TBD.")
+    assert paragraphs[-1].xpath("string(w:del//w:delText)", namespaces=ns) == "Name TBD is pending"
+
+
+def test_docx_redline_skips_table_of_contents_and_hidden_fallback_copy(tmp_path) -> None:
+    source = tmp_path / "toc.docx"
+    _docx_with_paragraphs(
+        source,
+        _field_char("begin")
+        + '<w:r><w:instrText xml:space="preserve"> TOC \\o "1-3" </w:instrText></w:r>'
+        + _field_char("separate")
+        + _run("Risk factors"),
+        _run("Summary") + _field_char("end"),
+        "<w:r><mc:AlternateContent><mc:Choice Requires=\"wps\"><w:drawing/></mc:Choice><mc:Fallback>"
+        "<w:pict><v:shape><v:textbox><w:txbxContent><w:p>"
+        + _run("Risk factors")
+        + "</w:p></w:txbxContent></v:textbox></v:shape></w:pict></mc:Fallback></mc:AlternateContent></w:r>",
+        _run("Risk factors"),
+    )
+    xml = _render(tmp_path, source, [("Risk factors", "Risk factors and mitigations")])
+    ns = {"w": _W}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    assert len(paragraphs) == 4
+    assert xml.xpath("count(//w:del)", namespaces=ns) == 1
+    assert _paragraph_views(paragraphs[3]) == ("Risk factors and mitigations", "Risk factors")
+
+
+def test_docx_redline_skips_moved_away_text_and_splits_the_move(tmp_path) -> None:
+    source = tmp_path / "move.docx"
+    revision = 'w:author="Other reviewer" w:date="2026-10-01T00:00:00Z"'
+    _docx_with_paragraphs(
+        source,
+        _run("Moved away: ") + f'<w:moveFrom w:id="20" {revision}>' + _run("Issuer TBD") + "</w:moveFrom>",
+        _run("Moved here: ") + f'<w:moveTo w:id="21" {revision}>' + _run("Issuer TBD here") + "</w:moveTo>",
+    )
+    xml = _render(tmp_path, source, [("Issuer TBD", "Issuer Example AG")])
+    ns = {"w": _W}
+    moved_away, moved_here = xml.xpath(".//w:body/w:p", namespaces=ns)
+    assert moved_away.xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
+    assert moved_here.xpath("string(w:moveTo/w:del//w:delText)", namespaces=ns) == "Issuer TBD"
+    assert moved_here.xpath("count(.//w:moveTo//w:ins)", namespaces=ns) == 0
+    accepted = "".join(moved_here.xpath(".//w:t[not(ancestor::w:del)]/text()", namespaces=ns))
+    assert accepted == "Moved here: Issuer Example AG here"
+    ids = xml.xpath("//@w:id", namespaces=ns)
     assert len(ids) == len(set(ids))
