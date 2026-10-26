@@ -24,14 +24,15 @@
 - Docs that disagreed with the code are corrected:
   - `docs/ARCHITECTURE.md` no longer says rules inherit from a `BaseRule`, and describes the loaders, the `Rule` dataclass, the generic checks and the outputs as they are.
   - `docs/FEATURES.md` no longer describes a BLOCKER as "regulatory rejection" or a pass as "compliant parameters"; it lists the input formats and outputs that exist.
-  - `docs/rule-extension-guide.md` lists every step a new rule needs.
+  - `docs/rule-extension-guide.md` lists the steps a new rule needs, including the rule-page example branch a pattern-only generic rule needs, and points to `AGENTS.md` for rules with their own logic.
   - `docs/SETUP.md` and `docs/API.md` write example outputs to `/tmp`, not into the committed `reports/` folder; `docs/SETUP.md` points to the full flag list.
-  - `docs/launch-readiness.md` no longer calls `art-stablecoin.json` "the passing ART example", and says PDF support is in the base install.
+  - `docs/launch-readiness.md` no longer calls `art-stablecoin.json` "the passing ART example", says PDF support is in the base install, and its diagram shows every input format.
   - `docs/COLLABORATION_PROGRAMME.md` says which outputs use `SOURCE_DATE_EPOCH` and which stamp the current time.
   - `docs/WHITEPAPER_STARTER_RELEASE.md` no longer mentions a `template-release` remote that a fresh checkout lacks.
-- The starter template README no longer says custody is always staged for review. It names the two checks that never pass (the iXBRL format check and the ART deposit floor) and warns that strict mode therefore fails every run of the template.
-- The study README writes its example commands to `/tmp/micar-study/` instead of over the committed study files, and warns that `micar-lint-batch` without its cache excludes every document and still exits 0. `findings-summary.md` is re-rendered with the current `study_report.py` wording; no figure changed.
-- `contracts/micar-whitepaper-linter.proof.v1.json` names all five console scripts, and its `contractTest`, the new `tests/test_proof_contract.py`, checks them against `pyproject.toml`.
+  - `docs/research/adaptation-plan.md` no longer says `workspace.py` has no timestamp code.
+- The starter template README no longer says custody is always staged for review. It names the two BLOCKER checks that never pass for its ART draft (the iXBRL format check and the deposit floor) and warns that strict mode therefore fails every run of the template.
+- The study README and the "Reproducibility" section that `micar-study-report` writes into `findings-summary.md` give the detector commands with output to `/tmp/micar-study/` instead of over the committed study files. The README warns that `micar-lint-batch` without its cache excludes every document and still exits 0, and that `micar-review-summary` overwrites the committed summary even while rows are pending. `findings-summary.md` is re-rendered; no figure changed.
+- `contracts/micar-whitepaper-linter.proof.v1.json` names all five console scripts and the study as a capability, and its `contractTest`, the new `tests/test_proof_contract.py`, checks the scripts against `pyproject.toml`.
 - The playground brand link's accessible name now matches its visible text (axe `label-content-name-mismatch`).
 - The GitHub Action installs the `docx` extra, so a DOCX `whitepaper` input is linted. Before, the run stopped with "DOCX support requires the optional 'docx' extra".
 - `--coverage` now changes only what is printed. `--strict` and the output files (SARIF, summary, annotations, audit log, remediation, coverage matrix, manifest, review table) still apply. Before, it printed the table and exited 0 before writing them, so `--coverage` in the Action's `extra-args` turned off the strict gate and the CI outputs.

@@ -12,7 +12,7 @@ The core proof is legal automation discipline: rule IDs, citations, severity lev
 
 ```mermaid
 flowchart TD
-  A[White paper JSON draft] --> B[Regime detector]
+  A[White paper draft: JSON, XHTML, DOCX, PDF or Markdown] --> B[Regime: JSON type field, --type or inferred]
   B --> C[Rule set selection]
   C --> D[Deterministic checks]
   D --> E[Findings with citations and severity]

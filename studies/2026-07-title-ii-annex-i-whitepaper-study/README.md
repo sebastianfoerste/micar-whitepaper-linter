@@ -33,7 +33,7 @@ WP identifiers are pseudonymous labels. They are not anonymisation: `source-mani
 
 ## Reproduce the detector output
 
-Write to a scratch folder and compare with the committed files. The committed outputs are curated research artifacts; a re-run must not overwrite them by accident.
+Write to a scratch folder and compare with the committed files, which a re-run must not overwrite by accident. The committed findings and summary are the machine output of the run on 2026-07-06. A re-run always differs in `generated_at` and `digest`, and its flags may differ too, because the detector and the loaders have changed since.
 
 ```bash
 mkdir -p /tmp/micar-study
@@ -49,7 +49,7 @@ uv run micar-study-report \
   --out /tmp/micar-study/findings-summary.md
 ```
 
-`micar-lint-batch` needs the source files under `.study-cache/title-ii-whitepapers/`. Without them it excludes every document as `cached_document_not_found` and still exits 0, so check that it reports more than 0 documents processed (`documents_reviewed` in the JSON summary) before comparing.
+`micar-lint-batch` needs the source files under `.study-cache/title-ii-whitepapers/`. Without them it excludes every document as `cached_document_not_found` and still exits 0. If only some are missing, it fills the sample of 10 with candidate entries instead. Before comparing, check that the run processed the same documents as the committed file: 10 documents processed and the same `study_doc_id` values.
 
 `source-manifest.json` and `document-provenance.json` are curated and are not regenerated. `python -m micar_linter.esma_register` cannot reproduce the manifest: it drops entries and provenance fields. To inspect its normalisation, write to the scratch folder:
 
@@ -59,7 +59,7 @@ uv run python -m micar_linter.esma_register \
   --out /tmp/micar-study/source-manifest.json
 ```
 
-The scripts in `scripts/` write to the committed files: `run_batch.py` to the findings, `render_report.py` to `findings-summary.md`, `fetch_esma_register.py` (from the live ESMA register) and `select_sample.py` to the manifests. Run them only to refresh the committed outputs on purpose.
+The scripts in `scripts/` write to the committed files: `run_batch.py` to the findings, `render_report.py` to `findings-summary.md`, and `fetch_esma_register.py` (from the live ESMA register) and `select_sample.py` to `source-manifest.json` and `sample-manifest.csv`. Do not run `fetch_esma_register.py` or `select_sample.py`: they replace the curated manifest. Run `run_batch.py` only with the full cache in place, and `render_report.py` only to refresh the summary on purpose.
 
 ## Validate against human labels
 
@@ -72,6 +72,6 @@ uv run micar-review-summary \
   --require-complete
 ```
 
-The command exits with status 2 while any row remains pending. Metrics exclude uncertain, extraction-failure, and not-applicable labels.
+The command writes `human-review-summary.json` before it checks completeness, so run it only once every row is labelled; while any row remains pending it still overwrites the committed file and then exits with status 2. Metrics exclude uncertain, extraction-failure, and not-applicable labels.
 
 The committed detector outputs are deterministic research artifacts. They are not legal advice.

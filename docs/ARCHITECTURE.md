@@ -1,6 +1,6 @@
 # System Architecture: MiCAR Whitepaper Linter
 
-This document explains the internal modules, loading pipeline, and rules-as-code structure of the MiCAR Whitepaper Linter. `AGENTS.md` has the full module map and lists every place a change has to reach.
+This document explains the internal modules, loading pipeline, and rules-as-code structure of the MiCAR Whitepaper Linter. `AGENTS.md` has a fuller module map and lists the places a change commonly has to reach.
 
 ## System Pipeline
 
@@ -28,9 +28,9 @@ graph TD
 ## Technical Components
 
 ### 1. Loading Layer
-`load_whitepaper` in `whitepaper.py` picks a loader by file suffix and returns a `Whitepaper`: a title, a regime and a map of section keys to text.
-- **JSON**: read directly. The draft states its regime in its `type` field.
-- **`document.py`**: PDF, DOCX and Markdown section extraction, and the heading-to-section matching (`SECTION_PATTERNS`) that every heading-based loader uses. Table cells are not read.
+`load_whitepaper` in `whitepaper.py` picks a loader by file suffix and returns a `Whitepaper`: a title, a regime, a map of section keys to text, and metadata that rule logic reads (for JSON, every other top-level key except the reserved ones; for the other formats, the source file and the iXBRL results).
+- **JSON**: read directly. The draft states its regime in its `type` field (`other` when the field is absent), and `--type` is ignored for it. The other formats take the regime from `--type` or, without it, from marker phrases in the text.
+- **`document.py`**: PDF, DOCX and Markdown section extraction, and the heading-to-section matching (`SECTION_PATTERNS`) that every heading-based loader uses. The table cells of a DOCX draft are not read; PDF and Markdown table text is read as ordinary lines.
 - **`xhtml_parser.py`**: XHTML and HTML text and heading-based sections. **`numbered_fields.py`** reads the numbered-field layout of Implementing Regulation (EU) 2024/2984, whose regime must be given with `--type`.
 - **`ixbrl.py`**: format checks for Inline XBRL (the iXBRL 1.1 namespace and facts tagged with the ESMA MiCA taxonomy). It does not check tag completeness.
 
@@ -44,6 +44,6 @@ Each rule is an instance of the frozen `Rule` dataclass in `rules/base.py`: a st
 `Linter` in `linter.py` applies the generic checks to most rules. A section that is empty or holds only placeholder text is missing; otherwise listed terms, required and prohibited patterns and a minimum word count decide between review and pass. Four rules have their own logic, dispatched by rule ID: the iXBRL format check and the ART deposit-floor review, which never pass, and the two LEI checks.
 
 ### 3. Outputs
-`lint_whitepaper` returns a `Report` of findings, each with a status: pass, review or missing. `report.py` renders it as text, JSON, a Markdown audit log or a coverage table, and each of these counts the open BLOCKER findings. While BLOCKER findings are open, the text report says the draft should not enter an external review or filing workflow until they are cured and a lawyer has signed off; `tests/test_report.py` pins that wording. `ci_outputs.py` writes SARIF, a job summary and workflow annotations that carry no draft text. Other modules write the review table, review bundle, remediation checklist, coverage matrix and artifact manifest.
+`lint_whitepaper` returns a `Report` of findings, each with a status: pass, review or missing. `report.py` renders it as text, JSON, a Markdown audit log or a coverage table, and each of these counts the open BLOCKER findings. While any finding is open, BLOCKER or not, the text report says the draft is not package-ready and should not enter an external review or filing workflow until BLOCKER items are cured and a lawyer has signed off; the audit log gives that warning only while a BLOCKER finding is open. `tests/test_report.py` pins that wording. `ci_outputs.py` renders SARIF, a job summary and workflow annotations that carry no draft text. Other modules build the review table, review bundle, remediation checklist, coverage matrix and artifact manifest; `cli.py` writes the outputs to the paths given.
 
 A pass means a check matched. It is not a compliance opinion.

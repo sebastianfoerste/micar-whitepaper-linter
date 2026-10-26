@@ -20,11 +20,11 @@ This document details the functional features implemented in the MiCAR Whitepape
 - **Status**: Fully Implemented.
 
 ## 3. Finding Severity Mapping
-- **Description**: Each rule has one of three severities, and each finding one of three statuses:
-  - **Blocker**: a required disclosure is absent. The draft should not enter an external review or filing workflow until it is cured and a lawyer has signed off.
-  - **Major**: a disclosure is present but materially incomplete or likely to need substantive review.
-  - **Minor**: a drafting gap to cure before publication.
-  - **Statuses**: `missing`, `review` or `pass`. A pass means the check matched (listed terms appear and the section is long enough); it is not a compliance opinion.
+- **Description**: Each rule has one of three severities, and each finding one of three statuses. Severity belongs to the rule, not to the finding: a BLOCKER finding can be `review` and a MAJOR finding `missing`.
+  - **Blocker**: the rule covers a disclosure the white paper cannot be notified or submitted for approval without. Every BLOCKER finding that has not passed counts as a blocker and makes `--strict` exit 1. The draft should not enter an external review or filing workflow until the blockers are cured and a lawyer has signed off.
+  - **Major**: the rule covers a disclosure that, if incomplete, is likely to mislead or need substantive review.
+  - **Minor**: a drafting gap to cure before publication; it does not gate notification.
+  - **Statuses**: `missing` (the section is empty, absent or holds only placeholders), `review` (present but thin, without a listed term, or otherwise flagged) or `pass`. On the generic checks a pass means the listed terms appear and the section is long enough; `COMMON.IXBRL_TAGGING` and `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW` never pass. A pass is not a compliance opinion.
 - **Related Files**:
   - [src/micar_linter/rules/base.py](../src/micar_linter/rules/base.py)
 - **Status**: Fully Implemented.

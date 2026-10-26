@@ -7,7 +7,8 @@
     "review-table-export",
     "draft-remediation",
     "github-action",
-    "whitepaper-starter-template"
+    "whitepaper-starter-template",
+    "title-ii-whitepaper-study"
   ],
   "interfaces": [
     "micar-whitepaper-linter",

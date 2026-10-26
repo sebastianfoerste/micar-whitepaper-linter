@@ -30,7 +30,7 @@ States captured at 1440×900 and 390×844 (git-ignored, `research/_captures/base
 
 ### Briefing corrections
 
-1. `SOURCE_DATE_EPOCH` is read by `review_table.py` and `collaboration_workspace.py`; `workspace.py` has no timestamp code of its own.
+1. `SOURCE_DATE_EPOCH` is read by `review_table.py` and `collaboration_workspace.py`; `workspace.py` stamps the vault's `generated_at` with the current time.
 2. The text report's closing paragraph cites Art. 8, 16, 17, 18 and 51 in the German form (`Art. 8 Abs. 1 …`) whatever `--citation-style` says (`report.py`, `render_text`). Same class of drift as the German citations in `reports/sample-*.txt`.
 3. `.github/ISSUE_TEMPLATE/rule-proposal.yml` already exists; the rule pages link to it rather than adding a second template.
 4. `examples/incomplete.json` is an ART draft, so `make demo` shows the 18 ART rules.
