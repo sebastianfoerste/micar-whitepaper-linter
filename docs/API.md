@@ -56,10 +56,10 @@ The reserved fields `reserve_characterisation_reviewed_by` and `reserve_characte
 
 ```bash
 uv run micar-lint examples/incomplete.json \
-  --audit-log reports/incomplete-audit.md \
-  --remediation-output reports/incomplete-remediation.json \
-  --review-table-output reports/incomplete-review-table.json \
-  --manifest-output reports/incomplete-manifest.json
+  --audit-log /tmp/micar-incomplete-audit.md \
+  --remediation-output /tmp/micar-incomplete-remediation.json \
+  --review-table-output /tmp/micar-incomplete-review-table.json \
+  --manifest-output /tmp/micar-incomplete-manifest.json
 ```
 
 The review table projects rule findings into rows with blocker status, remediation, citation, source anchor, reviewer decision state, export gate, review cells, playbook metadata and Word-style suggested-edit metadata. Review bundles include `review-table.md` alongside JSON outputs, and artifact manifests record each output role. The manifest records source and output SHA-256 digests, missing output warnings, blocker rule IDs and export eligibility metadata. It is an integrity aid for local review. It is not a filing approval, legal opinion, or external publication authority.

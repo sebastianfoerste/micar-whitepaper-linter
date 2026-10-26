@@ -33,21 +33,33 @@ WP identifiers are pseudonymous labels. They are not anonymisation: `source-mani
 
 ## Reproduce the detector output
 
+Write to a scratch folder and compare with the committed files. The committed outputs are curated research artifacts; a re-run must not overwrite them by accident.
+
 ```bash
-uv run python -m micar_linter.esma_register \
-  --csv studies/2026-07-title-ii-annex-i-whitepaper-study/sample-manifest.csv \
-  --out studies/2026-07-title-ii-annex-i-whitepaper-study/source-manifest.json
+mkdir -p /tmp/micar-study
 
 uv run micar-lint-batch \
   --manifest studies/2026-07-title-ii-annex-i-whitepaper-study/source-manifest.json \
   --cache .study-cache/title-ii-whitepapers \
   --annex annex-i \
-  --out studies/2026-07-title-ii-annex-i-whitepaper-study/findings-pseudonymous.json
+  --out /tmp/micar-study/findings-pseudonymous.json
 
 uv run micar-study-report \
-  --findings studies/2026-07-title-ii-annex-i-whitepaper-study/findings-pseudonymous.json \
-  --out studies/2026-07-title-ii-annex-i-whitepaper-study/findings-summary.md
+  --findings /tmp/micar-study/findings-pseudonymous.json \
+  --out /tmp/micar-study/findings-summary.md
 ```
+
+`micar-lint-batch` needs the source files under `.study-cache/title-ii-whitepapers/`. Without them it excludes every document as `cached_document_not_found` and still exits 0, so check that it reports more than 0 documents processed (`documents_reviewed` in the JSON summary) before comparing.
+
+`source-manifest.json` and `document-provenance.json` are curated and are not regenerated. `python -m micar_linter.esma_register` cannot reproduce the manifest: it drops entries and provenance fields. To inspect its normalisation, write to the scratch folder:
+
+```bash
+uv run python -m micar_linter.esma_register \
+  --csv studies/2026-07-title-ii-annex-i-whitepaper-study/sample-manifest.csv \
+  --out /tmp/micar-study/source-manifest.json
+```
+
+The scripts in `scripts/` write to the committed files: `run_batch.py` to the findings, `render_report.py` to `findings-summary.md`, `fetch_esma_register.py` (from the live ESMA register) and `select_sample.py` to the manifests. Run them only to refresh the committed outputs on purpose.
 
 ## Validate against human labels
 

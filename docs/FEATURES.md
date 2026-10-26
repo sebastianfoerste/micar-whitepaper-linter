@@ -5,14 +5,14 @@ This document details the functional features implemented in the MiCAR Whitepape
 ---
 
 ## 1. Multiple Document Input Formats
-- **Description**: Parses white papers saved as JSON structures, DOCX files, or tagged Inline XBRL XHTML.
+- **Description**: Reads white papers saved as JSON, XHTML or HTML (including Inline XBRL and the numbered-field layout of Implementing Regulation (EU) 2024/2984), DOCX, PDF or Markdown.
 - **Related Files**:
   - [src/micar_linter/document.py](../src/micar_linter/document.py)
   - [src/micar_linter/xhtml_parser.py](../src/micar_linter/xhtml_parser.py)
 - **Status**: Fully Implemented.
 
 ## 2. Regime-Specific Annex Audits
-- **Description**: Applies validation checkers based on whether the token is a standard utility token (Annex I), stablecoin (Annex II), or e-money token (Annex III).
+- **Description**: Applies the rules for the regime of the crypto-asset: other crypto-assets (Annex I), asset-referenced tokens (Annex II) or e-money tokens (Annex III), each with the rules every regime shares (`common.py`).
 - **Related Files**:
   - [src/micar_linter/rules/annex_i.py](../src/micar_linter/rules/annex_i.py)
   - [src/micar_linter/rules/annex_ii.py](../src/micar_linter/rules/annex_ii.py)
@@ -20,19 +20,20 @@ This document details the functional features implemented in the MiCAR Whitepape
 - **Status**: Fully Implemented.
 
 ## 3. Finding Severity Mapping
-- **Description**: Classifies findings into distinct severity levels:
-  - **Blocker**: Severe omissions causing immediate regulatory rejection.
-  - **Major**: Core missing disclosures.
-  - **Minor**: Non-binding suggestions.
-  - **Pass**: Standard compliant parameters met.
+- **Description**: Each rule has one of three severities, and each finding one of three statuses:
+  - **Blocker**: a required disclosure is absent. The draft should not enter an external review or filing workflow until it is cured and a lawyer has signed off.
+  - **Major**: a disclosure is present but materially incomplete or likely to need substantive review.
+  - **Minor**: a drafting gap to cure before publication.
+  - **Statuses**: `missing`, `review` or `pass`. A pass means the check matched (listed terms appear and the section is long enough); it is not a compliance opinion.
 - **Related Files**:
   - [src/micar_linter/rules/base.py](../src/micar_linter/rules/base.py)
 - **Status**: Fully Implemented.
 
 ## 4. Multi-Format Report Exporter
-- **Description**: Formats logs as markdown reports or raw JSON structures.
+- **Description**: Renders the report as text, JSON, a Markdown audit log or a coverage table, and writes SARIF, a job summary and workflow annotations for CI (`ci_outputs.py`).
 - **Related Files**:
   - [src/micar_linter/report.py](../src/micar_linter/report.py)
+  - [src/micar_linter/ci_outputs.py](../src/micar_linter/ci_outputs.py)
 - **Status**: Fully Implemented.
 
 ## 5. Review Table Export

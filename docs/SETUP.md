@@ -102,10 +102,11 @@ uv run micar-lint examples/incomplete.json --review-bundle-dir /tmp/micar-incomp
 This also writes a review bundle to `/tmp/micar-incomplete-review-bundle`: compliance and remediation checklists, a coverage matrix, a review table, a reviewer sign-off record and an artifact manifest. Or write single artifacts:
 ```bash
 uv run micar-lint examples/incomplete.json \
-  --audit-log reports/incomplete-audit.md \
-  --remediation-output reports/incomplete-remediation.json \
-  --manifest-output reports/incomplete-manifest.json
+  --audit-log /tmp/micar-incomplete-audit.md \
+  --remediation-output /tmp/micar-incomplete-remediation.json \
+  --manifest-output /tmp/micar-incomplete-manifest.json
 ```
+`reports/` holds committed sample reports, so write your own outputs elsewhere. [API.md](API.md) lists every output flag, including the CI outputs (SARIF, job summary, annotations), the coverage matrix, the review table and the directory batch pack.
 
 ---
 

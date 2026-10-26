@@ -10,4 +10,4 @@ The linter repository is the canonical working repository for both the determini
 4. Review `release/micar-whitepaper-template` against the public release branch.
 5. Push only after human review.
 
-The export script performs no network mutation. The `template-release` remote has a disabled push URL in this checkout.
+The export script makes no network change: it deletes and recreates the local branch `release/micar-whitepaper-template` from `templates/whitepaper-starter/`. A fresh checkout has only the `origin` remote. To compare with or publish to the public template repository, add it as a remote yourself, and keep its push URL disabled until a human has approved the release.
