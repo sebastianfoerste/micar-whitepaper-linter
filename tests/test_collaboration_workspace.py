@@ -321,10 +321,19 @@ def test_docx_redline_skips_moved_away_text_and_splits_the_move(tmp_path) -> Non
         source,
         _run("Moved away: ") + f'<w:moveFrom w:id="20" {revision}>' + _run("Issuer TBD") + "</w:moveFrom>",
         _run("Moved here: ") + f'<w:moveTo w:id="21" {revision}>' + _run("Issuer TBD here") + "</w:moveTo>",
+        _run("Fee ") + f'<w:moveFrom w:id="22" {revision}>' + _run("moved away ") + "</w:moveFrom>" + _run("is TBD."),
+        _run("Rate ")
+        + f'<w:del w:id="23" {revision}><w:r><w:delText xml:space="preserve">old </w:delText></w:r></w:del>'
+        + _run("is TBD."),
     )
-    xml = _render(tmp_path, source, [("Issuer TBD", "Issuer Example AG")])
+    changes = [("Issuer TBD", "Issuer Example AG"), ("Fee is TBD", "Fee is EUR 5"), ("Rate is TBD", "Rate is 5%")]
+    xml = _render(tmp_path, source, changes)
     ns = {"w": _W}
-    moved_away, moved_here = xml.xpath(".//w:body/w:p", namespaces=ns)
+    moved_away, moved_here, fee, rate = xml.xpath(".//w:body/w:p", namespaces=ns)
+    live = ".//w:t[not(ancestor::w:del) and not(ancestor::w:moveFrom)]/text()"
+    assert fee.xpath("count(w:moveFrom//w:del | w:moveFrom//w:ins)", namespaces=ns) == 0
+    assert "".join(fee.xpath(live, namespaces=ns)) == "Fee is EUR 5."
+    assert "".join(rate.xpath(live, namespaces=ns)) == "Rate is 5%."
     assert moved_away.xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
     assert moved_here.xpath("string(w:moveTo/w:del//w:delText)", namespaces=ns) == "Issuer TBD"
     assert moved_here.xpath("count(.//w:moveTo//w:ins)", namespaces=ns) == 0
@@ -452,7 +461,8 @@ def test_docx_redline_replaces_external_link_after_it_and_keeps_custom_xml_exten
     target = document.part.relate_to("mailto:info@old.invalid", RELATIONSHIP_TYPE.HYPERLINK, is_external=True)
     website = document.part.relate_to("https://www.old.invalid", RELATIONSHIP_TYPE.HYPERLINK, is_external=True)
     style = '<w:rPr><w:rStyle w:val="Hyperlink"/></w:rPr>'
-    link = f'<w:hyperlink r:id="{target}"><w:r>{style}<w:t>info@old.invalid</w:t></w:r></w:hyperlink>'
+    look = '<w:rPr><w:rStyle w:val="Hyperlink"/><w:rFonts w:ascii="Arial"/><w:color w:val="0563C1"/><w:u w:val="single"/>'
+    link = f'<w:hyperlink r:id="{target}"><w:r>{look}</w:rPr><w:t>info@old.invalid</w:t></w:r></w:hyperlink>'
     body = document.element.body
     for paragraph in (
         '<w:bookmarkStart w:id="\u00b2" w:name="Odd"/>'
@@ -478,8 +488,8 @@ def test_docx_redline_replaces_external_link_after_it_and_keeps_custom_xml_exten
     paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
     assert _paragraph_views(paragraphs[0]) == ("Contact: info@new.invalid.", "Contact: info@old.invalid.")
     assert paragraphs[0].xpath("count(w:hyperlink//w:ins)", namespaces=ns) == 0
-    assert paragraphs[0].xpath("count(w:ins/w:r/w:rPr/w:b)", namespaces=ns) == 1
-    assert paragraphs[0].xpath("count(w:ins//w:rStyle)", namespaces=ns) == 0
+    assert paragraphs[0].xpath("string(w:ins/w:r/w:rPr/w:rFonts/@w:ascii)", namespaces=ns) == "Arial"
+    assert paragraphs[0].xpath("count(w:ins//w:rStyle | w:ins//w:color | w:ins//w:u | w:ins//w:b)", namespaces=ns) == 0
     for untouched in paragraphs[1:4]:
         assert untouched.xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
     fallbacks = ["".join(p.xpath("w:del//w:delText/text()", namespaces=ns)) for p in paragraphs[4:]]
@@ -542,3 +552,37 @@ def test_docx_redline_spans_markers_and_stays_inside_tagged_controls_and_custom_
     assert _paragraph_views(paragraphs[2]) == ("The fee is EUR 7 per token.", "The fee is EUR 5 per token.")
     assert paragraphs[3].xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
     assert "".join(paragraphs[4].xpath("w:del//w:delText/text()", namespaces=ns)) == "Utility token"
+
+
+def test_docx_redline_deletes_a_link_at_either_end_of_the_match(tmp_path) -> None:
+    source = tmp_path / "link-edges.docx"
+    document = docx.Document()
+    target = document.part.relate_to("https://www.old.invalid", RELATIONSHIP_TYPE.HYPERLINK, is_external=True)
+    look = '<w:rPr><w:rStyle w:val="Hyperlink"/></w:rPr>'
+    link = f'<w:hyperlink r:id="{target}"><w:r>{look}<w:t>www.old.invalid</w:t></w:r></w:hyperlink>'
+    body = document.element.body
+    for paragraph in (
+        _run("Published at ") + link + _run("."),
+        link + _run(" is the offeror website."),
+        _run("Mirror at ") + link + _run(" and ") + link + _run("."),
+    ):
+        body.insert(len(body) - 1, parse_xml(f"<w:p {_DECLARATIONS}>{paragraph}</w:p>"))
+    document.save(source)
+    changes = [
+        ("Published at www.old.invalid", "Published at www.new.invalid"),
+        ("www.old.invalid is the offeror", "www.new.invalid is the issuer"),
+        ("old.invalid and www.old", "new.invalid and www.new"),
+    ]
+    xml = _render(tmp_path, source, changes)
+    ns = {"w": _W}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    assert _paragraph_views(paragraphs[0]) == ("Published at www.new.invalid.", "Published at www.old.invalid.")
+    assert _paragraph_views(paragraphs[1]) == (
+        "www.new.invalid is the issuer website.",
+        "www.old.invalid is the offeror website.",
+    )
+    for replaced in paragraphs[:2]:
+        assert replaced.xpath("count(w:hyperlink//w:ins | w:hyperlink//w:t)", namespaces=ns) == 0
+        assert replaced.xpath("count(w:ins//w:rStyle)", namespaces=ns) == 0
+    assert paragraphs[2].xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
+    assert "".join(paragraphs[3].xpath("w:del//w:delText/text()", namespaces=ns)) == "old.invalid and www.old"

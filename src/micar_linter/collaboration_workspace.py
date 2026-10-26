@@ -47,9 +47,8 @@ _SKIPPED = {
     ]
 }
 # Containers a match runs through: pending insertions and moves, smart tags, custom XML and hyperlinks. A
-# match must start and end in the same hyperlink and custom XML element, or outside any, so they keep their
-# extent, and inside a link to an external target it must be the link's whole content (both checked in
-# _find_match).
+# match must start and end in the same custom XML element, or outside any, so it keeps its extent; for
+# hyperlinks see _links_kept.
 _TRANSPARENT = {f"{{{W_NS}}}{name}" for name in ["ins", "moveTo", "smartTag", "customXml", "hyperlink"]}
 # Containers a match may lie inside but not cross, so a content control keeps its value. Other paragraph
 # content (an equation or a simple field, for example) ends a match.
@@ -338,17 +337,29 @@ def _external(link: etree._Element | None) -> bool:
     return link is not None and link.get(f"{{{R_NS}}}id") is not None
 
 
-def _replaceable(link: etree._Element | None, original: str) -> bool:
-    """Whether a match of ``original`` inside ``link`` can be redlined without leaving a stale target.
-
-    A link to an external target qualifies only when ``original`` is its whole content and that content is
-    plain text, so the replacement can go after the link and nothing is left pointing to the old target.
-    """
-    if not _external(link):
-        return True
+def _whole_plain(link: etree._Element, covered: list[tuple[etree._Element, int, int]]) -> bool:
+    """Whether the match covers all of ``link``'s content, and that content is plain text."""
     runs = link.xpath(".//w:r[not(ancestor::w:del) and not(ancestor::w:moveFrom)]", namespaces=NSMAP)
-    text = "".join(node.text or "" for run in runs for node in run.iterchildren(f"{{{W_NS}}}t"))
-    return text == original and all(child.tag in _SPANNABLE for run in runs for child in run)
+    if not all(child.tag in _SPANNABLE for run in runs for child in run):
+        return False
+    full = {node for node, start, end in covered if start == 0 and end == len(node.text or "")}
+    return all(node in full or not node.text for run in runs for node in run.iterchildren(f"{{{W_NS}}}t"))
+
+
+def _links_kept(
+    first_link: etree._Element | None,
+    last_link: etree._Element | None,
+    covered: list[tuple[etree._Element, int, int]],
+) -> bool:
+    """Whether redlining the match leaves every hyperlink it touches with the right extent and target.
+
+    A match inside an internal link stays there. A match that only partly covers a link at either end would
+    move the link's edge, and new text inside a link to an external target would inherit the old target. A
+    link the match covers wholly, holding plain text, is fine: it is deleted and the replacement follows it.
+    """
+    if first_link is last_link and not _external(first_link):
+        return True
+    return all(link is None or _whole_plain(link, covered) for link in (first_link, last_link))
 
 
 def _find_match(
@@ -359,8 +370,11 @@ def _find_match(
         start = text.find(original)
         while start >= 0:
             covered = _covered(nodes, start, start + len(original))
-            bounds = _bounds(covered[0][0])
-            if bounds == _bounds(covered[-1][0]) and _replaceable(bounds[0], original):
+            (first_link, first_tagged), (last_link, last_tagged) = (
+                _bounds(covered[0][0]),
+                _bounds(covered[-1][0]),
+            )
+            if first_tagged is last_tagged and _links_kept(first_link, last_link, covered):
                 return nodes, start
             start = text.find(original, start + 1)
     return None
@@ -436,11 +450,13 @@ def _redline_match(
         anchor = _revision("del", ids, author, date)
         run.addprevious(anchor)
         anchor.append(run)
-    # A match that is the whole content of a link to an external target is replaced after the link, in the
-    # formatting of the text next to it, so the new text does not keep the old target.
-    link = _bounds(first)[0]
-    if _external(link):
-        anchor = link
+    # A link the match covers wholly is deleted with it, and the replacement goes after the link without the
+    # link's look, so it neither extends the link nor keeps its target. A match inside an internal link stays
+    # inside it.
+    first_link, last_link = _bounds(first)[0], _bounds(last)[0]
+    inside_link = first_link is not None and first_link is last_link and not _external(first_link)
+    if last_link is not None and not inside_link:
+        anchor = last_link
     while anchor.getparent().tag in {f"{{{W_NS}}}ins", f"{{{W_NS}}}moveTo"}:
         outer = anchor.getparent()
         following = list(anchor.itersiblings())
@@ -451,15 +467,12 @@ def _redline_match(
             outer.addnext(rest)
         anchor = outer
     inserted = _revision("ins", ids, author, date)
-    if _external(link):
-        neighbours = link.xpath("preceding-sibling::w:r[1]", namespaces=NSMAP) or link.xpath(
-            "following-sibling::w:r[1]", namespaces=NSMAP
-        )
-        inserted_run = _sibling_run(neighbours[0], ids) if neighbours else etree.Element(f"{{{W_NS}}}r")
-        for hidden in inserted_run.xpath("w:rPr/w:vanish | w:rPr/w:specVanish", namespaces=NSMAP):
-            hidden.getparent().remove(hidden)
-    else:
-        inserted_run = _sibling_run(deleted_runs[0], ids)
+    # The replacement takes the formatting of the first replaced character, as Word does when text is typed
+    # over a selection.
+    inserted_run = _sibling_run(deleted_runs[0], ids)
+    if first_link is not None and not inside_link:
+        for look in inserted_run.xpath("w:rPr/w:rStyle | w:rPr/w:color | w:rPr/w:u", namespaces=NSMAP):
+            look.getparent().remove(look)
     inserted_run.append(_text_element("t", proposed))
     inserted.append(inserted_run)
     anchor.addnext(inserted)
