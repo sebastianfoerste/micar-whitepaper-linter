@@ -44,7 +44,8 @@ _SKIPPED = {f"{{{MC_NS}}}Fallback"} | {
         "moveToRangeEnd",
     ]
 }
-# Containers whose runs a match may enter. Other paragraph content (an equation, for example) ends a match.
+# Containers whose runs a match may enter. A match does not cross the edge of one, except of an insertion or
+# move, and other paragraph content (an equation, for example) ends a match.
 _CONTAINERS = {
     f"{{{W_NS}}}{name}"
     for name in [
@@ -303,8 +304,12 @@ def _text_segments(
                     segments[-1].append(item)
                 elif item.tag not in _SPANNABLE or item.tag == f"{{{W_NS}}}t":
                     segments.append([])
-        elif child.tag in _CONTAINERS:
+        elif child.tag in {f"{{{W_NS}}}ins", f"{{{W_NS}}}moveTo"}:
             _text_segments(child, excluded, segments)
+        elif child.tag in _CONTAINERS:
+            segments.append([])
+            _text_segments(child, excluded, segments)
+            segments.append([])
         else:
             segments.append([])
     return segments
@@ -320,24 +325,30 @@ def _find_match(
     return None
 
 
-def _isolate_text(node: etree._Element, start: int, end: int, ids: Iterator[int]) -> etree._Element:
-    """Split the run of ``node`` so that a run of its own holds ``node.text[start:end]``; return that run."""
-    run = node.getparent()
+def _isolate(item: etree._Element, ids: Iterator[int]) -> etree._Element:
+    """Move the rest of the run of ``item`` into sibling runs; return the run, now holding only ``item``."""
+    run = item.getparent()
     content = [child for child in run if child.tag != f"{{{W_NS}}}rPr"]
-    position = content.index(node)
-    text = node.text or ""
+    position = content.index(item)
     if content[:position]:
         before = _sibling_run(run, ids)
         before.extend(content[:position])
         run.addprevious(before)
-    if text[:start]:
-        prefix = _sibling_run(run, ids)
-        prefix.append(_text_element("t", text[:start]))
-        run.addprevious(prefix)
     if content[position + 1 :]:
         after = _sibling_run(run, ids)
         after.extend(content[position + 1 :])
         run.addnext(after)
+    return run
+
+
+def _isolate_text(node: etree._Element, start: int, end: int, ids: Iterator[int]) -> etree._Element:
+    """Split the run of ``node`` so that a run of its own holds ``node.text[start:end]``; return that run."""
+    run = _isolate(node, ids)
+    text = node.text or ""
+    if text[:start]:
+        prefix = _sibling_run(run, ids)
+        prefix.append(_text_element("t", text[:start]))
+        run.addprevious(prefix)
     if text[end:]:
         suffix = _sibling_run(run, ids)
         suffix.append(_text_element("t", text[end:]))
@@ -363,17 +374,32 @@ def _redline_match(
     so rejecting the change in Word restores the paragraph.
     """
     match_end = match_start + len(original)
-    deleted_runs = []
+    matched = []
     offset = 0
     for node in nodes:
         length = len(node.text or "")
         overlap_start, overlap_end = max(match_start, offset), min(match_end, offset + length)
         if overlap_start < overlap_end:
-            deleted_runs.append(_isolate_text(node, overlap_start - offset, overlap_end - offset, ids))
-            node.tag = f"{{{W_NS}}}delText"
+            matched.append((node, overlap_start - offset, overlap_end - offset))
         offset += length
-    anchor = None
-    for run in deleted_runs:
+    first, last = matched[0][0], matched[-1][0]
+    soft_hyphens, inside = [], False
+    for element in next(first.iterancestors(f"{{{W_NS}}}p")).iter(f"{{{W_NS}}}t", f"{{{W_NS}}}softHyphen"):
+        if element is last:
+            break
+        if element is first:
+            inside = True
+        elif (
+            inside
+            and element.tag == f"{{{W_NS}}}softHyphen"
+            and not any(ancestor.tag in _SKIPPED for ancestor in element.iterancestors())
+        ):
+            soft_hyphens.append(element)
+    deleted_runs = []
+    for node, start, end in matched:
+        deleted_runs.append(_isolate_text(node, start, end, ids))
+        node.tag = f"{{{W_NS}}}delText"
+    for run in [_isolate(hyphen, ids) for hyphen in soft_hyphens] + deleted_runs:
         anchor = _revision("del", ids, author, date)
         run.addprevious(anchor)
         anchor.append(run)

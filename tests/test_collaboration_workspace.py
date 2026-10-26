@@ -381,3 +381,32 @@ def test_docx_redline_skips_managed_content_controls_and_equations(tmp_path) -> 
         "Issuer name TBD offers from 01.01.2026.",
     )
     assert paragraphs[-1].xpath("string(w:del//w:delText)", namespaces=ns) == "rate  is TBD"
+
+
+def test_docx_redline_stays_within_links_and_content_controls_and_deletes_soft_hyphens(tmp_path) -> None:
+    source = tmp_path / "links.docx"
+    link = '<w:hyperlink w:anchor="Offer">' + _run("example.invalid/token") + "</w:hyperlink>"
+    control = '<w:sdt><w:sdtPr><w:tag w:val="issuer_name"/></w:sdtPr><w:sdtContent>'
+    _docx_with_paragraphs(
+        source,
+        _run("Details are published at ") + link + _run(" every quarter."),
+        _run("Mirror at ") + link.replace("example.invalid", "mirror.invalid") + _run("."),
+        control + _run("Example Issuer AG") + "</w:sdtContent></w:sdt>" + _run(" is the issuer."),
+        '<w:r><w:t xml:space="preserve">Der vermögenswert</w:t><w:softHyphen/><w:t>referenzierte Token gilt.</w:t></w:r>',
+    )
+    changes = [
+        ("published at example.invalid", "posted at example.invalid"),
+        ("mirror.invalid/token", "mirror.invalid/token-v2"),
+        ("Example Issuer AG is", "Example Issuer SE is"),
+        ("vermögenswertreferenzierte Token", "E-Geld-Token"),
+    ]
+    xml = _render(tmp_path, source, changes)
+    ns = {"w": _W}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    assert paragraphs[0].xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
+    assert paragraphs[1].xpath("string(w:hyperlink/w:ins)", namespaces=ns) == "mirror.invalid/token-v2"
+    assert paragraphs[2].xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
+    assert _paragraph_views(paragraphs[3])[0] == "Der E-Geld-Token gilt."
+    assert paragraphs[3].xpath("count(.//w:softHyphen[not(ancestor::w:del)])", namespaces=ns) == 0
+    fallbacks = ["".join(p.xpath("w:del//w:delText/text()", namespaces=ns)) for p in paragraphs[4:]]
+    assert fallbacks == ["published at example.invalid", "Example Issuer AG is"]
