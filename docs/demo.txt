@@ -1,7 +1,7 @@
 MiCAR Whitepaper Linter - Incomplete Synthetic EuroStable ART Draft
 Whitepaper type: ART
 ==============================================================================
-Pass: 0  |  Review: 12  |  Missing: 6  |  Blockers: 15
+Pass: 0  |  Review: 12  |  Missing: 8  |  Blockers: 15
 
 [REVIEW] [BLOCKER] COMMON.SUMMARY  Plain-language summary
            Cite:  Art. 6(7), Art. 19(6), Art. 51(6) MiCAR
@@ -41,6 +41,18 @@ Pass: 0  |  Review: 12  |  Missing: 6  |  Blockers: 15
            Text:  https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng
            Section: 'ixbrl_tagging'  (0 words)
            -  Draft format: notification requires XHTML with Inline XBRL tagging. This format cannot satisfy that requirement; the content checks still apply.
+
+[MISS  ] [MAJOR  ] COMMON.LEI_CHECK_DIGITS  Legal Entity Identifier format and check digits (ISO 17442, ISO/IEC 7064 MOD 97-10)
+           Cite:  Annex I, Part A, Annex II, Part A, Annex III, Part A MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'issuer'  (0 words)
+           -  No Legal Entity Identifier (20 characters, ISO 17442) was found in the draft, so its check digits could not be checked.
+
+[MISS  ] [MAJOR  ] COMMON.LEI_CONSISTENCY  Legal Entity Identifiers agree across the party sections and the rest of the draft
+           Cite:  Annex I, Part A, Annex II, Part A, Annex III, Part A MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'issuer'  (0 words)
+           -  No valid LEI was found in the issuer, offeror or trading_platform_operator sections, so consistency cannot be checked.
 
 [REVIEW] [BLOCKER] ANNEX_II.A  Information about the issuer of the ART (legal form, governance, prudential profile)
            Cite:  Annex II, Part A MiCAR

@@ -13,15 +13,30 @@ micar-lint <file_path> [options]
 Supported options:
 
 - `--json`: print the validation report as JSON.
-- `--strict`: exit with status `1` when blocker findings are open.
+- `--citation-style en|de`: citation style in the text report, English EU style (`Art. 6(7) MiCAR`, default) or the canonical German form (`Art. 6 Abs. 7 MiCAR`). JSON output always carries both.
+- `--type other|art|emt`: regime of a single PDF, DOCX, Markdown or XHTML draft. Required for XHTML in the numbered-field layout, whose regime is never inferred. A JSON draft states its own `type`.
+- `--strict`: exit with status `1` when blocker findings are open. For a directory, also when a file could not be linted or no file was linted.
 - `--lang en|de|auto`: force rule matching language. Defaults to `auto`.
 - `--audit-log <path>`: write a markdown compliance review log.
 - `--remediation-output <path>`: write `micar-whitepaper-linter.remediation-report.v1`.
+- `--coverage-output <path>`: write a JSON disclosure coverage matrix.
+- `--coverage`: print a coverage table to stdout instead of the report. Output files and `--strict` still apply.
 - `--review-table-output <path>`: write the review table, including playbook review data.
 - `--compare-review-table-output <path>`: compare multiple local draft review tables by rule id and source hash.
 - `--review-bundle-dir <path>`: write checklist, remediation, coverage, review table, sign-off and manifest files.
 - `--manifest-output <path>`: write `micar-whitepaper-linter.artifact-manifest.v1`.
+- `--sarif-output <path>`: write a SARIF 2.1.0 log of open findings for code scanning (see below).
+- `--summary-output <path>`: write a Markdown table of open findings, e.g. for `$GITHUB_STEP_SUMMARY`.
+- `--annotations-output <path>`: write GitHub workflow annotation commands for up to 10 open findings.
+- `--batch-output <path>`: required when the input path is a directory; writes a JSON batch review pack. Its summary counts `supported_files` and `blocked_files`, and in `failed_files` the files that could not be linted, such as numbered-field XHTML, whose regime a directory run cannot take from `--type`.
+- `--workspace-output <path>`: write a local white paper vault, interactive review table and reusable playbook.
+- `--collaboration-bundle-dir <path>`: write the collaboration sidecar, document change set and supervised workflow pack.
+- `--workflow-action validate|inspect|run`: validate, inspect or run the supervised local workflow (`run` needs `--collaboration-bundle-dir`).
 - `--version`: print the package version.
+
+### CI outputs
+
+`--sarif-output`, `--summary-output` and `--annotations-output` render the same report for CI. They contain rule IDs, statuses, severities, English citations, line numbers and links to the [rule pages](https://sebastianfoerste.github.io/micar-whitepaper-linter/rules/), never draft text: the issue messages of `COMMON.IXBRL_TAGGING`, `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW`, `COMMON.LEI_CHECK_DIGITS` and `COMMON.LEI_CONSISTENCY`, which can quote the draft, are replaced by a fixed sentence, and the summary names the file path instead of the draft title. Each output is byte-reproducible (no timestamps). SARIF lists every rule run and one result per open finding; levels follow severity (BLOCKER `error`, MAJOR `warning`, MINOR `note`). They change no status, severity or exit code. The text and JSON reports on stdout are unchanged and still include draft content such as the title. Design notes: [ADR 0001](adr/0001-ci-outputs-sarif-mapping.md).
 
 Input format is detected from the file extension by `load_whitepaper`. JSON, XHTML and DOCX are supported when the required optional parser dependencies are installed.
 

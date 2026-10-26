@@ -334,6 +334,8 @@ def build_batch_review_pack(root: Path, generated_at: datetime | None = None) ->
                 [warning for warning in warnings if warning.startswith("unsupported-file:")]
             ),
             "blocked_files": len([item for item in files if item["blocker_rule_ids"]]),
+            # Files that could not be linted, e.g. numbered-field XHTML without a stated regime.
+            "failed_files": len([warning for warning in warnings if warning.startswith("lint-failed:")]),
         },
         "files": files,
         "warnings": warnings,

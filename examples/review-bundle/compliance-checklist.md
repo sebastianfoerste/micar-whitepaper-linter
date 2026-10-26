@@ -3,8 +3,8 @@
 - **Document Title**: Synthetic EuroStable ART White Paper
 - **Regime/Type**: ART
 - **Source File**: examples/art-stablecoin.json
-- **SHA-256 Checksum**: `6cc7f0253a115a956fd4af80ac77c77ff8699cc6e914ed98a782375d4599209d`
-- **Review Timestamp**: 2026-10-13 19:19:24
+- **SHA-256 Checksum**: `76846c00bd5bf1255463b6c8c5a2d64b7ed6bed633edf33e57e13380719fd4f0`
+- **Review Timestamp**: 2026-10-26 09:29:07
 
 ## Rule Compliance Checklist
 
@@ -16,6 +16,8 @@
 | `COMMON.NOTIFICATION_DATE` | Art. 6 Abs. 8, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR | Date of notification to the competent authority | MAJOR | **PASS** | [x] |
 | `COMMON.LANGUAGE` | Art. 6 Abs. 9, Art. 19 Abs. 8, Art. 51 Abs. 8 MiCAR | Language of the white paper (home Member State official language or customary in international finance) | MAJOR | **PASS** | [x] |
 | `COMMON.IXBRL_TAGGING` | Art. 2 VO (EU) 2024/2984 | Inline XBRL (iXBRL) compliance and ESMA metadata tagging | BLOCKER | **MISSING** | [ ] |
+| `COMMON.LEI_CHECK_DIGITS` | Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR | Legal Entity Identifier format and check digits (ISO 17442, ISO/IEC 7064 MOD 97-10) | MAJOR | **PASS** | [x] |
+| `COMMON.LEI_CONSISTENCY` | Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR | Legal Entity Identifiers agree across the party sections and the rest of the draft | MAJOR | **PASS** | [x] |
 | `ANNEX_II.A` | Anhang II Teil A MiCAR | Information about the issuer of the ART (legal form, governance, prudential profile) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.B` | Anhang II Teil B MiCAR | Information about the asset-referenced token (reference assets, stabilisation mechanism) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.C` | Anhang II Teil C MiCAR | Information about the offer to the public of the ART or its admission to trading | BLOCKER | **PASS** | [x] |
@@ -31,7 +33,7 @@
 
 ## Summary of Findings
 
-- **Passed Checks**: 14
+- **Passed Checks**: 16
 - **Under Review**: 3
 - **Missing Sections**: 1
 - **BLOCKER Issues**: 4
