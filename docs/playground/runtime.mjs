@@ -22,6 +22,12 @@ self.onmessage = async ({ data }) => {
         // lxml is several megabytes, so JSON-only sessions never fetch it.
         progress("Loading the XHTML parser…");
         await pyodide.loadPackage("lxml");
+        // loadPackage reports a failed download without throwing; stay unready so the next check retries it.
+        if (!("lxml" in pyodide.loadedPackages)) {
+          progress("Ready. Checks run locally in your browser.");
+          self.postMessage({ type: "error", id: data.id, text: "The XHTML parser could not load. Check your connection and run the checks again. Your draft is still here." });
+          return;
+        }
         markupReady = true;
         progress("Ready. Checks run locally in your browser.");
       }
