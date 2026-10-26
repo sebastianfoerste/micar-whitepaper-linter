@@ -9,11 +9,11 @@ Each rule is a `Rule` in `src/micar_linter/rules/`.
 Required fields:
 
 1. `rule_id`: Stable identifier, for example `ANNEX_II.G.CUSTODY`.
-2. `citation`: Pinpoint citation to Regulation (EU) 2023/1114 or a documented technical standard, in the canonical German form (`Art. 6 Abs. 7 MiCAR`). The text report (by default), the JSON report's `citation_en`, the CI outputs and the rule pages show it in English; the audit log, the coverage and review-table outputs and the playground show the German form.
+2. `citation`: Pinpoint citation to Regulation (EU) 2023/1114 or a documented technical standard, in the canonical German form (`Art. 6 Abs. 7 MiCAR`). The text report (by default), the JSON report's `citation_en`, the CI outputs and the rule pages show it in English (SARIF and the rule pages also carry the German form); the audit log, the coverage and review-table outputs and the playground's findings list show the German form.
 3. `section`: the section key the generic checks read, as in the `sections` of a JSON draft (`COMMON.IXBRL_TAGGING` reads no section, and the two LEI rules read every section).
 4. `label`: Human-readable description of the disclosure requirement.
 5. `severity`: `BLOCKER`, `MAJOR` or `MINOR`.
-6. `min_words`, required terms or required patterns.
+6. `min_words`, required terms, required patterns or prohibited patterns, each with an optional German variant (`required_terms_de` and so on); without one, a German draft is checked against the English list.
 
 ## Severity Contract
 
@@ -38,4 +38,4 @@ The ranking is tested in `tests/test_linter.py`. Do not change numeric severity 
 
 ## Review Note
 
-Rules are screening controls. They are not legal advice. Ambiguous or fact-dependent cases should produce `MAJOR` review findings rather than pretending to decide legal sufficiency.
+Rules are screening controls. They are not legal advice. Ambiguous or fact-dependent cases should produce `review` findings rather than pretending to decide legal sufficiency. Severity follows what the rule covers, not how certain the check is: the fact-dependent deposit-floor check is a BLOCKER that never passes.

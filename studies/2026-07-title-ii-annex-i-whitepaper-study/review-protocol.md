@@ -76,6 +76,8 @@ uv run micar-review-summary \
   --require-complete
 ```
 
+The command writes `human-review-summary.json` before it checks completeness, so run it only once every row is labelled; while any row remains pending it still overwrites the committed file and then exits with status 2.
+
 ## Publication gate
 
 No reviewed legal finding or detector-performance claim may be published unless:

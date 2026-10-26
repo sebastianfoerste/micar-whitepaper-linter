@@ -33,7 +33,7 @@ WP identifiers are pseudonymous labels. They are not anonymisation: `source-mani
 
 ## Reproduce the detector output
 
-Write to a scratch folder and compare with the committed files, which a re-run must not overwrite by accident. The committed findings and summary are the machine output of the run on 2026-07-06. A re-run always differs in `generated_at` and `digest`, and its flags may differ too, because the detector and the loaders have changed since.
+Write to a scratch folder and compare with the committed files, which a re-run must not overwrite by accident. The committed findings are the machine output of the run on 2026-07-06, and the summary is rendered from them. A re-run always differs in `generated_at`, `digest`, `language_policy`, `source_manifest.register_source_detail` and each finding's `human_review_note`, because that wording and the curated manifest have changed since; its summary differs in the "Source manifest" and "Findings digest" lines with them. Its flags may differ too, because the document loaders have changed since.
 
 ```bash
 mkdir -p /tmp/micar-study

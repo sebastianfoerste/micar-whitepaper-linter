@@ -21,10 +21,10 @@ This document details the functional features implemented in the MiCAR Whitepape
 
 ## 3. Finding Severity Mapping
 - **Description**: Each rule has one of three severities, and each finding one of three statuses. Severity belongs to the rule, not to the finding: a BLOCKER finding can be `review` and a MAJOR finding `missing`.
-  - **Blocker**: the rule covers a disclosure the white paper cannot be notified or submitted for approval without. Every BLOCKER finding that has not passed counts as a blocker and makes `--strict` exit 1. The draft should not enter an external review or filing workflow until the blockers are cured and a lawyer has signed off.
+  - **Blocker**: the rule covers a disclosure or format requirement the white paper cannot be notified or submitted for approval without. Every BLOCKER finding that has not passed counts as a blocker and makes `--strict` exit 1. The draft should not enter an external review or filing workflow until the blockers are cured and a lawyer has signed off.
   - **Major**: the rule covers a disclosure that, if incomplete, is likely to mislead or need substantive review.
   - **Minor**: a drafting gap to cure before publication; it does not gate notification.
-  - **Statuses**: `missing` (the section is empty, absent or holds only placeholders), `review` (present but thin, without a listed term, or otherwise flagged) or `pass`. On the generic checks a pass means the listed terms appear and the section is long enough; `COMMON.IXBRL_TAGGING` and `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW` never pass. A pass is not a compliance opinion.
+  - **Statuses**: `missing`, `review` (present but thin, without a listed term, or otherwise flagged) or `pass`. On the generic checks, `missing` means the section is empty, absent or holds only placeholders. The rules with their own logic also return `missing` when the section has text: `COMMON.IXBRL_TAGGING` for every draft that is not XHTML or HTML, the two LEI rules when the draft contains no LEI, and `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW` when it finds no percentage. On the generic checks a pass means the listed terms appear and the section is long enough; `COMMON.IXBRL_TAGGING` and `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW` never pass. A pass is not a compliance opinion.
 - **Related Files**:
   - [src/micar_linter/rules/base.py](../src/micar_linter/rules/base.py)
 - **Status**: Fully Implemented.

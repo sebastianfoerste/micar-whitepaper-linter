@@ -22,7 +22,7 @@ Deterministic rules (no LLM, same input, same findings): mandatory sections pres
 
 ## Scope and honesty
 
-- Not legal advice. A draft can pass every check and still be misleading.
+- Not legal advice. A draft can pass every check that can pass and still be misleading.
 - The template covers the white paper content requirements, not the authorization or notification procedure itself.
 - Template text is synthetic guidance; nothing in it describes a real issuer or token.
 

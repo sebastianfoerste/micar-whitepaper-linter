@@ -28,10 +28,10 @@ graph TD
 ## Technical Components
 
 ### 1. Loading Layer
-`load_whitepaper` in `whitepaper.py` picks a loader by file suffix and returns a `Whitepaper`: a title, a regime, a map of section keys to text, and metadata that rule logic reads (for JSON, every other top-level key except the reserved ones; for the other formats, the source file and the iXBRL results).
-- **JSON**: read directly. The draft states its regime in its `type` field (`other` when the field is absent), and `--type` is ignored for it. The other formats take the regime from `--type` or, without it, from marker phrases in the text.
+`load_whitepaper` in `whitepaper.py` picks a loader by file suffix and returns a `Whitepaper`: a title, a regime, a map of section keys to text, and metadata that rule logic reads (for JSON, every other top-level key except the reserved ones; for the other formats, the source file, the iXBRL results and any extraction notes).
+- **JSON**: read directly. The draft states its regime in its `type` field (`other` when the field is absent), and `--type` is ignored for it. The other formats take the regime from `--type` (single-file runs only) or, without it, from marker phrases in the text.
 - **`document.py`**: PDF, DOCX and Markdown section extraction, and the heading-to-section matching (`SECTION_PATTERNS`) that every heading-based loader uses. The table cells of a DOCX draft are not read; PDF and Markdown table text is read as ordinary lines.
-- **`xhtml_parser.py`**: XHTML and HTML text and heading-based sections. **`numbered_fields.py`** reads the numbered-field layout of Implementing Regulation (EU) 2024/2984, whose regime must be given with `--type`.
+- **`xhtml_parser.py`**: XHTML and HTML text and heading-based sections. Text in a table cell is read only when it sits in a `p`, `li` or `div` element. **`numbered_fields.py`** reads the numbered-field layout of Implementing Regulation (EU) 2024/2984, whose regime must be given with `--type`.
 - **`ixbrl.py`**: format checks for Inline XBRL (the iXBRL 1.1 namespace and facts tagged with the ESMA MiCA taxonomy). It does not check tag completeness.
 
 ### 2. Rules (`rules/`)
