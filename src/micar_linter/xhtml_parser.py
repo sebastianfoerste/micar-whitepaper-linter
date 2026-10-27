@@ -9,6 +9,11 @@ from lxml import etree
 
 from micar_linter.document import match_heading_to_section
 
+# A saved iXBRL viewer page packs the white paper into a script and writes it into the page
+# only when a browser runs that script, so the file itself shows next to no text.
+SCRIPT_PAYLOAD_CHARS = 10_000
+MAX_PACKED_PAGE_WORDS = 50
+
 
 def _is_fully_bold(elem: etree._Element, text: str) -> bool:
     """True if the element is a b/strong, or its whole text sits inside b/strong children."""
@@ -18,6 +23,20 @@ def _is_fully_bold(elem: etree._Element, text: str) -> bool:
         return False
     bold = "".join("".join(b.itertext()) for b in elem.xpath("./b | ./strong"))
     return re.sub(r"\s+", " ", bold).strip() == text
+
+
+def is_script_packed(path: Path) -> bool:
+    """True if the page shows next to no text but carries a script large enough to hold a document."""
+    root = etree.parse(str(path), etree.HTMLParser(encoding="utf-8")).getroot()
+    if root is None:
+        return False
+    if not any(len("".join(script.itertext())) > SCRIPT_PAYLOAD_CHARS for script in root.iter("script")):
+        return False
+    visible = root.xpath(
+        "//text()[not(ancestor::head or ancestor::script or ancestor::style"
+        " or ancestor::noscript or ancestor::template)]"
+    )
+    return len(" ".join(visible).split()) < MAX_PACKED_PAGE_WORDS
 
 
 def load_from_xhtml(path: Path) -> dict[str, str]:

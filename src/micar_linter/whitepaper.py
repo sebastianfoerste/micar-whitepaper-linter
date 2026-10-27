@@ -151,8 +151,15 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
                 is_numbered_layout,
                 sections_from_numbered_fields,
             )
-            from micar_linter.xhtml_parser import load_from_xhtml
+            from micar_linter.xhtml_parser import is_script_packed, load_from_xhtml
 
+            if is_script_packed(path):
+                raise SystemExit(
+                    f"{path.name} holds no white paper text: its content is packed inside a script, "
+                    "as in a saved iXBRL viewer page, and appears only when a browser runs that script. "
+                    "Check the white paper's own XHTML file instead; for a published white paper, "
+                    "that is the file in the ESMA register."
+                )
             fields = extract_numbered_fields(path)
             if is_numbered_layout(fields):
                 # The template wording names every regime ("not an asset-referenced token"),

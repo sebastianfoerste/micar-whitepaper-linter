@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- XHTML input: a page that shows next to no text but carries a large script, such as a saved iXBRL viewer page that packs the white paper into a script, now stops with a message that names the cause and asks for the white paper's own XHTML file. Before, the CLI and the playground linted the empty page and reported every section Missing.
 - Release builds: `make dist` builds the wheel and the source archive from the committed tree (`git archive HEAD`), so uncommitted changes and untracked files stay out of both. `.gitignore` now also covers `.claude/settings.local.json` and `.claude/worktrees/`. The 1.2.0 source archive was built from a working tree and picked up untracked local Claude Code worktrees and settings; the 1.2.0 wheel was not affected.
 
 ## 1.2.0 - 2026-10-26

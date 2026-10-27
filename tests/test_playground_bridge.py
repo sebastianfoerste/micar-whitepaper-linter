@@ -67,6 +67,14 @@ def test_browser_cleans_up_draft_after_parser_failure(bridge):
     assert not list(workdir.iterdir())
 
 
+def test_browser_explains_a_script_packed_viewer_page(bridge):
+    lint, workdir = bridge
+    page = "<html><body><div>Loading document...</div><script>const b64 = \"" + "A" * 20_000 + "\";</script></body></html>"
+    error = json.loads(lint(page, "xhtml", "emt", "USDC-interactive-ixbrl.html"))["error"]
+    assert error.startswith("USDC-interactive-ixbrl.xhtml holds no white paper text")
+    assert not list(workdir.iterdir())
+
+
 def test_bundled_samples_match_canonical_examples():
     builder = runpy.run_path(str(ROOT / "scripts/build_playground_samples.py"))
     assert (ROOT / "docs/playground/samples.json").read_text() == builder["build_samples"]()
