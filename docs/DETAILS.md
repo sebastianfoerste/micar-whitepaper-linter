@@ -6,7 +6,7 @@ Long-form detail moved out of the README. Everything here was in the previous RE
 
 The full linter runs client-side via Pyodide. Nothing you paste leaves the page.
 
-The browser workbench accepts JSON drafts up to 1 MB and XHTML white papers up to 4 MB, includes synthetic examples for all three regimes, and presents searchable findings with citations and section navigation. Download the current report as JSON or text, or save a copy of the draft. Editing a checked draft marks the previous results as stale and disables report export until the checks run again. Python runs in a web worker so the editor stays responsive.
+The browser workbench accepts JSON drafts up to 1 MB and XHTML white papers up to 8 MB, includes synthetic examples for all three regimes, and presents searchable findings with citations and section navigation. Download the current report as JSON or text, or save a copy of the draft. Editing a checked draft marks the previous results as stale and disables report export until the checks run again. Python runs in a web worker so the editor stays responsive.
 
 For local preview, run `python3 -m http.server 8765 --bind 127.0.0.1 --directory docs` and open `http://127.0.0.1:8765/playground/`. The first runtime load needs an internet connection. The app does not persist drafts in browser storage.
 

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- Playground: XHTML files up to 8 MB are accepted (before: 4 MB). A later XHTML check may take 60 seconds before it times out (before: 30).
+
 ### Fixed
 
 - XHTML input: a page that shows next to no text but carries a large script, such as a saved iXBRL viewer page that packs the white paper into a script, now stops with a message that names the cause and asks for the white paper's own XHTML file. Before, the CLI and the playground linted the empty page and reported every section Missing.

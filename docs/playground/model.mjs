@@ -7,7 +7,7 @@ export const REGIMES = {
 };
 
 // Notified XHTML white papers run to a few megabytes once fonts and images are inlined.
-export const MAX_XHTML_BYTES = 4 * 1024 * 1024;
+export const MAX_XHTML_BYTES = 8 * 1024 * 1024;
 export const FORMATS = { json: "JSON", xhtml: "XHTML" };
 
 // A draft that opens with markup is XHTML; anything else has to be JSON.
@@ -20,7 +20,7 @@ export function draftFormat(text) {
 export function validateDraft(text) {
   if (draftFormat(text) === "json") return { format: "json", regime: parseDraft(text).type.toLowerCase() };
   if (new TextEncoder().encode(text).length > MAX_XHTML_BYTES) {
-    throw new Error("This playground accepts XHTML drafts up to 4 MB. Use the CLI for larger files.");
+    throw new Error(`This playground accepts XHTML drafts up to ${MAX_XHTML_BYTES / 1024 / 1024} MB. Use the CLI for larger files.`);
   }
   return { format: "xhtml", regime: null };
 }
