@@ -72,11 +72,11 @@ Run:
 ```bash
 uv run micar-review-summary \
   --matrix studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-matrix.csv \
-  --out studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-summary.json \
+  --out /tmp/micar-study/human-review-summary.json \
   --require-complete
 ```
 
-The command writes `human-review-summary.json` before it checks completeness, so run it only once every row is labelled; while any row remains pending it still overwrites the committed file and then exits with status 2.
+The command writes its output before it checks completeness and exits with status 2 while any row is pending. Copy the output over the committed `human-review-summary.json` only once it exits 0.
 
 ## Publication gate
 

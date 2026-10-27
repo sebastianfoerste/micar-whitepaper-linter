@@ -17,13 +17,13 @@ Required fields:
 
 ## Severity Contract
 
-Use the existing severity contract. Severity belongs to the rule: it says what is at stake if the check fails, not whether the section is there, so a BLOCKER rule can give a `review` finding and a MAJOR rule a `missing` one.
+Use the existing severity contract. Severity belongs to the rule: it says what is at stake if the check fails, not whether the section is there, so a BLOCKER rule can give a `review` finding and a MAJOR rule a `missing` one. Which tier a rule gets is a judgement recorded per rule; the environmental-impact rules, for example, cite mandatory content but are MAJOR.
 
-1. `BLOCKER`: the rule covers a disclosure or format requirement the white paper cannot be notified or submitted for approval without.
-2. `MAJOR`: the rule covers a disclosure that, if incomplete, is likely to mislead or need substantive review.
-3. `MINOR`: the rule covers a drafting or presentation point that should be cured before publication.
+1. `BLOCKER`: an open finding should keep the white paper from notification or submission for approval until it is cured, and makes `--strict` exit 1.
+2. `MAJOR`: the disclosure, if incomplete, is likely to mislead or need substantive review.
+3. `MINOR`: a drafting gap that should be cured before publication but does not gate notification, such as a disclosure that applies only in some cases (`ANNEX_I.C`, the trading platform operator, where applicable).
 
-The ranking is tested in `tests/test_linter.py`. Do not change numeric severity values without updating the tests and explaining the legal consequence.
+The order is tested in `tests/test_linter.py`. Do not change it without updating that test and explaining the legal consequence.
 
 ## Extension Steps
 

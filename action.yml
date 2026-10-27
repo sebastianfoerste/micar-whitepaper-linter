@@ -7,7 +7,7 @@ branding:
 
 inputs:
   whitepaper:
-    description: 'Path to the whitepaper draft (JSON, XHTML, or DOCX) in the consumer repository.'
+    description: 'Path to the whitepaper draft (JSON, XHTML or HTML, DOCX, PDF or Markdown) in the consumer repository.'
     required: true
   strict:
     description: 'Fail the job if any BLOCKER-severity finding is open.'

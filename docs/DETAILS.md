@@ -65,7 +65,7 @@ Inputs:
 
 | Input | Default | Effect |
 |---|---|---|
-| `whitepaper` | required | Path to a JSON or XHTML draft, or a DOCX draft from the next `v1` release |
+| `whitepaper` | required | Path to a JSON, XHTML or HTML, PDF or Markdown draft, or a DOCX draft from the next `v1` release |
 | `strict` | `true` | Fail the job while BLOCKER findings are open |
 | `extra-args` | `''` | More CLI arguments, e.g. `--json`, `--lang de` |
 | `summary` | `true` | Append a table of open findings to the job summary: rule, status, severity, citation, `file:line`, rule page |
@@ -74,7 +74,7 @@ Inputs:
 
 Output: `sarif-file`, the path of the SARIF log, for other uploaders such as reviewdog.
 
-The job fails while BLOCKER-severity findings are open. A failing job means open blockers to review, not a legal conclusion. The summary, annotations and SARIF log carry rule IDs, statuses, citations and line numbers, never draft text or the draft title, and they change no status or exit code. The job log still prints the full text report, which includes the draft title and quoted figures such as reserve percentages; treat the log as being as sensitive as the draft. The `summary`, `annotations` and `upload-sarif` inputs and the `sarif-file` output ship with the next `v1` release. The iXBRL format check (`COMMON.IXBRL_TAGGING`) never passes, so it is listed in its own summary section and not annotated.
+The job fails while BLOCKER-severity findings are open. A JSON, DOCX, PDF or Markdown draft always has one open BLOCKER, the iXBRL format check, which these formats cannot meet, so a strict job on such a draft always fails. A failing job means open blockers to review, not a legal conclusion. The summary, annotations and SARIF log carry rule IDs, statuses, citations and line numbers, never draft text or the draft title, and they change no status or exit code. The job log still prints the full text report, which includes the draft title and quoted figures such as reserve percentages; treat the log as being as sensitive as the draft. The `summary`, `annotations` and `upload-sarif` inputs and the `sarif-file` output ship with the next `v1` release. The iXBRL format check (`COMMON.IXBRL_TAGGING`) never passes, so it is listed in its own summary section and not annotated.
 
 Line numbers point at the section key in a JSON draft or the matching heading in an XHTML draft; numbered-field XHTML, DOCX and absent sections point at line 1.
 

@@ -59,7 +59,7 @@ uv run python -m micar_linter.esma_register \
   --out /tmp/micar-study/source-manifest.json
 ```
 
-The scripts in `scripts/` write to the committed files: `run_batch.py` to the findings, `render_report.py` to `findings-summary.md`, and `fetch_esma_register.py` (from the live ESMA register) and `select_sample.py` to `source-manifest.json` and `sample-manifest.csv`. Do not run `fetch_esma_register.py` or `select_sample.py`: they replace the curated manifest. Run `run_batch.py` only with the full cache in place, and `render_report.py` only to refresh the summary on purpose.
+The scripts in `scripts/` write to the committed files: `run_batch.py` to the findings, `render_report.py` to `findings-summary.md`, and `fetch_esma_register.py` (from the live ESMA register) and `select_sample.py` to `source-manifest.json` and `sample-manifest.csv`. Do not run `fetch_esma_register.py` or `select_sample.py`: they replace the curated manifest. Run `run_batch.py` only with the full cache in place, and `render_report.py` only to refresh the summary on purpose. A refresh of the findings also puts `human-review-matrix.csv`, whose rows store each cell's `detector_status`, and the study figures in `docs/playground/index.html`, `docs/overview.md` and this README out of step; no script rebuilds them.
 
 ## Validate against human labels
 
@@ -68,10 +68,12 @@ Complete `human-review-matrix.csv` under `review-protocol.md`, then run:
 ```bash
 uv run micar-review-summary \
   --matrix studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-matrix.csv \
-  --out studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-summary.json \
+  --out /tmp/micar-study/human-review-summary.json \
   --require-complete
 ```
 
-The command writes `human-review-summary.json` before it checks completeness, so run it only once every row is labelled; while any row remains pending it still overwrites the committed file and then exits with status 2. Metrics exclude uncertain, extraction-failure, and not-applicable labels.
+Copy the output over `human-review-summary.json` only once the command exits 0.
+
+The command writes its output before it checks completeness, so pointed at the committed `human-review-summary.json` it would overwrite it even while rows are pending; it then exits with status 2. Metrics exclude uncertain, extraction-failure, and not-applicable labels.
 
 The committed detector outputs are deterministic research artifacts. They are not legal advice.
