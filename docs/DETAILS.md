@@ -43,9 +43,11 @@ Check an XHTML white paper in the numbered-field layout of Implementing Regulati
 uv run micar-lint examples/numbered-other-draft.xhtml --type other
 ```
 
+A saved iXBRL viewer page packs the white paper into a script and shows it only when a browser runs that script. The linter unpacks it in memory (gzip, zlib or uncompressed, up to 8 MB) and checks the white paper it carries; a page in the numbered-field layout still needs `--type`. Its `COMMON.IXBRL_TAGGING` result stays Missing, because the viewer's rendering is not the XHTML document itself, and its findings point at line 1. A page that cannot be unpacked, or unpacks to more than 8 MB, stops with exit 1 and a message.
+
 ## Coverage caveats
 
-The Table 2 mapping (crypto-assets other than ARTs and EMTs) has been run against public register documents. The Table 3 and Table 4 mappings follow the Official Journal text and have not yet been run against a real ART or EMT white paper. The iXBRL check tests well-formedness, the Inline XBRL 1.1 namespace and the ESMA MiCA taxonomy namespace. It does not evaluate the taxonomy's existence and value assertions, so it never reports Pass.
+The Table 2 mapping (crypto-assets other than ARTs and EMTs) has been run against public register documents. The Table 3 and Table 4 mappings follow the Official Journal text and have not yet been run against a real ART or EMT white paper. The iXBRL check tests well-formedness, the Inline XBRL 1.1 namespace and the ESMA MiCA taxonomy namespace. It does not evaluate the taxonomy's existence and value assertions, so it never reports Pass. For a saved iXBRL viewer page it does not run at all and reports Missing.
 
 ## GitHub Action
 
@@ -78,7 +80,7 @@ Versions: `@v1` follows the latest 1.x release. From v1.2.0, one tag such as `v1
 
 The job fails while BLOCKER-severity findings are open. A failing job means open blockers to review, not a legal conclusion. The summary, annotations and SARIF log carry rule IDs, statuses, citations and line numbers, never draft text or the draft title, and they change no status or exit code. The job log still prints the full text report, which includes the draft title and quoted figures such as reserve percentages; treat the log as being as sensitive as the draft. The `summary`, `annotations` and `upload-sarif` inputs and the `sarif-file` output need v1.2.0 or later. The iXBRL format check (`COMMON.IXBRL_TAGGING`) never passes, so it is listed in its own summary section and not annotated.
 
-Line numbers point at the section key in a JSON draft or the matching heading in an XHTML draft; numbered-field XHTML, DOCX and absent sections point at line 1.
+Line numbers point at the section key in a JSON draft or the matching heading in an XHTML draft; numbered-field XHTML, saved iXBRL viewer pages, DOCX and absent sections point at line 1.
 
 Code scanning needs extra permissions and works on public repositories, or private ones with GitHub Code Security. Uploads from fork pull requests fail with the default read-only token:
 

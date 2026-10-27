@@ -6,7 +6,8 @@ export const REGIMES = {
   emt: "Annex III · E-money tokens",
 };
 
-// Notified XHTML white papers run to a few megabytes once fonts and images are inlined.
+// Notified XHTML white papers run to a few megabytes once fonts and images are inlined. The Python
+// loader unpacks a saved iXBRL viewer page up to the same size (MAX_UNPACKED_BYTES in xhtml_parser.py).
 export const MAX_XHTML_BYTES = 8 * 1024 * 1024;
 export const FORMATS = { json: "JSON", xhtml: "XHTML" };
 

@@ -1,5 +1,7 @@
 """Exercise the actual browser bridge against the same Python rules as the CLI."""
 
+import base64
+import gzip
 import json
 import runpy
 from pathlib import Path
@@ -8,7 +10,7 @@ import pytest
 
 from micar_linter.linter import lint_whitepaper
 from micar_linter.report import render_json, render_text
-from micar_linter.whitepaper import WhitepaperType, load_whitepaper
+from micar_linter.whitepaper import VIEWER_PAGE_NOTE, WhitepaperType, load_whitepaper
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -67,11 +69,42 @@ def test_browser_cleans_up_draft_after_parser_failure(bridge):
     assert not list(workdir.iterdir())
 
 
-def test_browser_explains_a_script_packed_viewer_page(bridge):
+def _viewer_page(payload: bytes) -> str:
+    # A saved iXBRL viewer page writes its packed white paper into itself when a browser runs the script.
+    literal = base64.b64encode(payload).decode()
+    return (
+        f'<html><body><div>Loading document...</div><script>const b64 = "{literal}";'
+        f" /* {'viewer runtime ' * 800}*/</script></body></html>"
+    )
+
+
+def test_browser_explains_a_viewer_page_it_cannot_unpack(bridge):
     lint, workdir = bridge
-    page = "<html><body><div>Loading document...</div><script>const b64 = \"" + "A" * 20_000 + "\";</script></body></html>"
-    error = json.loads(lint(page, "xhtml", "emt", "USDC-interactive-ixbrl.html"))["error"]
-    assert error.startswith("USDC-interactive-ixbrl.xhtml holds no white paper text")
+    error = json.loads(lint(_viewer_page(bytes(15_000)), "xhtml", "emt", "example-viewer.html"))["error"]
+    assert error.startswith("example-viewer.html holds no white paper text that can be read")
+    assert not list(workdir.iterdir())
+
+
+def test_browser_unpacks_a_viewer_page_like_the_cli(bridge, tmp_path):
+    lint, workdir = bridge
+    page = _viewer_page(gzip.compress((ROOT / "examples" / "numbered-other-draft.xhtml").read_bytes()))
+    result = json.loads(lint(page, "xhtml", "other", "example-viewer.html"))
+    source = tmp_path / "example-viewer.html"
+    source.write_text(page, encoding="utf-8")
+    expected = lint_whitepaper(load_whitepaper(source, WhitepaperType.OTHER))
+    assert result["report"] == json.loads(render_json(expected))
+    assert result["report"]["warnings"][0] == VIEWER_PAGE_NOTE
+    assert str(workdir) not in json.dumps(result)
+    assert not list(workdir.iterdir())
+
+
+def test_browser_refuses_a_viewer_page_over_the_unpacking_limit(bridge):
+    lint, workdir = bridge
+    markup = b"<html><body><p>" + b" " * (8 * 1024 * 1024) + b"</p></body></html>"
+    error = json.loads(lint(_viewer_page(gzip.compress(markup)), "xhtml", "other", "example-viewer.html"))["error"]
+    assert error.startswith("example-viewer.html is a saved iXBRL viewer page")
+    assert "more than 8 MB" in error
+    assert "Traceback" not in error and str(workdir) not in error
     assert not list(workdir.iterdir())
 
 

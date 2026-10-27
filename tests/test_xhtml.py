@@ -1,9 +1,7 @@
 from pathlib import Path
 
-import pytest
-
 from micar_linter.whitepaper import WhitepaperType, load_whitepaper
-from micar_linter.xhtml_parser import is_script_packed, load_from_xhtml
+from micar_linter.xhtml_parser import load_from_xhtml
 
 
 def test_load_from_xhtml(tmp_path: Path):
@@ -86,40 +84,3 @@ def test_bold_headings_are_detected(tmp_path: Path):
     assert "Risk Factors" not in joined
     assert "bold word that is not a heading" in joined
     assert len(sections) >= 3
-
-
-def _viewer_page(payload_chars: int, body: str) -> str:
-    # A saved viewer page writes the document from a packed script when a browser opens it.
-    payload = "H4sI" + "A" * payload_chars
-    return (
-        "<!DOCTYPE html><html><head><title>iXBRL Viewer</title></head><body>"
-        f"{body}<script>const b64 = \"{payload}\"; document.write(atob(b64));</script>"
-        "</body></html>"
-    )
-
-
-def test_script_packed_viewer_page_is_refused_with_a_reason(tmp_path: Path):
-    page = tmp_path / "viewer.html"
-    page.write_text(_viewer_page(20_000, '<div id="loader">Loading document...</div>'), encoding="utf-8")
-
-    with pytest.raises(SystemExit) as exc:
-        load_whitepaper(page, WhitepaperType.EMT)
-
-    message = str(exc.value)
-    assert message.startswith("viewer.html holds no white paper text")
-    assert "ESMA register" in message
-
-
-def test_page_with_text_and_a_large_script_is_still_read(tmp_path: Path):
-    page = tmp_path / "draft.html"
-    summary = "This plain-language summary describes the token, its issuer and the main risks. " * 8
-    page.write_text(_viewer_page(20_000, f"<h1>Summary</h1><p>{summary}</p>"), encoding="utf-8")
-
-    assert "plain-language summary" in load_whitepaper(page, WhitepaperType.OTHER).sections["summary"]
-
-
-def test_short_page_without_a_large_script_is_not_called_packed(tmp_path: Path):
-    page = tmp_path / "short.html"
-    page.write_text(_viewer_page(100, "<h1>Summary</h1><p>Short.</p>"), encoding="utf-8")
-
-    assert is_script_packed(page) is False

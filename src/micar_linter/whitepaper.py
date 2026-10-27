@@ -76,6 +76,8 @@ _RESERVED_METADATA_KEYS = (
     "ixbrl_validated",
     "ixbrl_issues",
     "extraction_notes",
+    # Set by the XHTML loader for a saved iXBRL viewer page; the iXBRL message reads it.
+    "script_packed_source",
     "reserve_characterisation_reviewed_by",
     "reserve_characterisation_reviewed_on",
 )
@@ -121,12 +123,50 @@ def _load_json(path: Path) -> Whitepaper:
     )
 
 
+VIEWER_PAGE_NOTE = (
+    "This file is a saved iXBRL viewer page. The checks read the white paper text packed inside it, "
+    "as the viewer renders it, and that rendering can differ from the XHTML document itself. "
+    "Its iXBRL format was not checked."
+)
+VIEWER_EMPTY_NOTE = (
+    "No section heading or numbered field was found in the white paper this page carries, "
+    "so the content checks report Missing because of the layout."
+)
+
+
+def _unpack_viewer_page(path: Path) -> bytes:
+    """Return the markup a saved iXBRL viewer page writes into itself, or stop with the reason."""
+    from micar_linter.xhtml_parser import (
+        MAX_UNPACKED_BYTES,
+        PackedPageTooLarge,
+        is_script_packed,
+        unpack_script_payload,
+    )
+
+    try:
+        document = unpack_script_payload(path)
+    except PackedPageTooLarge:
+        raise SystemExit(
+            f"{path.name} is a saved iXBRL viewer page whose packed white paper unpacks to more than "
+            f"{MAX_UNPACKED_BYTES // (1024 * 1024)} MB, the limit for unpacking. Check the white paper's own "
+            "XHTML file instead; for a published white paper, that is the file in the ESMA register."
+        ) from None
+    if document is None or is_script_packed(document):
+        raise SystemExit(
+            f"{path.name} holds no white paper text that can be read: its content is packed inside a script, "
+            "as in a saved iXBRL viewer page, in a form that cannot be unpacked. Check the white paper's own "
+            "XHTML file instead; for a published white paper, that is the file in the ESMA register."
+        )
+    return document
+
+
 def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | None) -> Whitepaper:
     if not path.exists():
         raise SystemExit(f"File not found: {path}")
 
     ixbrl_issues = []
     ixbrl_validated = False
+    script_packed = False
     extraction_notes: tuple[str, ...] = ()
     extracted = ""
     try:
@@ -153,27 +193,28 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
             )
             from micar_linter.xhtml_parser import is_script_packed, load_from_xhtml
 
-            if is_script_packed(path):
-                raise SystemExit(
-                    f"{path.name} holds no white paper text: its content is packed inside a script, "
-                    "as in a saved iXBRL viewer page, and appears only when a browser runs that script. "
-                    "Check the white paper's own XHTML file instead; for a published white paper, "
-                    "that is the file in the ESMA register."
-                )
-            fields = extract_numbered_fields(path)
+            script_packed = is_script_packed(path)
+            source = _unpack_viewer_page(path) if script_packed else path
+            fields = extract_numbered_fields(source)
             if is_numbered_layout(fields):
                 # The template wording names every regime ("not an asset-referenced token"),
                 # so the regime of a numbered white paper is never inferred from its text.
                 if whitepaper_type is None:
+                    subject = f"The white paper packed in {path.name}" if script_packed else path.name
                     raise SystemExit(
-                        f"{path.name} uses the numbered fields of Implementing Regulation (EU) 2024/2984. "
+                        f"{subject} uses the numbered fields of Implementing Regulation (EU) 2024/2984. "
                         "State the regime explicitly: other, art or emt."
                     )
                 sections, extraction_notes = sections_from_numbered_fields(fields, whitepaper_type)
             else:
-                sections = load_from_xhtml(path)
-            ixbrl_issues = validate_ixbrl(path)
-            ixbrl_validated = True
+                sections = load_from_xhtml(source)
+            if script_packed:
+                # A viewer's rendering is not the XHTML document itself, so validate_ixbrl does not run.
+                viewer_notes = (VIEWER_PAGE_NOTE, VIEWER_EMPTY_NOTE) if not sections else (VIEWER_PAGE_NOTE,)
+                extraction_notes = (*viewer_notes, *extraction_notes)
+            else:
+                ixbrl_issues = validate_ixbrl(path)
+                ixbrl_validated = True
     except SystemExit:
         raise
     except Exception as exc:
@@ -209,6 +250,7 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
         "ixbrl_validated": ixbrl_validated,
         "ixbrl_issues": tuple(ixbrl_issues),
         "extraction_notes": extraction_notes,
+        "script_packed_source": script_packed,
     }
 
     return Whitepaper(

@@ -15,7 +15,9 @@ SUFFIXES = {"json": ".json", "xhtml": ".xhtml"}
 def lint_draft(draft_text: str, draft_format: str = "json", regime: str = "", name: str = "") -> str:
     # The loader titles a document after its file name, so keep the imported name without its path.
     stem = re.sub(r"[^\w .-]", "_", Path(name).stem).strip(" .") or "whitepaper-draft"
-    path = WORKDIR / f"{stem}{SUFFIXES[draft_format]}"
+    # An imported .html page keeps that suffix, so messages and source anchors name it as the CLI does.
+    html = draft_format == "xhtml" and Path(name).suffix.lower() in (".html", ".htm")
+    path = WORKDIR / f"{stem}{'.html' if html else SUFFIXES[draft_format]}"
     try:
         WORKDIR.mkdir(parents=True, exist_ok=True)
         path.write_text(draft_text, encoding="utf-8")
