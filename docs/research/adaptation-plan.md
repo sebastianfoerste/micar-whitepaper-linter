@@ -33,9 +33,9 @@ States captured at 1440×900 and 390×844 (git-ignored, `research/_captures/base
 1. `SOURCE_DATE_EPOCH` is read by `review_table.py` and `collaboration_workspace.py`; `workspace.py` stamps the vault's `generated_at` with the current time.
 2. The text report's closing paragraph cites Art. 8, 16, 17, 18 and 51 in the German form (`Art. 8 Abs. 1 …`) whatever `--citation-style` says (`report.py`, `render_text`). Same class of drift as the German citations in `reports/sample-*.txt`. (Fixed on `main` since: the paragraph and the sample reports follow `--citation-style`, English by default.)
 3. `.github/ISSUE_TEMPLATE/rule-proposal.yml` already exists; the rule pages link to it rather than adding a second template.
-4. `examples/incomplete.json` is an ART draft, so `make demo` shows the 18 ART rules.
+4. `examples/incomplete.json` is an ART draft, so `make demo` shows the 18 ART rules. (20 since the two LEI rules were added.)
 5. Pyodide 0.28.2's distribution has no `python-docx` (checked against the release tarball), so H5 needs a vendored wheel, as the hypothesis assumed.
-6. The Action's `uvx --from "${GITHUB_ACTION_PATH}"` build is cached by uv on `pyproject.toml`, not on `src/`. Locally, uvx reused a stale build of the same version until `--no-cache` was passed. A moved `v1` tag without a version bump could hit this on a runner with a restored uv cache.
+6. The Action's `uvx --from "${GITHUB_ACTION_PATH}"` build is cached by uv on `pyproject.toml`, not on `src/`. Locally, uvx reused a stale build of the same version until `--no-cache` was passed. A moved `v1` tag without a version bump could hit this on a runner with a restored uv cache. (The Action has run `uvx --no-cache` since 1.2.0.)
 7. The baseline playground already carried one serious axe violation (above).
 
 Everything else in the briefing matched the code: 16/18/14 rules, the two never-pass rules, eight CLI flags missing from `docs/API.md`, `displayCitation` as `TODO(human)`, unpinned `setup-uv@v5` in `action.yml`, no `docs/index.html`, no `docs/adr/`.

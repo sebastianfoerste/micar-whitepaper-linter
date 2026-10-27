@@ -13,10 +13,9 @@ class Severity(IntEnum):
     if the check fails, so a BLOCKER rule can give a "review" finding and a
     MAJOR rule a "missing" one.
 
-    BLOCKER: the rule covers a requirement without which the white paper cannot
-             be notified or submitted for approval (Art. 8(1), 16(2) second
-             subpara., 17(1)(a), 18(2)(k), 51(11) MiCAR), so an open finding
-             should hold the draft back until it is cured.
+    BLOCKER: an open finding should keep the white paper from notification or
+             submission for approval (Art. 8(1), 16(2) second subpara.,
+             17(1)(a), 18(2)(k), 51(11) MiCAR) until it is cured.
     MAJOR:   the rule covers a disclosure that, if materially incomplete, is
              likely to mislead under Art. 6(2) / 19(2) / 51(2) MiCAR.
     MINOR:   drafting gap that should be cured before publication but does

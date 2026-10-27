@@ -12,14 +12,14 @@ Required fields:
 2. `citation`: Pinpoint citation to Regulation (EU) 2023/1114 or a documented technical standard, in the canonical German form (`Art. 6 Abs. 7 MiCAR`). The text report (by default) and the CI outputs show the English form; the JSON report and the SARIF rule properties carry both (`citation` and `citation_en`); the rule pages show the English form with the canonical form beside it; and the other outputs (audit log, coverage, remediation, review table, review bundle) and the playground's findings list show the German form.
 3. `section`: the section key the generic checks read, as in the `sections` of a JSON draft (`COMMON.IXBRL_TAGGING` reads no section, and the two LEI rules read every section).
 4. `label`: Human-readable description of the disclosure requirement.
-5. `severity`: `BLOCKER`, `MAJOR` or `MINOR`.
+5. `severity`: `BLOCKER`, `MAJOR` or `MINOR` (default `MAJOR`; set it explicitly).
 6. `min_words` (default 30, for drafts in both languages), required terms, required patterns or prohibited patterns. The three lists each have an optional German variant (`required_terms_de`, `required_patterns_de`, `prohibited_patterns_de`); without one, a German draft is checked against the English list.
 
 ## Severity Contract
 
 Use the existing severity contract. Severity belongs to the rule: it says what is at stake if the check fails, not whether the section is there, so a BLOCKER rule can give a `review` finding and a MAJOR rule a `missing` one. Which tier a rule gets is a judgement recorded per rule; the environmental-impact rules, for example, cite mandatory content but are MAJOR.
 
-1. `BLOCKER`: an open finding should keep the white paper from notification or submission for approval until it is cured, and makes `--strict` exit 1. Two BLOCKER rules never pass, so they stay open in every report that runs them: `COMMON.IXBRL_TAGGING` in every regime (the tool checks the iXBRL format only; tag completeness needs a taxonomy validator) and `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW` in ART reports (the floor needs lawyer review).
+1. `BLOCKER`: an open finding should keep the white paper from notification or submission for approval until it is cured, and makes `--strict` exit 1. Two BLOCKER rules never pass for a draft the loaders read (CLI, Action and playground), so they stay open in every such report that runs them: `COMMON.IXBRL_TAGGING` in every regime (the tool checks at most the iXBRL format; tag completeness needs a taxonomy validator) and `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW` in ART reports (the floor needs lawyer review).
 2. `MAJOR`: the disclosure, if incomplete, is likely to mislead or need substantive review.
 3. `MINOR`: a drafting gap that should be cured before publication but does not gate notification, such as a disclosure that applies only in some cases (`ANNEX_I.C`, the trading platform operator, where applicable).
 
@@ -27,8 +27,8 @@ The order is tested in `tests/test_linter.py`. Do not change it without updating
 
 ## Extension Steps
 
-1. Add the rule to `common.py` if every regime needs it, or to the annex module of its regime: `annex_i.py`, `annex_ii.py` or `annex_iii.py`. Rule IDs are stable: add new ones, never rename existing ones.
-2. Keep the citation precise and stable. A newly cited act needs an entry in `ACT_URLS` in `citations.py`, and an English name in `to_english()` unless it is a `VO (EU)` regulation or already English.
+1. Add the rule to `common.py` if every regime needs it, or to the annex module of its regime: `annex_i.py`, `annex_ii.py` or `annex_iii.py`. Rule IDs are stable: add new ones, never rename existing ones. A rule whose terms or minimum length differ for one regime keeps one ID: add a second `Rule` with that ID to that regime's set (as `EMT_COMMON_RULES` in `common.py` does for `COMMON.RISK_WARNING`), and explain the difference in `VARIANT_NOTES` in `scripts/build_rule_docs.py`, or the rule-page build stops.
+2. Keep the citation precise and stable. A newly cited act needs an entry in `ACT_URLS` in `citations.py`, and an English name in `to_english()` unless it is a `VO (EU)` regulation or already English. If you have read the citation against the Official Journal, record when in `OJ_CHECKED` in `scripts/build_rule_docs.py`; otherwise the rule page says the citation has not been re-verified (`VERIFICATION_NOTE`).
 3. Use deterministic terms or regex patterns before adding any parser complexity. A rule that reads a new section key also needs a heading pattern in `SECTION_PATTERNS` (`document.py`) and, for numbered-field XHTML, a mapping in `numbered_fields.py`. A generic rule that relies on `required_patterns`, or has no listed terms and `min_words=0`, also needs its own branch in `examples()` in `scripts/build_rule_docs.py`, or the rule-page build stops.
 4. A rule that needs its own logic is dispatched by rule ID in `linter.py` and special-cased in `scripts/build_rule_docs.py`, and may need entries in `ci_outputs.py`. `AGENTS.md` (section 4) lists every place.
 5. Add or update a synthetic example that exercises the rule, and a test proving the finding is cited and has the intended severity.
