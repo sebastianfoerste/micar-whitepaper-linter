@@ -8,7 +8,6 @@ only the part letter is treated as reliable.
 
 from __future__ import annotations
 
-import io
 import re
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -20,6 +19,7 @@ from lxml import etree
 from micar_linter.placeholders import is_not_applicable, is_placeholder
 from micar_linter.template_fields import FIELD_NAMES
 from micar_linter.whitepaper import WhitepaperType
+from micar_linter.xhtml_parser import element_text, parse_html, text_fragments
 
 # A layout counts as numbered once fields from this many distinct parts carry content.
 MIN_PARTS = 3
@@ -152,16 +152,12 @@ class NumberedField:
         return not (is_not_applicable(self.content) or self.placeholder)
 
 
-def _clean(text: str | None) -> str:
-    return re.sub(r"\s+", " ", text or "").strip()
-
-
 def _tag(element: etree._Element) -> str:
     return element.tag.lower() if isinstance(element.tag, str) else ""
 
 
 def _table_field(row: etree._Element) -> NumberedField | None:
-    cells = [_clean("".join(cell.itertext())) for cell in row.xpath("./td | ./th")]
+    cells = [element_text(cell) for cell in row.xpath("./td | ./th")]
     if len(cells) < 2:
         return None
     match = _FIELD_ID.match(cells[0])
@@ -184,18 +180,16 @@ def _field_id(match: re.Match[str]) -> str:
 def _text_nodes(
     element: etree._Element, table_rows: dict[etree._Element, NumberedField]
 ) -> Iterator[str | NumberedField]:
-    """Yield text fragments in document order, with each table field row as one item."""
-    if element in table_rows:
-        yield table_rows[element]
-        return
-    if _tag(element) in _SKIPPED_TAGS:
-        return
-    if isinstance(element.tag, str) and (text := _clean(element.text)):
-        yield from _INLINE_FIELD.split(text)
-    for child in element:
-        yield from _text_nodes(child, table_rows)
-        if tail := _clean(child.tail):
-            yield from _INLINE_FIELD.split(tail)
+    """Yield text fragments in document order, with each table field row as one item.
+
+    Fragments break where text_fragments breaks them, so a word that a PDF conversion split with an
+    empty spacer span comes out whole.
+    """
+    for node in text_fragments([element], lambda child: child in table_rows or _tag(child) in _SKIPPED_TAGS):
+        if isinstance(node, str):
+            yield from _INLINE_FIELD.split(node)
+        elif node in table_rows:
+            yield table_rows[node]
 
 
 def extract_numbered_fields(source: Path | bytes) -> list[NumberedField]:
@@ -203,8 +197,7 @@ def extract_numbered_fields(source: Path | bytes) -> list[NumberedField]:
 
     source is the file, or markup unpacked from a saved iXBRL viewer page.
     """
-    document = io.BytesIO(source) if isinstance(source, bytes) else str(source)
-    tree = etree.parse(document, etree.HTMLParser(encoding="utf-8"))
+    tree = parse_html(source)
     root = tree.getroot()
     if root is None:
         return []

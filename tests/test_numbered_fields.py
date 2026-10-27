@@ -144,6 +144,64 @@ def test_emt_safeguarding_stays_missing_when_no_field_describes_it(tmp_path: Pat
     assert any("no answered field mentions safeguarding" in warning for warning in report.warnings)
 
 
+def test_spacer_spans_inside_words_leave_the_words_whole(tmp_path: Path):
+    # The layout of pdf2htmlEX: pages of absolutely placed lines, with empty spacer spans inside words.
+    path = _write(
+        tmp_path,
+        '<div class="pf" data-page-no="1"><div class="pc">'
+        '<div class="t">04<span class="_ _2"></span>Statement in accor<span class="_ _0"></span>dance with Article 51(4)</div>'
+        '<div class="t"><ix:nonNumeric name="mica:RiskWarning" contextRef="c1" continuedAt="k1">'
+        'The e-money token may lose its val<span class="_ _1"></span>ue in part or in full. '
+        'The ri<span class="_ _0"></span>sk of lo<span class="_ _0"></span>ss rests</ix:nonNumeric></div>'
+        '</div></div><div class="pf" data-page-no="2"><div class="pc">'
+        '<div class="t"><ix:continuation id="k1">with the hol<span class="_ _0"></span>der.</ix:continuation></div>'
+        '<div class="t">A.1 Na<span class="_ _0"></span>me</div>'
+        '<div class="t"><ix:nonNumeric name="mica:IssuerName" contextRef="c1">'
+        'Example Money Financ<span class="_ _0"></span>ial Europe SAS</ix:nonNumeric></div>'
+        '<div class="t">B.1<span class="_ _2"></span>Name of the e-money token</div>'
+        '<div class="t">Exam<span class="_ _1"></span>ple Euro Token</div>'
+        '<div class="t">F.1<span class="_ _2"> </span>Description of the ri<span class="_ _0"></span>sks</div>'
+        '<div class="t">Holders face li<span class="_ _0"></span>quidity and market ri<span class="_ _0"></span>sks.</div>'
+        "</div></div>",
+    )
+    fields = {field.field_id: field for field in extract_numbered_fields(path)}
+    # A spacer with no space in it still keeps "04" and "B.1" apart from their labels.
+    assert set(fields) == {"04", "A.1", "B.1", "F.1"}
+    assert fields["04"].content.startswith("Statement in accordance with Article 51(4) ")
+    assert fields["04"].content.endswith("may lose its value in part or in full. The risk of loss rests with the holder.")
+    assert (fields["A.1"].label, fields["A.1"].content) == ("Name", "Example Money Financial Europe SAS")
+    assert fields["B.1"].content.endswith("Example Euro Token")
+    assert fields["F.1"].content.endswith("Holders face liquidity and market risks.")
+
+    report = lint_whitepaper(load_whitepaper(path, WhitepaperType.EMT))
+    warning = next(finding for finding in report.findings if finding.rule.rule_id == "COMMON.RISK_WARNING")
+    assert not any(issue.startswith("Missing review terms") for issue in warning.issues)
+
+
+def test_spacer_widths_in_the_css_separate_words_and_kerning_does_not(tmp_path: Path):
+    # Converters in the style of pdf2htmlEX can leave a gap between words as an empty spacer;
+    # its CSS width, here 14.6px against a 32px font, marks it as one.
+    path = _write(
+        tmp_path,
+        "<style>._0{margin-left:-1.1px;}._1{width:1.2px;}._2{width:14.6px;}.fs0{font-size:32px;}</style>"
+        '<div class="pf"><div class="pc">'
+        '<div class="t fs0">A.2<span class="_ _1"></span>\u2013 Legal form</div>'
+        '<div class="t fs0">Simplified joint<span class="_ _2"></span>stock comp<span class="_ _0"></span>any</div>'
+        '<div class="t fs0">B.2<span class="_ _2"></span>Name of the e-money token</div>'
+        "</div></div>",
+    )
+    fields = {field.field_id: field for field in extract_numbered_fields(path)}
+    assert set(fields) == {"A.2", "B.2"}
+    assert fields["A.2"].content.endswith("Simplified joint stock company")
+    assert fields["B.2"].content == "Name of the e-money token"
+
+
+def test_table_cells_keep_their_paragraphs_apart(tmp_path: Path):
+    row = "<tr><td>A.1</td><td>Name</td><td><p>Example AG.</p><p>Formerly Sample<br/>GmbH.</p></td></tr>"
+    (field,) = extract_numbered_fields(_write(tmp_path, f"<table>{row}</table>"))
+    assert field.content == "Example AG. Formerly Sample GmbH."
+
+
 def test_labels_that_run_into_the_answers_are_reported(tmp_path: Path):
     # A rendering converted from PDF puts each field number in its own text run, so the label joins the answer.
     rows = "".join(

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import re
+from collections.abc import Iterable
 
 from micar_linter import citations
 from micar_linter.linter import Report
@@ -15,6 +17,9 @@ _FILING_CITATION = (
     "Art. 8 Abs. 1, Art. 16 Abs. 2 UAbs. 2, Art. 17 Abs. 1 Buchst. a, Art. 18 Abs. 2 Buchst. k, "
     "Art. 51 Abs. 11 MiCAR"
 )
+# Characters that start inline Markdown or HTML. The loader's notes contain none, but an
+# unrecognised-section warning quotes a section key from the draft.
+_MARKDOWN_MARKUP = re.compile(r"[\\`*_~\[\]<>&]")
 
 
 def render_text(report: Report, citation_style: str = "en") -> str:
@@ -114,6 +119,7 @@ def render_audit_log(report: Report, source_file: str, sha256: str) -> str:
     lines.append(f"- **SHA-256 Checksum**: `{sha256}`")
     lines.append(f"- **Review Timestamp**: {now_str}")
     lines.append("")
+    lines.extend(render_extraction_notes(report.warnings))
     lines.append("## Rule Compliance Checklist")
     lines.append("")
     lines.append("| Rule ID | Citation | Description | Severity | Status | Reviewer Checked |")
@@ -183,6 +189,27 @@ def _open_findings_note(report: Report) -> str:
         f"{'finding' if one else 'findings'} resolved or reviewed, and substantive lawyer review "
         "is still required."
     )
+
+
+def render_extraction_notes(warnings: Iterable[str]) -> list[str]:
+    """The Markdown section that lists the report warnings, for a review file to place before its results.
+
+    No lines when there are no warnings. Each warning is one list item shown as written: its line breaks
+    become spaces and its markup characters are escaped, so a section key quoted from the draft cannot add
+    a heading, an alert, an image or HTML to the file.
+    """
+    notes = [_MARKDOWN_MARKUP.sub(r"\\\g<0>", " ".join(warning.split())) for warning in warnings]
+    if not notes:
+        return []
+    return [
+        "## Extraction Notes",
+        "",
+        "The linter recorded these notes while reading the draft. They can qualify any automated result, "
+        "including a Pass, so read them before relying on the results.",
+        "",
+        *(f"- {note}" for note in notes),
+        "",
+    ]
 
 
 def render_coverage_table(report: Report) -> str:
