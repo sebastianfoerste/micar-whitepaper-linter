@@ -102,8 +102,27 @@ def test_block_boundaries_separate_words_and_inline_spacers_do_not(tmp_path: Pat
     )
     sections = load_from_xhtml(path)
     assert sections["issuer"] == "The issuer is EuroStable AG. Its seat is in Frankfurt."
-    assert "Market risk. Liquidity risk." in sections["risks"]
+    assert "Market risk.\nLiquidity risk." in sections["risks"]
     assert "lose the value of the token" in sections["risks"]
     # Finding anchors and SARIF lines read the heading as the loader does.
     assert _xhtml_section_identifiers(path)["issuer"] == "xhtml:issuer-info"
     assert _xhtml_heading_lines(path)["issuer"] == 2
+
+
+def test_nested_blocks_are_read_once(tmp_path: Path):
+    path = tmp_path / "nested.html"
+    path.write_text(
+        "<html><body><h2>Risk Factors</h2>"
+        "<ul><li><p>Market risk.</p><p>Liquidity risk.</p></li>"
+        "<li>Custody risk.<ul><li>Loss of keys.</li></ul></li></ul>"
+        "<div><ul><li>Loss of value.</li></ul></div>"
+        "</body></html>",
+        encoding="utf-8",
+    )
+    assert load_from_xhtml(path)["risks"].split("\n") == [
+        "Market risk.",
+        "Liquidity risk.",
+        "Custody risk.",
+        "Loss of keys.",
+        "Loss of value.",
+    ]
