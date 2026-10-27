@@ -129,6 +129,8 @@ These choices need a decision from the owner:
 5. `ANNEX_III.SAFEGUARDING` has no white paper item, and on its wording Art. 54 may not reach credit-institution issuers. It can stay as a prompt, lose its blocker severity, or be retired; retiring it removes a rule page and a SARIF rule ID that users may refer to. If it stays, the German "sicher" also matches "sichere Aktiva" in Art. 54(b), so it can pass a section that describes the investment of the funds and says nothing on how they are safeguarded.
 6. `COMMON.LEI_CHECK_DIGITS` and `COMMON.LEI_CONSISTENCY`: whether a draft that gives another identifier, as No. 5 allows, gets review in place of missing.
 
+The owner decided choices 3 to 6 on 27 October 2026. The legal form and registered address terms go (3). The valuation check moves to Annex II Part D No. 10(c) and drops "audit" (4). `ANNEX_III.SAFEGUARDING` stays as a prompt for review with the proposed terms and MAJOR severity (5). A party section without an LEI goes to review (6). Choices 1 and 2 remain open and belong to the class 3 fix.
+
 ## Effect on the examples
 
 The results below come from linting every committed example and the starter template with the proposed terms in place of the current ones (`ANNEX_II.G.VALUATION_AUDIT` keeps its terms; `ANNEX_III.SAFEGUARDING` runs with the proposed ones). The rules and examples are those on `main` at `0e0939d`; #49's version of `art-stablecoin.json` gives the same result.
@@ -154,6 +156,8 @@ Two points affect the choice of German terms. The adjective appears as "vermöge
 2. Class 4: the citations and labels of `ANNEX_II.G.CUSTODY`, `ANNEX_II.I` and the LEI rules.
 3. Class 3: the remaining terms, `ANNEX_II.G.COMPOSITION_DISCLOSURE` included, with the examples rewritten to the Annex items and the generated outputs refreshed.
 4. `ANNEX_II.G.VALUATION_AUDIT` and `ANNEX_III.SAFEGUARDING`, once the owner has decided what each rule checks.
+
+Fixes 1, 2 and 4 went up on 27 October 2026 as #51, #52 and #53. The `ANNEX_II.I` citation of fix 2 went into #49, which already rewrites that rule. Fix 3 waits for choices 1 and 2.
 
 ## Limits
 
