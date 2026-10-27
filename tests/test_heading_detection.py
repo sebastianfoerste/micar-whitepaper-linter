@@ -1130,8 +1130,9 @@ def test_pdf_summary_table_field_that_names_no_section_ends_the_field_before_it(
     assert "A.3 Registered address 12 Rue de la Gare" in sections["offeror"]
     findings = _findings(path)
     assert findings["COMMON.NOTIFICATION_DATE"].rule.severity is Severity.MAJOR
+    # The three words are a calendar date, which is all the field asks for.
     assert (findings["COMMON.NOTIFICATION_DATE"].status, findings["COMMON.NOTIFICATION_DATE"].word_count) == (
-        "review",
+        "pass",
         3,
     )
     assert findings["ANNEX_I.A"].rule.severity is Severity.BLOCKER
