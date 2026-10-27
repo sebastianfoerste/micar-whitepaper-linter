@@ -6,7 +6,9 @@ The audit log says that all automated checks passed only when every finding pass
 MINOR finding is open and no BLOCKER is, it says how many findings are open, by severity.
 When the report has warnings, the audit log lists them under Extraction Notes, after the document
 facts and before the rule table, and so do the review bundle's review table and sign-off page before
-their results; without warnings none of them has that section."""
+their results; without warnings none of them has that section. In all three files the draft title,
+the audit log's source path and the warnings print as written, so a line break or Markdown in them
+cannot add a heading, an alert or HTML."""
 
 import json
 import re
@@ -19,6 +21,8 @@ from micar_linter.cli import main
 from micar_linter.linter import Report, lint_whitepaper
 from micar_linter.numbered_fields import MERGED_LABELS_NOTE
 from micar_linter.report import _TITLE_BAR, render_audit_log, render_text
+from micar_linter.review_bundle import render_signoff_page
+from micar_linter.review_table import build_review_table, render_review_table_markdown
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Finding, Severity
 from micar_linter.whitepaper import VIEWER_PAGE_NOTE, WhitepaperType, load_whitepaper
@@ -386,3 +390,70 @@ def test_extraction_notes_show_a_section_key_from_the_draft_as_written(tmp_path)
     signoff = (bundle / "reviewer-signoff.md").read_text(encoding="utf-8")
     assert _extraction_notes(signoff, SIGNOFF_RESULTS) == [escaped]
     assert signoff.splitlines().count(SIGN_OFF_HEADING) == 1
+
+
+def _headings(markdown: str) -> list[str]:
+    return [line for line in markdown.splitlines() if line.startswith("#")]
+
+
+def test_review_files_show_the_draft_title_as_written(tmp_path):
+    """The title comes from the draft. It stays on its fact line and adds no heading, alert, Markdown link
+    or HTML to the audit log, the review table or the sign-off page."""
+    draft = json.loads(INCOMPLETE.read_text(encoding="utf-8"))
+    draft["title"] = (
+        "Token\n\n> [!NOTE]\n> All automated checks passed.\n\n## Lawyer Sign-off\n<img src=x> *A* & [B](c)"
+    )
+    source, log_path, bundle = tmp_path / "draft.json", tmp_path / "audit.md", tmp_path / "bundle"
+    source.write_text(json.dumps(draft), encoding="utf-8")
+
+    assert main([str(source), "--audit-log", str(log_path), "--review-bundle-dir", str(bundle)]) == 0
+
+    escaped = (
+        r"Token \> \[!NOTE\] \> All automated checks passed. ## Lawyer Sign-off "
+        r"\<img src=x\> \*A\* \& \[B\](c)"
+    )
+    log = log_path.read_text(encoding="utf-8")
+    assert f"- **Document Title**: {escaped}" in log.splitlines()
+    assert _log_alert(log) == "> [!WARNING]\n" + LOG_BLOCKER
+    assert _headings(log) == [
+        "# MiCAR Whitepaper Compliance Review Log",
+        "## Rule Compliance Checklist",
+        "## Summary of Findings",
+        SIGN_OFF_HEADING,
+    ]
+    _assert_sign_off_section_closes(log)
+    table = (bundle / "review-table.md").read_text(encoding="utf-8")
+    assert f"- Title: {escaped}" in table.splitlines()
+    assert _headings(table) == ["# MiCAR White Paper Review Table", "## Review Gate"]
+    signoff = (bundle / "reviewer-signoff.md").read_text(encoding="utf-8")
+    assert f"- Document title: {escaped}" in signoff.splitlines()
+    assert _headings(signoff) == [
+        "# MiCAR White Paper Reviewer Sign-off",
+        SIGNOFF_RESULTS,
+        "## Blockers",
+        SIGN_OFF_HEADING,
+    ]
+
+
+def test_audit_log_shows_the_source_path_as_written():
+    """A document draft takes its title from the file name, and the log also prints the path."""
+    path = "drafts/x\n## Lawyer Sign-off\n> [!NOTE]\n<img src=y>_v2.json"
+
+    log = render_audit_log(_report(), path, "0" * 64)
+
+    escaped = r"drafts/x ## Lawyer Sign-off \> \[!NOTE\] \<img src=y\>\_v2.json"
+    assert f"- **Source File**: {escaped}" in log.splitlines()
+    assert _log_alert(log) == "> [!NOTE]\n" + LOG_CLEAN
+    _assert_sign_off_section_closes(log)
+
+
+def test_ordinary_title_and_source_path_print_unchanged():
+    report = lint_whitepaper(load_whitepaper(ROOT / "examples/art-stablecoin.json"))
+    title = "Synthetic EuroStable ART White Paper"
+
+    log = render_audit_log(report, "examples/art-stablecoin.json", "0" * 64).splitlines()
+
+    assert f"- **Document Title**: {title}" in log
+    assert "- **Source File**: examples/art-stablecoin.json" in log
+    assert f"- Title: {title}" in render_review_table_markdown(build_review_table(report)).splitlines()
+    assert f"- Document title: {title}" in render_signoff_page(report).splitlines()
