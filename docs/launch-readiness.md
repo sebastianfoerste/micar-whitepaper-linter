@@ -12,7 +12,7 @@ The core proof is legal automation discipline: rule IDs, citations, severity lev
 
 ```mermaid
 flowchart TD
-  A[White paper JSON draft] --> B[Regime detector]
+  A[White paper draft: JSON, XHTML or HTML, DOCX, PDF or Markdown] --> B[Regime: JSON type field, --type or inferred]
   B --> C[Rule set selection]
   C --> D[Deterministic checks]
   D --> E[Findings with citations and severity]
@@ -46,15 +46,15 @@ pip install -e .
 micar-lint examples/art-stablecoin.json
 ```
 
-Optional PDF and DOCX ingestion:
+DOCX ingestion needs the optional `docx` extra; PDF support is part of the base install:
 
 ```bash
-pip install -e ".[all]"
+pip install -e ".[docx]"
 ```
 
 ## Demo path
 
-1. Run the ART example. Most checks pass. The blockers that stay open are the iXBRL format gate, which no JSON draft passes, the deposit-floor item, which never passes automatically, and the reserve composition and custody items, which go to review.
+1. Run the full ART example (`examples/art-stablecoin.json`). Its sections are drafted, but four BLOCKERs stay open, among them the iXBRL format check, which a JSON draft never passes.
 2. Run the incomplete example in strict mode.
 3. Show that blocker findings create a non-zero exit code.
 4. Run JSON output and inspect machine-readable findings.

@@ -14,5 +14,6 @@ jobs:
         with:
           whitepaper: whitepaper.json
           # Report mode: the check stays green and lists findings in the log.
-          # Set to 'true' to fail the build on any open BLOCKER before you notify.
+          # Set to 'true' to fail the build on any open BLOCKER before you notify. The build then
+          # always fails: the iXBRL format BLOCKER never passes for whitepaper.json (see README).
           strict: 'false'
