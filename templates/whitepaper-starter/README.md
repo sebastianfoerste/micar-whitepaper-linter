@@ -18,11 +18,11 @@ You can also lint drafts [live in the browser](https://sebastianfoerste.github.i
 
 ## What the linter checks
 
-Deterministic rules (no LLM, same input, same findings). For each mandatory section (summary, risk warning, management-body statement, redemption, reserve of assets, …) and each annex-specific item for the token type, the linter checks that the section exists, meets a minimum length and contains the expected keywords. It does not compare your text with the wording MiCAR prescribes (from linter v1.2.0, the one exception is the English first-page statement for Title II and e-money token white papers under Art. 6 Abs. 3 and Art. 51 Abs. 3 MiCAR), and it does not judge whether a disclosure is accurate or adequate. Findings are staged pass / review / missing.
+Deterministic rules (no LLM, same input, same findings). For each mandatory section (summary, risk warning, management-body statement, redemption, reserve of assets, …) and each annex-specific item for the token type, the linter checks that the section exists, meets a minimum length and contains the expected keywords. It does not compare your text with the wording MiCAR prescribes (the one exception, once a linter release includes it, is the English first-page statement for Title II and e-money token white papers under Art. 6 Abs. 3 and Art. 51 Abs. 3 MiCAR), and it does not judge whether a disclosure is accurate or adequate. Findings are staged pass / review / missing.
 
 The rules, their citations and their tests live in [micar-whitepaper-linter](https://github.com/sebastianfoerste/micar-whitepaper-linter), which is the source of truth; this README only summarises them.
 
-The workflow pins the linter's `@v1` tag. Linter v1.2.0 corrects the asset-referenced token redemption checks (Art. 39 Abs. 2 MiCAR) and the reserve citations (Art. 36 MiCAR) and adds the first-page statement check; the pin will be updated once v1.2.0 is released.
+The workflow pins the linter's `@v1` tag, which moves to each linter release. `@v1` runs v1.2.1, which does not yet correct the asset-referenced token redemption checks (Art. 39 Abs. 2 MiCAR) and the reserve citations (Art. 36 MiCAR) or check the first-page statement; they reach `@v1` with the release that includes them.
 
 ## Scope and honesty
 

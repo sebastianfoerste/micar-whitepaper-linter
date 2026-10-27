@@ -42,3 +42,13 @@ def test_never_pass_rules_publish_no_passing_example():
 
 def test_sarif_help_uri_base_matches_the_pages_location():
     assert RULE_DOCS_BASE.endswith("/micar-whitepaper-linter/rules/")
+
+
+# Regression: the pages of the two rules whose citation this branch corrected said the citation
+# was the rule's own, unchanged, and not re-verified.
+def test_pages_of_corrected_citations_say_where_they_were_read():
+    pages = BUILD["build_pages"]()
+    for rule_id in ("ANNEX_II.G.VALUATION_AUDIT", "ANNEX_II.I"):
+        page = pages[f"{rule_id}.html"]
+        assert "own, unchanged" not in page, rule_id
+        assert "legalize-dev/legalize-eu" in page, rule_id

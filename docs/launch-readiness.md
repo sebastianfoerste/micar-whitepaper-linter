@@ -54,7 +54,7 @@ pip install -e ".[all]"
 
 ## Demo path
 
-1. Run the ART example. Most checks pass; the deposit-floor item never passes automatically and stays open for a lawyer.
+1. Run the ART example. Most checks pass. The blockers that stay open are the iXBRL format gate, which no JSON draft passes, the deposit-floor item, which never passes automatically, and the reserve composition and custody items, which go to review.
 2. Run the incomplete example in strict mode.
 3. Show that blocker findings create a non-zero exit code.
 4. Run JSON output and inspect machine-readable findings.

@@ -69,6 +69,26 @@ STATEMENT_VERIFICATION_NOTE = (
     "Art. 51(3) MiCAR as mirrored in legalize-dev/legalize-eu (CELEX 32023R1114), not on EUR-Lex itself, "
     "which was unreachable from the build environment. The German wording has not been checked."
 )
+# Citations corrected after the pages were introduced, read in the same copy of the EUR-Lex text.
+CORRECTED_CITATION_NOTE = (
+    "The citation was corrected after these pages were introduced. The provisions it names were read in the "
+    "EUR-Lex text of MiCAR as mirrored in legalize-dev/legalize-eu (CELEX 32023R1114), not on EUR-Lex itself, "
+    "which was unreachable from the build environment."
+)
+CORRECTED_CITATIONS = {"ANNEX_II.G.VALUATION_AUDIT", "ANNEX_II.I"}
+
+
+def verification_note(rule_id: str) -> str:
+    """Which reading of the Regulation the rule's citation rests on."""
+    if rule_id in OJ_CHECKED:
+        return OJ_CHECKED[rule_id]
+    if rule_id in NOT_APPROVED_STATEMENT_RULE_IDS:
+        return STATEMENT_VERIFICATION_NOTE
+    if rule_id in CORRECTED_CITATIONS:
+        return CORRECTED_CITATION_NOTE
+    return VERIFICATION_NOTE
+
+
 STATEMENT_APPROVAL = (
     "This crypto-asset white paper has not been approved by any competent authority in any Member State of "
     "the European Union."
@@ -623,7 +643,7 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
 <h2>Legal basis</h2>
 <p>{_e(citation_en)}</p>
 <ul class="plain">{sources}</ul>
-<p class="callout">{_e(OJ_CHECKED.get(rule.rule_id, STATEMENT_VERIFICATION_NOTE if rule.rule_id in NOT_APPROVED_STATEMENT_RULE_IDS else VERIFICATION_NOTE))}{" " + _e(LEI_VERIFICATION_NOTE) if rule.rule_id in LEI_RULES else ""}</p>
+<p class="callout">{_e(verification_note(rule.rule_id))}{" " + _e(LEI_VERIFICATION_NOTE) if rule.rule_id in LEI_RULES else ""}</p>
 <h2>Synthetic examples</h2>
 <p class="small muted">Each example is linted when this page is generated. The build fails if a result differs.</p>
 {"".join(example_html)}

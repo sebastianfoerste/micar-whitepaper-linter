@@ -109,6 +109,23 @@ def test_art_ruleset_has_no_not_approved_statement():
     assert EMT in {rule.rule_id for rule in RULESETS[WhitepaperType.EMT]}
 
 
+# Regression: an ART document draft that carries the statement got a warning about a section key
+# it never wrote, which the audit log and the review bundle also print among their notes.
+@pytest.mark.parametrize(
+    ("suffix", "markup"),
+    [
+        (".md", "{}\n\n# Summary\n\nKey information.\n"),
+        (".xhtml", "<html><body><p>{}</p><h2>Summary</h2><p>Key information.</p></body></html>"),
+    ],
+)
+def test_art_document_draft_with_the_statement_gets_no_section_key_warning(tmp_path: Path, suffix, markup):
+    path = tmp_path / f"draft{suffix}"
+    path.write_text(markup.format(_statement("The offeror")), encoding="utf-8")
+    whitepaper = load_whitepaper(path, WhitepaperType.ART)
+    assert "not_approved_statement" not in whitepaper.sections
+    assert not [w for w in lint_whitepaper(whitepaper).warnings if "not_approved_statement" in w]
+
+
 GERMAN_ROUTING_FIXTURE = (
     "Dieses Kryptowerte-Whitepaper wurde von keiner zuständigen Behörde eines Mitgliedstaats "
     "der Europäischen Union genehmigt. Der Anbieter des Kryptowerts trägt die alleinige "
@@ -372,6 +389,42 @@ def test_xhtml_statement_in_nested_blocks_is_read_once_and_whole(tmp_path: Path)
     assert whitepaper.section("not_approved_statement") == f"{APPROVAL}\n{responsibility}"
     assert whitepaper.section("summary") == "Key information."
     statement = next(f for f in lint_whitepaper(whitepaper).findings if f.rule.rule_id == TITLE_II)
+    assert statement.status == "pass", statement.issues
+
+
+# Regression: the XHTML text extraction puts a space at every <br>, so a statement wrapped after
+# the hyphen of "crypto-asset" read "crypto- asset" and was neither found nor matched.
+@pytest.mark.parametrize("heading", ["", "<h2>Statement in accordance with Article 6(3)</h2>"])
+@pytest.mark.parametrize("wrapped", ["This crypto-", "of this crypto-"])
+def test_xhtml_statement_wrapped_after_a_hyphen_at_a_line_break_passes(tmp_path: Path, heading, wrapped):
+    text = _statement("The offeror").replace(f"{wrapped}asset", f"{wrapped}<br/>\n  asset", 1)
+    path = tmp_path / "draft.xhtml"
+    path.write_text(
+        f"<html><body>{heading}<p>{text}</p><h2>Summary</h2><p>Key information.</p></body></html>",
+        encoding="utf-8",
+    )
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    assert whitepaper.section("not_approved_statement") == _statement("The offeror")
+    statement = next(f for f in lint_whitepaper(whitepaper).findings if f.rule.rule_id == TITLE_II)
+    assert statement.status == "pass", statement.issues
+
+
+def test_numbered_field_statement_wrapped_after_a_hyphen_at_a_line_break_passes(tmp_path: Path):
+    wrapped = _statement("The issuer").replace("crypto-asset", "crypto-<br/>asset")
+    rows = "".join(
+        f"<tr><td>{number}</td><td>{label}</td><td>{content}</td></tr>"
+        for number, label, content in [
+            ("I.01", "Date of notification", "2026-03-02"),
+            ("I.02", "Statement in accordance with Article 51(3) of Regulation (EU) 2023/1114", wrapped),
+            ("A.1", "Statutory name", "Example EMI GmbH"),
+            ("B.1", "Name of the e-money token", "Example EUR"),
+            ("D.1", "Holder's rights and obligations", "Redemption at any time and at par value."),
+        ]
+    )
+    path = tmp_path / "emt.xhtml"
+    path.write_text(f"<html><body><table>{rows}</table></body></html>", encoding="utf-8")
+    whitepaper = load_whitepaper(path, WhitepaperType.EMT)
+    statement = next(f for f in lint_whitepaper(whitepaper).findings if f.rule.rule_id == EMT)
     assert statement.status == "pass", statement.issues
 
 

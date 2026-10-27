@@ -53,6 +53,10 @@ _BLOCK_TAGS = {
 # label, so the number never runs on into a letter or a dash.
 _FIELD_NUMBER = re.compile(r"(?:[A-Z]{1,2}\.\d{1,2}|\d{2})[.:)]?")
 _LABEL_START = re.compile(r"[^\W\d_]|[-\u2013\u2014]")
+# A word broken after its hyphen, such as "crypto-" before a <br>.
+_BROKEN_AFTER_HYPHEN = re.compile(r"[^\W\d_]-\s*$")
+# Stands in the text flow for a <br>, a line break inside a block.
+_LINE_BREAK = object()
 # pdf2htmlEX writes a shift inside a line as a span of class "_ _N" whose CSS rule moves the next
 # glyph: "._N{width:7.6px;}", or "._N{margin-left:-1.1px;}" for kerning. It writes a space into a
 # shift of an eighth of an em or more, its threshold for a gap between words; converters in its
@@ -97,16 +101,20 @@ def parse_html(source: Path | bytes) -> etree._ElementTree:
 
 def _text_flow(
     element: etree._Element, stop: Callable[[etree._Element], bool] | None
-) -> Iterator[str | etree._Element | None]:
-    """Text nodes in document order, None where a block element or <br> breaks the line, and
-    each element for which ``stop`` is true in place of its content."""
+) -> Iterator[str | etree._Element | object | None]:
+    """Text nodes in document order, None where a block element breaks the line, _LINE_BREAK for a
+    <br>, and each element for which ``stop`` is true in place of its content."""
     if stop is not None and stop(element):
         yield element
         return
     # A comment or processing instruction shows no text; its tail belongs to the parent.
     if not isinstance(element.tag, str):
         return
-    block = element.tag.rsplit("}", 1)[-1].lower() in _BLOCK_TAGS
+    tag = element.tag.rsplit("}", 1)[-1].lower()
+    if tag == "br":
+        yield _LINE_BREAK
+        return
+    block = tag in _BLOCK_TAGS
     if block:
         yield None
     if element.text:
@@ -134,12 +142,24 @@ def text_fragments(
     Text nodes that meet inside a word make one fragment, so an empty spacer span inside a word
     ("Financ<span class="_ _0"></span>ial", as pdf2htmlEX and similar PDF conversions write it)
     leaves the word whole. Whitespace, a block element, <br> and the gap after a field number end
-    a fragment. An element for which ``stop`` is true is yielded in place of its content.
+    a fragment. A word broken after its hyphen at a <br> ("crypto-" / "asset") is joined with its
+    hyphen, as at a line end in a PDF, DOCX or Markdown draft. An element for which ``stop`` is true
+    is yielded in place of its content.
     """
     fragment = ""
+    rejoin = False
     pieces = (piece for element in elements for piece in _text_flow(element, stop))
     # The closing None flushes the last fragment.
     for piece in chain(pieces, [None]):
+        if piece is _LINE_BREAK and _BROKEN_AFTER_HYPHEN.search(fragment):
+            rejoin = True
+            continue
+        if rejoin and isinstance(piece, str):
+            # Whitespace around the <br> is source layout; the word goes on with the next text.
+            if piece.strip():
+                fragment, rejoin = fragment.rstrip() + piece.lstrip(), False
+            continue
+        rejoin = False
         if isinstance(piece, str) and _inside_word(fragment, piece):
             fragment += piece
             continue
