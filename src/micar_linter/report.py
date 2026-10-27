@@ -17,8 +17,8 @@ _FILING_CITATION = (
     "Art. 8 Abs. 1, Art. 16 Abs. 2 UAbs. 2, Art. 17 Abs. 1 Buchst. a, Art. 18 Abs. 2 Buchst. k, "
     "Art. 51 Abs. 11 MiCAR"
 )
-# Characters that start inline Markdown or HTML. The loader's notes contain none, but an
-# unrecognised-section warning quotes a section key from the draft.
+# Characters that start inline Markdown or HTML. The loader's notes contain none, but the title and the
+# source path come from the draft or its file name, and an unrecognised-section warning quotes a section key.
 _MARKDOWN_MARKUP = re.compile(r"[\\`*_~\[\]<>&]")
 
 
@@ -113,9 +113,9 @@ def render_audit_log(report: Report, source_file: str, sha256: str) -> str:
     lines = []
     lines.append("# MiCAR Whitepaper Compliance Review Log")
     lines.append("")
-    lines.append(f"- **Document Title**: {report.title}")
+    lines.append(f"- **Document Title**: {markdown_line(report.title)}")
     lines.append(f"- **Regime/Type**: {report.whitepaper_type.value.upper()}")
-    lines.append(f"- **Source File**: {source_file}")
+    lines.append(f"- **Source File**: {markdown_line(source_file)}")
     lines.append(f"- **SHA-256 Checksum**: `{sha256}`")
     lines.append(f"- **Review Timestamp**: {now_str}")
     lines.append("")
@@ -191,14 +191,19 @@ def _open_findings_note(report: Report) -> str:
     )
 
 
+def markdown_line(text: str) -> str:
+    """Text as one line of Markdown that renders as written: its line breaks become spaces and its markup
+    characters are escaped, so text from the draft cannot add a heading, an alert, an image or HTML."""
+    return _MARKDOWN_MARKUP.sub(r"\\\g<0>", " ".join(text.split()))
+
+
 def render_extraction_notes(warnings: Iterable[str]) -> list[str]:
     """The Markdown section that lists the report warnings, for a review file to place before its results.
 
-    No lines when there are no warnings. Each warning is one list item shown as written: its line breaks
-    become spaces and its markup characters are escaped, so a section key quoted from the draft cannot add
-    a heading, an alert, an image or HTML to the file.
+    No lines when there are no warnings. Each warning is one list item written with `markdown_line`,
+    because an unrecognised-section warning quotes a section key from the draft.
     """
-    notes = [_MARKDOWN_MARKUP.sub(r"\\\g<0>", " ".join(warning.split())) for warning in warnings]
+    notes = [markdown_line(warning) for warning in warnings]
     if not notes:
         return []
     return [
