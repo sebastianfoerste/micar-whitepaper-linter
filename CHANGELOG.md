@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## 1.2.0 - 2026-10-26
+
+From this release the PyPI package and the GitHub Action share one version number. The tag `v1.2.0` marks both, and `v1` moves to it. Earlier releases had two version lines, listed under [Earlier releases](#earlier-releases).
+
+For `@v1` users this is the first Action release since v1.1.1. Besides the changes listed below, it brings the package changes of 0.2.0 and 0.2.1: the corrected paragraph citations for Arts. 6, 19 and 51 MiCAR, numbered-field XHTML read with `--type`, the rewritten iXBRL check, the `micar-whitepaper-linter` command and the corrected documentation links. The lists below record the changes since package 0.2.1.
+
+### Upgrading
+
+- Expect more open findings on the same draft. The two LEI rules are new in every regime, and a section that holds only placeholder text such as TBD is now Missing.
+- `COMMON.IXBRL_TAGGING` is a BLOCKER that no draft passes: JSON, DOCX, PDF and Markdown drafts get Missing and XHTML gets Review at best. So `strict: 'true'`, the Action's default, fails every run. Set `strict: 'false'` for a report-only job, as the starter template does.
+- The Action now writes a job summary and up to 10 annotations by default. Set `summary: 'false'` or `annotations: 'false'` to turn them off.
+- `--coverage` in `extra-args` keeps the strict gate and the CI outputs. Under v1.1.1 it exited 0 before the strict check.
+- A DOCX draft is linted by the Action. Under v1.1.1 the run stopped because the `docx` extra was missing.
+- XHTML in the numbered-field layout of Implementing Regulation (EU) 2024/2984 is now read field by field. It needs `--type other|art|emt` in `extra-args`; without it the run exits 1 with a message.
+- Rule IDs are unchanged. Citation text in reports differs from v1.1.1, so stored reports and snapshots change.
+
 ### Added
 
 - `--sarif-output`, `--summary-output` and `--annotations-output`: SARIF 2.1.0, a Markdown summary table and GitHub annotation commands for open findings. No draft text; byte-reproducible; no status, severity or exit-code change.
@@ -16,11 +32,13 @@
 
 ### Changed
 
-- The Action pins `astral-sh/setup-uv` to v5.4.2 by commit SHA and runs `uvx --no-cache`, so a moved `v1` tag cannot reuse a stale build.
+- Version 1.2.0 for the package and the Action. `docs/DETAILS.md` marks the Action inputs and the DOCX input that need v1.2.0 and explains the shared version number.
+- The Action pins `astral-sh/setup-uv` to v10.3.0 by commit SHA. v1.1.1 used the floating `v5` tag, which runs on Node.js 20, so every run showed GitHub's Node.js 20 deprecation warning. The Action turns off the `setup-uv` cache and runs `uvx --no-cache`, so a moved `v1` tag cannot reuse a stale build, and it no longer saves an empty cache entry in the calling repository.
 - All CLI flags are documented in `docs/API.md`.
 
 ### Fixed
 
+- Playground: when the XHTML parser (lxml) fails to download, the check reports that the parser could not load, and the next check downloads it again. Before, the check ran without it, showed "No module named 'lxml'", and every later XHTML check in the session failed the same way.
 - The playground brand link's accessible name now matches its visible text (axe `label-content-name-mismatch`).
 - The GitHub Action installs the `docx` extra, so a DOCX `whitepaper` input is linted. Before, the run stopped with "DOCX support requires the optional 'docx' extra".
 - `--coverage` now changes only what is printed. `--strict` and the output files (SARIF, summary, annotations, audit log, remediation, coverage matrix, manifest, review table) still apply. Before, it printed the table and exited 0 before writing them, so `--coverage` in the Action's `extra-args` turned off the strict gate and the CI outputs.
@@ -43,3 +61,16 @@
 - DOCX and PDF drafts: heading text no longer counts as section body. A section that holds only its heading is reported missing with 0 words. The exception is a PDF sub-heading that names no section and stays in its section, such as "Market Volatility" in a smaller heading font or a bold "12.1 Market risk": it is read as a line of that section, so its words count as its text, while in a DOCX they do not. Required terms must now appear in the body text, so a PDF field "01 Date of notification" answered only "2 March 2026", on the next line or on the field line, leaves the notification date for review, because the word "date" sits in the heading. Regime inference reads the whole extracted text of a PDF or DOCX draft, headings and text in no section included, so a draft whose only ART or EMT marker is a heading such as "Reserve of Assets" or "Stabilisation Mechanism", or an introduction before the first heading, is read as that regime when no regime is stated.
 - A section whose whole text is placeholders is now reported missing with 0 words and the issue "Section holds only placeholder text such as TBD or TBC.". Before, it counted as a thin answer under review. Placeholders are "TBD", "TBC" and "TBA" (also written "t.b.d."), "to be confirmed", "determined", "announced", "advised" or "provided", "[●]", "[•]", "[...]", "[…]", "[insert ...]", "XX" and longer runs of X, and in German drafts "noch offen", "folgt", "wird nachgereicht" and "N.N.", in any case and with any punctuation around them. In the numbered-field layout a field that holds a placeholder is unanswered: it contributes the placeholder instead of "Label: TBD", does not produce the "marked not applicable" note, and a placeholder in the language field is reported on the language check. A part with no answered field and at least one placeholder contributes only its placeholders, so it is reported missing even when its other fields say "N/A". Findings stay per section: a placeholder field in a part with an answered field, or a placeholder next to other text in a section, is not reported. The notification date of `examples/incomplete.json` ("TBD.") is now missing, so the sample report, the demo capture and the README and DETAILS output blocks are regenerated. The playground wheel is rebuilt from the fixed source.
 - Study runs (`micar-lint-batch`): PDF and TXT sections use the shape rule of `micar-lint` without font information, so a body line that names a section no longer opens it. PDF sections are read line by line; before, the PDF text was joined into one line first, so a PDF yielded no sections. Study runs read no fonts or pages, so for a PDF whose headings are marked by a heading font they can differ from `micar-lint`: a sentence-case heading ("Information about the issuer") ends the section, an unnumbered heading of more than 12 words is body text, and a running page header is read like any other line.
+
+## Earlier releases
+
+Before 1.2.0 the package and the Action had separate version lines. Each release page holds the full notes.
+
+| Tag | Released | Line | Contents |
+|---|---|---|---|
+| [`v0.2.1`](https://github.com/sebastianfoerste/micar-whitepaper-linter/releases/tag/v0.2.1) | 2026-10-15 | Package (PyPI) | Corrected documentation links and clean-clone commands. |
+| [`v0.2.0`](https://github.com/sebastianfoerste/micar-whitepaper-linter/releases/tag/v0.2.0) | 2026-10-15 | Package (PyPI) | First PyPI release: corrected citations, numbered-field XHTML with `--type`, rewritten iXBRL check. |
+| [`v1.1.1`](https://github.com/sebastianfoerste/micar-whitepaper-linter/releases/tag/v1.1.1) | 2026-09-19 | Action | iXBRL gate fails closed; the ART deposit floor goes to lawyer review. Its `--version` says 0.2.0, but it predates the 0.2.0 package release. |
+| `v1.1.0` | 2026-09-19 | Action | Tag without a release, superseded by v1.1.1. |
+| [`v1.0.0`](https://github.com/sebastianfoerste/micar-whitepaper-linter/releases/tag/v1.0.0) | 2026-07-17 | Action | First Action release. |
+| [`v0.1.0`](https://github.com/sebastianfoerste/micar-whitepaper-linter/releases/tag/v0.1.0) | 2026-07-07 | Package, not on PyPI | First tagged release. |

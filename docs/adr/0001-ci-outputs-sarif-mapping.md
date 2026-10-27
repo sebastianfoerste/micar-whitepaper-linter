@@ -24,8 +24,8 @@ Option 3.
 - **No draft text.** Messages use rule metadata and issue strings. Issue strings of `COMMON.IXBRL_TAGGING` and `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW` can quote the draft (namespaces, parser errors, percentages) and are replaced by a fixed sentence; so, since ADR 0007, are those of `COMMON.LEI_CHECK_DIGITS` and `COMMON.LEI_CONSISTENCY`, which quote LEIs. The summary names the file path, not the draft title.
 - **The always-open format gate.** `COMMON.IXBRL_TAGGING` keeps its status and severity. It is tagged `format-gate` in SARIF, listed in its own summary section, and left out of the 10 annotations so it does not take a slot on every run.
 - **Reproducibility.** No timestamps; fixed order (open blockers first, then missing before review, then rule order).
-- **Pins.** `astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86` (v5.4.2, newest v5.x) and `github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee` (v4.39.0), both from `git ls-remote` on 2026-10-20.
-- **Cache.** `uvx --no-cache`: uv keys a path build on `pyproject.toml`, so a moved `v1` tag could otherwise reuse a stale build.
+- **Pins.** `astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86` (v5.4.2, newest v5.x) and `github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee` (v4.39.0), both from `git ls-remote` on 2026-10-20. Amended 2026-10-26 by owner decision: `setup-uv` moves to `1c37ad07a6a961277cf70c0d37d6f313000f5884` (v10.3.0, `git ls-remote` on 2026-10-26), because v5.4.2 runs on Node.js 20 and every run showed GitHub's deprecation warning. v10.3.0 runs on Node.js 24. Its post step fails a passing job when the uv cache directory does not exist, and v5's default cache prune that used to create the directory is off in v10, so the Action sets `enable-cache: 'false'`.
+- **Cache.** `uvx --no-cache`: uv keys a path build on `pyproject.toml`, so a moved `v1` tag could otherwise reuse a stale build. `uvx --no-cache` leaves the GitHub Actions cache of `setup-uv` empty, so the Action turns it off (since 2026-10-26).
 
 ## Consequences
 
