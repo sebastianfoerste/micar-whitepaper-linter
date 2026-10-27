@@ -7,6 +7,8 @@ import binascii
 import io
 import re
 import zlib
+from collections.abc import Callable, Iterable, Iterator
+from itertools import chain
 from pathlib import Path
 
 from lxml import etree
@@ -38,14 +40,129 @@ def _parse(source: Path | bytes, huge_tree: bool = False) -> etree._ElementTree:
     return etree.parse(document, etree.HTMLParser(encoding="utf-8", huge_tree=huge_tree))
 
 
+# Elements a browser lays out on lines of their own, and <br>. Text runs on across every other
+# element (span, a, b, i, ix:nonNumeric, ix:continuation and the like) without a space.
+_BLOCK_TAGS = {
+    "address", "article", "aside", "blockquote", "body", "br", "caption", "center", "dd", "details",
+    "dialog", "dir", "div", "dl", "dt", "fieldset", "figcaption", "figure", "footer", "form", "h1", "h2",
+    "h3", "h4", "h5", "h6", "header", "hgroup", "hr", "html", "legend", "li", "main", "menu", "nav", "ol",
+    "p", "pre", "search", "section", "summary", "table", "tbody", "td", "tfoot", "th", "thead", "tr", "ul",
+}
+# A field number of Implementing Regulation (EU) 2024/2984 ("A.1", "I.01", "05"), as numbered_fields
+# reads it. A spacer can be the only gap between such a number and its label or the dash before the
+# label, so the number never runs on into a letter or a dash.
+_FIELD_NUMBER = re.compile(r"(?:[A-Z]{1,2}\.\d{1,2}|\d{2})[.:)]?")
+_LABEL_START = re.compile(r"[^\W\d_]|[-\u2013\u2014]")
+# pdf2htmlEX writes a shift inside a line as a span of class "_ _N" whose CSS rule moves the next
+# glyph: "._N{width:7.6px;}", or "._N{margin-left:-1.1px;}" for kerning. It writes a space into a
+# shift of an eighth of an em or more, its threshold for a gap between words; converters in its
+# style leave that span empty too.
+_WORD_GAP_EM = 0.125
+_CSS_LENGTH = re.compile(r"\.(_[0-9a-z]+|fs[0-9a-z]+)\{(?:[^}]*;)?\s*(?:width|font-size):([\d.]+)px")
+
+
+def mark_spacer_gaps(root: etree._Element) -> None:
+    """Write a space into each empty pdf2htmlEX spacer that the page's CSS makes a gap between words."""
+    lengths: dict[str, float] = {}
+    for style in root.iter("{*}style"):
+        for name, value in _CSS_LENGTH.findall(style.text or ""):
+            lengths.setdefault(name, float(value))
+    if not lengths:
+        return
+    for span in root.iter("{*}span"):
+        classes = (span.get("class") or "").split()
+        if "_" not in classes or span.text or len(span):
+            continue
+        width = next((lengths[name] for name in classes if name in lengths), 0.0)
+        size = next(
+            (
+                lengths[name]
+                for node in (span, *span.iterancestors())
+                for name in (node.get("class") or "").split()
+                if name.startswith("fs") and name in lengths
+            ),
+            None,
+        )
+        if size and width >= _WORD_GAP_EM * size:
+            span.text = " "
+
+
+def parse_html(source: Path | bytes) -> etree._ElementTree:
+    """Parse an HTML or XHTML file, or markup unpacked from one, with the word gaps of its spacers marked."""
+    tree = _parse(source)
+    if (root := tree.getroot()) is not None:
+        mark_spacer_gaps(root)
+    return tree
+
+
+def _text_flow(
+    element: etree._Element, stop: Callable[[etree._Element], bool] | None
+) -> Iterator[str | etree._Element | None]:
+    """Text nodes in document order, None where a block element or <br> breaks the line, and
+    each element for which ``stop`` is true in place of its content."""
+    if stop is not None and stop(element):
+        yield element
+        return
+    # A comment or processing instruction shows no text; its tail belongs to the parent.
+    if not isinstance(element.tag, str):
+        return
+    block = element.tag.rsplit("}", 1)[-1].lower() in _BLOCK_TAGS
+    if block:
+        yield None
+    if element.text:
+        yield element.text
+    for child in element:
+        yield from _text_flow(child, stop)
+        if child.tail:
+            yield child.tail
+    if block:
+        yield None
+
+
+def _inside_word(text: str, piece: str) -> bool:
+    """Whether the text node ``piece`` continues the word that ``text`` ends with."""
+    if not text or text[-1].isspace() or piece[:1].isspace():
+        return False
+    return not (_LABEL_START.match(piece) and _FIELD_NUMBER.fullmatch(text.rsplit(None, 1)[-1]))
+
+
+def text_fragments(
+    elements: Iterable[etree._Element], stop: Callable[[etree._Element], bool] | None = None
+) -> Iterator[str | etree._Element]:
+    """Yield the text under the elements in document order, in fragments with collapsed whitespace.
+
+    Text nodes that meet inside a word make one fragment, so an empty spacer span inside a word
+    ("Financ<span class="_ _0"></span>ial", as pdf2htmlEX and similar PDF conversions write it)
+    leaves the word whole. Whitespace, a block element, <br> and the gap after a field number end
+    a fragment. An element for which ``stop`` is true is yielded in place of its content.
+    """
+    fragment = ""
+    pieces = (piece for element in elements for piece in _text_flow(element, stop))
+    # The closing None flushes the last fragment.
+    for piece in chain(pieces, [None]):
+        if isinstance(piece, str) and _inside_word(fragment, piece):
+            fragment += piece
+            continue
+        if text := " ".join(fragment.split()):
+            yield text
+        fragment = piece if isinstance(piece, str) else ""
+        if isinstance(piece, etree._Element):
+            yield piece
+
+
+def element_text(*elements: etree._Element) -> str:
+    """The text of the elements on one line, joined as text_fragments joins it."""
+    return " ".join(fragment for fragment in text_fragments(elements) if isinstance(fragment, str))
+
+
 def _is_fully_bold(elem: etree._Element, text: str) -> bool:
     """True if the element is a b/strong, or its whole text sits inside b/strong children."""
     if elem.tag in ("b", "strong"):
         return True
     if elem.tag not in ("p", "li", "div"):
         return False
-    bold = "".join("".join(b.itertext()) for b in elem.xpath("./b | ./strong"))
-    return re.sub(r"\s+", " ", bold).strip() == text
+    # A <br> between bold runs breaks the line here as it does in the element's own text.
+    return element_text(*elem.xpath("./b | ./strong | ./br")) == text
 
 
 def is_script_packed(source: Path | bytes) -> bool:
@@ -142,7 +259,7 @@ def _is_markup(document: bytes) -> bool:
 def load_from_xhtml(source: Path | bytes) -> dict[str, str]:
     """Parse an XHTML file, or markup unpacked from one, and extract sections mapped by headings."""
     try:
-        tree = _parse(source)
+        tree = parse_html(source)
     except Exception as exc:
         raise ValueError(f"Failed to parse HTML/XHTML: {exc}") from exc
 
@@ -160,8 +277,7 @@ def load_from_xhtml(source: Path | bytes) -> dict[str, str]:
     )
 
     for elem in elements:
-        text = "".join(elem.itertext()).strip()
-        text = re.sub(r"\s+", " ", text)
+        text = element_text(elem)
         if not text:
             continue
 
