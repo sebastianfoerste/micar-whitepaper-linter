@@ -1,6 +1,6 @@
 UV ?= uv
 
-.PHONY: check install demo demo-image lint test smoke review-bundle playground-check playground-samples sample-reports template-check template-export
+.PHONY: check install demo demo-image lint test smoke review-bundle playground-check playground-samples sample-reports template-check template-export dist
 
 check: lint test smoke review-bundle playground-check template-check
 
@@ -42,3 +42,7 @@ template-check:
 
 template-export:
 	scripts/export-whitepaper-starter.sh
+
+dist:
+	rm -rf dist
+	tmp="$$(mktemp -d)" && git archive HEAD | tar -x -C "$$tmp" && $(UV) build --out-dir "$(CURDIR)/dist" "$$tmp"; status=$$?; rm -rf "$$tmp"; exit $$status

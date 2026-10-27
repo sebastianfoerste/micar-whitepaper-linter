@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- Release builds: `make dist` builds the wheel and the source archive from the committed tree (`git archive HEAD`), so uncommitted changes and untracked files stay out of both. `.gitignore` now also covers `.claude/settings.local.json` and `.claude/worktrees/`. The 1.2.0 source archive was built from a working tree and picked up untracked local Claude Code worktrees and settings; the 1.2.0 wheel was not affected.
+
 ## 1.2.0 - 2026-10-26
 
 From this release the PyPI package and the GitHub Action share one version number. The tag `v1.2.0` marks both, and `v1` moves to it. Earlier releases had two version lines, listed under [Earlier releases](#earlier-releases).
