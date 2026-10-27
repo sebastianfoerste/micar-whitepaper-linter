@@ -10,6 +10,8 @@ These checks run before the Annex-specific ruleset.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from micar_linter.rules.base import Rule, Severity
 
 COMMON_RULES: tuple[Rule, ...] = (
@@ -93,4 +95,20 @@ COMMON_RULES: tuple[Rule, ...] = (
         min_words=0,
         severity=Severity.MAJOR,
     ),
+)
+
+# Art. 51 Abs. 4 MiCAR asks an e-money token white paper only to warn that investor compensation
+# and deposit guarantee schemes do not cover the token. The loss-of-value, transferability and
+# liquidity statements of Art. 6 Abs. 5 and Art. 19 Abs. 4 have no counterpart there, and the two
+# warnings fit in one sentence of about 25 words.
+EMT_COMMON_RULES: tuple[Rule, ...] = tuple(
+    replace(
+        rule,
+        required_terms=("investor compensation", "deposit guarantee"),
+        required_terms_de=("entschädigung", "einlagensicherung"),
+        min_words=20,
+    )
+    if rule.rule_id == "COMMON.RISK_WARNING"
+    else rule
+    for rule in COMMON_RULES
 )
