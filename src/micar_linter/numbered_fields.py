@@ -8,6 +8,7 @@ only the part letter is treated as reliable.
 
 from __future__ import annotations
 
+import io
 import re
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -195,9 +196,13 @@ def _text_nodes(
             yield from _INLINE_FIELD.split(tail)
 
 
-def extract_numbered_fields(path: Path) -> list[NumberedField]:
-    """Read the numbered fields of a white paper, merging repeated field numbers."""
-    tree = etree.parse(str(path), etree.HTMLParser(encoding="utf-8"))
+def extract_numbered_fields(source: Path | bytes) -> list[NumberedField]:
+    """Read the numbered fields of a white paper, merging repeated field numbers.
+
+    source is the file, or markup unpacked from a saved iXBRL viewer page.
+    """
+    document = io.BytesIO(source) if isinstance(source, bytes) else str(source)
+    tree = etree.parse(document, etree.HTMLParser(encoding="utf-8"))
     root = tree.getroot()
     if root is None:
         return []
@@ -230,6 +235,24 @@ def extract_numbered_fields(path: Path) -> list[NumberedField]:
         NumberedField(field_id, labels.get(field_id, ""), " ".join(parts))
         for field_id, parts in contents.items()
     ]
+
+
+MERGED_LABELS_NOTE = (
+    "Most numbered fields in this layout have no separate label, so a label can run into its answer: "
+    "a field answered only \"N/A\" or \"TBD\" then reads as answered, and the template's label wording "
+    "can count toward a check. Check each Pass against the white paper."
+)
+
+
+def labels_run_into_answers(fields: list[NumberedField]) -> bool:
+    """True if four in five lettered fields carry no label of their own.
+
+    A rendering converted from PDF can split field number, label and answer into separate text runs,
+    and some tables set the label in the answer cell. The label then reads as part of the answer,
+    so "Legal form N/A" counts as answered.
+    """
+    lettered = [field for field in fields if "." in field.field_id and field.content.strip()]
+    return bool(lettered) and 5 * sum(not field.label for field in lettered) >= 4 * len(lettered)
 
 
 def is_numbered_layout(fields: list[NumberedField]) -> bool:
@@ -286,7 +309,7 @@ def sections_from_numbered_fields(
             sections.setdefault("safeguarding", []).append(line)
             safeguarding_fields.append(field.field_id)
 
-    notes = []
+    notes = [MERGED_LABELS_NOTE] if labels_run_into_answers(fields) else []
     if not any(field.field_id in summary and field.content.strip() for field in fields):
         notes.append(
             "No leading numbered fields were found. The summary, statements, warning and notification date "

@@ -6,7 +6,7 @@ import pytest
 
 from micar_linter.cli import main
 from micar_linter.linter import lint_whitepaper
-from micar_linter.numbered_fields import extract_numbered_fields, is_numbered_layout
+from micar_linter.numbered_fields import MERGED_LABELS_NOTE, extract_numbered_fields, is_numbered_layout
 from micar_linter.whitepaper import WhitepaperType, load_whitepaper
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -135,6 +135,40 @@ def test_emt_safeguarding_stays_missing_when_no_field_describes_it(tmp_path: Pat
     finding = next(f for f in report.findings if f.rule.rule_id == "ANNEX_III.SAFEGUARDING")
     assert finding.status == "missing"
     assert any("no answered field mentions safeguarding" in warning for warning in report.warnings)
+
+
+def test_labels_that_run_into_the_answers_are_reported(tmp_path: Path):
+    # A rendering converted from PDF puts each field number in its own text run, so the label joins the answer.
+    rows = "".join(
+        f"<div><span>{part}.{number}</span></div><div><span>Field {part}{number} label "
+        f"{'N/A' if part == 'C' else 'answer for the fictional issuer'}</span></div>"
+        for part in "ABCDE"
+        for number in range(1, 5)
+    )
+    whitepaper = load_whitepaper(_write(tmp_path, rows), WhitepaperType.OTHER)
+
+    assert whitepaper.metadata["extraction_notes"][0] == MERGED_LABELS_NOTE
+    # The risk the note names: the "N/A" field reads as answered, label included.
+    assert "Field C1 label N/A" in whitepaper.sections["trading_platform_operator"]
+
+
+def test_fields_with_their_own_label_raise_no_merged_label_note():
+    whitepaper = load_whitepaper(SAMPLE, WhitepaperType.OTHER)
+    assert MERGED_LABELS_NOTE not in whitepaper.metadata["extraction_notes"]
+
+
+def test_merged_label_note_needs_four_in_five_unlabelled_fields(tmp_path: Path):
+    # Eleven of fourteen lettered fields keep the label in the answer cell: just under four in five.
+    path = _emt_table(tmp_path, [*_EMT_BASE, *((f"B.{n}", f"Field B{n} label N/A") for n in range(1, 12))])
+    whitepaper = load_whitepaper(path, WhitepaperType.EMT)
+    assert MERGED_LABELS_NOTE not in whitepaper.metadata["extraction_notes"]
+
+
+def test_label_sharing_the_answer_cell_raises_the_merged_label_note(tmp_path: Path):
+    # Twelve of fifteen lettered fields keep the label in the answer cell.
+    path = _emt_table(tmp_path, [*_EMT_BASE, *((f"B.{n}", f"Field B{n} label N/A") for n in range(1, 13))])
+    whitepaper = load_whitepaper(path, WhitepaperType.EMT)
+    assert whitepaper.metadata["extraction_notes"][0] == MERGED_LABELS_NOTE
 
 
 def test_heading_structured_xhtml_keeps_the_heading_loader():
