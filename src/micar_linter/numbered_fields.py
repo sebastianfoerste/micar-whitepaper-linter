@@ -9,9 +9,11 @@ only the part letter is treated as reliable.
 from __future__ import annotations
 
 import re
+from collections import Counter
 from collections.abc import Iterator
 from dataclasses import dataclass
 from functools import cache
+from itertools import islice
 from pathlib import Path
 
 from lxml import etree
@@ -239,6 +241,11 @@ _JOINT = re.compile(r"^(?:[\s:|)\]]|[-\u2013\u2014\u2022\u00b7](?=\s))+")
 # Text that goes on from a field name with "of", "'s" or the like makes a longer label than the
 # template's ("Name of the token N/A"), so the field keeps its text.
 _NAME_GOES_ON = re.compile(r"(?:of|for|and|or)\b|['\u2019]s\b")
+# The CoreFiling rendering prints a field's name twice and can word the first copy differently
+# ("Financial condition over the past three years Financial condition for the past three years").
+# Words before a name count as another wording of it when three in five of them are its words.
+_VARIANT_WORDS = 30
+_VARIANT_SHARE = 0.6
 _LISTED_FIELDS = 10
 
 
@@ -271,31 +278,49 @@ def _leading_name(text: str, whitepaper_type: WhitepaperType) -> tuple[str, int]
     return found
 
 
+def _stems(text: str) -> Counter[str]:
+    return Counter(stem for word in re.findall(r"[^\W_]+", text.lower()) if (stem := word.rstrip("s")))
+
+
+def _name_after_variant(text: str, whitepaper_type: WhitepaperType) -> tuple[str, int] | None:
+    """A template field name that follows another wording of itself, and where it ends in the text."""
+    for word in islice(re.finditer(r"\S+", text), 1, _VARIANT_WORDS + 1):
+        found = _leading_name(text[word.start() :], whitepaper_type)
+        if found is None:
+            continue
+        before, name = _stems(text[: word.start()]), _stems(found[0])
+        if (before & name).total() >= _VARIANT_SHARE * max(before.total(), name.total()):
+            return found[0], word.start() + found[1]
+    return None
+
+
 def _with_template_label(field: NumberedField, whitepaper_type: WhitepaperType) -> NumberedField:
     """Split the template's field name off the start of the field's text.
 
     A field without a label of its own takes the name its content starts with: "Legal form Legal
     form N/A" after a dash gives the label "Legal form" and the answer "N/A", also where a PDF
-    conversion split a word or printed the name twice. A label cut off inside a word takes the rest
-    of the name from the content. A field keeps its text when no name fits, when a name covers only
-    the start of its label, or when the text after the name goes on with "of" and the like.
+    conversion split a word, printed the name twice or worded its first copy differently. A label
+    cut off inside a word takes the rest of the name from the content. A field keeps its text when
+    no name fits, when a name covers only the start of its label, or when the text after the name
+    goes on with "of" and the like.
     """
     label = _LEAD.sub("", field.label).rstrip(" .:")
     text = _LEAD.sub("", f"{label} {field.content}" if label else field.content)
-    found = _leading_name(text, whitepaper_type)
-    if found is None or found[1] < len(label):
-        return field
-    name, end = found
-    answer = _JOINT.sub("", text[end:])
-    while match := _name_pattern(name).match(answer):
-        answer = _JOINT.sub("", answer[match.end() :])
-    if _NAME_GOES_ON.match(answer) and not (is_not_applicable(answer) or is_placeholder(answer)):
-        return field
-    if not label or end > len(label):
-        label = name
-    if (label, answer) == (field.label, field.content):
-        return field
-    return NumberedField(field.field_id, label, answer)
+    for find in (_leading_name, _name_after_variant):
+        found = find(text, whitepaper_type)
+        if found is None or found[1] < len(label):
+            continue
+        name, end = found
+        answer = _JOINT.sub("", text[end:])
+        while match := _name_pattern(name).match(answer):
+            answer = _JOINT.sub("", answer[match.end() :])
+        if _NAME_GOES_ON.match(answer) and not (is_not_applicable(answer) or is_placeholder(answer)):
+            continue
+        new_label = name if not label or end > len(label) else label
+        if (new_label, answer) == (field.label, field.content):
+            return field
+        return NumberedField(field.field_id, new_label, answer)
+    return field
 
 
 MERGED_LABELS_NOTE = (

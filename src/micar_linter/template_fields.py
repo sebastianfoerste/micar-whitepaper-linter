@@ -2,7 +2,8 @@
 Implementing Regulation (EU) 2024/2984, by field number as the tables print it.
 
 numbered_fields.py reads them to recognise a label that a white paper prints in front of its answer.
-Not yet compared with the Official Journal text: compare before relying on a name.
+Not yet compared with the Official Journal text: compare before relying on a name. Fields B.4, B.5,
+C.1 and D.2 of Table 4 follow the wording a notified e-money token white paper prints for them.
 """
 
 from __future__ import annotations
@@ -328,8 +329,8 @@ _TABLE_4 = {
     "B.1": "Name",
     "B.2": "Abbreviation",
     "B.3": "Details of all natural or legal persons involved in design and development",
-    "B.4": "Type of crypto-asset white paper",
-    "B.5": "Type of submission",
+    "B.4": "Type of white paper",
+    "B.5": "The type of submission",
     "B.6": "Crypto-asset characteristics",
     "B.7": "Website of the issuer",
     "B.8": "Starting date of offer to the public or admission to trading",
@@ -346,14 +347,14 @@ _TABLE_4 = {
     "B.16": "LEI eligibility",
     "B.17": "Home Member State",
     "B.18": "Host Member States",
-    "C.1": "Public offering or admission to trading",
+    "C.1": "Public offering or trading",
     "C.2": "Number of units",
     "C.3": "Trading platforms name",
     "C.4": "Trading platforms Market Identifier Code (MIC)",
     "C.5": "Applicable law",
     "C.6": "Competent court",
     "D.1": "Holder's rights and obligations",
-    "D.2": "Conditions for modifications of rights and obligations",
+    "D.2": "Conditions of modifications of rights and obligations",
     "D.3": "Description of the rights of the holders",
     "D.4": "Rights in implementation of recovery plan",
     "D.5": "Rights in implementation of redemption plan",

@@ -271,10 +271,12 @@ def _split_word(label: str) -> str:
     return label.replace(word, f'{word[:3]}<span class="_ _0"></span>{word[3:]}', 1)
 
 
-def _converted_from_pdf(rows: list[tuple[str, str, str]]) -> str:
-    # Field number, label and answer in separate text runs; the label follows a dash and is printed twice.
+def _converted_from_pdf(rows: list[tuple[str, str, str]], first_copies: dict[str, str] | None = None) -> str:
+    # Field number, label and answer in separate text runs; the label follows a dash and is printed twice,
+    # the first time in the wording first_copies gives for the field number.
+    first = first_copies or {}
     lines = "".join(
-        f'<div class="t">{n}</div><div class="t">\u2013 {_split_word(label)}</div>'
+        f'<div class="t">{n}</div><div class="t">\u2013 {_split_word(first.get(n, label))}</div>'
         f'<div class="t">{_split_word(label)}</div><div class="t">{a}</div>'
         for n, label, a in rows
     )
@@ -342,6 +344,32 @@ def test_emt_label_in_the_answer_cell_is_split_off(tmp_path: Path):
     assert whitepaper.metadata["extraction_notes"] == labelled.metadata["extraction_notes"]
 
 
+def test_first_copy_of_a_name_in_other_words_is_split_off(tmp_path: Path):
+    # The CoreFiling rendering can word the first copy of a field name differently from the second.
+    answers = [
+        ("I.01", "2026-03-02"),
+        ("A.1", "Example E-Money Institution SAS (fictional)"),
+        ("A.22", "N/A"),
+        ("B.6", "A fictional token redeemable at par in euro."),
+        ("C.3", "Example Exchange (fictional)"),
+        ("F.1", "N/A"),
+    ]
+    rows = _labelled(answers, WhitepaperType.EMT)
+    names = FIELD_NAMES[WhitepaperType.EMT]
+    first_copies = {
+        "A.22": names["A.22"].replace("for the", "over the"),
+        "B.6": names["B.6"].replace("Crypto-asset", "Crypto-assets"),
+        "C.3": names["C.3"].removesuffix(" name"),
+    }
+    assert all(first_copies[number] != names[number] for number in first_copies)
+    merged = _load(tmp_path, "merged", _converted_from_pdf(rows, first_copies), WhitepaperType.EMT)
+    labelled = _load(tmp_path, "labelled", _three_columns(rows), WhitepaperType.EMT)
+
+    assert merged.sections == labelled.sections
+    assert merged.metadata["extraction_notes"] == labelled.metadata["extraction_notes"]
+    assert merged.section("issuer").endswith("\nN/A")
+
+
 @pytest.mark.parametrize(
     ("label", "content", "line"),
     [
@@ -359,6 +387,19 @@ def test_emt_label_in_the_answer_cell_is_split_off(tmp_path: Path):
         # A label repeated in its answer cell is split off again.
         ("Legal form", "Legal form N/A", "N/A"),
         ("\u2013 Legal form", "Stock corporation", "Legal form: Stock corporation"),
+        # A rendering can word the first copy of a name differently.
+        (
+            "",
+            "Financial condition over the past three years Financial condition for the past three years N/A",
+            "N/A",
+        ),
+        (
+            "",
+            "Trading platforms Trading platforms name Example Exchange",
+            "Trading platforms name: Example Exchange",
+        ),
+        # Words before a name that are not another wording of it keep the field's text.
+        ("", "Holding structure Parent company N/A", "Holding structure Parent company N/A"),
         # A label of its own that is not a field name stays as written.
         ("Name of the project", "Meadow", "Name of the project: Meadow"),
         # Text that goes on from a field name, or holds none, keeps its wording.
