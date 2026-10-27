@@ -48,10 +48,10 @@ def test_german_draft_linting():
                 "hervorragender Einstiegspunkt, der die wesentlichen Aspekte vollumfänglich abdeckt."
             ),
             "risk_warning": (
-                "Warnhinweis: Der Erwerb dieses Krypto-Assets ist mit dem Risiko eines vollständigen "
-                "Wertverlusts oder Verlusts des eingesetzten Kapitals verbunden. Es wird keine "
-                "Gewährleistung für Gewinne oder Erträge gegeben, und die vergangene Entwicklung "
-                "ist kein Indikator für zukünftige Ergebnisse. Bitte handeln Sie vorsichtig."
+                "Warnhinweis: Der Kryptowert kann seinen Wert ganz oder teilweise verlieren. Der "
+                "Kryptowert ist möglicherweise nicht immer übertragbar und möglicherweise nicht liquide. "
+                "Er fällt nicht unter die Systeme für die Entschädigung der Anleger gemäß der Richtlinie "
+                "97/9/EG und nicht unter die Einlagensicherungssysteme gemäß der Richtlinie 2014/49/EU."
             ),
             "management_statement": (
                 "Das Leitungsorgan bestätigt hiermit ausdrücklich, dass dieser vorliegende Entwurf des "

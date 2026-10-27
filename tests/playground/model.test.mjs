@@ -112,7 +112,8 @@ test("a draft that opens with markup is XHTML and states no regime of its own", 
   assert.equal(draftFormat(JSON.stringify(valid)), "json");
   assert.deepEqual(validateDraft(JSON.stringify({ ...valid, type: "ART" })), { format: "json", regime: "art" });
   assert.throws(() => validateDraft("not a draft"), /valid JSON/);
-  assert.throws(() => validateDraft(`<html>${" ".repeat(MAX_XHTML_BYTES)}</html>`), /up to 4 MB/);
+  assert.deepEqual(validateDraft(`<html>${" ".repeat(6 * 1024 * 1024)}</html>`), { format: "xhtml", regime: null });
+  assert.throws(() => validateDraft(`<html>${" ".repeat(MAX_XHTML_BYTES)}</html>`), /up to 8 MB/);
 });
 
 test("display citations never alter a pinpoint", () => {

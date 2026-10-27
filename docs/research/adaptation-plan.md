@@ -195,8 +195,8 @@ with call sites passing the finding instead of `finding.citation`, and a test (t
 1. **H4**: accept the `displayCitation` diff above, or keep German citations in the browser.
 2. **H9 never-pass**: if Arelle assertions are added, confirm `COMMON.IXBRL_TAGGING` stays never-pass and assertion failures add issues rather than new statuses.
 3. **H10 labels**: the 150 study cells need human review before any accuracy figure; nobody else can enter them.
-4. **`setup-uv` pin**: the Action now pins `v5.4.2` (newest v5.x, node20). CI uses `v10.3.0` (node24). Moving the Action to v10 needs an ADR and a test run on the starter repo.
-5. **Annotations and summary on by default** under `@v1`: additive output with no exit-code change, but visible to every existing consumer on the next `v1` move.
+4. **`setup-uv` pin**: decided 2026-10-26. The owner moved the Action to `v10.3.0` (node24), recorded in ADR 0001, with `enable-cache: 'false'`. The `action` job in CI runs it; the starter repo itself has not been run against it.
+5. **Annotations and summary on by default** under `@v1`: decided 2026-10-26. The owner kept both on by default for the 1.2.0 release, which every existing consumer sees when `v1` moves.
 6. **`uvx --no-cache`** in the Action: correctness over a few seconds per run (briefing correction 6).
 7. **H8 IDs and citations**: approve the point-level ID scheme and verify each point citation on EUR-Lex.
 8. **H7 versus H11**: decided 2026-10-21. The owner swapped dark mode out for H11.

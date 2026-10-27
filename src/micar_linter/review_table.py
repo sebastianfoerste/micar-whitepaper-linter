@@ -11,6 +11,7 @@ from typing import Any
 
 from micar_linter.artifact_manifest import file_sha256
 from micar_linter.linter import Report, lint_whitepaper
+from micar_linter.report import markdown_line, render_extraction_notes
 from micar_linter.rules.base import Finding, Severity
 from micar_linter.whitepaper import load_whitepaper
 
@@ -169,11 +170,12 @@ def render_review_table_markdown(table: dict[str, Any]) -> str:
             "publication or notification."
         ),
         "",
-        f"- Title: {table['title']}",
+        f"- Title: {markdown_line(table['title'])}",
         f"- White paper type: {table['whitepaper_type']}",
         f"- Export gate: {table['summary']['export_gate']}",
         f"- External action allowed: {table['delivery_block']['external_action_allowed']}",
         "",
+        *render_extraction_notes(table["warnings"]),
         "| Rule ID | Citation | Status | Blocker | Reviewer decision | Anchor verified |",
         "| --- | --- | --- | --- | --- | --- |",
     ]

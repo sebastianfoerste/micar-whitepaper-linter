@@ -6,7 +6,7 @@ import pytest
 
 from micar_linter.cli import main
 from micar_linter.linter import lint_whitepaper
-from micar_linter.numbered_fields import extract_numbered_fields, is_numbered_layout
+from micar_linter.numbered_fields import MERGED_LABELS_NOTE, extract_numbered_fields, is_numbered_layout
 from micar_linter.whitepaper import WhitepaperType, load_whitepaper
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -83,6 +83,154 @@ def test_leading_fields_of_tables_3_and_4_do_not_collide_with_part_i(tmp_path: P
     for part in ("redeem at par", "market value of the reserve", "Bank deposits"):
         assert part in whitepaper.section("redemption")
     assert "German" in whitepaper.section("language")
+
+
+def _emt_table(tmp_path: Path, rows: list[tuple[str, ...]]) -> Path:
+    cells = "".join("<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>" for row in rows)
+    return _write(tmp_path, f"<table>{cells}</table>")
+
+
+_EMT_BASE = [
+    ("I.01", "Date of notification", "2026-03-02"),
+    ("A.1", "Statutory name", "Example E-Money Institution SAS"),
+    ("C.1", "Public offering or admission to trading", "Offer to the public."),
+    ("F.1", "Risks", "Holders bear the risk of a failure of the issuer."),
+]
+
+
+def test_language_field_whose_label_shares_the_answer_cell(tmp_path: Path):
+    # Some white papers set "B.11" in one cell and the label with its answer in the next.
+    path = _emt_table(tmp_path, [*_EMT_BASE, ("B.11", "Language or languages of the white paper English")])
+    whitepaper = load_whitepaper(path, WhitepaperType.EMT)
+    assert whitepaper.section("language").endswith("English")
+    report = lint_whitepaper(whitepaper)
+    assert not any("labelled as the language" in warning for warning in report.warnings)
+
+
+def test_unlabelled_field_mentioning_a_language_is_not_the_language_field(tmp_path: Path):
+    path = _emt_table(
+        tmp_path, [*_EMT_BASE, ("E.1", "Smart contracts are written in a programming language.")]
+    )
+    assert "language" not in load_whitepaper(path, WhitepaperType.EMT).sections
+
+
+def test_emt_safeguarding_reads_the_fields_that_describe_it(tmp_path: Path):
+    funds = (
+        "Funds received in exchange for the tokens are safeguarded in segregated accounts "
+        "at a credit institution, protected in the insolvency of the issuer."
+    )
+    path = _emt_table(tmp_path, [*_EMT_BASE, ("D.3", "Rights of holders", funds)])
+    whitepaper = load_whitepaper(path, WhitepaperType.EMT)
+    assert "segregated accounts" in whitepaper.section("safeguarding")
+    report = lint_whitepaper(whitepaper)
+    finding = next(f for f in report.findings if f.rule.rule_id == "ANNEX_III.SAFEGUARDING")
+    assert finding.status != "missing"
+    assert any(warning.endswith("mention it: D.3.") for warning in report.warnings)
+
+
+def test_emt_safeguarding_stays_missing_when_no_field_describes_it(tmp_path: Path):
+    whitepaper = load_whitepaper(_emt_table(tmp_path, _EMT_BASE), WhitepaperType.EMT)
+    assert "safeguarding" not in whitepaper.sections
+    report = lint_whitepaper(whitepaper)
+    finding = next(f for f in report.findings if f.rule.rule_id == "ANNEX_III.SAFEGUARDING")
+    assert finding.status == "missing"
+    assert any("no answered field mentions safeguarding" in warning for warning in report.warnings)
+
+
+def test_spacer_spans_inside_words_leave_the_words_whole(tmp_path: Path):
+    # The layout of pdf2htmlEX: pages of absolutely placed lines, with empty spacer spans inside words.
+    path = _write(
+        tmp_path,
+        '<div class="pf" data-page-no="1"><div class="pc">'
+        '<div class="t">04<span class="_ _2"></span>Statement in accor<span class="_ _0"></span>dance with Article 51(4)</div>'
+        '<div class="t"><ix:nonNumeric name="mica:RiskWarning" contextRef="c1" continuedAt="k1">'
+        'The e-money token is not covered by the inves<span class="_ _1"></span>tor compen<span class="_ _0"></span>sation '
+        'schemes under Directive 97/9/EC or by the depo<span class="_ _0"></span>sit guaran<span class="_ _0"></span>tee '
+        "schemes</ix:nonNumeric></div>"
+        '</div></div><div class="pf" data-page-no="2"><div class="pc">'
+        '<div class="t"><ix:continuation id="k1">under Direc<span class="_ _0"></span>tive 2014/49/EU.</ix:continuation></div>'
+        '<div class="t">A.1 Na<span class="_ _0"></span>me</div>'
+        '<div class="t"><ix:nonNumeric name="mica:IssuerName" contextRef="c1">'
+        'Example Money Financ<span class="_ _0"></span>ial Europe SAS</ix:nonNumeric></div>'
+        '<div class="t">B.1<span class="_ _2"></span>Name of the e-money token</div>'
+        '<div class="t">Exam<span class="_ _1"></span>ple Euro Token</div>'
+        '<div class="t">F.1<span class="_ _2"> </span>Description of the ri<span class="_ _0"></span>sks</div>'
+        '<div class="t">Holders face li<span class="_ _0"></span>quidity and market ri<span class="_ _0"></span>sks.</div>'
+        "</div></div>",
+    )
+    fields = {field.field_id: field for field in extract_numbered_fields(path)}
+    # A spacer with no space in it still keeps "04" and "B.1" apart from their labels.
+    assert set(fields) == {"04", "A.1", "B.1", "F.1"}
+    assert fields["04"].content.startswith("Statement in accordance with Article 51(4) ")
+    assert fields["04"].content.endswith(
+        "not covered by the investor compensation schemes under Directive 97/9/EC "
+        "or by the deposit guarantee schemes under Directive 2014/49/EU."
+    )
+    assert (fields["A.1"].label, fields["A.1"].content) == ("Name", "Example Money Financial Europe SAS")
+    assert fields["B.1"].content.endswith("Example Euro Token")
+    assert fields["F.1"].content.endswith("Holders face liquidity and market risks.")
+
+    report = lint_whitepaper(load_whitepaper(path, WhitepaperType.EMT))
+    warning = next(finding for finding in report.findings if finding.rule.rule_id == "COMMON.RISK_WARNING")
+    assert not any(issue.startswith("Missing review terms") for issue in warning.issues)
+
+
+def test_spacer_widths_in_the_css_separate_words_and_kerning_does_not(tmp_path: Path):
+    # Converters in the style of pdf2htmlEX can leave a gap between words as an empty spacer;
+    # its CSS width, here 14.6px against a 32px font, marks it as one.
+    path = _write(
+        tmp_path,
+        "<style>._0{margin-left:-1.1px;}._1{width:1.2px;}._2{width:14.6px;}.fs0{font-size:32px;}</style>"
+        '<div class="pf"><div class="pc">'
+        '<div class="t fs0">A.2<span class="_ _1"></span>\u2013 Legal form</div>'
+        '<div class="t fs0">Simplified joint<span class="_ _2"></span>stock comp<span class="_ _0"></span>any</div>'
+        '<div class="t fs0">B.2<span class="_ _2"></span>Name of the e-money token</div>'
+        "</div></div>",
+    )
+    fields = {field.field_id: field for field in extract_numbered_fields(path)}
+    assert set(fields) == {"A.2", "B.2"}
+    assert fields["A.2"].content.endswith("Simplified joint stock company")
+    assert fields["B.2"].content == "Name of the e-money token"
+
+
+def test_table_cells_keep_their_paragraphs_apart(tmp_path: Path):
+    row = "<tr><td>A.1</td><td>Name</td><td><p>Example AG.</p><p>Formerly Sample<br/>GmbH.</p></td></tr>"
+    (field,) = extract_numbered_fields(_write(tmp_path, f"<table>{row}</table>"))
+    assert field.content == "Example AG. Formerly Sample GmbH."
+
+
+def test_labels_that_run_into_the_answers_are_reported(tmp_path: Path):
+    # A rendering converted from PDF puts each field number in its own text run, so the label joins the answer.
+    rows = "".join(
+        f"<div><span>{part}.{number}</span></div><div><span>Field {part}{number} label "
+        f"{'N/A' if part == 'C' else 'answer for the fictional issuer'}</span></div>"
+        for part in "ABCDE"
+        for number in range(1, 5)
+    )
+    whitepaper = load_whitepaper(_write(tmp_path, rows), WhitepaperType.OTHER)
+
+    assert whitepaper.metadata["extraction_notes"][0] == MERGED_LABELS_NOTE
+    # The risk the note names: the "N/A" field reads as answered, label included.
+    assert "Field C1 label N/A" in whitepaper.sections["trading_platform_operator"]
+
+
+def test_fields_with_their_own_label_raise_no_merged_label_note():
+    whitepaper = load_whitepaper(SAMPLE, WhitepaperType.OTHER)
+    assert MERGED_LABELS_NOTE not in whitepaper.metadata["extraction_notes"]
+
+
+def test_merged_label_note_needs_four_in_five_unlabelled_fields(tmp_path: Path):
+    # Eleven of fourteen lettered fields keep the label in the answer cell: just under four in five.
+    path = _emt_table(tmp_path, [*_EMT_BASE, *((f"B.{n}", f"Field B{n} label N/A") for n in range(1, 12))])
+    whitepaper = load_whitepaper(path, WhitepaperType.EMT)
+    assert MERGED_LABELS_NOTE not in whitepaper.metadata["extraction_notes"]
+
+
+def test_label_sharing_the_answer_cell_raises_the_merged_label_note(tmp_path: Path):
+    # Twelve of fifteen lettered fields keep the label in the answer cell.
+    path = _emt_table(tmp_path, [*_EMT_BASE, *((f"B.{n}", f"Field B{n} label N/A") for n in range(1, 13))])
+    whitepaper = load_whitepaper(path, WhitepaperType.EMT)
+    assert whitepaper.metadata["extraction_notes"][0] == MERGED_LABELS_NOTE
 
 
 def test_heading_structured_xhtml_keeps_the_heading_loader():
