@@ -1,6 +1,6 @@
 {
   "schema": "micar-whitepaper-linter.review-table",
-  "generated_at": "2026-10-25T18:14:22.956278+00:00",
+  "generated_at": "2026-10-27T20:53:04.672911+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "source": {
@@ -1037,7 +1037,7 @@
     {
       "row_id": "review-row-2274cfe5a8b05216",
       "rule_id": "COMMON.LEI_CHECK_DIGITS",
-      "citation": "Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR",
+      "citation": "Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, Anhang III Teil A Nr. 5 MiCAR",
       "section": "issuer",
       "label": "Legal Entity Identifier format and check digits (ISO 17442, ISO/IEC 7064 MOD 97-10)",
       "severity": "MAJOR",
@@ -1063,7 +1063,7 @@
         "rule_scope": [
           "COMMON.LEI_CHECK_DIGITS"
         ],
-        "citation": "Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR",
+        "citation": "Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, Anhang III Teil A Nr. 5 MiCAR",
         "severity": "MAJOR",
         "review_gate": "Qualified lawyer review required before external use.",
         "priority": "standard_review",
@@ -1094,7 +1094,7 @@
         {
           "column_id": "citation",
           "label": "Citation",
-          "value": "Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR",
+          "value": "Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, Anhang III Teil A Nr. 5 MiCAR",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -1184,7 +1184,7 @@
     {
       "row_id": "review-row-793877aec60b852a",
       "rule_id": "COMMON.LEI_CONSISTENCY",
-      "citation": "Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR",
+      "citation": "Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, Anhang III Teil A Nr. 5 MiCAR",
       "section": "issuer",
       "label": "Legal Entity Identifiers agree across the party sections and the rest of the draft",
       "severity": "MAJOR",
@@ -1210,7 +1210,7 @@
         "rule_scope": [
           "COMMON.LEI_CONSISTENCY"
         ],
-        "citation": "Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR",
+        "citation": "Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, Anhang III Teil A Nr. 5 MiCAR",
         "severity": "MAJOR",
         "review_gate": "Qualified lawyer review required before external use.",
         "priority": "standard_review",
@@ -1241,7 +1241,7 @@
         {
           "column_id": "citation",
           "label": "Citation",
-          "value": "Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR",
+          "value": "Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, Anhang III Teil A Nr. 5 MiCAR",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2513,7 +2513,7 @@
       "rule_id": "ANNEX_II.G.CUSTODY",
       "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR",
       "section": "reserve_of_assets",
-      "label": "Custody policy and custodian selection (Art. 36(2) MiCAR)",
+      "label": "Custody policy and custodian selection (Art. 36(2), Art. 37 MiCAR)",
       "severity": "BLOCKER",
       "status": "review",
       "blocker": true,
@@ -3101,5 +3101,5 @@
   ],
   "warnings": [],
   "review_notice": "Review table rows are deterministic linter outputs. Reviewer decisions remain pending until a qualified lawyer signs off.",
-  "digest": "af0dbc6e74bbbe7f203429192aa1d2605edb6f6ade263fc29838ed51acb43dce"
+  "digest": "45f9c6a01bcaf72dc378b0ba5bace8343b4ba64618133f0d94453da7164ed0e2"
 }

@@ -1,6 +1,6 @@
 {
   "schema": "micar-whitepaper-linter.coverage-matrix.v1",
-  "generated_at": "2026-10-25T18:14:22.956278+00:00",
+  "generated_at": "2026-10-27T20:53:04.672911+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "summary": {
@@ -117,7 +117,7 @@
       "rule_id": "COMMON.LEI_CHECK_DIGITS",
       "annex": "COMMON",
       "section": "issuer",
-      "citation": "Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR",
+      "citation": "Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, Anhang III Teil A Nr. 5 MiCAR",
       "severity": "MAJOR",
       "status": "pass",
       "word_count": 0,
@@ -134,7 +134,7 @@
       "rule_id": "COMMON.LEI_CONSISTENCY",
       "annex": "COMMON",
       "section": "issuer",
-      "citation": "Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR",
+      "citation": "Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, Anhang III Teil A Nr. 5 MiCAR",
       "severity": "MAJOR",
       "status": "pass",
       "word_count": 0,
@@ -360,5 +360,5 @@
   ],
   "warnings": [],
   "review_notice": "Coverage matrix is a deterministic disclosure checklist. It is not legal advice, a signature, a notification, or filing approval.",
-  "digest": "36d9e9668c7953f5855ed059637b9061871382d0cae7f40e9615f3cd6be7967e"
+  "digest": "65a34479f1793399f4036139aff3c03c873e088b56da1097433b0292704c10bf"
 }

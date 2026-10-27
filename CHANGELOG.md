@@ -5,6 +5,7 @@
 ### Changed
 
 - Playground: XHTML files up to 8 MB are accepted (before: 4 MB), the same limit the loader applies when it unpacks a saved iXBRL viewer page. A later XHTML check may take 60 seconds before it times out (before: 30).
+- `COMMON.LEI_CHECK_DIGITS` and `COMMON.LEI_CONSISTENCY`: a draft whose party sections have text but carry no LEI now shows Review instead of Missing, with a note that point 5 of each party Part allows another identifier required under national law in place of the LEI; a draft with no party text still shows Missing. This follows the owner's decision on the rule terms review. Both rules now cite point 5 of Annex I Parts A, B and C and of Annex II and III Part A, checked against the Official Journal; before, they cited Part A of each Annex without a point, although Annex I Part A covers the offeror. The label of `ANNEX_II.G.CUSTODY` names Art. 37, the custody policy, beside Art. 36(2). The examples without an LEI (`incomplete.json`, `sample-draft.xhtml`, `sample-draft.docx`, both numbered-field samples and the starter template) show Review for both rules, so `incomplete.json` now shows 14 Review and 6 Missing. The sample reports, the output in `README.md` and `docs/DETAILS.md`, the review bundle copy, the demo image and the rule pages are regenerated, ADR 0007 is amended, and the playground wheel is rebuilt.
 
 ### Fixed
 

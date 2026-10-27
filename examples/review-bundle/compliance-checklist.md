@@ -4,7 +4,7 @@
 - **Regime/Type**: ART
 - **Source File**: examples/art-stablecoin.json
 - **SHA-256 Checksum**: `aba778f9ac18355010618d26f96f95cd53699ca56ef9503d18b20d41b16a3fc1`
-- **Review Timestamp**: 2026-10-25 18:14:22
+- **Review Timestamp**: 2026-10-27 20:53:04
 
 ## Rule Compliance Checklist
 
@@ -16,8 +16,8 @@
 | `COMMON.NOTIFICATION_DATE` | Art. 6 Abs. 8, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR | Date of notification to the competent authority | MAJOR | **PASS** | [x] |
 | `COMMON.LANGUAGE` | Art. 6 Abs. 9, Art. 19 Abs. 8, Art. 51 Abs. 8 MiCAR | Language of the white paper (home Member State official language or customary in international finance) | MAJOR | **PASS** | [x] |
 | `COMMON.IXBRL_TAGGING` | Art. 2 VO (EU) 2024/2984 | Inline XBRL (iXBRL) compliance and ESMA metadata tagging | BLOCKER | **MISSING** | [ ] |
-| `COMMON.LEI_CHECK_DIGITS` | Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR | Legal Entity Identifier format and check digits (ISO 17442, ISO/IEC 7064 MOD 97-10) | MAJOR | **PASS** | [x] |
-| `COMMON.LEI_CONSISTENCY` | Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR | Legal Entity Identifiers agree across the party sections and the rest of the draft | MAJOR | **PASS** | [x] |
+| `COMMON.LEI_CHECK_DIGITS` | Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, Anhang III Teil A Nr. 5 MiCAR | Legal Entity Identifier format and check digits (ISO 17442, ISO/IEC 7064 MOD 97-10) | MAJOR | **PASS** | [x] |
+| `COMMON.LEI_CONSISTENCY` | Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, Anhang III Teil A Nr. 5 MiCAR | Legal Entity Identifiers agree across the party sections and the rest of the draft | MAJOR | **PASS** | [x] |
 | `ANNEX_II.A` | Anhang II Teil A MiCAR | Information about the issuer of the ART (legal form, governance, prudential profile) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.B` | Anhang II Teil B MiCAR | Information about the asset-referenced token (reference assets, stabilisation mechanism) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.C` | Anhang II Teil C MiCAR | Information about the offer to the public of the ART or its admission to trading | BLOCKER | **PASS** | [x] |
@@ -26,7 +26,7 @@
 | `ANNEX_II.F` | Anhang II Teil F MiCAR | Risk factors specific to ARTs (de-pegging, reserve impairment, redemption suspension) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.G.COMPOSITION_DISCLOSURE` | Anhang II Teil G i.V.m. Art. 36 MiCAR | Reserve composition disclosure (Annex II Part G) | BLOCKER | **REVIEW** | [ ] |
 | `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW` | Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d, Art. 45 Abs. 3 und Art. 45 Abs. 7 Buchst. b MiCAR | Candidate deposit floor for the reserve (30 % under Art. 36(4)(d); 60 % under Art. 45(7)(b) for significant ARTs, or for non-significant ARTs via Arts. 35(4) and 45(3) MiCAR) - lawyer review required | BLOCKER | **REVIEW** | [ ] |
-| `ANNEX_II.G.CUSTODY` | Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR | Custody policy and custodian selection (Art. 36(2) MiCAR) | BLOCKER | **REVIEW** | [ ] |
+| `ANNEX_II.G.CUSTODY` | Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR | Custody policy and custodian selection (Art. 36(2), Art. 37 MiCAR) | BLOCKER | **REVIEW** | [ ] |
 | `ANNEX_II.G.VALUATION_AUDIT` | Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR | Valuation procedure and audit frequency (Art. 36(3) MiCAR) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.H` | Art. 19 Abs. 1 UAbs. 1 Buchst. h MiCAR i.V.m. Art. 4 VO (EU) 2025/422; Anhang Tabelle 3 Teil H VO (EU) 2024/2984 | Principal adverse environmental and climate-related impact of the consensus mechanism | MAJOR | **PASS** | [x] |
 | `ANNEX_II.I` | Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 MiCAR | Redemption rights and procedure (timing, fees, suspension conditions) | BLOCKER | **PASS** | [x] |

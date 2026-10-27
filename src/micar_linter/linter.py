@@ -351,6 +351,32 @@ def _deposit_floor_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     return Finding(rule=rule, status="missing", word_count=words, issues=(msg,))
 
 
+def _other_identifier_note(is_de: bool) -> str:
+    return (
+        "Nr. 5 der Teile A bis C von Anhang I und von Teil A der Anhänge II und III lässt statt der LEI eine "
+        "andere nach geltendem nationalem Recht erforderliche Kennung zu. Ob der Entwurf für jeden "
+        "Beteiligten eine dieser Kennungen angibt, ist von Hand zu prüfen."
+        if is_de
+        else "Point 5 of Annex I Parts A to C and of Annex II and III Part A allows another identifier "
+        "required pursuant to applicable national law in place of the LEI. Whether the draft gives one of "
+        "them for each party needs checking by hand."
+    )
+
+
+def _no_lei_finding(rule: Rule, whitepaper: Whitepaper, msg: str) -> Finding:
+    """Fails closed without an LEI: Missing when no party section has text, Review when one has.
+
+    Point 5 of each party Part allows another identifier under national law in place of the LEI,
+    and VO (EU) 2024/2984 asks for the LEI "where available", so a party section without one
+    goes to a reviewer instead of counting as absent.
+    """
+    texts = ((whitepaper.sections.get(section) or "").strip() for section in PARTY_SECTIONS)
+    if not any(text and not is_placeholder(text) for text in texts):
+        return Finding(rule=rule, status="missing", word_count=0, issues=(msg,))
+    note = _other_identifier_note(whitepaper.language == "de")
+    return Finding(rule=rule, status="review", word_count=0, issues=(msg, note))
+
+
 def _lei_check_digits_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     """Fails closed: a draft without any LEI cannot show valid check digits."""
     is_de = whitepaper.language == "de"
@@ -363,7 +389,7 @@ def _lei_check_digits_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
             else "No Legal Entity Identifier (20 characters, ISO 17442) was found in the draft, "
             "so its check digits could not be checked."
         )
-        return Finding(rule=rule, status="missing", word_count=0, issues=(msg,))
+        return _no_lei_finding(rule, whitepaper, msg)
     issues = []
     for section, codes in found.items():
         for code in codes:
@@ -380,8 +406,8 @@ def _lei_check_digits_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
 def _lei_consistency_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     """Every valid LEI in the draft must belong to a party section; the issuer states one LEI.
 
-    Fails closed when no party section carries a valid LEI. Invalid codes are left to
-    COMMON.LEI_CHECK_DIGITS so that one typo is not reported twice.
+    Fails closed when no party section carries a valid LEI (see _no_lei_finding). Invalid codes
+    are left to COMMON.LEI_CHECK_DIGITS so that one typo is not reported twice.
     """
     is_de = whitepaper.language == "de"
     valid = {
@@ -398,7 +424,7 @@ def _lei_consistency_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
             else "No valid LEI was found in the issuer, offeror or trading_platform_operator sections, "
             "so consistency cannot be checked."
         )
-        return Finding(rule=rule, status="missing", word_count=0, issues=(msg,))
+        return _no_lei_finding(rule, whitepaper, msg)
     issues = []
     issuer_codes = valid.get("issuer", ())
     if len(issuer_codes) > 1:

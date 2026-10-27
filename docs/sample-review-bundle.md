@@ -64,12 +64,12 @@ Pass: 16  |  Review: 3  |  Missing: 1  |  Blockers: 4
            -  Draft format: notification requires XHTML with Inline XBRL tagging. This format cannot satisfy that requirement; the content checks still apply.
 
 [PASS  ] [MAJOR  ] COMMON.LEI_CHECK_DIGITS  Legal Entity Identifier format and check digits (ISO 17442, ISO/IEC 7064 MOD 97-10)
-           Cite:  Annex I, Part A, Annex II, Part A, Annex III, Part A MiCAR
+           Cite:  Annex I, Part A, point 5, Part B, point 5, Part C, point 5, Annex II, Part A, point 5, Annex III, Part A, point 5 MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'issuer'  (0 words)
 
 [PASS  ] [MAJOR  ] COMMON.LEI_CONSISTENCY  Legal Entity Identifiers agree across the party sections and the rest of the draft
-           Cite:  Annex I, Part A, Annex II, Part A, Annex III, Part A MiCAR
+           Cite:  Annex I, Part A, point 5, Part B, point 5, Part C, point 5, Annex II, Part A, point 5, Annex III, Part A, point 5 MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'issuer'  (0 words)
 
@@ -115,7 +115,7 @@ Pass: 16  |  Review: 3  |  Missing: 1  |  Blockers: 4
            Section: 'reserve_of_assets'  (192 words)
            -  Draft percentage candidate(s) detected: 30%. The draft characterisation indicates a 30% candidate floor (Art. 36(4)(d) MiCAR). A lawyer must confirm applicability, statement context, and compliance.
 
-[REVIEW] [BLOCKER] ANNEX_II.G.CUSTODY  Custody policy and custodian selection (Art. 36(2) MiCAR)
+[REVIEW] [BLOCKER] ANNEX_II.G.CUSTODY  Custody policy and custodian selection (Art. 36(2), Art. 37 MiCAR)
            Cite:  Annex II, Part G in conjunction with Art. 36(2), Art. 37 MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'reserve_of_assets'  (192 words)
