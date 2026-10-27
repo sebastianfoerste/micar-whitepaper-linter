@@ -47,7 +47,7 @@ A saved iXBRL viewer page packs the white paper into a script and shows it only 
 
 ## Coverage caveats
 
-The Table 2 mapping (crypto-assets other than ARTs and EMTs) has been run against public register documents. The Table 3 and Table 4 mappings follow the Official Journal text and have not yet been run against a real ART or EMT white paper. The iXBRL check tests well-formedness, the Inline XBRL 1.1 namespace and the ESMA MiCA taxonomy namespace. It does not evaluate the taxonomy's existence and value assertions, so it never reports Pass. For a saved iXBRL viewer page it does not run at all and reports Missing.
+The Table 2 mapping (crypto-assets other than ARTs and EMTs) has been run against public register documents. The Table 3 and Table 4 mappings follow the Official Journal text and have not yet been run against a real ART or EMT white paper. Where a white paper runs its field labels into the answers, as a conversion from PDF can, the loader recognises the template's English field names and splits them off; a label in another language or in other words stays in the answer, and the report warns about those fields. The iXBRL check tests well-formedness, the Inline XBRL 1.1 namespace and the ESMA MiCA taxonomy namespace. It does not evaluate the taxonomy's existence and value assertions, so it never reports Pass. For a saved iXBRL viewer page it does not run at all and reports Missing.
 
 ## GitHub Action
 

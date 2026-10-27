@@ -12,11 +12,13 @@ import io
 import re
 from collections.abc import Iterator
 from dataclasses import dataclass
+from functools import cache
 from pathlib import Path
 
 from lxml import etree
 
 from micar_linter.placeholders import is_not_applicable, is_placeholder
+from micar_linter.template_fields import FIELD_NAMES
 from micar_linter.whitepaper import WhitepaperType
 
 # A layout counts as numbered once fields from this many distinct parts carry content.
@@ -237,11 +239,93 @@ def extract_numbered_fields(source: Path | bytes) -> list[NumberedField]:
     ]
 
 
+# Before a label: spaces, a colon, a dash or a bullet. Between a label and its answer the same, but a dash
+# or bullet only before more text: a lone dash answers "not applicable" and a lone bullet is a placeholder.
+_LEAD = re.compile(r"^[\s:|\-\u2013\u2014\u2022\u00b7]+")
+_JOINT = re.compile(r"^(?:[\s:|)\]]|[-\u2013\u2014\u2022\u00b7](?=\s))+")
+# Text that goes on from a field name with "of", "'s" or the like makes a longer label than the
+# template's ("Name of the token N/A"), so the field keeps its text.
+_NAME_GOES_ON = re.compile(r"(?:of|for|and|or)\b|['\u2019]s\b")
+_LISTED_FIELDS = 10
+
+
+@cache
+def _name_pattern(name: str) -> re.Pattern[str]:
+    """Match a template field name at the start of a text, in any case and spacing.
+
+    A PDF conversion can split a word with an empty span ("accor dance"), so a word may hold gaps;
+    between words any spacing or punctuation passes ("E-mail", "Email", "6(5)").
+    """
+    words = re.findall(r"[^\W_]+", name)
+    body = r"[\W_]*".join(r"\s*".join(map(re.escape, word)) for word in words)
+    tail = r"(?:\s*\))?" if name.endswith(")") else ""
+    return re.compile(rf"{body}{tail}(?![^\W_])", re.I)
+
+
+@cache
+def _field_names(whitepaper_type: WhitepaperType) -> tuple[str, ...]:
+    return tuple(dict.fromkeys(FIELD_NAMES[whitepaper_type].values()))
+
+
+def _leading_name(text: str, whitepaper_type: WhitepaperType) -> tuple[str, int] | None:
+    """The longest template field name the text starts with, and where it ends in the text."""
+    found = None
+    for name in _field_names(whitepaper_type):
+        if name[0].lower() != text[:1].lower():
+            continue
+        if (match := _name_pattern(name).match(text)) and (found is None or match.end() > found[1]):
+            found = (name, match.end())
+    return found
+
+
+def _with_template_label(field: NumberedField, whitepaper_type: WhitepaperType) -> NumberedField:
+    """Split the template's field name off the start of the field's text.
+
+    A field without a label of its own takes the name its content starts with: "Legal form Legal
+    form N/A" after a dash gives the label "Legal form" and the answer "N/A", also where a PDF
+    conversion split a word or printed the name twice. A label cut off inside a word takes the rest
+    of the name from the content. A field keeps its text when no name fits, when a name covers only
+    the start of its label, or when the text after the name goes on with "of" and the like.
+    """
+    label = _LEAD.sub("", field.label).rstrip(" .:")
+    text = _LEAD.sub("", f"{label} {field.content}" if label else field.content)
+    found = _leading_name(text, whitepaper_type)
+    if found is None or found[1] < len(label):
+        return field
+    name, end = found
+    answer = _JOINT.sub("", text[end:])
+    while match := _name_pattern(name).match(answer):
+        answer = _JOINT.sub("", answer[match.end() :])
+    if _NAME_GOES_ON.match(answer) and not (is_not_applicable(answer) or is_placeholder(answer)):
+        return field
+    if not label or end > len(label):
+        label = name
+    if (label, answer) == (field.label, field.content):
+        return field
+    return NumberedField(field.field_id, label, answer)
+
+
 MERGED_LABELS_NOTE = (
-    "Most numbered fields in this layout have no separate label, so a label can run into its answer: "
-    "a field answered only \"N/A\" or \"TBD\" then reads as answered, and the template's label wording "
-    "can count toward a check. Check each Pass against the white paper."
+    "Most numbered fields in this layout have no separate label, and their text does not start with a "
+    "field name of the template, so a label can run into its answer: a field answered only \"N/A\" or "
+    "\"TBD\" then reads as answered, and the template's label wording can count toward a check. "
+    "Check each Pass against the white paper."
 )
+
+
+def _unlabelled_fields_note(field_ids: list[str]) -> str:
+    listed = ", ".join(field_ids[:_LISTED_FIELDS])
+    if len(field_ids) > _LISTED_FIELDS:
+        listed += f" and {len(field_ids) - _LISTED_FIELDS} more"
+    if len(field_ids) == 1:
+        subject, fields = f"Field {listed} has no separate label, and its text", "the field"
+    else:
+        subject, fields = f"Fields {listed} have no separate label, and their text", "those fields"
+    return (
+        f"{subject} does not start with a field name of the template, so a label can run into the answer: "
+        "such a field answered only \"N/A\" or \"TBD\" reads as answered. "
+        f"Check {fields} against the white paper."
+    )
 
 
 def labels_run_into_answers(fields: list[NumberedField]) -> bool:
@@ -249,7 +333,7 @@ def labels_run_into_answers(fields: list[NumberedField]) -> bool:
 
     A rendering converted from PDF can split field number, label and answer into separate text runs,
     and some tables set the label in the answer cell. The label then reads as part of the answer,
-    so "Legal form N/A" counts as answered.
+    so "Legal form N/A" counts as answered, unless the template's field name is split off first.
     """
     lettered = [field for field in fields if "." in field.field_id and field.content.strip()]
     return bool(lettered) and 5 * sum(not field.label for field in lettered) >= 4 * len(lettered)
@@ -271,10 +355,16 @@ def sections_from_numbered_fields(
     so a part of unanswered fields cannot satisfy a rule through the wording of the
     template alone. In a part with no answered field, the "N/A" fields contribute nothing
     when another field holds a placeholder, so a part of placeholders and "N/A" reads as
-    placeholders only and is reported missing.
+    placeholders only and is reported missing. A field whose text starts with the template's
+    field name has that name split off as its label first, so the safeguards also hold
+    where a layout runs labels into answers.
     """
     parts = _PART_SECTIONS[whitepaper_type]
     summary = _SUMMARY_SECTIONS[whitepaper_type]
+    # The layout notes read the fields as found: a field holding only its name still counts as present.
+    merged_layout = labels_run_into_answers(fields)
+    has_leading_fields = any(field.field_id in summary and field.content.strip() for field in fields)
+    fields = [_with_template_label(field, whitepaper_type) for field in fields]
     lettered = [field for field in fields if field.part in parts and field.content.strip()]
     answered_parts = {field.part for field in lettered if field.answered}
     placeholder_parts = {field.part for field in lettered if field.placeholder} - answered_parts
@@ -309,8 +399,14 @@ def sections_from_numbered_fields(
             sections.setdefault("safeguarding", []).append(line)
             safeguarding_fields.append(field.field_id)
 
-    notes = [MERGED_LABELS_NOTE] if labels_run_into_answers(fields) else []
-    if not any(field.field_id in summary and field.content.strip() for field in fields):
+    notes = []
+    # Where labels run into answers, the fields whose label could not be split off stay at risk.
+    unlabelled = [field.field_id for field in lettered if field.answered and not field.label]
+    if labels_run_into_answers(fields):
+        notes.append(MERGED_LABELS_NOTE)
+    elif merged_layout and unlabelled:
+        notes.append(_unlabelled_fields_note(unlabelled))
+    if not has_leading_fields:
         notes.append(
             "No leading numbered fields were found. The summary, statements, warning and notification date "
             "may sit under other headings; those checks report Missing because of the layout."
