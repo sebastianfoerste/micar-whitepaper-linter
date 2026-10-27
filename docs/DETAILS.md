@@ -74,9 +74,9 @@ Inputs:
 
 Output: `sarif-file`, the path of the SARIF log, for other uploaders such as reviewdog.
 
-The job fails while BLOCKER-severity findings are open. The iXBRL format check (`COMMON.IXBRL_TAGGING`) is a BLOCKER that a JSON, DOCX, PDF or Markdown draft can never meet, so a strict job on such a draft always fails. From the next `v1` release it never passes for XHTML or HTML either (it stays at review, because tag completeness is not checked), so a strict job then fails on every draft. A failing job means open blockers to review, not a legal conclusion. The summary, annotations and SARIF log carry rule IDs, statuses, citations and line numbers, never draft text or the draft title, and they change no status or exit code. The job log still prints the full text report, which includes the draft title and quoted figures such as reserve percentages; treat the log as being as sensitive as the draft. The `summary`, `annotations` and `upload-sarif` inputs and the `sarif-file` output ship with the next `v1` release. The iXBRL format check (`COMMON.IXBRL_TAGGING`) never passes, so it is listed in its own summary section and not annotated.
+The job fails while BLOCKER-severity findings are open. The iXBRL format check (`COMMON.IXBRL_TAGGING`) is a BLOCKER that a JSON, DOCX, PDF or Markdown draft can never meet, so a strict job on such a draft always fails (on the current `v1`, unless `extra-args` holds `--coverage`, which there skips the strict gate). From the next `v1` release it never passes for XHTML or HTML either (it stays at review, because tag completeness is not checked), so a strict job then fails on every draft. A failing job means open blockers to review, or a draft that could not be loaded (on the current `v1`, every DOCX draft), not a legal conclusion. The summary, annotations and SARIF log carry rule IDs, statuses, citations and line numbers, never draft text or the draft title, and they change no status or exit code. The job log still prints the full text report, which includes the draft title and quoted figures such as reserve percentages; treat the log as being as sensitive as the draft. The `summary`, `annotations` and `upload-sarif` inputs and the `sarif-file` output ship with the next `v1` release. The iXBRL format check (`COMMON.IXBRL_TAGGING`) never passes, so it is listed in its own summary section and not annotated.
 
-Line numbers point at the section key in a JSON draft or the matching heading in an XHTML draft; numbered-field XHTML, DOCX, PDF, Markdown and absent sections point at line 1.
+Line numbers point at the section key in a JSON draft or the first `h1` to `h6` heading that maps to the section in an XHTML or HTML draft; numbered-field XHTML, DOCX, PDF, Markdown, sections found only under bold-text headings and absent sections point at line 1.
 
 Code scanning needs extra permissions and works on public repositories, or private ones with GitHub Code Security. Uploads from fork pull requests fail with the default read-only token:
 
@@ -92,7 +92,7 @@ steps:
       upload-sarif: 'true'
 ```
 
-Fastest start: the [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template) repo ships this workflow preconfigured — click **Use this template**.
+Fastest start: the [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template) repo ships a preconfigured workflow in report mode (`strict: 'false'`) — click **Use this template**.
 
 The canonical template source lives at `templates/whitepaper-starter` in this repository. The public template repository remains the release surface. Run `make template-check` to validate its JSON and workflow contract, then `make template-export` to prepare a local path-export branch for human review. The export command never pushes.
 

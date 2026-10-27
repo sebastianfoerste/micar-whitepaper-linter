@@ -6,7 +6,7 @@
 
 **Flag missing and thin disclosures in draft MiCAR white papers before substantive legal review, using deterministic Annex I, II and III checks with pinpoint citations.**
 
-A deterministic Python linter for draft white papers under MiCAR (Regulation (EU) 2023/1114). It checks Annex I, II and III requirements as code, accepts JSON, XHTML or HTML (incl. numbered-field iXBRL layouts), DOCX, PDF and Markdown, and runs as a CLI, [a GitHub Action](https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/docs/SETUP.md#github-action), or [in your browser](https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/).
+A deterministic Python linter for draft white papers under MiCAR (Regulation (EU) 2023/1114). It checks Annex I, II and III requirements as code, accepts JSON, XHTML or HTML (incl. numbered-field iXBRL layouts), DOCX, PDF and Markdown, and runs as a CLI, [a GitHub Action](https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/docs/SETUP.md#github-action), or [in your browser](https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/) (JSON, XHTML).
 
 > Review-gated first-pass tooling. It flags candidate gaps for a lawyer; it does not decide whether a white paper is lawful or complete. **Not legal advice.** Bundled examples are synthetic.
 
@@ -36,7 +36,7 @@ DOCX, review bundles and options: [full quick start](https://github.com/sebastia
 
 ## Example output
 
-Real output of `uv run micar-lint examples/incomplete.json` (a synthetic, deliberately incomplete ART draft), first two findings only:
+Real output of `uv run micar-lint examples/incomplete.json` (a synthetic, incomplete ART draft), first two findings only:
 
 ```text
 MiCAR Whitepaper Linter - Incomplete Synthetic EuroStable ART Draft

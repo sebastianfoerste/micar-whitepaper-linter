@@ -41,7 +41,7 @@ uvx --from git+https://github.com/sebastianfoerste/micar-whitepaper-linter micar
 ```
 
 ### From source
-Clone the repository and install the `dev` extra, which includes DOCX and PDF support:
+Clone the repository and install the `dev` extra, which adds DOCX support and the test tools (PDF support is in the base install):
 ```bash
 git clone https://github.com/sebastianfoerste/micar-whitepaper-linter.git && cd micar-whitepaper-linter
 make install   # uv sync --extra dev
@@ -130,4 +130,4 @@ Details in [docs/DETAILS.md](DETAILS.md#browser-workbench).
     strict: 'true'
 ```
 
-Findings and their citations appear in the job log. With `strict: 'true'` (the default) the job fails while BLOCKER-severity findings are open; `strict: 'false'` is report mode, which only lists them. The iXBRL format check (`COMMON.IXBRL_TAGGING`) is a BLOCKER that a JSON, DOCX, PDF or Markdown draft can never meet, so a strict job on such a draft always fails. From the next `v1` release it never passes for XHTML or HTML either (it stays at review, because tag completeness is not checked), so a strict job then fails on every draft. The current `v1` cannot load DOCX at all, so a DOCX job fails even with `strict: 'false'` until the next release. Starter repo: [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template), which ships this step for its `whitepaper.json` in report mode; set `strict` to `'true'` in its `.github/workflows/micar-lint.yml` to fail on open BLOCKERs. Details in [docs/DETAILS.md](DETAILS.md#github-action).
+Findings and their citations appear in the job log. With `strict: 'true'` (the default) the job fails while BLOCKER-severity findings are open; `strict: 'false'` is report mode, which only lists them. The iXBRL format check (`COMMON.IXBRL_TAGGING`) is a BLOCKER that a JSON, DOCX, PDF or Markdown draft can never meet, so a strict job on such a draft always fails (on the current `v1`, unless `extra-args` holds `--coverage`, which there skips the strict gate). From the next `v1` release it never passes for XHTML or HTML either (it stays at review, because tag completeness is not checked), so a strict job then fails on every draft. The current `v1` cannot load DOCX at all, so a DOCX job fails even with `strict: 'false'` until the next release. Starter repo: [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template), which ships this step for its `whitepaper.json` in report mode; set `strict` to `'true'` in its `.github/workflows/micar-lint.yml` to fail on open BLOCKERs. Details in [docs/DETAILS.md](DETAILS.md#github-action).
