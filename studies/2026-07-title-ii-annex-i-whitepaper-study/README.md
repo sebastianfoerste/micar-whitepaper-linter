@@ -33,7 +33,7 @@ WP identifiers are pseudonymous labels. They are not anonymisation: `source-mani
 
 ## Reproduce the detector output
 
-Write to a scratch folder and compare with the committed files, which a re-run must not overwrite by accident. The committed findings are the machine output of the run on 2026-07-06, and the summary is rendered from them. A re-run always differs in `generated_at`, `digest`, `language_policy`, `source_manifest.register_source_detail` and each finding's `human_review_note`, because that wording and the curated manifest have changed since; its summary differs in the "Source manifest" and "Findings digest" lines with them. Its flags may differ too, because the document loaders have changed since.
+Write to a scratch folder and compare with the committed files, which a re-run must not overwrite by accident. The committed findings are the machine output of the run on 2026-07-06, and the summary is rendered from them. A re-run always differs in `generated_at`, `digest`, `language_policy`, `source_manifest.register_source_detail` and each finding's `human_review_note`, because that wording and the curated manifest have changed since; its summary differs in the "Source manifest" and "Findings digest" lines with them. Its flags and evidence (`matched_text`, `page_or_section`, `extraction_metadata`) may differ too, because the document loaders have changed since.
 
 ```bash
 mkdir -p /tmp/micar-study
@@ -49,7 +49,7 @@ uv run micar-study-report \
   --out /tmp/micar-study/findings-summary.md
 ```
 
-`micar-lint-batch` needs the source files under `.study-cache/title-ii-whitepapers/`. Without them it excludes every document as `cached_document_not_found` and still exits 0. If only some are missing, it fills the sample of 10 with candidate entries instead. Before comparing, check that the run processed the same documents as the committed file: 10 documents processed and the same `study_doc_id` values.
+`micar-lint-batch` needs the source files under `.study-cache/title-ii-whitepapers/`. Without them it excludes every document as `cached_document_not_found` and still exits 0. If only some are missing, it fills the sample of 10 with candidate entries instead. Before comparing, check that the run processed the same documents as the committed file: 10 documents processed, the same `study_doc_id` values and the same `document_hash_sha256` values (also recorded in `document-provenance.json`). A white paper downloaded again with different bytes can change the flags on its own.
 
 `source-manifest.json` and `document-provenance.json` are curated and are not regenerated. `python -m micar_linter.esma_register` cannot reproduce the manifest: it drops entries and provenance fields. To inspect its normalisation, write to the scratch folder:
 
@@ -59,7 +59,7 @@ uv run python -m micar_linter.esma_register \
   --out /tmp/micar-study/source-manifest.json
 ```
 
-The scripts in `scripts/` write to the committed files: `run_batch.py` to the findings, `render_report.py` to `findings-summary.md`, and `fetch_esma_register.py` (from the live ESMA register) and `select_sample.py` to `source-manifest.json` and `sample-manifest.csv`. Do not run `fetch_esma_register.py` or `select_sample.py`: they replace the curated manifest. Run `run_batch.py` only with the full cache in place, and `render_report.py` only to refresh the summary on purpose. A refresh of the findings also puts `human-review-matrix.csv`, whose rows store each cell's `detector_status`, and the study figures in `docs/playground/index.html`, `docs/overview.md` and this README out of step; no script rebuilds them.
+The scripts in `scripts/` write to the committed files: `run_batch.py` to the findings, `render_report.py` to `findings-summary.md`, and `fetch_esma_register.py` (from the live ESMA register) and `select_sample.py` to `source-manifest.json` and `sample-manifest.csv`. Do not run `fetch_esma_register.py` or `select_sample.py`: they replace the curated manifest. Run `run_batch.py` only with the full cache in place, and `render_report.py` only to refresh the summary on purpose. A refresh that changes the flags puts `human-review-matrix.csv`, whose rows store each cell's `detector_status`, and the candidate-gap figures in `docs/overview.md` and this README out of step; one that changes the documents processed also puts the figures in `docs/playground/index.html` and `docs/DETAILS.md` out of step. No script rebuilds them.
 
 ## Validate against human labels
 
@@ -72,7 +72,7 @@ uv run micar-review-summary \
   --require-complete
 ```
 
-Copy the output over `human-review-summary.json` only once the command exits 0.
+Copy the output over `human-review-summary.json` only once the command exits 0. Then update the reviewed count (`basis-reviewed`) in `docs/playground/index.html`, which `tests/playground/model.test.mjs` checks against `rows_completed`.
 
 The command writes its output before it checks completeness, so pointed at the committed `human-review-summary.json` it would overwrite it even while rows are pending; it then exits with status 2. Metrics exclude uncertain, extraction-failure, and not-applicable labels.
 

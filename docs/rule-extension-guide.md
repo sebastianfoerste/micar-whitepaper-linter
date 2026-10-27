@@ -9,7 +9,7 @@ Each rule is a `Rule` in `src/micar_linter/rules/`.
 Required fields:
 
 1. `rule_id`: Stable identifier, for example `ANNEX_II.G.CUSTODY`.
-2. `citation`: Pinpoint citation to Regulation (EU) 2023/1114 or a documented technical standard, in the canonical German form (`Art. 6 Abs. 7 MiCAR`). The text report (by default), the JSON report's `citation_en`, the CI outputs and the rule pages show it in English (SARIF and the rule pages also carry the German form); the audit log, the coverage and review-table outputs and the playground's findings list show the German form.
+2. `citation`: Pinpoint citation to Regulation (EU) 2023/1114 or a documented technical standard, in the canonical German form (`Art. 6 Abs. 7 MiCAR`). The text report (by default), the CI outputs and the rule pages show the English form, the JSON report carries both (`citation` and `citation_en`), and the other outputs (audit log, coverage, remediation, review table, review bundle) and the playground's findings list show the German form.
 3. `section`: the section key the generic checks read, as in the `sections` of a JSON draft (`COMMON.IXBRL_TAGGING` reads no section, and the two LEI rules read every section).
 4. `label`: Human-readable description of the disclosure requirement.
 5. `severity`: `BLOCKER`, `MAJOR` or `MINOR`.
