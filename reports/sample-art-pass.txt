@@ -59,10 +59,10 @@ Pass: 16  |  Review: 3  |  Missing: 1  |  Blockers: 4
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'offer_or_admission'  (77 words)
 
-[PASS  ] [BLOCKER] ANNEX_II.D  Rights and obligations of holders (redemption right at par, complaints handling)
+[PASS  ] [BLOCKER] ANNEX_II.D  Rights and obligations of holders (permanent right of redemption, complaints handling)
            Cite:  Annex II, Part D in conjunction with Art. 39 MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'rights_and_obligations'  (94 words)
+           Section: 'rights_and_obligations'  (103 words)
 
 [PASS  ] [BLOCKER] ANNEX_II.E  Information on the underlying technology (DLT, custody architecture, key management)
            Cite:  Annex II, Part E MiCAR
@@ -72,7 +72,7 @@ Pass: 16  |  Review: 3  |  Missing: 1  |  Blockers: 4
 [PASS  ] [BLOCKER] ANNEX_II.F  Risk factors specific to ARTs (de-pegging, reserve impairment, redemption suspension)
            Cite:  Annex II, Part F MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'risks'  (157 words)
+           Section: 'risks'  (160 words)
 
 [REVIEW] [BLOCKER] ANNEX_II.G.COMPOSITION_DISCLOSURE  Reserve composition disclosure (Annex II Part G)
            Cite:  Annex II, Part G in conjunction with Art. 36 MiCAR
@@ -107,7 +107,7 @@ Pass: 16  |  Review: 3  |  Missing: 1  |  Blockers: 4
 [PASS  ] [BLOCKER] ANNEX_II.I  Redemption rights and procedure (timing, fees, suspension conditions)
            Cite:  Annex II, Part D, points 9, 15 and 16, Part G, point 3 in conjunction with Art. 39 MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'redemption'  (125 words)
+           Section: 'redemption'  (139 words)
 
 ==============================================================================
 First-pass screening only. The draft is not package-ready. The white paper notification or submission for approval (Art. 8(1), Art. 16(2), second subparagraph, Art. 17(1), point (a), Art. 18(2), point (k), Art. 51(11) MiCAR) should not enter an external review or filing workflow until BLOCKER items are cured and a lawyer has signed off.

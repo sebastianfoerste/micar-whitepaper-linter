@@ -3,8 +3,8 @@
 - **Document Title**: Synthetic EuroStable ART White Paper
 - **Regime/Type**: ART
 - **Source File**: examples/art-stablecoin.json
-- **SHA-256 Checksum**: `aba778f9ac18355010618d26f96f95cd53699ca56ef9503d18b20d41b16a3fc1`
-- **Review Timestamp**: 2026-10-25 18:14:22
+- **SHA-256 Checksum**: `3eddd4d706064ea7a74004a83fa7d453e46543054c02ca8ebbb286a21d99ac02`
+- **Review Timestamp**: 2026-10-27 19:17:44
 
 ## Rule Compliance Checklist
 
@@ -21,7 +21,7 @@
 | `ANNEX_II.A` | Anhang II Teil A MiCAR | Information about the issuer of the ART (legal form, governance, prudential profile) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.B` | Anhang II Teil B MiCAR | Information about the asset-referenced token (reference assets, stabilisation mechanism) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.C` | Anhang II Teil C MiCAR | Information about the offer to the public of the ART or its admission to trading | BLOCKER | **PASS** | [x] |
-| `ANNEX_II.D` | Anhang II Teil D i.V.m. Art. 39 MiCAR | Rights and obligations of holders (redemption right at par, complaints handling) | BLOCKER | **PASS** | [x] |
+| `ANNEX_II.D` | Anhang II Teil D i.V.m. Art. 39 MiCAR | Rights and obligations of holders (permanent right of redemption, complaints handling) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.E` | Anhang II Teil E MiCAR | Information on the underlying technology (DLT, custody architecture, key management) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.F` | Anhang II Teil F MiCAR | Risk factors specific to ARTs (de-pegging, reserve impairment, redemption suspension) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.G.COMPOSITION_DISCLOSURE` | Anhang II Teil G i.V.m. Art. 36 MiCAR | Reserve composition disclosure (Annex II Part G) | BLOCKER | **REVIEW** | [ ] |

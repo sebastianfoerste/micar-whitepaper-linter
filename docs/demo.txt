@@ -74,12 +74,12 @@ Pass: 0  |  Review: 12  |  Missing: 8  |  Blockers: 15
            Section: 'offer_or_admission'  (0 words)
            -  Section is empty or absent.
 
-[REVIEW] [BLOCKER] ANNEX_II.D  Rights and obligations of holders (redemption right at par, complaints handling)
+[REVIEW] [BLOCKER] ANNEX_II.D  Rights and obligations of holders (permanent right of redemption, complaints handling)
            Cite:  Annex II, Part D in conjunction with Art. 39 MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'rights_and_obligations'  (3 words)
            -  Section is thin: 3 words, expected at least 80.
-           -  Missing review terms: redemption, at par, complaints.
+           -  Missing review terms: redemption, permanent, complaints.
 
 [REVIEW] [BLOCKER] ANNEX_II.E  Information on the underlying technology (DLT, custody architecture, key management)
            Cite:  Annex II, Part E MiCAR

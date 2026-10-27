@@ -47,13 +47,16 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
         min_words=60,
         severity=Severity.BLOCKER,
     ),
+    # Anhang II Teil D Nr. 9 and Art. 39 Abs. 1 MiCAR give ART holders a permanent right of
+    # redemption ("dauerhafte Rücktauschrechte"). Redemption at par value is the e-money token rule
+    # of Art. 49 Abs. 4 and appears nowhere in Art. 39 or Annex II.
     Rule(
         rule_id="ANNEX_II.D",
         citation="Anhang II Teil D i.V.m. Art. 39 MiCAR",
         section="rights_and_obligations",
-        label="Rights and obligations of holders (redemption right at par, complaints handling)",
-        required_terms=("rights", "redemption", "at par", "complaints", "holder"),
-        required_terms_de=("rechte", "rückzahlung", "zu par", "beschwerden", "inhaber"),
+        label="Rights and obligations of holders (permanent right of redemption, complaints handling)",
+        required_terms=("rights", "redemption", "permanent", "complaints", "holder"),
+        required_terms_de=("rechte", "rücktausch", "dauerhaft", "beschwerden", "inhaber"),
         min_words=80,
         severity=Severity.BLOCKER,
     ),
@@ -157,13 +160,16 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
         min_words=80,
         severity=Severity.MAJOR,
     ),
+    # Art. 39 Abs. 2 MiCAR: redemption in funds at the market value of the referenced assets, or by
+    # delivering them, under a policy that sets the periods and timeframes. Art. 39 Abs. 3: no fee,
+    # except the liquidity fees a recovery plan may provide for; Art. 46: suspension of redemptions.
     Rule(
         rule_id="ANNEX_II.I",
         citation="Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 MiCAR",
         section="redemption",
         label="Redemption rights and procedure (timing, fees, suspension conditions)",
-        required_terms=("redemption", "at par", "procedure", "timing", "fees", "suspension"),
-        required_terms_de=("rücknahme", "zu par", "verfahren", "zeitplan", "gebühren", "aussetzung"),
+        required_terms=("redemption", "market value", "procedure", "timeframe", "fee", "suspension"),
+        required_terms_de=("rücktausch", "marktwert", "verfahren", "zeitrahmen", "gebühr", "aussetzung"),
         min_words=100,
         severity=Severity.BLOCKER,
     ),

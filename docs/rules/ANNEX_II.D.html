@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Rights and obligations of holders (redemption right at par, complaints handling). Annex II, Part D in conjunction with Art. 39 MiCAR.">
+<meta name="description" content="Rights and obligations of holders (permanent right of redemption, complaints handling). Annex II, Part D in conjunction with Art. 39 MiCAR.">
 <title>ANNEX_II.D: MiCAR Whitepaper Linter rule</title>
 <link rel="stylesheet" href="../assets/site.css">
 </head>
@@ -16,7 +16,7 @@
 <main id="main">
 <p class="eyebrow">Rule · BLOCKER</p>
 <h1>ANNEX_II.D</h1>
-<p class="lede">Rights and obligations of holders (redemption right at par, complaints handling)</p>
+<p class="lede">Rights and obligations of holders (permanent right of redemption, complaints handling)</p>
 <div class="panel"><dl class="facts">
 <dt>Citation</dt><dd>Annex II, Part D in conjunction with Art. 39 MiCAR</dd>
 <dt>Canonical form</dt><dd lang="de">Anhang II Teil D i.V.m. Art. 39 MiCAR</dd>
@@ -24,8 +24,8 @@
 <dt>Severity if open</dt><dd>BLOCKER</dd>
 <dt>Section key</dt><dd><code>rights_and_obligations</code></dd>
 <dt>Minimum words</dt><dd>80</dd>
-<dt>Listed terms (English)</dt><dd><code>rights</code>, <code>redemption</code>, <code>at par</code>, <code>complaints</code>, <code>holder</code></dd>
-<dt>Listed terms (German)</dt><dd lang="de"><code>rechte</code>, <code>rückzahlung</code>, <code>zu par</code>, <code>beschwerden</code>, <code>inhaber</code></dd>
+<dt>Listed terms (English)</dt><dd><code>rights</code>, <code>redemption</code>, <code>permanent</code>, <code>complaints</code>, <code>holder</code></dd>
+<dt>Listed terms (German)</dt><dd lang="de"><code>rechte</code>, <code>rücktausch</code>, <code>dauerhaft</code>, <code>beschwerden</code>, <code>inhaber</code></dd>
 <dt>Package version</dt><dd>1.2.1, built from source that may include unreleased changes</dd>
 <dt>Source</dt><dd><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/rules/annex_ii.py">rules/annex_ii.py</a></dd>
 </dl></div>
@@ -45,13 +45,13 @@
   &quot;title&quot;: &quot;Synthetic rule example&quot;,
   &quot;type&quot;: &quot;art&quot;,
   &quot;sections&quot;: {
-    &quot;rights_and_obligations&quot;: &quot;rights redemption at par complaints holder&quot;
+    &quot;rights_and_obligations&quot;: &quot;rights redemption permanent complaints holder&quot;
   }
 }</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>Section that matches</strong></div><p class="small muted">This text passes and shows what the check measures: listed terms and length. It is not model disclosure wording and does not meet MiCAR.</p><pre><code>{
   &quot;title&quot;: &quot;Synthetic rule example&quot;,
   &quot;type&quot;: &quot;art&quot;,
   &quot;sections&quot;: {
-    &quot;rights_and_obligations&quot;: &quot;Synthetic example naming rights, redemption, at par, complaints, holder. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token.&quot;
+    &quot;rights_and_obligations&quot;: &quot;Synthetic example naming rights, redemption, permanent, complaints, holder. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token.&quot;
   }
 }</code></pre></div>
 <h2>Limitations</h2>

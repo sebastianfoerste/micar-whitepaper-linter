@@ -1,11 +1,11 @@
 {
   "schema": "micar-whitepaper-linter.review-table",
-  "generated_at": "2026-10-25T18:14:22.956278+00:00",
+  "generated_at": "2026-10-27T19:17:44.574230+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "source": {
     "path": "examples/art-stablecoin.json",
-    "sha256": "aba778f9ac18355010618d26f96f95cd53699ca56ef9503d18b20d41b16a3fc1"
+    "sha256": "3eddd4d706064ea7a74004a83fa7d453e46543054c02ca8ebbb286a21d99ac02"
   },
   "summary": {
     "total": 20,
@@ -1774,11 +1774,11 @@
       "rule_id": "ANNEX_II.D",
       "citation": "Anhang II Teil D i.V.m. Art. 39 MiCAR",
       "section": "rights_and_obligations",
-      "label": "Rights and obligations of holders (redemption right at par, complaints handling)",
+      "label": "Rights and obligations of holders (permanent right of redemption, complaints handling)",
       "severity": "BLOCKER",
       "status": "pass",
       "blocker": false,
-      "word_count": 94,
+      "word_count": 103,
       "issues": [],
       "remediation": "Keep disclosure under lawyer review before external use.",
       "reviewer_decision": "pending_lawyer_confirmation",
@@ -1786,8 +1786,8 @@
       "source_anchor": {
         "section_key": "rights_and_obligations",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:rights_and_obligations:fdbeb2b6e2baaaea",
-        "section_length": 584
+        "stable_anchor_id": "json:rights_and_obligations:c76f6f3f9bcae095",
+        "section_length": 635
       },
       "anchor_verified": true,
       "citation_coverage": "anchor_and_citation",
@@ -1861,7 +1861,7 @@
         {
           "column_id": "word_count",
           "label": "Word count",
-          "value": "94",
+          "value": "103",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -1893,7 +1893,7 @@
         {
           "column_id": "source_anchor",
           "label": "Source anchor",
-          "value": "json:rights_and_obligations:fdbeb2b6e2baaaea",
+          "value": "json:rights_and_obligations:c76f6f3f9bcae095",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2072,7 +2072,7 @@
       "severity": "BLOCKER",
       "status": "pass",
       "blocker": false,
-      "word_count": 157,
+      "word_count": 160,
       "issues": [],
       "remediation": "Keep disclosure under lawyer review before external use.",
       "reviewer_decision": "pending_lawyer_confirmation",
@@ -2080,8 +2080,8 @@
       "source_anchor": {
         "section_key": "risks",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:risks:fb6c82fce9769e1f",
-        "section_length": 1058
+        "stable_anchor_id": "json:risks:19ce73a0c2bbf863",
+        "section_length": 1056
       },
       "anchor_verified": true,
       "citation_coverage": "anchor_and_citation",
@@ -2155,7 +2155,7 @@
         {
           "column_id": "word_count",
           "label": "Word count",
-          "value": "157",
+          "value": "160",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2187,7 +2187,7 @@
         {
           "column_id": "source_anchor",
           "label": "Source anchor",
-          "value": "json:risks:fb6c82fce9769e1f",
+          "value": "json:risks:19ce73a0c2bbf863",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2960,7 +2960,7 @@
       "severity": "BLOCKER",
       "status": "pass",
       "blocker": false,
-      "word_count": 125,
+      "word_count": 139,
       "issues": [],
       "remediation": "Keep disclosure under lawyer review before external use.",
       "reviewer_decision": "pending_lawyer_confirmation",
@@ -2968,8 +2968,8 @@
       "source_anchor": {
         "section_key": "redemption",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:redemption:b068b69a32233498",
-        "section_length": 812
+        "stable_anchor_id": "json:redemption:f30c1426e8222ca8",
+        "section_length": 892
       },
       "anchor_verified": true,
       "citation_coverage": "anchor_and_citation",
@@ -3043,7 +3043,7 @@
         {
           "column_id": "word_count",
           "label": "Word count",
-          "value": "125",
+          "value": "139",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -3075,7 +3075,7 @@
         {
           "column_id": "source_anchor",
           "label": "Source anchor",
-          "value": "json:redemption:b068b69a32233498",
+          "value": "json:redemption:f30c1426e8222ca8",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -3101,5 +3101,5 @@
   ],
   "warnings": [],
   "review_notice": "Review table rows are deterministic linter outputs. Reviewer decisions remain pending until a qualified lawyer signs off.",
-  "digest": "af0dbc6e74bbbe7f203429192aa1d2605edb6f6ade263fc29838ed51acb43dce"
+  "digest": "4f8da1a0e00389108448231afc4696cb5281a1b462df87eac778472fbdc1b5de"
 }
