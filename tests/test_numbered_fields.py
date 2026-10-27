@@ -144,10 +144,11 @@ def test_spacer_spans_inside_words_leave_the_words_whole(tmp_path: Path):
         '<div class="pf" data-page-no="1"><div class="pc">'
         '<div class="t">04<span class="_ _2"></span>Statement in accor<span class="_ _0"></span>dance with Article 51(4)</div>'
         '<div class="t"><ix:nonNumeric name="mica:RiskWarning" contextRef="c1" continuedAt="k1">'
-        'The e-money token may lose its val<span class="_ _1"></span>ue in part or in full. '
-        'The ri<span class="_ _0"></span>sk of lo<span class="_ _0"></span>ss rests</ix:nonNumeric></div>'
+        'The e-money token is not covered by the inves<span class="_ _1"></span>tor compen<span class="_ _0"></span>sation '
+        'schemes under Directive 97/9/EC or by the depo<span class="_ _0"></span>sit guaran<span class="_ _0"></span>tee '
+        "schemes</ix:nonNumeric></div>"
         '</div></div><div class="pf" data-page-no="2"><div class="pc">'
-        '<div class="t"><ix:continuation id="k1">with the hol<span class="_ _0"></span>der.</ix:continuation></div>'
+        '<div class="t"><ix:continuation id="k1">under Direc<span class="_ _0"></span>tive 2014/49/EU.</ix:continuation></div>'
         '<div class="t">A.1 Na<span class="_ _0"></span>me</div>'
         '<div class="t"><ix:nonNumeric name="mica:IssuerName" contextRef="c1">'
         'Example Money Financ<span class="_ _0"></span>ial Europe SAS</ix:nonNumeric></div>'
@@ -161,7 +162,10 @@ def test_spacer_spans_inside_words_leave_the_words_whole(tmp_path: Path):
     # A spacer with no space in it still keeps "04" and "B.1" apart from their labels.
     assert set(fields) == {"04", "A.1", "B.1", "F.1"}
     assert fields["04"].content.startswith("Statement in accordance with Article 51(4) ")
-    assert fields["04"].content.endswith("may lose its value in part or in full. The risk of loss rests with the holder.")
+    assert fields["04"].content.endswith(
+        "not covered by the investor compensation schemes under Directive 97/9/EC "
+        "or by the deposit guarantee schemes under Directive 2014/49/EU."
+    )
     assert (fields["A.1"].label, fields["A.1"].content) == ("Name", "Example Money Financial Europe SAS")
     assert fields["B.1"].content.endswith("Example Euro Token")
     assert fields["F.1"].content.endswith("Holders face liquidity and market risks.")
