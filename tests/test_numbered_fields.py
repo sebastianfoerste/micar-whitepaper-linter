@@ -157,6 +157,13 @@ def test_fields_with_their_own_label_raise_no_merged_label_note():
     assert MERGED_LABELS_NOTE not in whitepaper.metadata["extraction_notes"]
 
 
+def test_merged_label_note_needs_four_in_five_unlabelled_fields(tmp_path: Path):
+    # Eleven of fourteen lettered fields keep the label in the answer cell: just under four in five.
+    path = _emt_table(tmp_path, [*_EMT_BASE, *((f"B.{n}", f"Field B{n} label N/A") for n in range(1, 12))])
+    whitepaper = load_whitepaper(path, WhitepaperType.EMT)
+    assert MERGED_LABELS_NOTE not in whitepaper.metadata["extraction_notes"]
+
+
 def test_label_sharing_the_answer_cell_raises_the_merged_label_note(tmp_path: Path):
     # Twelve of fifteen lettered fields keep the label in the answer cell.
     path = _emt_table(tmp_path, [*_EMT_BASE, *((f"B.{n}", f"Field B{n} label N/A") for n in range(1, 13))])

@@ -97,14 +97,15 @@ def test_unpadded_literal_and_bare_data_script_are_unpacked(tmp_path: Path):
     bare = tmp_path / "bare.html"
     wrapped = "\n".join(literal[i : i + 76] for i in range(0, len(literal), 76))
     bare.write_text(
-        _packed_page("", runtime=0).replace(
-            "</body>", f'<script type="application/octet-stream">{wrapped}</script></body>'
-        ),
+        _packed_page("").replace("</body>", f'<script type="application/octet-stream">{wrapped}</script></body>'),
         encoding="utf-8",
     )
 
     assert unpack_script_payload(unpadded) == SYNTHETIC_PAPER
     assert unpack_script_payload(bare) == SYNTHETIC_PAPER
+    whitepaper = load_whitepaper(bare, WhitepaperType.OTHER)
+    assert whitepaper.metadata["script_packed_source"] is True
+    assert "Example Issuer AG" in whitepaper.sections["issuer"]
 
 
 def _raw_deflate(markup: bytes) -> bytes:
@@ -123,6 +124,72 @@ def test_data_uri_json_escaped_and_raw_deflate_payloads_are_unpacked(tmp_path: P
 
     for page in (data_uri, escaped, raw):
         assert unpack_script_payload(page) == SYNTHETIC_PAPER, page.name
+
+
+def test_multi_member_gzip_is_read_whole_and_trailing_bytes_are_refused(tmp_path: Path):
+    half = len(SYNTHETIC_PAPER) // 2
+    members = _write_page(
+        tmp_path, SYNTHETIC_PAPER, lambda m: gzip.compress(m[:half]) + gzip.compress(m[half:]), "members.html"
+    )
+    trailing = _write_page(tmp_path, SYNTHETIC_PAPER, lambda m: gzip.compress(m) + b"junk", "trailing.html")
+
+    assert unpack_script_payload(members) == SYNTHETIC_PAPER
+    assert unpack_script_payload(trailing) is None
+
+
+def test_uncompressed_markup_split_over_literals_is_refused(tmp_path: Path):
+    literal = base64.b64encode(SYNTHETIC_PAPER).decode()
+    cut = len(literal) // 2 // 4 * 4
+    page = tmp_path / "chunks.html"
+    page.write_text(_packed_page(f'{literal[:cut]}", "{literal[cut:]}'), encoding="utf-8")
+
+    assert unpack_script_payload(page) is None
+
+
+@pytest.mark.parametrize(
+    "other",
+    [
+        # base64 of binary data, such as an inlined icon or font
+        base64.b64encode(bytes(range(256)) * 8).decode(),
+        # a compressed JSON blob
+        base64.b64encode(gzip.compress(json.dumps({"facts": list(range(2000))}).encode())).decode(),
+        # the same document a second time
+        base64.b64encode(gzip.compress(SYNTHETIC_PAPER)).decode(),
+    ],
+    ids=["binary", "json", "duplicate"],
+)
+def test_other_literals_on_the_page_do_not_hide_the_white_paper(tmp_path: Path, other: str):
+    assert len(other) >= 1024
+    payload = base64.b64encode(gzip.compress(SYNTHETIC_PAPER)).decode()
+    page = tmp_path / "decoy.html"
+    page.write_text(_packed_page(f'{other}"; const b64 = "{payload}'), encoding="utf-8")
+
+    assert unpack_script_payload(page) == SYNTHETIC_PAPER
+
+
+def test_page_packing_two_documents_is_refused(tmp_path: Path):
+    # Which one is the white paper is unclear, for example with a loading page packed ahead of it.
+    shell = base64.b64encode(gzip.compress(f"<html><body><p>{_clauses(100)}</p></body></html>".encode())).decode()
+    assert len(shell) >= 1024
+    payload = base64.b64encode(gzip.compress(SYNTHETIC_PAPER)).decode()
+    page = tmp_path / "two.html"
+    page.write_text(_packed_page(f'{shell}"; const b64 = "{payload}'), encoding="utf-8")
+
+    with pytest.raises(SystemExit) as exc:
+        load_whitepaper(page, WhitepaperType.OTHER)
+
+    assert str(exc.value).startswith("two.html is a saved iXBRL viewer page that packs more than one document")
+
+
+def test_text_in_noscript_is_read_directly(tmp_path: Path):
+    page = tmp_path / "noscript.html"
+    literal = base64.b64encode(gzip.compress(b"<html><body><p>x</p></body></html>")).decode()
+    page.write_text(
+        _packed_page(literal, f"<noscript><h1>Summary</h1><p>{_clauses(20)}</p></noscript>"), encoding="utf-8"
+    )
+
+    assert is_script_packed(page) is False
+    assert "Clause 3" in load_whitepaper(page, WhitepaperType.OTHER).sections["summary"]
 
 
 def test_viewer_page_without_sections_says_why_everything_is_missing(tmp_path: Path):
@@ -172,6 +239,8 @@ def test_unpacking_limit_matches_the_playground_limit():
     for factor in factors:
         product *= int(factor)
     assert product == MAX_UNPACKED_BYTES
+    page = (ROOT / "docs" / "playground" / "index.html").read_text()
+    assert f"XHTML up to {MAX_UNPACKED_BYTES // 2**20} MB" in page
 
 
 def test_ordinary_xhtml_keeps_the_format_check(tmp_path: Path):
@@ -202,6 +271,33 @@ def test_short_page_without_a_large_script_is_not_called_packed(tmp_path: Path):
     page.write_text(_packed_page("QUJD" * 10, "<h1>Summary</h1><p>Short.</p>", runtime=0), encoding="utf-8")
 
     assert is_script_packed(page) is False
+
+
+@pytest.mark.parametrize(("script_chars", "packed"), [(10_000, False), (10_001, True)])
+def test_a_page_counts_as_packed_only_above_the_script_threshold(tmp_path: Path, script_chars: int, packed: bool):
+    page = tmp_path / "threshold.html"
+    page.write_text(
+        f"<html><body><div>Loading document...</div><script>{'x' * script_chars}</script></body></html>",
+        encoding="utf-8",
+    )
+
+    assert is_script_packed(page) is packed
+
+
+def test_cli_lints_a_viewer_page_and_keeps_its_outputs_free_of_draft_lines(tmp_path: Path, capsys):
+    page = _write_page(tmp_path, SYNTHETIC_PAPER)
+    sarif = tmp_path / "report.sarif"
+
+    status = main([str(page), "--type", "other", "--strict", "--sarif-output", str(sarif)])
+
+    assert status == 1
+    assert VIEWER_PAGE_NOTE in capsys.readouterr().out
+    lines = {
+        location["physicalLocation"]["region"]["startLine"]
+        for result in json.loads(sarif.read_text())["runs"][0]["results"]
+        for location in result["locations"]
+    }
+    assert lines == {1}
 
 
 def test_numbered_layout_inside_a_viewer_page_reads_like_the_file_itself(tmp_path: Path):
@@ -262,12 +358,14 @@ def test_inflation_stops_at_the_limit(tmp_path: Path):
         base64.b64encode(gzip.compress(json.dumps({"facts": list(range(2000))}).encode())).decode(),
         # a gzip stream cut short, which would hide the end of the white paper
         base64.b64encode(gzip.compress(SYNTHETIC_PAPER)[:-200]).decode(),
+        # uncompressed markup cut short, which has no end marker of its own
+        base64.b64encode(SYNTHETIC_PAPER[:-200]).decode(),
         # a page that unpacks into another packed page
         base64.b64encode(
             gzip.compress(_packed_page(base64.b64encode(gzip.compress(SYNTHETIC_PAPER)).decode()).encode())
         ).decode(),
     ],
-    ids=["not-a-stream", "not-markup", "truncated", "packed-twice"],
+    ids=["not-a-stream", "not-markup", "truncated", "truncated-uncompressed", "packed-twice"],
 )
 def test_page_that_cannot_be_unpacked_is_refused_with_a_reason(tmp_path: Path, literal: str):
     page = tmp_path / "viewer.html"

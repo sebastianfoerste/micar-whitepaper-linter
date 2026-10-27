@@ -85,6 +85,17 @@ def test_browser_explains_a_viewer_page_it_cannot_unpack(bridge):
     assert not list(workdir.iterdir())
 
 
+@pytest.mark.parametrize(
+    ("imported", "named"),
+    [("example-viewer.HTML", "example-viewer.HTML"), ("example-viewer.htm", "example-viewer.html")],
+)
+def test_browser_names_an_html_import_as_imported(bridge, imported, named):
+    lint, workdir = bridge
+    error = json.loads(lint(_viewer_page(bytes(15_000)), "xhtml", "emt", imported))["error"]
+    assert error.startswith(f"{named} holds no white paper text")
+    assert not list(workdir.iterdir())
+
+
 def test_browser_unpacks_a_viewer_page_like_the_cli(bridge, tmp_path):
     lint, workdir = bridge
     page = _viewer_page(gzip.compress((ROOT / "examples" / "numbered-other-draft.xhtml").read_bytes()))

@@ -43,7 +43,7 @@ Check an XHTML white paper in the numbered-field layout of Implementing Regulati
 uv run micar-lint examples/numbered-other-draft.xhtml --type other
 ```
 
-A saved iXBRL viewer page packs the white paper into a script and shows it only when a browser runs that script. The linter unpacks it in memory (gzip, zlib or uncompressed, up to 8 MB) and checks the white paper it carries; a page in the numbered-field layout still needs `--type`. Its `COMMON.IXBRL_TAGGING` result stays Missing, because the viewer's rendering is not the XHTML document itself, and its findings point at line 1. A page that cannot be unpacked, or unpacks to more than 8 MB, stops with exit 1 and a message.
+A saved iXBRL viewer page packs the white paper into a script and shows it only when a browser runs that script. The linter unpacks it in memory (gzip, zlib, raw deflate or uncompressed, up to 8 MB) and checks the white paper it carries; a page in the numbered-field layout still needs `--type`. Its `COMMON.IXBRL_TAGGING` result stays Missing, because the viewer's rendering is not the XHTML document itself, and its findings point at line 1. A page that cannot be unpacked, unpacks to more than 8 MB, or packs more than one document stops with exit 1 and a message.
 
 ## Coverage caveats
 

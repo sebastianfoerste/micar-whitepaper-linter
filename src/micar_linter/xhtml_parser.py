@@ -29,6 +29,10 @@ class PackedPageTooLarge(ValueError):
     """The document packed into a page unpacks to more than the limit."""
 
 
+class SeveralPackedDocuments(ValueError):
+    """The page packs more than one document, so which one is the white paper is unclear."""
+
+
 def _parse(source: Path | bytes, huge_tree: bool = False) -> etree._ElementTree:
     document = io.BytesIO(source) if isinstance(source, bytes) else str(source)
     return etree.parse(document, etree.HTMLParser(encoding="utf-8", huge_tree=huge_tree))
@@ -52,22 +56,22 @@ def is_script_packed(source: Path | bytes) -> bool:
         return False
     if not any(len("".join(script.itertext())) > SCRIPT_PAYLOAD_CHARS for script in root.iter("script")):
         return False
-    visible = root.xpath(
-        "//text()[not(ancestor::head or ancestor::script or ancestor::style"
-        " or ancestor::noscript or ancestor::template)]"
-    )
+    # Text in noscript or template counts as visible: such a page carries its white paper as text.
+    visible = root.xpath("//text()[not(ancestor::head or ancestor::script or ancestor::style)]")
     return len(" ".join(visible).split()) < MAX_PACKED_PAGE_WORDS
 
 
 def unpack_script_payload(source: Path | bytes, limit: int = MAX_UNPACKED_BYTES) -> bytes | None:
     """Return the markup a script-packed page carries as a base64 string, or None if it carries none.
 
-    Raises PackedPageTooLarge when that markup exceeds limit. Inflation stops one byte past the
-    limit, so a compressed payload cannot expand without bound.
+    Raises PackedPageTooLarge when a markup payload exceeds limit, and SeveralPackedDocuments when
+    the page packs more than one distinct document. Inflation stops one byte past the limit, so a
+    compressed payload cannot expand without bound.
     """
     root = _parse(source, huge_tree=True).getroot()
     if root is None:
         return None
+    documents: list[bytes] = []
     for script in root.iter("script"):
         # A JSON string may escape "/" as "\/".
         text = "".join(script.itertext()).replace("\\/", "/")
@@ -77,9 +81,11 @@ def unpack_script_payload(source: Path | bytes, limit: int = MAX_UNPACKED_BYTES)
             candidates.append(bare)
         for literal in candidates:
             document = _decode_payload(literal, limit)
-            if document is not None:
-                return document
-    return None
+            if document is not None and document not in documents:
+                documents.append(document)
+    if len(documents) > 1:
+        raise SeveralPackedDocuments(f"The page packs {len(documents)} documents.")
+    return documents[0] if documents else None
 
 
 def _decode_payload(literal: str, limit: int) -> bytes | None:
@@ -96,7 +102,9 @@ def _decode_payload(literal: str, limit: int) -> bytes | None:
     except zlib.error:
         pass
     if _is_markup(data):
-        return _checked(data, True, limit)
+        # Uncompressed markup carries no end marker of its own, so it must close the document;
+        # the first of several chunks would otherwise pass for the whole white paper.
+        return _checked(data, b"</html" in data[-4096:].lower(), limit)
     try:
         return _inflate(data, -zlib.MAX_WBITS, limit)
     except zlib.error:
@@ -104,9 +112,17 @@ def _decode_payload(literal: str, limit: int) -> bytes | None:
 
 
 def _inflate(data: bytes, wbits: int, limit: int) -> bytes | None:
-    inflater = zlib.decompressobj(wbits)
-    document = inflater.decompress(data, limit + 1)
-    return _checked(document, inflater.eof, limit)
+    document = b""
+    while True:
+        inflater = zlib.decompressobj(wbits)
+        document += inflater.decompress(data, limit + 1 - len(document))
+        if len(document) > limit or not inflater.eof:
+            return _checked(document, False, limit)
+        data = inflater.unused_data
+        # A gzip stream may hold several members in a row, and browser inflaters read them all.
+        # Other bytes after the stream would be dropped, so the payload does not count as complete.
+        if not data.startswith(b"\x1f\x8b"):
+            return _checked(document, not data, limit)
 
 
 def _checked(document: bytes, complete: bool, limit: int) -> bytes | None:

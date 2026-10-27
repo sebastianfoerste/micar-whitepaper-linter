@@ -130,7 +130,7 @@ VIEWER_PAGE_NOTE = (
 )
 VIEWER_EMPTY_NOTE = (
     "No section heading or numbered field was found in the white paper this page carries, "
-    "so the content checks report Missing because of the layout."
+    "so the content checks find no section text to read."
 )
 
 
@@ -139,6 +139,7 @@ def _unpack_viewer_page(path: Path) -> bytes:
     from micar_linter.xhtml_parser import (
         MAX_UNPACKED_BYTES,
         PackedPageTooLarge,
+        SeveralPackedDocuments,
         is_script_packed,
         unpack_script_payload,
     )
@@ -150,6 +151,12 @@ def _unpack_viewer_page(path: Path) -> bytes:
             f"{path.name} is a saved iXBRL viewer page whose packed white paper unpacks to more than "
             f"{MAX_UNPACKED_BYTES // (1024 * 1024)} MB, the limit for unpacking. Check the white paper's own "
             "XHTML file instead; for a published white paper, that is the file in the ESMA register."
+        ) from None
+    except SeveralPackedDocuments:
+        raise SystemExit(
+            f"{path.name} is a saved iXBRL viewer page that packs more than one document, so which one is "
+            "the white paper is unclear. Check the white paper's own XHTML file instead; for a published "
+            "white paper, that is the file in the ESMA register."
         ) from None
     if document is None or is_script_packed(document):
         raise SystemExit(
