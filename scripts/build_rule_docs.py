@@ -72,11 +72,11 @@ UNTESTED_REGIMES = {
 # ID has more than one Rule in RULESETS and no note here.
 VARIANT_NOTES = {
     "COMMON.RISK_WARNING": (
-        "Art. 51(4) MiCAR asks an e-money token white paper only to warn that investor compensation and "
-        "deposit guarantee schemes do not cover the token. The statements that the token may lose its value, "
-        "may not always be transferable and may not be liquid are required by Art. 6(5) and Art. 19(4) only. "
-        "EMT drafts are therefore checked for the two scheme warnings, which fit in one sentence of about "
-        "25 words."
+        "Art. 6(5) and Art. 19(4) MiCAR require a statement that the crypto-asset may lose its value in part "
+        "or in full, may not always be transferable and may not be liquid, and that investor compensation "
+        "and deposit guarantee schemes do not cover it; the listed terms come from that wording. Art. 51(4) "
+        "asks an e-money token white paper only for the two scheme warnings, so EMT drafts are checked for "
+        "those. The utility-token statement of Art. 6(5)(d) applies to utility tokens only and is not checked."
     ),
 }
 
@@ -345,12 +345,18 @@ def status_logic(rule: Rule) -> str:
             "percentage.</li><li><strong>Pass</strong>: never. Draft flags are assertions pending lawyer "
             "confirmation, not trusted facts.</li></ul>"
         )
-    review = (
-        f"the section has fewer than {rule.min_words} words, or a listed term does not appear"
-        if len(variants(rule.rule_id)) == 1
-        else "the section has fewer words than the minimum listed above for the draft's regime, or a term "
-        "listed for that regime does not appear"
+    groups = [variant for variant, _ in variants(rule.rule_id)]
+    minimum = (
+        f"{rule.min_words} words"
+        if len({variant.min_words for variant in groups}) == 1
+        else "the minimum number of words listed above for the draft's regime"
     )
+    terms = (
+        "a listed term"
+        if len({(variant.required_terms, variant.required_terms_de) for variant in groups}) == 1
+        else "a term listed for the draft's regime"
+    )
+    review = f"the section has fewer than {minimum}, or {terms} does not appear"
     parts = [
         f"<li><strong>Missing</strong>: section <code>{_e(rule.section)}</code> is absent or empty, or holds "
         "only placeholder text such as TBD or TBC.</li>",
@@ -373,9 +379,10 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
         raise SystemExit(f"{rule.rule_id}: its settings differ by regime; add an entry to VARIANT_NOTES")
 
     def by_regime(render: Callable[[Rule], str]) -> str:
-        if len(groups) == 1:
-            return render(rule)
-        return "; ".join(f"{render(variant)} ({_annexes(found)})" for variant, found in groups)
+        rendered = [(render(variant), found) for variant, found in groups]
+        if len({text for text, _ in rendered}) == 1:
+            return rendered[0][0]
+        return "; ".join(f"{text} ({_annexes(found)})" for text, found in rendered)
 
     variant_note = f"<p>{_e(VARIANT_NOTES[rule.rule_id])}</p>" if len(groups) > 1 else ""
     citation_en = citations.to_english(rule.citation)

@@ -17,6 +17,19 @@ EMT_WARNING_DE = (
     "Der E-Geld-Token fällt nicht unter die Systeme für die Entschädigung der Anleger gemäß der "
     "Richtlinie 97/9/EG und nicht unter die Einlagensicherungssysteme gemäß der Richtlinie 2014/49/EU."
 )
+# The statements of Art. 6(5)(a) to (c), (e) and (f) MiCAR in the Regulation's English wording, and in
+# German in one sentence.
+OTHER_WARNING = (
+    "The crypto-asset may lose its value in part or in full. The crypto-asset may not always be "
+    "transferable. The crypto-asset may not be liquid. The crypto-asset is not covered by the investor "
+    "compensation schemes under Directive 97/9/EC. The crypto-asset is not covered by the deposit "
+    "guarantee schemes under Directive 2014/49/EU."
+)
+OTHER_WARNING_DE = (
+    "Der Kryptowert kann seinen Wert ganz oder teilweise verlieren, ist möglicherweise nicht immer "
+    "übertragbar, möglicherweise nicht liquide und fällt weder unter Anlegerentschädigungssysteme noch "
+    "unter Einlagensicherungssysteme."
+)
 LOSS_OF_VALUE_WARNING = (
     "The token may lose its value in part or in full, may not always be transferable and may not be "
     "liquid. The risk of loss rests with the holder, who should not commit funds that cannot be lost."
@@ -65,6 +78,17 @@ def test_emt_risk_warning_checks_the_two_warnings_of_article_51_4():
     # The loss-of-value statement of Art. 6(5) and 19(4) does not stand in for the two warnings.
     finding = _risk_warning(WhitepaperType.EMT, LOSS_OF_VALUE_WARNING)
     assert finding.issues == ("Missing review terms: investor compensation, deposit guarantee.",)
+
+
+def test_other_and_art_risk_warnings_check_the_statements_of_articles_6_5_and_19_4():
+    art_warning = OTHER_WARNING.replace("crypto-asset", "asset-referenced token")
+    assert _risk_warning(WhitepaperType.OTHER, OTHER_WARNING).status == "pass"
+    assert _risk_warning(WhitepaperType.ART, art_warning).status == "pass"
+    assert _risk_warning(WhitepaperType.OTHER, OTHER_WARNING_DE, language="de").status == "pass"
+    # The old terms "risk", "value" and "loss" let a warning without the two scheme statements pass.
+    for whitepaper_type in (WhitepaperType.OTHER, WhitepaperType.ART):
+        finding = _risk_warning(whitepaper_type, LOSS_OF_VALUE_WARNING)
+        assert finding.issues == ("Missing review terms: investor compensation, deposit guarantee.",)
 
 
 def test_other_regimes_ask_for_more_than_the_emt_warnings():

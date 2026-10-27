@@ -25,14 +25,26 @@ COMMON_RULES: tuple[Rule, ...] = (
         min_words=80,
         severity=Severity.BLOCKER,
     ),
+    # Art. 6 Abs. 5 and Art. 19 Abs. 4 MiCAR: the crypto-asset may lose its value, may not always be
+    # transferable and may not be liquid, and investor compensation and deposit guarantee schemes do not
+    # cover it. The terms come from the Regulation's wording of each statement; in German, "wert" would
+    # match every "Kryptowert". The utility-token statement of Art. 6 Abs. 5 Buchst. d applies to
+    # utility tokens only and is not checked. In German the statements fit in about 25 words.
     Rule(
         rule_id="COMMON.RISK_WARNING",
         citation="Art. 6 Abs. 5, Art. 19 Abs. 4, Art. 51 Abs. 4 MiCAR",
         section="risk_warning",
         label="Mandatory risk warning statement",
-        required_terms=("risk", "value", "loss"),
-        required_terms_de=("risiko", "wert", "verlust"),
-        min_words=40,
+        required_terms=(
+            "lose",
+            "value",
+            "transferable",
+            "liquid",
+            "investor compensation",
+            "deposit guarantee",
+        ),
+        required_terms_de=("verlier", "übertragbar", "liquid", "entschädigung", "einlagensicherung"),
+        min_words=20,
         severity=Severity.BLOCKER,
     ),
     Rule(
@@ -99,14 +111,12 @@ COMMON_RULES: tuple[Rule, ...] = (
 
 # Art. 51 Abs. 4 MiCAR asks an e-money token white paper only to warn that investor compensation
 # and deposit guarantee schemes do not cover the token. The loss-of-value, transferability and
-# liquidity statements of Art. 6 Abs. 5 and Art. 19 Abs. 4 have no counterpart there, and the two
-# warnings fit in one sentence of about 25 words.
+# liquidity statements of Art. 6 Abs. 5 and Art. 19 Abs. 4 have no counterpart there.
 EMT_COMMON_RULES: tuple[Rule, ...] = tuple(
     replace(
         rule,
         required_terms=("investor compensation", "deposit guarantee"),
         required_terms_de=("entschädigung", "einlagensicherung"),
-        min_words=20,
     )
     if rule.rule_id == "COMMON.RISK_WARNING"
     else rule
