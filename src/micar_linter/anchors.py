@@ -65,6 +65,8 @@ def _xhtml_section_identifiers(path: Path) -> dict[str, str]:
     try:
         from lxml import etree
 
+        from micar_linter.xhtml_parser import element_text
+
         parser = etree.HTMLParser(encoding="utf-8")
         tree = etree.parse(str(path), parser=parser)
         elements = tree.xpath("//h1 | //h2 | //h3 | //h4 | //h5 | //h6")
@@ -73,7 +75,7 @@ def _xhtml_section_identifiers(path: Path) -> dict[str, str]:
 
     identifiers: dict[str, str] = {}
     for elem in elements:
-        text = re.sub(r"\s+", " ", "".join(elem.itertext()).strip())
+        text = element_text(elem)
         if not text:
             continue
         element_id = elem.get("id") or elem.get("{http://www.w3.org/XML/1998/namespace}id")

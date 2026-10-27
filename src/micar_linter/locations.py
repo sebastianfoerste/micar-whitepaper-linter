@@ -133,6 +133,7 @@ def _xhtml_heading_lines(path: Path) -> dict[str, int]:
         from lxml import etree
 
         from micar_linter.document import match_heading_to_section
+        from micar_linter.xhtml_parser import element_text
 
         tree = etree.parse(str(path), etree.HTMLParser(encoding="utf-8"))
         headings = tree.xpath("//h1 | //h2 | //h3 | //h4 | //h5 | //h6")
@@ -140,7 +141,7 @@ def _xhtml_heading_lines(path: Path) -> dict[str, int]:
         return {}
     lines: dict[str, int] = {}
     for heading in headings:
-        text = " ".join("".join(heading.itertext()).split())
+        text = element_text(heading)
         if not text or not heading.sourceline:
             continue
         for section_key in match_heading_to_section(text):

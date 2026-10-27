@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- XHTML text extraction: a word that a PDF conversion split with an empty spacer span is read whole. pdf2htmlEX and converters in its style write `<span class="_ _0"></span>` inside words for kerning; "accordance" came out as "accor dance", and rules reported review terms such as risk, value and loss as missing. Text on either side of a block element or `<br>` inside a heading, paragraph, list item or table cell is kept apart, so a heading written `Information about the<br/>issuer` opens its section. A field number stays apart from its label when only a spacer separates them. The fix covers numbered-field XHTML, the heading loader, finding anchors and SARIF lines, and the study batch (`micar-lint-batch`).
 - Release builds: `make dist` builds the wheel and the source archive from the committed tree (`git archive HEAD`), so uncommitted changes and untracked files stay out of both. `.gitignore` now also covers `.claude/settings.local.json` and `.claude/worktrees/`. The 1.2.0 source archive was built from a working tree and picked up untracked local Claude Code worktrees and settings; the 1.2.0 wheel was not affected.
 
 ## 1.2.0 - 2026-10-26
