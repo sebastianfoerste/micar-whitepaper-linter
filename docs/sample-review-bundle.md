@@ -134,7 +134,7 @@ Pass: 16  |  Review: 3  |  Missing: 1  |  Blockers: 4
            Section: 'environmental_impact'  (104 words)
 
 [PASS  ] [BLOCKER] ANNEX_II.I  Redemption rights and procedure (timing, fees, suspension conditions)
-           Cite:  Annex II, Part D, points 9, 15 and 16, Part G, point 3 in conjunction with Art. 39 MiCAR
+           Cite:  Annex II, Part D, points 9, 14, 15 and 16, Part G, point 3 in conjunction with Art. 39, Art. 46(1), third subparagraph, point (c) and Art. 46(4) MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'redemption'  (139 words)
 

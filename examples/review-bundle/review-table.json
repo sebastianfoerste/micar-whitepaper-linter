@@ -1,6 +1,6 @@
 {
   "schema": "micar-whitepaper-linter.review-table",
-  "generated_at": "2026-10-27T19:17:44.574230+00:00",
+  "generated_at": "2026-10-27T20:42:27.415428+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "source": {
@@ -2954,7 +2954,7 @@
     {
       "row_id": "review-row-e6a3acc23127fe1c",
       "rule_id": "ANNEX_II.I",
-      "citation": "Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 MiCAR",
+      "citation": "Anhang II Teil D Nr. 9, 14, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39, Art. 46 Abs. 1 UAbs. 3 Buchst. c und Art. 46 Abs. 4 MiCAR",
       "section": "redemption",
       "label": "Redemption rights and procedure (timing, fees, suspension conditions)",
       "severity": "BLOCKER",
@@ -2980,7 +2980,7 @@
         "rule_scope": [
           "ANNEX_II.I"
         ],
-        "citation": "Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 MiCAR",
+        "citation": "Anhang II Teil D Nr. 9, 14, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39, Art. 46 Abs. 1 UAbs. 3 Buchst. c und Art. 46 Abs. 4 MiCAR",
         "severity": "BLOCKER",
         "review_gate": "Qualified lawyer review required before external use.",
         "priority": "standard_review",
@@ -3011,7 +3011,7 @@
         {
           "column_id": "citation",
           "label": "Citation",
-          "value": "Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 MiCAR",
+          "value": "Anhang II Teil D Nr. 9, 14, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39, Art. 46 Abs. 1 UAbs. 3 Buchst. c und Art. 46 Abs. 4 MiCAR",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -3101,5 +3101,5 @@
   ],
   "warnings": [],
   "review_notice": "Review table rows are deterministic linter outputs. Reviewer decisions remain pending until a qualified lawyer signs off.",
-  "digest": "4f8da1a0e00389108448231afc4696cb5281a1b462df87eac778472fbdc1b5de"
+  "digest": "2456fbc027ba06582ba18bdb5f59b22c09aeebd0f652fa27c6dc6274157de4a5"
 }

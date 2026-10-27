@@ -162,10 +162,16 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
     ),
     # Art. 39 Abs. 2 MiCAR: redemption in funds at the market value of the referenced assets, or by
     # delivering them, under a policy that sets the periods and timeframes. Art. 39 Abs. 3: no fee,
-    # except the liquidity fees a recovery plan may provide for; Art. 46: suspension of redemptions.
+    # without prejudice to Art. 46, whose recovery plan must include liquidity fees on redemptions and
+    # suspension of redemptions among its options (Abs. 1 UAbs. 3 Buchst. a and c); the competent
+    # authority may suspend redemption (Abs. 4). Anhang II Teil D Nr. 14 covers the holders' rights
+    # under the recovery plan.
     Rule(
         rule_id="ANNEX_II.I",
-        citation="Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 MiCAR",
+        citation=(
+            "Anhang II Teil D Nr. 9, 14, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39, "
+            "Art. 46 Abs. 1 UAbs. 3 Buchst. c und Art. 46 Abs. 4 MiCAR"
+        ),
         section="redemption",
         label="Redemption rights and procedure (timing, fees, suspension conditions)",
         required_terms=("redemption", "market value", "procedure", "timeframe", "fee", "suspension"),
