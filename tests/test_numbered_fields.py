@@ -85,6 +85,58 @@ def test_leading_fields_of_tables_3_and_4_do_not_collide_with_part_i(tmp_path: P
     assert "German" in whitepaper.section("language")
 
 
+def _emt_table(tmp_path: Path, rows: list[tuple[str, ...]]) -> Path:
+    cells = "".join("<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>" for row in rows)
+    return _write(tmp_path, f"<table>{cells}</table>")
+
+
+_EMT_BASE = [
+    ("I.01", "Date of notification", "2026-03-02"),
+    ("A.1", "Statutory name", "Example E-Money Institution SAS"),
+    ("C.1", "Public offering or admission to trading", "Offer to the public."),
+    ("F.1", "Risks", "Holders bear the risk of a failure of the issuer."),
+]
+
+
+def test_language_field_whose_label_shares_the_answer_cell(tmp_path: Path):
+    # Some white papers set "B.11" in one cell and the label with its answer in the next.
+    path = _emt_table(tmp_path, [*_EMT_BASE, ("B.11", "Language or languages of the white paper English")])
+    whitepaper = load_whitepaper(path, WhitepaperType.EMT)
+    assert whitepaper.section("language").endswith("English")
+    report = lint_whitepaper(whitepaper)
+    assert not any("labelled as the language" in warning for warning in report.warnings)
+
+
+def test_unlabelled_field_mentioning_a_language_is_not_the_language_field(tmp_path: Path):
+    path = _emt_table(
+        tmp_path, [*_EMT_BASE, ("E.1", "Smart contracts are written in a programming language.")]
+    )
+    assert "language" not in load_whitepaper(path, WhitepaperType.EMT).sections
+
+
+def test_emt_safeguarding_reads_the_fields_that_describe_it(tmp_path: Path):
+    funds = (
+        "Funds received in exchange for the tokens are safeguarded in segregated accounts "
+        "at a credit institution, protected in the insolvency of the issuer."
+    )
+    path = _emt_table(tmp_path, [*_EMT_BASE, ("D.3", "Rights of holders", funds)])
+    whitepaper = load_whitepaper(path, WhitepaperType.EMT)
+    assert "segregated accounts" in whitepaper.section("safeguarding")
+    report = lint_whitepaper(whitepaper)
+    finding = next(f for f in report.findings if f.rule.rule_id == "ANNEX_III.SAFEGUARDING")
+    assert finding.status != "missing"
+    assert any(warning.endswith("mention it: D.3.") for warning in report.warnings)
+
+
+def test_emt_safeguarding_stays_missing_when_no_field_describes_it(tmp_path: Path):
+    whitepaper = load_whitepaper(_emt_table(tmp_path, _EMT_BASE), WhitepaperType.EMT)
+    assert "safeguarding" not in whitepaper.sections
+    report = lint_whitepaper(whitepaper)
+    finding = next(f for f in report.findings if f.rule.rule_id == "ANNEX_III.SAFEGUARDING")
+    assert finding.status == "missing"
+    assert any("no answered field mentions safeguarding" in warning for warning in report.warnings)
+
+
 def test_heading_structured_xhtml_keeps_the_heading_loader():
     whitepaper = load_whitepaper(ROOT / "examples" / "sample-draft.xhtml")
     assert whitepaper.type is WhitepaperType.EMT
