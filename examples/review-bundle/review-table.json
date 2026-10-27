@@ -1,11 +1,11 @@
 {
   "schema": "micar-whitepaper-linter.review-table",
-  "generated_at": "2026-10-25T18:14:22.956278+00:00",
+  "generated_at": "2026-10-27T20:56:47.854737+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "source": {
     "path": "examples/art-stablecoin.json",
-    "sha256": "aba778f9ac18355010618d26f96f95cd53699ca56ef9503d18b20d41b16a3fc1"
+    "sha256": "09e19585a56e58d26e8e14cd5ba2bdce75bf0756cdc11bc1552c13ea2cc766f5"
   },
   "summary": {
     "total": 20,
@@ -1778,7 +1778,7 @@
       "severity": "BLOCKER",
       "status": "pass",
       "blocker": false,
-      "word_count": 94,
+      "word_count": 132,
       "issues": [],
       "remediation": "Keep disclosure under lawyer review before external use.",
       "reviewer_decision": "pending_lawyer_confirmation",
@@ -1786,8 +1786,8 @@
       "source_anchor": {
         "section_key": "rights_and_obligations",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:rights_and_obligations:fdbeb2b6e2baaaea",
-        "section_length": 584
+        "stable_anchor_id": "json:rights_and_obligations:6d6978c0ea4d9654",
+        "section_length": 839
       },
       "anchor_verified": true,
       "citation_coverage": "anchor_and_citation",
@@ -1861,7 +1861,7 @@
         {
           "column_id": "word_count",
           "label": "Word count",
-          "value": "94",
+          "value": "132",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -1893,7 +1893,7 @@
         {
           "column_id": "source_anchor",
           "label": "Source anchor",
-          "value": "json:rights_and_obligations:fdbeb2b6e2baaaea",
+          "value": "json:rights_and_obligations:6d6978c0ea4d9654",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2658,35 +2658,35 @@
       ]
     },
     {
-      "row_id": "review-row-541d00149b4fdbf7",
+      "row_id": "review-row-9f87c93957f695c2",
       "rule_id": "ANNEX_II.G.VALUATION_AUDIT",
-      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR",
-      "section": "reserve_of_assets",
-      "label": "Valuation procedure and audit frequency (Art. 36(3) MiCAR)",
+      "citation": "Anhang II Teil D Nr. 10 Buchst. c MiCAR",
+      "section": "rights_and_obligations",
+      "label": "Valuation of the components of the claim (Annex II Part D No. 10(c) MiCAR)",
       "severity": "BLOCKER",
       "status": "pass",
       "blocker": false,
-      "word_count": 192,
+      "word_count": 132,
       "issues": [],
       "remediation": "Keep disclosure under lawyer review before external use.",
       "reviewer_decision": "pending_lawyer_confirmation",
       "verification_state": "auto_passed",
       "source_anchor": {
-        "section_key": "reserve_of_assets",
+        "section_key": "rights_and_obligations",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:5852d30038a35798",
-        "section_length": 1231
+        "stable_anchor_id": "json:rights_and_obligations:7c277f403e2b89d2",
+        "section_length": 839
       },
       "anchor_verified": true,
       "citation_coverage": "anchor_and_citation",
       "export_gate": "review_required",
       "playbook": {
-        "id": "art-reserve_of_assets",
+        "id": "art-rights_and_obligations",
         "skill": "rule-review-playbook",
         "rule_scope": [
           "ANNEX_II.G.VALUATION_AUDIT"
         ],
-        "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR",
+        "citation": "Anhang II Teil D Nr. 10 Buchst. c MiCAR",
         "severity": "BLOCKER",
         "review_gate": "Qualified lawyer review required before external use.",
         "priority": "standard_review",
@@ -2696,7 +2696,7 @@
         "schema": "micar-whitepaper-linter.word-suggested-edit.v1",
         "action": "none",
         "instruction": "No suggested edit. Preserve disclosure under lawyer review.",
-        "target_section": "reserve_of_assets",
+        "target_section": "rights_and_obligations",
         "draft_only": true,
         "external_action_allowed": false
       },
@@ -2717,7 +2717,7 @@
         {
           "column_id": "citation",
           "label": "Citation",
-          "value": "Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR",
+          "value": "Anhang II Teil D Nr. 10 Buchst. c MiCAR",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2725,7 +2725,7 @@
         {
           "column_id": "section",
           "label": "Section",
-          "value": "reserve_of_assets",
+          "value": "rights_and_obligations",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2749,7 +2749,7 @@
         {
           "column_id": "word_count",
           "label": "Word count",
-          "value": "192",
+          "value": "132",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -2781,7 +2781,7 @@
         {
           "column_id": "source_anchor",
           "label": "Source anchor",
-          "value": "json:reserve_of_assets:5852d30038a35798",
+          "value": "json:rights_and_obligations:7c277f403e2b89d2",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -3101,5 +3101,5 @@
   ],
   "warnings": [],
   "review_notice": "Review table rows are deterministic linter outputs. Reviewer decisions remain pending until a qualified lawyer signs off.",
-  "digest": "af0dbc6e74bbbe7f203429192aa1d2605edb6f6ade263fc29838ed51acb43dce"
+  "digest": "ad96e186af7776dda52dfb9e796e0d8734cbc29756ef25da28fb9c357d444233"
 }

@@ -116,14 +116,19 @@ ANNEX_III_RULES: tuple[Rule, ...] = (
         min_words=80,
         severity=Severity.MAJOR,
     ),
+    # No Annex III item and no field of Anhang Tabelle 4 VO (EU) 2024/2984 asks the white paper to
+    # describe the safeguarding of the funds received, so the rule is a prompt for review with MAJOR
+    # severity. Art. 54 MiCAR covers funds safeguarded under Art. 7 Abs. 1 EMD2, which addresses
+    # electronic money institutions; Anhang III Teil D Nr. 3 asks for the holders' rights in
+    # insolvency. The German stem "sicher" also matches "sichere Aktiva" (Art. 54 Buchst. b).
     Rule(
         rule_id="ANNEX_III.SAFEGUARDING",
-        citation="Art. 54 MiCAR i.V.m. Art. 7 EMD2 (Richtlinie 2009/110/EG)",
+        citation="Art. 54 MiCAR i.V.m. Art. 7 EMD2 (Richtlinie 2009/110/EG); Anhang III Teil D Nr. 3 MiCAR",
         section="safeguarding",
-        label="Safeguarding of funds received against EMT issuance",
-        required_terms=("safeguarding", "segregated", "credit institution", "insolvency"),
-        required_terms_de=("absicherung", "getrennt", "kreditinstitut", "insolvenz"),
+        label="Safeguarding of funds received against EMT issuance (review prompt; no Annex III item)",
+        required_terms=("safeguard", "separate", "credit institution", "insolvency"),
+        required_terms_de=("sicher", "gesondert", "kreditinstitut", "insolvenz"),
         min_words=60,
-        severity=Severity.BLOCKER,
+        severity=Severity.MAJOR,
     ),
 )

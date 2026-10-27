@@ -1,6 +1,6 @@
 {
   "schema": "micar-whitepaper-linter.coverage-matrix.v1",
-  "generated_at": "2026-10-25T18:14:22.956278+00:00",
+  "generated_at": "2026-10-27T20:56:47.854737+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "summary": {
@@ -205,14 +205,14 @@
       "citation": "Anhang II Teil D i.V.m. Art. 39 MiCAR",
       "severity": "BLOCKER",
       "status": "pass",
-      "word_count": 94,
+      "word_count": 132,
       "blocker": false,
       "next_action": "Keep disclosure under lawyer review before external use.",
       "source_anchor": {
         "section_key": "rights_and_obligations",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:rights_and_obligations:fdbeb2b6e2baaaea",
-        "section_length": 584
+        "stable_anchor_id": "json:rights_and_obligations:6d6978c0ea4d9654",
+        "section_length": 839
       }
     },
     {
@@ -303,18 +303,18 @@
     {
       "rule_id": "ANNEX_II.G.VALUATION_AUDIT",
       "annex": "ANNEX_II",
-      "section": "reserve_of_assets",
-      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR",
+      "section": "rights_and_obligations",
+      "citation": "Anhang II Teil D Nr. 10 Buchst. c MiCAR",
       "severity": "BLOCKER",
       "status": "pass",
-      "word_count": 192,
+      "word_count": 132,
       "blocker": false,
       "next_action": "Keep disclosure under lawyer review before external use.",
       "source_anchor": {
-        "section_key": "reserve_of_assets",
+        "section_key": "rights_and_obligations",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:5852d30038a35798",
-        "section_length": 1231
+        "stable_anchor_id": "json:rights_and_obligations:7c277f403e2b89d2",
+        "section_length": 839
       }
     },
     {
@@ -360,5 +360,5 @@
   ],
   "warnings": [],
   "review_notice": "Coverage matrix is a deterministic disclosure checklist. It is not legal advice, a signature, a notification, or filing approval.",
-  "digest": "36d9e9668c7953f5855ed059637b9061871382d0cae7f40e9615f3cd6be7967e"
+  "digest": "9ce901546aa5fd9654fc28afcbca14bfa2531a9f28c1907d82ac6de8c8eef123"
 }

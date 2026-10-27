@@ -3,8 +3,8 @@
 - **Document Title**: Synthetic EuroStable ART White Paper
 - **Regime/Type**: ART
 - **Source File**: examples/art-stablecoin.json
-- **SHA-256 Checksum**: `aba778f9ac18355010618d26f96f95cd53699ca56ef9503d18b20d41b16a3fc1`
-- **Review Timestamp**: 2026-10-25 18:14:22
+- **SHA-256 Checksum**: `09e19585a56e58d26e8e14cd5ba2bdce75bf0756cdc11bc1552c13ea2cc766f5`
+- **Review Timestamp**: 2026-10-27 20:56:47
 
 ## Rule Compliance Checklist
 
@@ -27,7 +27,7 @@
 | `ANNEX_II.G.COMPOSITION_DISCLOSURE` | Anhang II Teil G i.V.m. Art. 36 MiCAR | Reserve composition disclosure (Annex II Part G) | BLOCKER | **REVIEW** | [ ] |
 | `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW` | Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d, Art. 45 Abs. 3 und Art. 45 Abs. 7 Buchst. b MiCAR | Candidate deposit floor for the reserve (30 % under Art. 36(4)(d); 60 % under Art. 45(7)(b) for significant ARTs, or for non-significant ARTs via Arts. 35(4) and 45(3) MiCAR) - lawyer review required | BLOCKER | **REVIEW** | [ ] |
 | `ANNEX_II.G.CUSTODY` | Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR | Custody policy and custodian selection (Art. 36(2) MiCAR) | BLOCKER | **REVIEW** | [ ] |
-| `ANNEX_II.G.VALUATION_AUDIT` | Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR | Valuation procedure and audit frequency (Art. 36(3) MiCAR) | BLOCKER | **PASS** | [x] |
+| `ANNEX_II.G.VALUATION_AUDIT` | Anhang II Teil D Nr. 10 Buchst. c MiCAR | Valuation of the components of the claim (Annex II Part D No. 10(c) MiCAR) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.H` | Art. 19 Abs. 1 UAbs. 1 Buchst. h MiCAR i.V.m. Art. 4 VO (EU) 2025/422; Anhang Tabelle 3 Teil H VO (EU) 2024/2984 | Principal adverse environmental and climate-related impact of the consensus mechanism | MAJOR | **PASS** | [x] |
 | `ANNEX_II.I` | Anhang II Teil D Nr. 9, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 MiCAR | Redemption rights and procedure (timing, fees, suspension conditions) | BLOCKER | **PASS** | [x] |
 
