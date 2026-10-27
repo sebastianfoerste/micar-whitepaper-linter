@@ -402,8 +402,30 @@ def test_first_copy_of_a_name_in_other_words_is_split_off(tmp_path: Path):
             "Trading platforms Trading platforms name Example Exchange",
             "Trading platforms name: Example Exchange",
         ),
+        # The second copy can be the one in other words.
+        (
+            "",
+            "Financial condition for the past three years Financial condition over the past three years N/A",
+            "N/A",
+        ),
+        # Here the second copy is the name Table 2 uses for the field of Table 4.
+        (
+            "",
+            "Another identifier required pursuant to applicable law "
+            "Another identifier required pursuant to applicable national law N/A",
+            "N/A",
+        ),
+        # An acronym in brackets for the name, and a name of another table.
+        ("", "Distributed ledger technology (DLT) N/A", "N/A"),
+        ("", "Token-related risks TBD", "TBD"),
         # Words before a name that are not another wording of it keep the field's text.
         ("", "Holding structure Parent company N/A", "Holding structure Parent company N/A"),
+        # Words after a name that only share some of its words stay in the answer.
+        (
+            "",
+            "Issuer-related risks Risks related to the issuer include insolvency",
+            "Issuer-related risks: Risks related to the issuer include insolvency",
+        ),
         # A label of its own that is not a field name stays as written.
         ("Name of the project", "Meadow", "Name of the project: Meadow"),
         # Text that goes on from a field name, or holds none, keeps its wording.

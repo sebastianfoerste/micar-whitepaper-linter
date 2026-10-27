@@ -241,11 +241,15 @@ _JOINT = re.compile(r"^(?:[\s:|)\]]|[-\u2013\u2014\u2022\u00b7](?=\s))+")
 # Text that goes on from a field name with "of", "'s" or the like makes a longer label than the
 # template's ("Name of the token N/A"), so the field keeps its text.
 _NAME_GOES_ON = re.compile(r"(?:of|for|and|or)\b|['\u2019]s\b")
-# The CoreFiling rendering prints a field's name twice and can word the first copy differently
+# The CoreFiling rendering prints a field's name twice and can word one copy differently
 # ("Financial condition over the past three years Financial condition for the past three years").
-# Words before a name count as another wording of it when three in five of them are its words.
+# Words before a name count as another wording of it when three in five of them are its words; words
+# after a name, which no second name bounds, when three in four are.
 _VARIANT_WORDS = 30
 _VARIANT_SHARE = 0.6
+_OTHER_WORDING_SHARE = 0.75
+# An acronym in brackets after a name ("Distributed ledger technology (DLT)").
+_ACRONYM = re.compile(r"\(([A-Z]{2,6})\)")
 _LISTED_FIELDS = 10
 
 
@@ -263,14 +267,15 @@ def _name_pattern(name: str) -> re.Pattern[str]:
 
 
 @cache
-def _field_names(whitepaper_type: WhitepaperType) -> tuple[str, ...]:
-    return tuple(dict.fromkeys(FIELD_NAMES[whitepaper_type].values()))
+def _field_names() -> tuple[str, ...]:
+    # The names of all three tables: a white paper can print a name in another table's wording.
+    return tuple(dict.fromkeys(name for table in FIELD_NAMES.values() for name in table.values()))
 
 
-def _leading_name(text: str, whitepaper_type: WhitepaperType) -> tuple[str, int] | None:
+def _leading_name(text: str) -> tuple[str, int] | None:
     """The longest template field name the text starts with, and where it ends in the text."""
     found = None
-    for name in _field_names(whitepaper_type):
+    for name in _field_names():
         if name[0].lower() != text[:1].lower():
             continue
         if (match := _name_pattern(name).match(text)) and (found is None or match.end() > found[1]):
@@ -282,10 +287,10 @@ def _stems(text: str) -> Counter[str]:
     return Counter(stem for word in re.findall(r"[^\W_]+", text.lower()) if (stem := word.rstrip("s")))
 
 
-def _name_after_variant(text: str, whitepaper_type: WhitepaperType) -> tuple[str, int] | None:
+def _name_after_variant(text: str) -> tuple[str, int] | None:
     """A template field name that follows another wording of itself, and where it ends in the text."""
     for word in islice(re.finditer(r"\S+", text), 1, _VARIANT_WORDS + 1):
-        found = _leading_name(text[word.start() :], whitepaper_type)
+        found = _leading_name(text[word.start() :])
         if found is None:
             continue
         before, name = _stems(text[: word.start()]), _stems(found[0])
@@ -294,26 +299,53 @@ def _name_after_variant(text: str, whitepaper_type: WhitepaperType) -> tuple[str
     return None
 
 
-def _with_template_label(field: NumberedField, whitepaper_type: WhitepaperType) -> NumberedField:
+def _other_wording_end(text: str, name: str) -> int | None:
+    """Where another wording of the name ends, if the text starts with one: the closest of the
+    text's first words, up to two more than the name has."""
+    target = _stems(name)
+    best, end = 0.0, None
+    for word in islice(re.finditer(r"\S+", text), target.total() + 2):
+        start = _stems(text[: word.end()])
+        share = (start & target).total() / max(start.total(), target.total())
+        if share > best:
+            best, end = share, word.end()
+    return end if best >= _OTHER_WORDING_SHARE else None
+
+
+def _answer_after(rest: str, name: str) -> str:
+    """The text after a field name without the further copies of the name, in its own words or
+    others, or the acronym of the name in brackets."""
+    answer = _JOINT.sub("", rest)
+    while True:
+        acronym = _ACRONYM.match(answer)
+        initials = "".join(word[0] for word in re.findall(r"[^\W_]+", name)).upper()
+        if acronym and initials.endswith(acronym.group(1)):
+            end = acronym.end()
+        elif match := _name_pattern(name).match(answer):
+            end = match.end()
+        elif not (end := _other_wording_end(answer, name)):
+            return answer
+        answer = _JOINT.sub("", answer[end:])
+
+
+def _with_template_label(field: NumberedField) -> NumberedField:
     """Split the template's field name off the start of the field's text.
 
     A field without a label of its own takes the name its content starts with: "Legal form Legal
     form N/A" after a dash gives the label "Legal form" and the answer "N/A", also where a PDF
-    conversion split a word, printed the name twice or worded its first copy differently. A label
-    cut off inside a word takes the rest of the name from the content. A field keeps its text when
-    no name fits, when a name covers only the start of its label, or when the text after the name
-    goes on with "of" and the like.
+    conversion split a word, printed the name twice or worded one copy differently, or where an
+    acronym in brackets follows the name. A label cut off inside a word takes the rest of the name
+    from the content. A field keeps its text when no name fits, when a name covers only the start of
+    its label, or when the text after the name goes on with "of" and the like.
     """
     label = _LEAD.sub("", field.label).rstrip(" .:")
     text = _LEAD.sub("", f"{label} {field.content}" if label else field.content)
     for find in (_leading_name, _name_after_variant):
-        found = find(text, whitepaper_type)
+        found = find(text)
         if found is None or found[1] < len(label):
             continue
         name, end = found
-        answer = _JOINT.sub("", text[end:])
-        while match := _name_pattern(name).match(answer):
-            answer = _JOINT.sub("", answer[match.end() :])
+        answer = _answer_after(text[end:], name)
         if _NAME_GOES_ON.match(answer) and not (is_not_applicable(answer) or is_placeholder(answer)):
             continue
         new_label = name if not label or end > len(label) else label
@@ -382,7 +414,7 @@ def sections_from_numbered_fields(
     # The layout notes read the fields as found: a field holding only its name still counts as present.
     merged_layout = labels_run_into_answers(fields)
     has_leading_fields = any(field.field_id in summary and field.content.strip() for field in fields)
-    fields = [_with_template_label(field, whitepaper_type) for field in fields]
+    fields = [_with_template_label(field) for field in fields]
     lettered = [field for field in fields if field.part in parts and field.content.strip()]
     answered_parts = {field.part for field in lettered if field.answered}
     placeholder_parts = {field.part for field in lettered if field.placeholder} - answered_parts
