@@ -5,6 +5,7 @@
 ### Fixed
 
 - XHTML text extraction: a word that a PDF conversion split with an empty spacer span is read whole. pdf2htmlEX and converters in its style write `<span class="_ _0"></span>` inside words for kerning; "accordance" came out as "accor dance", and rules reported review terms such as risk, value and loss as missing. A spacer that the page's CSS makes at least an eighth of an em wide still separates words, as pdf2htmlEX treats it. Text on either side of a block element or `<br>` inside a heading, paragraph, list item or table cell is kept apart, so a heading written `Information about the<br/>issuer` opens its section. A field number stays apart from its label, or the dash before the label, when only a spacer separates them. The fix covers numbered-field XHTML, the heading loader, finding anchors and SARIF lines, and the study batch (`micar-lint-batch`).
+- Heading-based XHTML: text in nested blocks is read once. A list item holding paragraphs or a nested list, or a `div` holding a list, was read for the outer element and again for each inner one, which doubled those words and could lift a section over its minimum word count.
 
 ## 1.2.1 - 2026-10-27
 

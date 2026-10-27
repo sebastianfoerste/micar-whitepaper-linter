@@ -121,9 +121,16 @@ def text_fragments(
             yield piece
 
 
-def element_text(*elements: etree._Element) -> str:
-    """The text of the elements on one line, joined as text_fragments joins it."""
-    return " ".join(fragment for fragment in text_fragments(elements) if isinstance(fragment, str))
+def element_text(*elements: etree._Element, stop: Callable[[etree._Element], bool] | None = None) -> str:
+    """The text of the elements on one line, joined as text_fragments joins it, without the text of
+    any element for which ``stop`` is true."""
+    return " ".join(fragment for fragment in text_fragments(elements, stop) if isinstance(fragment, str))
+
+
+def _own_text(elem: etree._Element, selected: set[etree._Element]) -> str:
+    """The text of a selected element without the selected elements nested in it, which the loader
+    reads on their own, so that a list item holding paragraphs counts each paragraph once."""
+    return element_text(elem, stop=lambda child: child is not elem and child in selected)
 
 
 def _is_fully_bold(elem: etree._Element, text: str) -> bool:
@@ -156,8 +163,9 @@ def load_from_xhtml(path: Path) -> dict[str, str]:
         " or self::p or self::li or self::div or self::b or self::strong])]"
     )
 
+    selected = set(elements)
     for elem in elements:
-        text = element_text(elem)
+        text = _own_text(elem, selected)
         if not text:
             continue
 
