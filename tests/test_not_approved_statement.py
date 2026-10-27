@@ -356,6 +356,25 @@ def test_xhtml_statement_split_over_two_paragraphs_is_read_whole(
     assert statement.status == "pass", statement.issues
 
 
+# Statement routing runs on the blocks the XHTML loader reads once each: paragraphs nested in
+# a list item, and a word split by a pdf2htmlEX spacer span, still give the whole statement.
+def test_xhtml_statement_in_nested_blocks_is_read_once_and_whole(tmp_path: Path):
+    responsibility = _statement("The offeror")[len(APPROVAL) + 1 :]
+    spaced = APPROVAL.replace("approved", 'appr<span class="_ _0"></span>oved')
+    path = tmp_path / "draft.xhtml"
+    path.write_text(
+        "<html><head><style>._0{width:0.5px;}</style></head><body><ul><li>"
+        f"<p>{spaced}</p><p>{responsibility}</p></li></ul>"
+        "<h2>Summary</h2><p>Key information.</p></body></html>",
+        encoding="utf-8",
+    )
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    assert whitepaper.section("not_approved_statement") == f"{APPROVAL}\n{responsibility}"
+    assert whitepaper.section("summary") == "Key information."
+    statement = next(f for f in lint_whitepaper(whitepaper).findings if f.rule.rule_id == TITLE_II)
+    assert statement.status == "pass", statement.issues
+
+
 # Regression: an incomplete statement swallowed the sections that followed it, so a draft
 # that has a summary and a risk warning got MISSING blockers for both.
 SUMMARY_BODY = " ".join(["The summary gives key information about the offer and the token."] * 15)

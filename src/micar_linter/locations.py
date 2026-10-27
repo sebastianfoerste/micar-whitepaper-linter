@@ -3,9 +3,10 @@
 A finding concerns a section, not a span of words, so the line is where the
 section starts: the key inside the JSON ``sections`` object, or the first
 XHTML heading that maps to the section. Other formats, numbered-field XHTML,
-an XHTML section without an h1 to h6 heading of its own (one opened by a bold
-label, or the first-page statement found by its wording) and sections a draft
-does not contain fall back to line 1. Only line numbers
+saved iXBRL viewer pages (whose white paper sits packed in a script), an XHTML
+section without an h1 to h6 heading of its own (one opened by a bold label, or
+the first-page statement found by its wording) and sections a draft does not
+contain fall back to line 1. Only line numbers
 are derived from the draft; no draft text is returned.
 """
 
@@ -132,12 +133,10 @@ def _xhtml_heading_lines(path: Path) -> dict[str, int]:
     Numbered-field layouts have no section headings, so their findings stay on line 1.
     """
     try:
-        from lxml import etree
-
         from micar_linter.document import match_heading_to_section
-        from micar_linter.xhtml_parser import load_from_xhtml
+        from micar_linter.xhtml_parser import element_text, load_from_xhtml, parse_html
 
-        tree = etree.parse(str(path), etree.HTMLParser(encoding="utf-8"))
+        tree = parse_html(path)
         headings = tree.xpath("//h1 | //h2 | //h3 | //h4 | //h5 | //h6")
         # A heading element that the loader reads as part of the first-page statement opens no section.
         statement = set(load_from_xhtml(path).get("not_approved_statement", "").split("\n"))
@@ -145,7 +144,7 @@ def _xhtml_heading_lines(path: Path) -> dict[str, int]:
         return {}
     lines: dict[str, int] = {}
     for heading in headings:
-        text = " ".join("".join(heading.itertext()).split())
+        text = element_text(heading)
         if not text or not heading.sourceline or text in statement:
             continue
         for section_key in match_heading_to_section(text):

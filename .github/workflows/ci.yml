@@ -30,3 +30,33 @@ jobs:
         run: uv sync --locked --extra dev
       - name: Lint, test, smoke, review bundle, playground and template checks
         run: make check
+
+  # Runs action.yml from this checkout, so a broken Action shows up before the v1 tag moves.
+  action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Strict run on a draft with open blockers
+        id: strict
+        continue-on-error: true
+        uses: ./
+        with:
+          whitepaper: examples/incomplete.json
+          annotations: 'false'
+      - name: Report-mode run on a DOCX draft
+        id: docx
+        uses: ./
+        with:
+          whitepaper: examples/sample-draft.docx
+          strict: 'false'
+          extra-args: --type other
+          annotations: 'false'
+      - name: Strict run fails and both runs write a SARIF log
+        env:
+          STRICT_OUTCOME: ${{ steps.strict.outcome }}
+          STRICT_SARIF: ${{ steps.strict.outputs.sarif-file }}
+          DOCX_SARIF: ${{ steps.docx.outputs.sarif-file }}
+        run: |
+          test "${STRICT_OUTCOME}" = failure
+          test -s "${STRICT_SARIF}"
+          test -s "${DOCX_SARIF}"

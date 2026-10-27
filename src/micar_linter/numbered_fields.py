@@ -17,6 +17,7 @@ from lxml import etree
 
 from micar_linter.placeholders import is_not_applicable, is_placeholder
 from micar_linter.whitepaper import WhitepaperType
+from micar_linter.xhtml_parser import element_text, parse_html, text_fragments
 
 # A layout counts as numbered once fields from this many distinct parts carry content.
 MIN_PARTS = 3
@@ -115,6 +116,22 @@ _SUMMARY_SECTIONS: dict[WhitepaperType, dict[str, tuple[str, ...]]] = {
 # The language field sits at F.12, B.14 or B.11 depending on the table, and authors
 # renumber, so it is found by its label ("Language or languages of the ... white paper").
 _LANGUAGE_LABEL = re.compile(r"\blanguages?\b", re.I)
+# Where the label shares a cell or paragraph with its answer, the field has no separate label and its
+# content opens with the template label ("Language or languages of the white paper English").
+_LANGUAGE_CONTENT = re.compile(
+    r"^\W*languages?(?:\s+or\s+languages)?\s+of\s+the\s+(?:crypto-?\s*assets?\s+)?white\s+paper\b", re.I
+)
+# Table 4 has no field for the safeguarding of funds received (Art. 54 MiCAR), so for an EMT the
+# safeguarding section collects the answered lettered fields that describe it.
+_SAFEGUARDING_TEXT = re.compile(
+    r"\bsafeguard\w*|\bsegregat\w*|\babsicherung\w*|\bsicherung\w*.*\bgelder\w*", re.I
+)
+
+
+def _is_language_field(field: NumberedField) -> bool:
+    if field.label:
+        return bool(_LANGUAGE_LABEL.search(field.label))
+    return bool(_LANGUAGE_CONTENT.match(field.content))
 
 
 @dataclass(frozen=True)
@@ -137,16 +154,12 @@ class NumberedField:
         return not (is_not_applicable(self.content) or self.placeholder)
 
 
-def _clean(text: str | None) -> str:
-    return re.sub(r"\s+", " ", text or "").strip()
-
-
 def _tag(element: etree._Element) -> str:
     return element.tag.lower() if isinstance(element.tag, str) else ""
 
 
 def _table_field(row: etree._Element) -> NumberedField | None:
-    cells = [_clean("".join(cell.itertext())) for cell in row.xpath("./td | ./th")]
+    cells = [element_text(cell) for cell in row.xpath("./td | ./th")]
     if len(cells) < 2:
         return None
     match = _FIELD_ID.match(cells[0])
@@ -169,23 +182,24 @@ def _field_id(match: re.Match[str]) -> str:
 def _text_nodes(
     element: etree._Element, table_rows: dict[etree._Element, NumberedField]
 ) -> Iterator[str | NumberedField]:
-    """Yield text fragments in document order, with each table field row as one item."""
-    if element in table_rows:
-        yield table_rows[element]
-        return
-    if _tag(element) in _SKIPPED_TAGS:
-        return
-    if isinstance(element.tag, str) and (text := _clean(element.text)):
-        yield from _INLINE_FIELD.split(text)
-    for child in element:
-        yield from _text_nodes(child, table_rows)
-        if tail := _clean(child.tail):
-            yield from _INLINE_FIELD.split(tail)
+    """Yield text fragments in document order, with each table field row as one item.
+
+    Fragments break where text_fragments breaks them, so a word that a PDF conversion split with an
+    empty spacer span comes out whole.
+    """
+    for node in text_fragments([element], lambda child: child in table_rows or _tag(child) in _SKIPPED_TAGS):
+        if isinstance(node, str):
+            yield from _INLINE_FIELD.split(node)
+        elif node in table_rows:
+            yield table_rows[node]
 
 
-def extract_numbered_fields(path: Path) -> list[NumberedField]:
-    """Read the numbered fields of a white paper, merging repeated field numbers."""
-    tree = etree.parse(str(path), etree.HTMLParser(encoding="utf-8"))
+def extract_numbered_fields(source: Path | bytes) -> list[NumberedField]:
+    """Read the numbered fields of a white paper, merging repeated field numbers.
+
+    source is the file, or markup unpacked from a saved iXBRL viewer page.
+    """
+    tree = parse_html(source)
     root = tree.getroot()
     if root is None:
         return []
@@ -220,6 +234,24 @@ def extract_numbered_fields(path: Path) -> list[NumberedField]:
     ]
 
 
+MERGED_LABELS_NOTE = (
+    "Most numbered fields in this layout have no separate label, so a label can run into its answer: "
+    "a field answered only \"N/A\" or \"TBD\" then reads as answered, and the template's label wording "
+    "can count toward a check. Check each Pass against the white paper."
+)
+
+
+def labels_run_into_answers(fields: list[NumberedField]) -> bool:
+    """True if four in five lettered fields carry no label of their own.
+
+    A rendering converted from PDF can split field number, label and answer into separate text runs,
+    and some tables set the label in the answer cell. The label then reads as part of the answer,
+    so "Legal form N/A" counts as answered.
+    """
+    lettered = [field for field in fields if "." in field.field_id and field.content.strip()]
+    return bool(lettered) and 5 * sum(not field.label for field in lettered) >= 4 * len(lettered)
+
+
 def is_numbered_layout(fields: list[NumberedField]) -> bool:
     return (
         len({field.part for field in fields if "." in field.field_id and field.content.strip()}) >= MIN_PARTS
@@ -245,16 +277,13 @@ def sections_from_numbered_fields(
     placeholder_parts = {field.part for field in lettered if field.placeholder} - answered_parts
 
     sections: dict[str, list[str]] = {}
+    safeguarding_fields: list[str] = []
     for field in fields:
         keys = parts.get(field.part) or summary.get(field.field_id, ())
         if not keys or not field.content.strip():
             continue
         # A placeholder language field still names the language field, so its check reports the placeholder.
-        if (
-            field.part in parts
-            and (field.answered or field.placeholder)
-            and _LANGUAGE_LABEL.search(field.label)
-        ):
+        if field.part in parts and (field.answered or field.placeholder) and _is_language_field(field):
             keys = (*keys, "language")
         if field.placeholder:
             line = field.content
@@ -268,8 +297,16 @@ def sections_from_numbered_fields(
             line = field.content
         for key in keys:
             sections.setdefault(key, []).append(line)
+        if (
+            whitepaper_type is WhitepaperType.EMT
+            and field.part in parts
+            and field.answered
+            and _SAFEGUARDING_TEXT.search(field.content)
+        ):
+            sections.setdefault("safeguarding", []).append(line)
+            safeguarding_fields.append(field.field_id)
 
-    notes = []
+    notes = [MERGED_LABELS_NOTE] if labels_run_into_answers(fields) else []
     if not any(field.field_id in summary and field.content.strip() for field in fields):
         notes.append(
             "No leading numbered fields were found. The summary, statements, warning and notification date "
@@ -281,10 +318,16 @@ def sections_from_numbered_fields(
             "the language check reports Missing because of the layout."
         )
     if whitepaper_type is WhitepaperType.EMT:
-        notes.append(
-            "The template has no numbered field for the safeguarding of funds; "
-            "that check reports Missing because of the layout."
-        )
+        if safeguarding_fields:
+            notes.append(
+                "The template has no numbered field for the safeguarding of funds; the safeguarding check "
+                f"reads the fields that mention it: {', '.join(safeguarding_fields)}."
+            )
+        else:
+            notes.append(
+                "The template has no numbered field for the safeguarding of funds, and no answered field "
+                "mentions safeguarding or segregated funds; the safeguarding check reports Missing."
+            )
     for part in sorted({field.part for field in lettered}):
         in_part = [field for field in lettered if field.part == part]
         if not any(field.answered or field.placeholder for field in in_part):

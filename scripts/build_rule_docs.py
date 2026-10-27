@@ -13,6 +13,7 @@ from __future__ import annotations
 import html
 import json
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -38,11 +39,19 @@ SOURCE_MODULES = {
     "ANNEX_II": "annex_ii.py",
     "ANNEX_III": "annex_iii.py",
 }
-# Citations have not been re-read against the Official Journal since these pages were introduced.
+# Citations have not been re-read against the Official Journal since these pages were introduced,
+# except those of the rules in OJ_CHECKED.
 VERIFICATION_NOTE = (
     "Not re-verified since these pages were introduced (2026-10-20): EUR-Lex was unreachable from the "
     "build environment. The citation is the rule's own, unchanged."
 )
+OJ_CHECKED = {
+    "COMMON.RISK_WARNING": (
+        "Checked on 2026-10-27 against the Official Journal text in English and German (OJ L 150, 9.6.2023) "
+        "and the consolidated version of 9 January 2024. No amendment and no English or German corrigendum "
+        "changes Art. 6(5), Art. 19(4) or Art. 51(4)."
+    ),
+}
 FILLER = "This synthetic sentence only adds length and states no fact about any issuer or token."
 FORMAT_GATE = {"COMMON.IXBRL_TAGGING"}
 LEI_RULES = {"COMMON.LEI_CHECK_DIGITS", "COMMON.LEI_CONSISTENCY"}
@@ -69,6 +78,17 @@ UNTESTED_REGIMES = {
     "ANNEX_II": "The Annex II rules have not yet been run against a real ART white paper.",
     "ANNEX_III": "The Annex III rules have not yet been run against a real EMT white paper.",
 }
+# Why a rule runs with other terms or another minimum for some regimes. The build stops when a rule
+# ID has more than one Rule in RULESETS and no note here.
+VARIANT_NOTES = {
+    "COMMON.RISK_WARNING": (
+        "Art. 6(5) and Art. 19(4) MiCAR require a statement that the crypto-asset may lose its value in part "
+        "or in full, may not always be transferable and may not be liquid, and that investor compensation "
+        "and deposit guarantee schemes do not cover it; the listed terms come from that wording. Art. 51(4) "
+        "asks an e-money token white paper only for the two scheme warnings, so EMT drafts are checked for "
+        "those. The utility-token statement of Art. 6(5)(d) applies to utility tokens only and is not checked."
+    ),
+}
 
 
 @dataclass(frozen=True)
@@ -93,6 +113,20 @@ def all_rules() -> list[Rule]:
         for rule in rules:
             seen.setdefault(rule.rule_id, rule)
     return list(seen.values())
+
+
+def variants(rule_id: str) -> list[tuple[Rule, list[WhitepaperType]]]:
+    """The distinct Rule objects that carry one ID, each with the regimes that run it."""
+    found: dict[Rule, list[WhitepaperType]] = {}
+    for regime, rules in RULESETS.items():
+        for rule in rules:
+            if rule.rule_id == rule_id:
+                found.setdefault(rule, []).append(regime)
+    return list(found.items())
+
+
+def _annexes(regimes: list[WhitepaperType]) -> str:
+    return ", ".join(REGIME_NAMES[regime].split(" · ")[0] for regime in regimes)
 
 
 def _passing_text(rule: Rule) -> str:
@@ -129,7 +163,8 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
                 {"title": "Synthetic rule example", "type": regime.value, "sections": {}},
                 "A JSON, DOCX, PDF or Markdown draft cannot carry Inline XBRL, so the blocker stays open. "
                 "An XHTML file is checked for the Inline XBRL 1.1 and ESMA MiCA taxonomy namespaces and "
-                "then shows Review, because tag completeness needs a taxonomy validator.",
+                "then shows Review, because tag completeness needs a taxonomy validator. A saved iXBRL viewer "
+                "page stays Missing: its text is unpacked for the content checks, and its format is not checked.",
             )
         ]
     if rule.rule_id in LEI_RULES:
@@ -368,10 +403,12 @@ def _terms(terms: tuple[str, ...]) -> str:
 def status_logic(rule: Rule) -> str:
     if rule.rule_id == "COMMON.IXBRL_TAGGING":
         return (
-            '<ul class="plain"><li><strong>Missing</strong>: the draft is JSON, DOCX, PDF or Markdown.</li>'
-            "<li><strong>Review</strong>: the draft is XHTML. The check reports namespace problems and always adds "
-            "that tag completeness was not checked.</li><li><strong>Pass</strong>: never. This is a fail-closed "
-            "format gate.</li></ul>"
+            '<ul class="plain"><li><strong>Missing</strong>: the draft is JSON, DOCX, PDF or Markdown, or a saved '
+            "iXBRL viewer page. A viewer page packs the white paper into a script; the content checks read the "
+            "unpacked text, and the viewer's rendering is not the XHTML document itself.</li>"
+            "<li><strong>Review</strong>: the draft is any other XHTML file. The check reports namespace problems "
+            "and always adds that tag completeness was not checked.</li><li><strong>Pass</strong>: never. This is "
+            "a fail-closed format gate.</li></ul>"
         )
     if rule.rule_id == "COMMON.LEI_CHECK_DIGITS":
         return (
@@ -430,11 +467,22 @@ def status_logic(rule: Rule) -> str:
             "“crypto-asset”; a word split only for the line break (“Mem-”, “ber”) does not match and goes to "
             "review. Placement on the first page is not checked.</li></ul>"
         )
+    groups = [variant for variant, _ in variants(rule.rule_id)]
+    minimum = (
+        f"{rule.min_words} words"
+        if len({variant.min_words for variant in groups}) == 1
+        else "the minimum number of words listed above for the draft's regime"
+    )
+    terms = (
+        "a listed term"
+        if len({(variant.required_terms, variant.required_terms_de) for variant in groups}) == 1
+        else "a term listed for the draft's regime"
+    )
+    review = f"the section has fewer than {minimum}, or {terms} does not appear"
     parts = [
         missing,
-        "<li><strong>Review</strong>: the section has fewer than "
-        f"{rule.min_words} words, or a listed term does not appear (case-insensitive substring match, with any "
-        "run of spaces and line breaks read as one space).</li>",
+        f"<li><strong>Review</strong>: {review} (case-insensitive substring match, with any run of spaces and "
+        "line breaks read as one space).</li>",
     ]
     if rule.rule_id == "ANNEX_II.I":
         parts.append(
@@ -463,6 +511,17 @@ def status_logic(rule: Rule) -> str:
 
 def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
     family = rule.rule_id.split(".")[0]
+    groups = variants(rule.rule_id)
+    if len(groups) > 1 and rule.rule_id not in VARIANT_NOTES:
+        raise SystemExit(f"{rule.rule_id}: its settings differ by regime; add an entry to VARIANT_NOTES")
+
+    def by_regime(render: Callable[[Rule], str]) -> str:
+        rendered = [(render(variant), found) for variant, found in groups]
+        if len({text for text, _ in rendered}) == 1:
+            return rendered[0][0]
+        return "; ".join(f"{text} ({_annexes(found)})" for text, found in rendered)
+
+    variant_note = f"<p>{_e(VARIANT_NOTES[rule.rule_id])}</p>" if len(groups) > 1 else ""
     citation_en = citations.to_english(rule.citation)
     sources = "".join(
         f'<li><a href="{_e(url)}">{_e(url)}</a></li>' for url in citations.source_urls(rule.citation)
@@ -530,17 +589,20 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
     if rule.rule_id in NEVER_PASS:
         limitations.append("This rule never reports Pass.")
     example_html = []
-    for example in examples(rule, regimes[0]):
-        actual = lint_example(rule, example)
-        if actual != example.expected:
-            raise SystemExit(
-                f"{rule.rule_id}: example '{example.title}' gives {actual}, page states {example.expected}"
+    for variant, found in groups:
+        suffix = f" ({_annexes(found)})" if len(groups) > 1 else ""
+        for example in examples(variant, found[0]):
+            title = example.title + suffix
+            actual = lint_example(variant, example)
+            if actual != example.expected:
+                raise SystemExit(
+                    f"{rule.rule_id}: example '{title}' gives {actual}, page states {example.expected}"
+                )
+            example_html.append(
+                f'<div class="example"><div class="example-head">{_status_badge(example.expected)}'
+                f'<strong>{_e(title)}</strong></div><p class="small muted">{_e(example.note)}</p>'
+                f"<pre><code>{_e(json.dumps(example.draft, indent=2, ensure_ascii=False))}</code></pre></div>"
             )
-        example_html.append(
-            f'<div class="example"><div class="example-head">{_status_badge(example.expected)}'
-            f'<strong>{_e(example.title)}</strong></div><p class="small muted">{_e(example.note)}</p>'
-            f"<pre><code>{_e(json.dumps(example.draft, indent=2, ensure_ascii=False))}</code></pre></div>"
-        )
     body = f"""<p class="eyebrow">Rule · {_e(rule.severity.label)}</p>
 <h1>{_e(rule.rule_id)}</h1>
 <p class="lede">{_e(rule.label)}</p>
@@ -550,18 +612,18 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
 <dt>Runs for</dt><dd>{_e("; ".join(REGIME_NAMES[r] for r in regimes))}</dd>
 <dt>Severity if open</dt><dd>{_e(rule.severity.label)}</dd>
 <dt>Section key</dt><dd>{"none: checks the file format" if rule.rule_id in FORMAT_GATE else "all sections; anchored to <code>issuer</code>" if rule.rule_id in LEI_RULES else f"<code>{_e(rule.section)}</code>"}</dd>
-<dt>Minimum words</dt><dd>{rule.min_words}</dd>
-<dt>Listed terms (English)</dt><dd>{_terms(rule.required_terms)}</dd>
-<dt>Listed terms (German)</dt><dd lang="de">{_terms(rule.required_terms_de)}</dd>
+<dt>Minimum words</dt><dd>{by_regime(lambda r: str(r.min_words))}</dd>
+<dt>Listed terms (English)</dt><dd>{by_regime(lambda r: _terms(r.required_terms))}</dd>
+<dt>Listed terms (German)</dt><dd lang="de">{by_regime(lambda r: _terms(r.required_terms_de))}</dd>
 <dt>Package version</dt><dd>{_e(__version__)}, built from source that may include unreleased changes</dd>
 <dt>Source</dt><dd><a href="{REPO}/blob/main/src/micar_linter/rules/{SOURCE_MODULES[family]}">rules/{SOURCE_MODULES[family]}</a></dd>
 </dl></div>
 <h2>How the status is set</h2>
-{status_logic(rule)}
+{status_logic(rule)}{variant_note}
 <h2>Legal basis</h2>
 <p>{_e(citation_en)}</p>
 <ul class="plain">{sources}</ul>
-<p class="callout">{_e(STATEMENT_VERIFICATION_NOTE if rule.rule_id in NOT_APPROVED_STATEMENT_RULE_IDS else VERIFICATION_NOTE)}{" " + _e(LEI_VERIFICATION_NOTE) if rule.rule_id in LEI_RULES else ""}</p>
+<p class="callout">{_e(OJ_CHECKED.get(rule.rule_id, STATEMENT_VERIFICATION_NOTE if rule.rule_id in NOT_APPROVED_STATEMENT_RULE_IDS else VERIFICATION_NOTE))}{" " + _e(LEI_VERIFICATION_NOTE) if rule.rule_id in LEI_RULES else ""}</p>
 <h2>Synthetic examples</h2>
 <p class="small muted">Each example is linted when this page is generated. The build fails if a result differs.</p>
 {"".join(example_html)}

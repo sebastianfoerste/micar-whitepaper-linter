@@ -301,12 +301,25 @@ def _ixbrl_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     Only a source that actually went through iXBRL validation can pass. A draft
     format (JSON, DOCX, PDF, Markdown) cannot satisfy the notification format, so
     it leaves the blocker open instead of reporting a pass it has not evidenced.
+    A saved iXBRL viewer page is not validated either: its text is a viewer's
+    rendering of the document.
     """
     is_de = whitepaper.language == "de"
     metadata = whitepaper.metadata
     if not bool(metadata.get("ixbrl_validated", False)):
         source_file = str(metadata.get("source_file", ""))
-        if source_file.lower().endswith((".xhtml", ".html")):
+        if metadata.get("script_packed_source"):
+            msg = (
+                "Gespeicherte iXBRL-Viewer-Seite: Die inhaltlichen Prüfungen beruhen auf dem Text, wie der "
+                "Viewer ihn darstellt. Diese Darstellung ist nicht das XHTML-Dokument selbst. "
+                "Die Inline-XBRL-Prüfung wurde daher nicht ausgeführt; "
+                "die Formatkonformität ist nicht nachgewiesen."
+                if is_de
+                else "Saved iXBRL viewer page: the content checks read the text as the viewer renders it. "
+                "That rendering is not the XHTML document itself, so Inline XBRL validation did not run; "
+                "format compliance is unverified."
+            )
+        elif source_file.lower().endswith((".xhtml", ".html")):
             msg = (
                 "Inline-XBRL-Prüfung wurde für diese XHTML-Quelle nicht ausgeführt; "
                 "die Formatkonformität ist nicht nachgewiesen."

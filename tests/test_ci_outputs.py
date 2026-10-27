@@ -34,6 +34,8 @@ def _marked_art_draft(tmp_path: Path) -> Path:
             "summary": f"{MARKER} summary",
             "issuer": f"{MARKER} issuer",
             "reserve_of_assets": f"{MARKER} keeps 37.5% of the reserve in deposits.",
+            # A key no rule reads: the report warning quotes it.
+            f"{MARKER} key": "Text under a key that no rule reads.",
         },
     }
     path = tmp_path / "marked.json"
@@ -100,6 +102,7 @@ def test_ci_outputs_never_echo_draft_text(tmp_path: Path):
     report = _report(path)
     deposit = next(f for f in report.findings if f.rule.rule_id == "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW")
     assert any("37.5%" in issue for issue in deposit.issues)
+    assert any(MARKER in warning for warning in report.warnings)
     for output in (
         render_sarif(report, path),
         render_summary(report, path),
