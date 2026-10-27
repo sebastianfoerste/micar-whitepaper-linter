@@ -171,6 +171,24 @@ def test_spacer_spans_inside_words_leave_the_words_whole(tmp_path: Path):
     assert not any(issue.startswith("Missing review terms") for issue in warning.issues)
 
 
+def test_spacer_widths_in_the_css_separate_words_and_kerning_does_not(tmp_path: Path):
+    # Converters in the style of pdf2htmlEX can leave a gap between words as an empty spacer;
+    # its CSS width, here 14.6px against a 32px font, marks it as one.
+    path = _write(
+        tmp_path,
+        "<style>._0{margin-left:-1.1px;}._1{width:1.2px;}._2{width:14.6px;}.fs0{font-size:32px;}</style>"
+        '<div class="pf"><div class="pc">'
+        '<div class="t fs0">A.2<span class="_ _1"></span>\u2013 Legal form</div>'
+        '<div class="t fs0">Simplified joint<span class="_ _2"></span>stock comp<span class="_ _0"></span>any</div>'
+        '<div class="t fs0">B.2<span class="_ _2"></span>Name of the e-money token</div>'
+        "</div></div>",
+    )
+    fields = {field.field_id: field for field in extract_numbered_fields(path)}
+    assert set(fields) == {"A.2", "B.2"}
+    assert fields["A.2"].content.endswith("Simplified joint stock company")
+    assert fields["B.2"].content == "Name of the e-money token"
+
+
 def test_table_cells_keep_their_paragraphs_apart(tmp_path: Path):
     row = "<tr><td>A.1</td><td>Name</td><td><p>Example AG.</p><p>Formerly Sample<br/>GmbH.</p></td></tr>"
     (field,) = extract_numbered_fields(_write(tmp_path, f"<table>{row}</table>"))

@@ -130,12 +130,10 @@ def _xhtml_heading_lines(path: Path) -> dict[str, int]:
     Numbered-field layouts have no section headings, so their findings stay on line 1.
     """
     try:
-        from lxml import etree
-
         from micar_linter.document import match_heading_to_section
-        from micar_linter.xhtml_parser import element_text
+        from micar_linter.xhtml_parser import element_text, parse_html
 
-        tree = etree.parse(str(path), etree.HTMLParser(encoding="utf-8"))
+        tree = parse_html(path)
         headings = tree.xpath("//h1 | //h2 | //h3 | //h4 | //h5 | //h6")
     except Exception:
         return {}

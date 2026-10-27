@@ -17,7 +17,7 @@ from lxml import etree
 
 from micar_linter.placeholders import is_not_applicable, is_placeholder
 from micar_linter.whitepaper import WhitepaperType
-from micar_linter.xhtml_parser import element_text, text_fragments
+from micar_linter.xhtml_parser import element_text, parse_html, text_fragments
 
 # A layout counts as numbered once fields from this many distinct parts carry content.
 MIN_PARTS = 3
@@ -192,7 +192,7 @@ def _text_nodes(
 
 def extract_numbered_fields(path: Path) -> list[NumberedField]:
     """Read the numbered fields of a white paper, merging repeated field numbers."""
-    tree = etree.parse(str(path), etree.HTMLParser(encoding="utf-8"))
+    tree = parse_html(path)
     root = tree.getroot()
     if root is None:
         return []

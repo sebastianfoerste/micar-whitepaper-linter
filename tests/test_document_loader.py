@@ -35,9 +35,11 @@ def test_load_document_xhtml_extracts_visible_text_and_ixbrl_tags(tmp_path: Path
 def test_load_document_xhtml_joins_words_that_spacer_spans_split(tmp_path: Path):
     path = tmp_path / "wp.xhtml"
     path.write_text(
-        '<html xmlns="http://www.w3.org/1999/xhtml"><body><div class="pc">'
+        '<html xmlns="http://www.w3.org/1999/xhtml">'
+        "<head><style>._0{margin-left:-1.1px;}._2{width:14.6px;}.fs0{font-size:32px;}</style></head>"
+        '<body><div class="pc">'
         '<div class="t">A.1<span class="_ _2"></span>Name</div>'
-        '<div class="t">Example Money Financ<span class="_ _0"></span>ial Europe SAS</div>'
+        '<div class="t fs0">Example Money Financ<span class="_ _0"></span>ial<span class="_ _2"></span>Europe SAS</div>'
         "<h2>Information about the<br/>issuer</h2><p>Example Money is an e-money institution.</p>"
         "</div></body></html>",
         encoding="utf-8",

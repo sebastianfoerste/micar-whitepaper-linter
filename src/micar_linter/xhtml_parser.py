@@ -20,9 +20,50 @@ _BLOCK_TAGS = {
     "p", "pre", "search", "section", "summary", "table", "tbody", "td", "tfoot", "th", "thead", "tr", "ul",
 }
 # A field number of Implementing Regulation (EU) 2024/2984 ("A.1", "I.01", "05"), as numbered_fields
-# reads it. A spacer can be the only gap between such a number and its label, so the number never
-# runs on into a letter.
+# reads it. A spacer can be the only gap between such a number and its label or the dash before the
+# label, so the number never runs on into a letter or a dash.
 _FIELD_NUMBER = re.compile(r"(?:[A-Z]{1,2}\.\d{1,2}|\d{2})[.:)]?")
+_LABEL_START = re.compile(r"[^\W\d_]|[-\u2013\u2014]")
+# pdf2htmlEX writes a shift inside a line as a span of class "_ _N" whose CSS rule moves the next
+# glyph: "._N{width:7.6px;}", or "._N{margin-left:-1.1px;}" for kerning. It writes a space into a
+# shift of an eighth of an em or more, its threshold for a gap between words; converters in its
+# style leave that span empty too.
+_WORD_GAP_EM = 0.125
+_CSS_LENGTH = re.compile(r"\.(_[0-9a-z]+|fs[0-9a-z]+)\{(?:[^}]*;)?\s*(?:width|font-size):([\d.]+)px")
+
+
+def mark_spacer_gaps(root: etree._Element) -> None:
+    """Write a space into each empty pdf2htmlEX spacer that the page's CSS makes a gap between words."""
+    lengths: dict[str, float] = {}
+    for style in root.iter("{*}style"):
+        for name, value in _CSS_LENGTH.findall(style.text or ""):
+            lengths.setdefault(name, float(value))
+    if not lengths:
+        return
+    for span in root.iter("{*}span"):
+        classes = (span.get("class") or "").split()
+        if "_" not in classes or span.text or len(span):
+            continue
+        width = next((lengths[name] for name in classes if name in lengths), 0.0)
+        size = next(
+            (
+                lengths[name]
+                for node in (span, *span.iterancestors())
+                for name in (node.get("class") or "").split()
+                if name.startswith("fs") and name in lengths
+            ),
+            None,
+        )
+        if size and width >= _WORD_GAP_EM * size:
+            span.text = " "
+
+
+def parse_html(path: Path) -> etree._ElementTree:
+    """Parse an HTML or XHTML file with the HTML parser, with the word gaps of its spacers marked."""
+    tree = etree.parse(str(path), etree.HTMLParser(encoding="utf-8"))
+    if (root := tree.getroot()) is not None:
+        mark_spacer_gaps(root)
+    return tree
 
 
 def _text_flow(
@@ -53,7 +94,7 @@ def _inside_word(text: str, piece: str) -> bool:
     """Whether the text node ``piece`` continues the word that ``text`` ends with."""
     if not text or text[-1].isspace() or piece[:1].isspace():
         return False
-    return not (piece[:1].isalpha() and _FIELD_NUMBER.fullmatch(text.rsplit(None, 1)[-1]))
+    return not (_LABEL_START.match(piece) and _FIELD_NUMBER.fullmatch(text.rsplit(None, 1)[-1]))
 
 
 def text_fragments(
@@ -98,8 +139,7 @@ def _is_fully_bold(elem: etree._Element, text: str) -> bool:
 def load_from_xhtml(path: Path) -> dict[str, str]:
     """Parse an XHTML file and extract sections mapped by headings."""
     try:
-        parser = etree.HTMLParser(encoding="utf-8")
-        tree = etree.parse(str(path), parser=parser)
+        tree = parse_html(path)
     except Exception as exc:
         raise ValueError(f"Failed to parse HTML/XHTML: {exc}") from exc
 

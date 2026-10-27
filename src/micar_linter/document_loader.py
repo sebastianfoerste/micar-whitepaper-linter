@@ -64,7 +64,7 @@ def file_sha256(path: Path) -> str:
 def _load_html(path: Path) -> LoadedDocument:
     from lxml import etree
 
-    from micar_linter.xhtml_parser import element_text
+    from micar_linter.xhtml_parser import element_text, mark_spacer_gaps
 
     raw = path.read_bytes()
     warnings: list[str] = []
@@ -81,6 +81,8 @@ def _load_html(path: Path) -> LoadedDocument:
         tree = etree.parse(str(path), parser=parser).getroot()
         warnings.append("parsed_with_html_recovery")
 
+    # The spacer widths are read from the CSS, so before the style elements go.
+    mark_spacer_gaps(tree)
     _remove_non_visible_elements(tree)
     text = element_text(tree)
     sections = _sections_from_html_tree(tree)
