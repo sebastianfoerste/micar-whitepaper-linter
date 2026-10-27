@@ -300,6 +300,20 @@ def test_cli_lints_a_viewer_page_and_keeps_its_outputs_free_of_draft_lines(tmp_p
     assert lines == {1}
 
 
+def test_audit_log_and_review_bundle_list_the_viewer_page_note(tmp_path: Path):
+    page = _write_page(tmp_path, SYNTHETIC_PAPER)
+    log_path, bundle = tmp_path / "audit.md", tmp_path / "bundle"
+
+    status = main(
+        [str(page), "--type", "other", "--audit-log", str(log_path), "--review-bundle-dir", str(bundle)]
+    )
+
+    assert status == 0
+    bundle_files = ("compliance-checklist.md", "review-table.md", "reviewer-signoff.md")
+    for path in (log_path, *(bundle / name for name in bundle_files)):
+        assert f"- {VIEWER_PAGE_NOTE}" in path.read_text(encoding="utf-8").splitlines(), path.name
+
+
 def test_numbered_layout_inside_a_viewer_page_reads_like_the_file_itself(tmp_path: Path):
     example = ROOT / "examples" / "numbered-other-draft.xhtml"
     page = _write_page(tmp_path, example.read_bytes())
