@@ -8,7 +8,7 @@ Each rule is a `Rule` in `src/micar_linter/rules/`.
 
 Required fields:
 
-1. `rule_id`: Stable identifier, for example `ANNEX_II.G.CUSTODY`. Its first part must be `COMMON`, `ANNEX_I`, `ANNEX_II` or `ANNEX_III` (the rule-page build looks the source module up by it in `SOURCE_MODULES`).
+1. `rule_id`: Stable identifier, for example `ANNEX_II.G.CUSTODY`. Its first part names the rule family, which needs an entry in `SOURCE_MODULES` in `scripts/build_rule_docs.py` (now `COMMON`, `ANNEX_I`, `ANNEX_II` and `ANNEX_III`), or the rule-page build fails.
 2. `citation`: Pinpoint citation to Regulation (EU) 2023/1114 or a documented technical standard, in the canonical German form (`Art. 6 Abs. 7 MiCAR`). The text report (by default) and the CI outputs show the English form; the JSON report and the SARIF rule properties carry both (`citation` and `citation_en`); the rule pages show the English form with the canonical form beside it; and the other outputs (audit log, coverage, remediation, review table, review bundle) and the playground's findings list show the German form.
 3. `section`: the section key the generic checks read, as in the `sections` of a JSON draft (`COMMON.IXBRL_TAGGING` reads no section, and the two LEI rules read every section).
 4. `label`: Human-readable description of the disclosure requirement.
@@ -19,7 +19,7 @@ Required fields:
 
 Use the existing severity contract. Severity belongs to the rule: it says what is at stake if the check fails, not whether the section is there, so a BLOCKER rule can give a `review` finding and a MAJOR rule a `missing` one. Which tier a rule gets is a judgement recorded per rule; the environmental-impact rules, for example, cite mandatory content but are MAJOR.
 
-1. `BLOCKER`: an open finding should keep the white paper from notification or submission for approval until it is cured or resolved in lawyer review, and makes `--strict` exit 1. The two BLOCKER rules that never pass (the iXBRL format check and the ART deposit-floor review) stay open in every report, so they always need lawyer review.
+1. `BLOCKER`: an open finding should keep the white paper from notification or submission for approval until it is cured, and makes `--strict` exit 1. Two BLOCKER rules never pass, so they stay open in every report that runs them: `COMMON.IXBRL_TAGGING` in every regime (the tool checks the iXBRL format only; tag completeness needs a taxonomy validator) and `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW` in ART reports (the floor needs lawyer review).
 2. `MAJOR`: the disclosure, if incomplete, is likely to mislead or need substantive review.
 3. `MINOR`: a drafting gap that should be cured before publication but does not gate notification, such as a disclosure that applies only in some cases (`ANNEX_I.C`, the trading platform operator, where applicable).
 
