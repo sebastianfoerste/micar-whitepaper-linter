@@ -1,8 +1,12 @@
-"""XHTML text extraction and section mapping."""
+"""XHTML text extraction, section mapping and the unpacking of saved iXBRL viewer pages."""
 
 from __future__ import annotations
 
+import base64
+import binascii
+import io
 import re
+import zlib
 from collections.abc import Callable, Iterable, Iterator
 from itertools import chain
 from pathlib import Path
@@ -10,6 +14,31 @@ from pathlib import Path
 from lxml import etree
 
 from micar_linter.document import match_heading_to_section
+
+# A saved iXBRL viewer page packs the white paper into a script and writes it into the page
+# only when a browser runs that script, so the file itself shows next to no text.
+SCRIPT_PAYLOAD_CHARS = 10_000
+MAX_PACKED_PAGE_WORDS = 50
+# The packed document is read up to the size the playground accepts for an XHTML file.
+MAX_UNPACKED_BYTES = 8 * 1024 * 1024
+# A string literal of base64, or a data: URI of base64, long enough to hold a document.
+_BASE64_LITERAL = re.compile(r"""(["'`])(?:data:[^,"'`]{0,100};base64,)?([A-Za-z0-9+/]{1024,}={0,2})\1""")
+# A data script whose whole content is base64, without quotes.
+_BASE64_TEXT = re.compile(r"[A-Za-z0-9+/]{1024,}={0,2}")
+
+
+class PackedPageTooLarge(ValueError):
+    """The document packed into a page unpacks to more than the limit."""
+
+
+class SeveralPackedDocuments(ValueError):
+    """The page packs more than one document, so which one is the white paper is unclear."""
+
+
+def _parse(source: Path | bytes, huge_tree: bool = False) -> etree._ElementTree:
+    document = io.BytesIO(source) if isinstance(source, bytes) else str(source)
+    return etree.parse(document, etree.HTMLParser(encoding="utf-8", huge_tree=huge_tree))
+
 
 # Elements a browser lays out on lines of their own, and <br>. Text runs on across every other
 # element (span, a, b, i, ix:nonNumeric, ix:continuation and the like) without a space.
@@ -58,9 +87,9 @@ def mark_spacer_gaps(root: etree._Element) -> None:
             span.text = " "
 
 
-def parse_html(path: Path) -> etree._ElementTree:
-    """Parse an HTML or XHTML file with the HTML parser, with the word gaps of its spacers marked."""
-    tree = etree.parse(str(path), etree.HTMLParser(encoding="utf-8"))
+def parse_html(source: Path | bytes) -> etree._ElementTree:
+    """Parse an HTML or XHTML file, or markup unpacked from one, with the word gaps of its spacers marked."""
+    tree = _parse(source)
     if (root := tree.getroot()) is not None:
         mark_spacer_gaps(root)
     return tree
@@ -136,10 +165,101 @@ def _is_fully_bold(elem: etree._Element, text: str) -> bool:
     return element_text(*elem.xpath("./b | ./strong | ./br")) == text
 
 
-def load_from_xhtml(path: Path) -> dict[str, str]:
-    """Parse an XHTML file and extract sections mapped by headings."""
+def is_script_packed(source: Path | bytes) -> bool:
+    """True if the page shows next to no text but carries a script large enough to hold a document."""
+    # Without huge_tree, libxml2 drops a text node above about 10 million characters, script content included.
+    root = _parse(source, huge_tree=True).getroot()
+    if root is None:
+        return False
+    if not any(len("".join(script.itertext())) > SCRIPT_PAYLOAD_CHARS for script in root.iter("script")):
+        return False
+    # Text in noscript or template counts as visible: such a page carries its white paper as text.
+    visible = root.xpath("//text()[not(ancestor::head or ancestor::script or ancestor::style)]")
+    return len(" ".join(visible).split()) < MAX_PACKED_PAGE_WORDS
+
+
+def unpack_script_payload(source: Path | bytes, limit: int = MAX_UNPACKED_BYTES) -> bytes | None:
+    """Return the markup a script-packed page carries as a base64 string, or None if it carries none.
+
+    Raises PackedPageTooLarge when a markup payload exceeds limit, and SeveralPackedDocuments when
+    the page packs more than one distinct document. Inflation stops one byte past the limit, so a
+    compressed payload cannot expand without bound.
+    """
+    root = _parse(source, huge_tree=True).getroot()
+    if root is None:
+        return None
+    documents: list[bytes] = []
+    for script in root.iter("script"):
+        # A JSON string may escape "/" as "\/".
+        text = "".join(script.itertext()).replace("\\/", "/")
+        candidates = [match.group(2) for match in _BASE64_LITERAL.finditer(text)]
+        bare = "".join(text.split())
+        if _BASE64_TEXT.fullmatch(bare):
+            candidates.append(bare)
+        for literal in candidates:
+            document = _decode_payload(literal, limit)
+            if document is not None and document not in documents:
+                documents.append(document)
+    if len(documents) > 1:
+        raise SeveralPackedDocuments(f"The page packs {len(documents)} documents.")
+    return documents[0] if documents else None
+
+
+def _decode_payload(literal: str, limit: int) -> bytes | None:
+    # Browsers decode base64 without its "=" padding, so restore the padding before decoding.
+    digits = literal.rstrip("=")
     try:
-        tree = parse_html(path)
+        data = base64.b64decode(digits + "=" * (-len(digits) % 4), validate=True)
+    except (binascii.Error, ValueError):
+        return None
+    # The payload is gzip or zlib (wbits with 32 added reads either header), the markup itself,
+    # or raw deflate, which has no header and is tried last.
+    try:
+        return _inflate(data, zlib.MAX_WBITS | 32, limit)
+    except zlib.error:
+        pass
+    if _is_markup(data):
+        # Uncompressed markup carries no end marker of its own, so it must close the document;
+        # the first of several chunks would otherwise pass for the whole white paper.
+        return _checked(data, b"</html" in data[-4096:].lower(), limit)
+    try:
+        return _inflate(data, -zlib.MAX_WBITS, limit)
+    except zlib.error:
+        return None
+
+
+def _inflate(data: bytes, wbits: int, limit: int) -> bytes | None:
+    document = b""
+    while True:
+        inflater = zlib.decompressobj(wbits)
+        document += inflater.decompress(data, limit + 1 - len(document))
+        if len(document) > limit or not inflater.eof:
+            return _checked(document, False, limit)
+        data = inflater.unused_data
+        # A gzip stream may hold several members in a row, and browser inflaters read them all.
+        # Other bytes after the stream would be dropped, so the payload does not count as complete.
+        if not data.startswith(b"\x1f\x8b"):
+            return _checked(document, not data, limit)
+
+
+def _checked(document: bytes, complete: bool, limit: int) -> bytes | None:
+    if not _is_markup(document):
+        return None
+    if len(document) > limit:
+        raise PackedPageTooLarge(f"The packed document exceeds {limit} bytes.")
+    # A truncated stream would hide the end of the white paper.
+    return document if complete else None
+
+
+def _is_markup(document: bytes) -> bool:
+    head = document[:65536].lstrip(b"\xef\xbb\xbf \t\r\n").lower()
+    return head.startswith(b"<") and (b"<html" in head or b"<!doctype html" in head)
+
+
+def load_from_xhtml(source: Path | bytes) -> dict[str, str]:
+    """Parse an XHTML file, or markup unpacked from one, and extract sections mapped by headings."""
+    try:
+        tree = parse_html(source)
     except Exception as exc:
         raise ValueError(f"Failed to parse HTML/XHTML: {exc}") from exc
 

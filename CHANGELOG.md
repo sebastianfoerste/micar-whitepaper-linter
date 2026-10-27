@@ -2,8 +2,15 @@
 
 ## Unreleased
 
+### Changed
+
+- Playground: XHTML files up to 8 MB are accepted (before: 4 MB), the same limit the loader applies when it unpacks a saved iXBRL viewer page. A later XHTML check may take 60 seconds before it times out (before: 30).
+
 ### Fixed
 
+- XHTML input: a saved iXBRL viewer page, which packs the white paper into a base64 string inside a script and shows it only when a browser runs that script, is now unpacked and checked by the CLI and the playground. The loader reads gzip, zlib, raw deflate and uncompressed payloads, also as a `data:` URI or a JSON string, of up to 8 MB unpacked, in memory, with no temporary file. `COMMON.IXBRL_TAGGING` reports Missing for such a page, because the viewer's rendering is not the XHTML document itself. The report warns that the text came from a viewer page, and when no section could be read. A page whose packed content cannot be unpacked, unpacks to more than 8 MB, or holds more than one document stops with a message that names the cause and asks for the white paper's own XHTML file. Before, the CLI and the playground linted the empty page and reported every section Missing.
+- Numbered-field XHTML: when at least four in five lettered fields have no separate label, as in a white paper converted from PDF or a table that sets the label in the answer cell, the report now warns that a label can run into its answer, so a field answered only "N/A" or "TBD" reads as answered and the template's label wording can count toward a check. Before, nothing showed that the safeguards for unanswered fields could not work in that layout.
+- Playground: the browser bridge keeps the suffix of an imported `.html` file and reads an `.htm` file as `.html`, so loader messages and source anchors match a CLI run on the `.html` file. Before, the bridge renamed both to `.xhtml`.
 - XHTML text extraction: a word that a PDF conversion split with an empty spacer span is read whole. pdf2htmlEX and converters in its style write `<span class="_ _0"></span>` inside words for kerning; "accordance" came out as "accor dance", and rules reported review terms such as risk, value and loss as missing. A spacer that the page's CSS makes at least an eighth of an em wide still separates words, as pdf2htmlEX treats it. Text on either side of a block element or `<br>` inside a heading, paragraph, list item or table cell is kept apart, so a heading written `Information about the<br/>issuer` opens its section. A field number stays apart from its label, or the dash before the label, when only a spacer separates them. The fix covers numbered-field XHTML, the heading loader, finding anchors and SARIF lines, and the study batch (`micar-lint-batch`).
 
 ## 1.2.1 - 2026-10-27

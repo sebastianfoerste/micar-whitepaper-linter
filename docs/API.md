@@ -38,7 +38,7 @@ Supported options:
 
 `--sarif-output`, `--summary-output` and `--annotations-output` render the same report for CI. They contain rule IDs, statuses, severities, English citations, line numbers and links to the [rule pages](https://sebastianfoerste.github.io/micar-whitepaper-linter/rules/), never draft text: the issue messages of `COMMON.IXBRL_TAGGING`, `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW`, `COMMON.LEI_CHECK_DIGITS` and `COMMON.LEI_CONSISTENCY`, which can quote the draft, are replaced by a fixed sentence, and the summary names the file path instead of the draft title. Each output is byte-reproducible (no timestamps). SARIF lists every rule run and one result per open finding; levels follow severity (BLOCKER `error`, MAJOR `warning`, MINOR `note`). They change no status, severity or exit code. The text and JSON reports on stdout are unchanged and still include draft content such as the title. Design notes: [ADR 0001](adr/0001-ci-outputs-sarif-mapping.md).
 
-Input format is detected from the file extension by `load_whitepaper`. JSON, XHTML and DOCX are supported when the required optional parser dependencies are installed.
+Input format is detected from the file extension by `load_whitepaper`. JSON, XHTML and DOCX are supported when the required optional parser dependencies are installed. An `.xhtml` or `.html` file that is a saved iXBRL viewer page is unpacked in memory before the checks, up to 8 MB.
 
 ### Reserve-floor characterisation
 

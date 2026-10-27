@@ -15,7 +15,7 @@ Rule sets cover all three white paper regimes under MiCAR (Regulation (EU) 2023/
 | --- | --- |
 | Table 2 (crypto-assets other than ART/EMT) | Run against public ESMA-register documents |
 | Table 3 / Table 4 (ART / EMT) | Follows the Official Journal text; **not yet run against a real ART or EMT white paper** |
-| iXBRL check | Well-formedness, Inline XBRL 1.1 and ESMA MiCA taxonomy namespaces only; never reports Pass |
+| iXBRL check | Well-formedness, Inline XBRL 1.1 and ESMA MiCA taxonomy namespaces only; never reports Pass; not run for a saved iXBRL viewer page (Missing) |
 | Reserve-floor check | Extracts candidates; never returns `PASS` |
 | Pilot study | 10 documents, 15 rules each, 21 machine-flagged candidate gaps, **pending human review**; convenience sample, no precision/recall claim |
 

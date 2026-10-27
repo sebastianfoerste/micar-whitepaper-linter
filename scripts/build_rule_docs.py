@@ -111,7 +111,8 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
                 {"title": "Synthetic rule example", "type": regime.value, "sections": {}},
                 "A JSON, DOCX, PDF or Markdown draft cannot carry Inline XBRL, so the blocker stays open. "
                 "An XHTML file is checked for the Inline XBRL 1.1 and ESMA MiCA taxonomy namespaces and "
-                "then shows Review, because tag completeness needs a taxonomy validator.",
+                "then shows Review, because tag completeness needs a taxonomy validator. A saved iXBRL viewer "
+                "page stays Missing: its text is unpacked for the content checks, and its format is not checked.",
             )
         ]
     if rule.rule_id in LEI_RULES:
@@ -277,10 +278,12 @@ def _terms(terms: tuple[str, ...]) -> str:
 def status_logic(rule: Rule) -> str:
     if rule.rule_id == "COMMON.IXBRL_TAGGING":
         return (
-            '<ul class="plain"><li><strong>Missing</strong>: the draft is JSON, DOCX, PDF or Markdown.</li>'
-            "<li><strong>Review</strong>: the draft is XHTML. The check reports namespace problems and always adds "
-            "that tag completeness was not checked.</li><li><strong>Pass</strong>: never. This is a fail-closed "
-            "format gate.</li></ul>"
+            '<ul class="plain"><li><strong>Missing</strong>: the draft is JSON, DOCX, PDF or Markdown, or a saved '
+            "iXBRL viewer page. A viewer page packs the white paper into a script; the content checks read the "
+            "unpacked text, and the viewer's rendering is not the XHTML document itself.</li>"
+            "<li><strong>Review</strong>: the draft is any other XHTML file. The check reports namespace problems "
+            "and always adds that tag completeness was not checked.</li><li><strong>Pass</strong>: never. This is "
+            "a fail-closed format gate.</li></ul>"
         )
     if rule.rule_id == "COMMON.LEI_CHECK_DIGITS":
         return (
