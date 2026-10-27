@@ -5,7 +5,16 @@
 ### Fixed
 
 - XHTML text extraction: a word that a PDF conversion split with an empty spacer span is read whole. pdf2htmlEX and converters in its style write `<span class="_ _0"></span>` inside words for kerning; "accordance" came out as "accor dance", and rules reported review terms such as risk, value and loss as missing. Text on either side of a block element or `<br>` inside a heading, paragraph, list item or table cell is kept apart, so a heading written `Information about the<br/>issuer` opens its section. A field number stays apart from its label when only a spacer separates them. The fix covers numbered-field XHTML, the heading loader, finding anchors and SARIF lines, and the study batch (`micar-lint-batch`).
+
+## 1.2.1 - 2026-10-27
+
+The tag `v1.2.1` marks the PyPI package and the GitHub Action, and `v1` moves to it. Rule IDs, statuses on JSON, DOCX, PDF and Markdown drafts, and the output formats are unchanged. On EMT white papers in the numbered-field layout, the language and safeguarding checks can report differently from 1.2.0 (see Fixed).
+
+### Fixed
+
 - Release builds: `make dist` builds the wheel and the source archive from the committed tree (`git archive HEAD`), so uncommitted changes and untracked files stay out of both. `.gitignore` now also covers `.claude/settings.local.json` and `.claude/worktrees/`. The 1.2.0 source archive was built from a working tree and picked up untracked local Claude Code worktrees and settings; the 1.2.0 wheel was not affected.
+- EMT white papers in the numbered-field layout: a language field whose label shares a cell or paragraph with its answer ("B.11" in one cell, "Language or languages of the white paper English" in the next) is read as the language section. Before, `COMMON.LANGUAGE` reported Missing with the note that no language field was found. An unlabelled field that mentions a language in other words, such as "a programming language", is not read as the language field.
+- EMT white papers in the numbered-field layout: Table 4 of Implementing Regulation (EU) 2024/2984 has no field for the safeguarding of funds, so `ANNEX_III.SAFEGUARDING` now reads the answered lettered fields that mention safeguarding or segregated funds, and the extraction note names those fields. Before, the check reported Missing on every white paper in that layout, so `--strict` and the Action's default strict gate could never pass. Where no answered field mentions safeguarding, the check still reports Missing, and the note says so. The playground wheel is rebuilt from the fixed source.
 
 ## 1.2.0 - 2026-10-26
 

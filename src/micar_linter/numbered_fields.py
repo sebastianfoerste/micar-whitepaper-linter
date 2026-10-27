@@ -112,6 +112,22 @@ _SUMMARY_SECTIONS: dict[WhitepaperType, dict[str, tuple[str, ...]]] = {
 # The language field sits at F.12, B.14 or B.11 depending on the table, and authors
 # renumber, so it is found by its label ("Language or languages of the ... white paper").
 _LANGUAGE_LABEL = re.compile(r"\blanguages?\b", re.I)
+# Where the label shares a cell or paragraph with its answer, the field has no separate label and its
+# content opens with the template label ("Language or languages of the white paper English").
+_LANGUAGE_CONTENT = re.compile(
+    r"^\W*languages?(?:\s+or\s+languages)?\s+of\s+the\s+(?:crypto-?\s*assets?\s+)?white\s+paper\b", re.I
+)
+# Table 4 has no field for the safeguarding of funds received (Art. 54 MiCAR), so for an EMT the
+# safeguarding section collects the answered lettered fields that describe it.
+_SAFEGUARDING_TEXT = re.compile(
+    r"\bsafeguard\w*|\bsegregat\w*|\babsicherung\w*|\bsicherung\w*.*\bgelder\w*", re.I
+)
+
+
+def _is_language_field(field: NumberedField) -> bool:
+    if field.label:
+        return bool(_LANGUAGE_LABEL.search(field.label))
+    return bool(_LANGUAGE_CONTENT.match(field.content))
 
 
 @dataclass(frozen=True)
@@ -236,16 +252,13 @@ def sections_from_numbered_fields(
     placeholder_parts = {field.part for field in lettered if field.placeholder} - answered_parts
 
     sections: dict[str, list[str]] = {}
+    safeguarding_fields: list[str] = []
     for field in fields:
         keys = parts.get(field.part) or summary.get(field.field_id, ())
         if not keys or not field.content.strip():
             continue
         # A placeholder language field still names the language field, so its check reports the placeholder.
-        if (
-            field.part in parts
-            and (field.answered or field.placeholder)
-            and _LANGUAGE_LABEL.search(field.label)
-        ):
+        if field.part in parts and (field.answered or field.placeholder) and _is_language_field(field):
             keys = (*keys, "language")
         if field.placeholder:
             line = field.content
@@ -259,6 +272,14 @@ def sections_from_numbered_fields(
             line = field.content
         for key in keys:
             sections.setdefault(key, []).append(line)
+        if (
+            whitepaper_type is WhitepaperType.EMT
+            and field.part in parts
+            and field.answered
+            and _SAFEGUARDING_TEXT.search(field.content)
+        ):
+            sections.setdefault("safeguarding", []).append(line)
+            safeguarding_fields.append(field.field_id)
 
     notes = []
     if not any(field.field_id in summary and field.content.strip() for field in fields):
@@ -272,10 +293,16 @@ def sections_from_numbered_fields(
             "the language check reports Missing because of the layout."
         )
     if whitepaper_type is WhitepaperType.EMT:
-        notes.append(
-            "The template has no numbered field for the safeguarding of funds; "
-            "that check reports Missing because of the layout."
-        )
+        if safeguarding_fields:
+            notes.append(
+                "The template has no numbered field for the safeguarding of funds; the safeguarding check "
+                f"reads the fields that mention it: {', '.join(safeguarding_fields)}."
+            )
+        else:
+            notes.append(
+                "The template has no numbered field for the safeguarding of funds, and no answered field "
+                "mentions safeguarding or segregated funds; the safeguarding check reports Missing."
+            )
     for part in sorted({field.part for field in lettered}):
         in_part = [field for field in lettered if field.part == part]
         if not any(field.answered or field.placeholder for field in in_part):
