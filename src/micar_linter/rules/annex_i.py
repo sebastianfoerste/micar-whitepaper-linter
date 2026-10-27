@@ -18,13 +18,16 @@ from __future__ import annotations
 from micar_linter.rules.base import Rule, Severity
 
 ANNEX_I_RULES: tuple[Rule, ...] = (
+    # A white paper that gives an LEI need not state the legal form or the registered address
+    # (recital 2 and Anhang Tabelle 2 Teil A to C VO (EU) 2024/2984), so the party rules do not
+    # ask for them. Every party Part asks for the business addresses of the management body.
     Rule(
         rule_id="ANNEX_I.A",
         citation="Anhang I Teil A MiCAR",
         section="offeror",
         label="Information about the offeror or person seeking admission to trading",
-        required_terms=("name", "legal form", "registered", "address"),
-        required_terms_de=("name", "rechtsform", "eingetragen", "anschrift"),
+        required_terms=("name", "address"),
+        required_terms_de=("name", "anschrift"),
         min_words=50,
         severity=Severity.BLOCKER,
     ),
@@ -33,8 +36,8 @@ ANNEX_I_RULES: tuple[Rule, ...] = (
         citation="Anhang I Teil B MiCAR",
         section="issuer",
         label="Information about the issuer, if different from the offeror or person seeking admission",
-        required_terms=("issuer", "registered", "address"),
-        required_terms_de=("emittent", "eingetragen", "anschrift"),
+        required_terms=("issuer", "address"),
+        required_terms_de=("emittent", "anschrift"),
         min_words=40,
     ),
     Rule(
@@ -73,7 +76,7 @@ ANNEX_I_RULES: tuple[Rule, ...] = (
         section="crypto_asset",
         label="Information about the crypto-asset (type, characteristics, functionality)",
         required_terms=("crypto-asset", "supply", "transfer", "functionality"),
-        required_terms_de=("kryptowertpapier", "angebot", "übertragung", "funktionsweise"),
+        required_terms_de=("kryptowert", "angebot", "übertragung", "funktionsweise"),
         min_words=60,
         severity=Severity.BLOCKER,
     ),
@@ -115,7 +118,7 @@ ANNEX_I_RULES: tuple[Rule, ...] = (
         ),
         section="environmental_impact",
         label="Principal adverse environmental and climate-related impact of the consensus mechanism",
-        required_terms=("consensus", "energy", "climate", "environmental"),
+        required_terms=("consensus", "energy", "climate", "environment"),
         required_terms_de=("konsens", "energie", "klima", "umwelt"),
         min_words=80,
         severity=Severity.MAJOR,

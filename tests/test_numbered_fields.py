@@ -44,7 +44,7 @@ def test_template_wording_cannot_satisfy_a_rule_for_unanswered_fields():
     report = lint_whitepaper(load_whitepaper(SAMPLE, WhitepaperType.OTHER))
     offeror = next(finding for finding in report.findings if finding.rule.rule_id == "ANNEX_I.A")
     assert offeror.status == "review"
-    assert any("legal form" in issue for issue in offeror.issues)
+    assert any("name" in issue for issue in offeror.issues)
     assert any(warning.startswith("Part A: all 3 numbered fields") for warning in report.warnings)
 
 
