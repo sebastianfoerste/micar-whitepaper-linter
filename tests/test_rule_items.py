@@ -1,7 +1,7 @@
 """Rules that check a white paper item other than the one their ID first named.
 
-ANNEX_II.G.VALUATION_AUDIT checks the valuation item of Annex II Part D No. 10(c), and
-ANNEX_III.SAFEGUARDING is a review prompt, because no Annex III item asks for safeguarding.
+ANNEX_II.G.VALUATION_AUDIT checks the referenced assets and the valuation item of Annex II Part D
+No. 10, and ANNEX_III.SAFEGUARDING is a review prompt, because no Annex III item asks for safeguarding.
 The issuers are fictional.
 """
 
@@ -30,14 +30,16 @@ def _finding(report, rule_id: str) -> Finding:
     return next(f for f in report.findings if f.rule.rule_id == rule_id)
 
 
-# Annex II Part D No. 10(c): "a description how a fair and transparent valuation of components of the
-# claim is undertaken, which identifies, where relevant, independent parties".
+# Annex II Part D No. 10: (a) "the description of each referenced asset" and (c) "a description how a
+# fair and transparent valuation of components of the claim is undertaken, which identifies, where
+# relevant, independent parties".
 CLAIM_VALUATION = (
     "The claim is valued at the market value of the referenced assets. A fair and transparent valuation of "
     "the components of the claim is undertaken daily, and an independent valuation agent reviews it."
 )
 CLAIM_VALUATION_DE = (
-    "Eine redliche und transparente Bewertung der Bestandteile der Forderung wird täglich vorgenommen; "
+    "Der Anspruch entspricht dem Marktwert der referenzierten Vermögenswerte. Eine redliche und "
+    "transparente Bewertung der Bestandteile der Forderung wird täglich vorgenommen; "
     "eine unabhängige Bewertungsstelle prüft sie."
 )
 
@@ -47,6 +49,22 @@ def test_valuation_rule_reads_the_valuation_item_of_the_rights_section():
     assert _finding(report, "ANNEX_II.G.VALUATION_AUDIT").status == "pass"
     german = _lint(WhitepaperType.ART, {"rights_and_obligations": CLAIM_VALUATION_DE}, "de")
     assert _finding(german, "ANNEX_II.G.VALUATION_AUDIT").status == "pass"
+
+
+def test_valuation_rule_asks_for_the_referenced_assets():
+    valuation_only = "A fair and transparent valuation of the components of the claim is undertaken daily."
+    report = _lint(WhitepaperType.ART, {"rights_and_obligations": valuation_only})
+    finding = _finding(report, "ANNEX_II.G.VALUATION_AUDIT")
+    assert finding.status == "review"
+    assert "Missing review terms: referenced asset." in finding.issues
+    german = _lint(
+        WhitepaperType.ART,
+        {"rights_and_obligations": "Die Bestandteile der Forderung werden täglich redlich bewertet."},
+        "de",
+    )
+    assert "Fehlende Begriffe: referenzierten vermögenswert, bewertung." in _finding(
+        german, "ANNEX_II.G.VALUATION_AUDIT"
+    ).issues
 
 
 def test_valuation_rule_no_longer_reads_the_reserve_section_or_asks_for_an_audit():

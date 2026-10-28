@@ -50,63 +50,76 @@ ANNEX_I_RULES: tuple[Rule, ...] = (
         min_words=20,
         severity=Severity.MINOR,
     ),
+    # Anhang I Teil D Nr. 5 asks for the past and future milestones of the project ("Projekt-Etappen").
     Rule(
         rule_id="ANNEX_I.D",
         citation="Anhang I Teil D MiCAR",
         section="project",
         label="Information about the crypto-asset project",
-        required_terms=("project", "purpose", "business model", "team"),
-        required_terms_de=("projekt", "zweck", "geschäftsmodell", "team"),
+        required_terms=("project", "milestones"),
+        required_terms_de=("projekt", "etappen"),
         min_words=80,
         severity=Severity.BLOCKER,
     ),
+    # Anhang I Teil E Nr. 19: the law applicable to the offer and the competent court ("Gericht").
     Rule(
         rule_id="ANNEX_I.E",
         citation="Anhang I Teil E MiCAR",
         section="offer_or_admission",
         label="Information about the offer to the public or admission to trading",
-        required_terms=("offer", "price", "subscription", "target", "jurisdictions"),
-        required_terms_de=("angebot", "preis", "zeichnung", "ziel", "jurisdiktionen"),
+        required_terms=("offer", "price", "subscription", "target", "court"),
+        required_terms_de=("angebot", "preis", "zeichnung", "ziel", "gericht"),
         min_words=60,
         severity=Severity.BLOCKER,
     ),
+    # Anhang I Teil F Nr. 2: the characteristics and functionality ("Merkmale ... und Funktionen").
+    # Supply protocols and transfer restrictions are items of Teil G (Nr. 7 and 8).
     Rule(
         rule_id="ANNEX_I.F",
         citation="Anhang I Teil F MiCAR",
         section="crypto_asset",
         label="Information about the crypto-asset (type, characteristics, functionality)",
-        required_terms=("crypto-asset", "supply", "transfer", "functionality"),
-        required_terms_de=("kryptowert", "angebot", "übertragung", "funktionsweise"),
+        required_terms=("characteristics", "functionality"),
+        required_terms_de=("merkmale", "funktion"),
         min_words=60,
         severity=Severity.BLOCKER,
     ),
+    # Anhang I Teil G Nr. 1: the procedure and conditions for the exercise of the rights ("Ausübung");
+    # Nr. 10: the applicable law and the competent court.
     Rule(
         rule_id="ANNEX_I.G",
         citation="Anhang I Teil G MiCAR",
         section="rights_and_obligations",
         label="Rights and obligations attached to the crypto-asset",
-        required_terms=("rights", "obligations", "holder", "enforce"),
-        required_terms_de=("rechte", "pflichten", "inhaber", "durchsetzen"),
+        required_terms=("rights", "obligations", "exercise", "court"),
+        required_terms_de=("rechte", "pflichten", "ausübung", "gericht"),
         min_words=60,
         severity=Severity.BLOCKER,
     ),
+    # Anhang I Teil H Nr. 1 names the distributed ledger technology, protocols and technical standards; a
+    # token can run without smart contracts.
     Rule(
         rule_id="ANNEX_I.H",
         citation="Anhang I Teil H MiCAR",
         section="technology",
         label="Information on the underlying technology",
-        required_terms=("protocol", "consensus", "smart contract", "audit"),
-        required_terms_de=("protokoll", "konsens", "smart contract", "prüfung"),
+        required_terms=("protocol", "consensus", "ledger", "audit"),
+        required_terms_de=("protokoll", "konsens", "ledger", "prüfung"),
         min_words=60,
         severity=Severity.BLOCKER,
     ),
+    # Anhang I Teil I groups the risks by source: the offer, the issuer, the crypto-assets, project
+    # implementation ("Projektdurchführung") and the technology with mitigation measures ("Risikominderung").
     Rule(
         rule_id="ANNEX_I.I",
         citation="Anhang I Teil I MiCAR",
         section="risks",
-        label="Risk factors (market, project, technology, mitigation measures)",
-        required_terms=("market", "technology", "regulatory", "liquidity", "operational"),
-        required_terms_de=("markt", "technologie", "regulatorisch", "liquidität", "operativ"),
+        label=(
+            "Risk factors (offer, issuer, crypto-assets, project implementation, technology, "
+            "mitigation measures)"
+        ),
+        required_terms=("offer", "project", "technology", "mitigation"),
+        required_terms_de=("angebot", "projekt", "technologie", "minderung"),
         min_words=120,
         severity=Severity.BLOCKER,
     ),

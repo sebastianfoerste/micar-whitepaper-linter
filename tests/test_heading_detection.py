@@ -39,6 +39,8 @@ RISK_DETAIL = (
     "Operational failures at the service provider, such as outages or faulty software updates, can delay "
     "transfers for days. Keys held by holders can be lost or stolen, and lost keys cannot be recovered by "
     "anyone. Smart contract defects can freeze balances until a fix is deployed and accepted by the network. "
+    "Buyers in the offer bear the risk that the project is delayed or stopped, and the mitigation measures of "
+    "the operator shorten outages without preventing them. "
     "Holders should read this document in full and seek independent advice before they buy units. Past "
     "performance of similar services does not indicate future returns, and holders may lose the full amount."
 )
@@ -372,7 +374,7 @@ def test_pdf_list_and_wrapped_lines_open_no_section(tmp_path: Path, case: str):
 
 
 # Part titles of the Implementing Regulation as bold Normal paragraphs, each with up to 20 words.
-RIGHTS = "Holders have rights and obligations; each holder may enforce rights in court under the terms. " * 6
+RIGHTS = "Holders have rights and obligations; each holder may exercise rights in court under the terms. " * 6
 OFFER = (
     "The offer to the public runs from 2 March 2026 at a price of 1 EUR per token in three Member States. "
     * 4
@@ -982,7 +984,8 @@ RISK_PARTS = [
     ),
     (
         "Liquidity risk",
-        "Liquidity can disappear when few buyers are active, so holders may be unable to exit at a fair price.",
+        "Liquidity can disappear when few buyers are active after the offer, so holders may be unable to exit "
+        "at a fair price.",
     ),
     (
         "Regulatory risk",
@@ -991,12 +994,14 @@ RISK_PARTS = [
     (
         "Operational risk",
         "Operational failures at the service provider, such as outages or faulty software updates, can delay "
-        "transfers for days. Keys held by holders can be lost or stolen, and lost keys cannot be recovered.",
+        "transfers for days and set the project back. Keys held by holders can be lost or stolen, and lost keys "
+        "cannot be recovered.",
     ),
     (
         "Smart contract risk",
         "Smart contract defects can freeze balances until a fix is deployed and accepted by the network. "
-        "Technology failures at the ledger can also stop transfers for days.",
+        "Technology failures at the ledger can also stop transfers for days; the mitigation measures of the "
+        "operator shorten such outages without preventing them.",
     ),
 ]
 GERMAN_RISK_LABELS = [

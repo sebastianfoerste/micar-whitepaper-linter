@@ -83,21 +83,6 @@ def test_german_template_statement_meets_the_management_statement_terms(whitepap
     assert finding.status == "pass"
 
 
-def test_art_section_needs_no_basket_and_takes_either_german_spelling():
-    # Art. 3(1)(6): an ART may reference "another value or right or a combination thereof".
-    english = (
-        "The asset-referenced token references a single value, the price of one gram of gold. Its reference "
-        "assets and its stabilisation mechanism are described below."
-    )
-    assert _finding(WhitepaperType.ART, "ANNEX_II.B", "art", english).status == "pass"
-    for adjective in ("vermögenswertereferenzierte", "vermögenswertreferenzierte"):
-        german = (
-            f"Der {adjective} Token bezieht sich auf einen einzigen Wert, den Preis eines Gramms Gold. Die "
-            "Referenzwerte und der Mechanismus zur Stabilisierung sind unten beschrieben."
-        )
-        assert _finding(WhitepaperType.ART, "ANNEX_II.B", "art", german, "de").status == "pass"
-
-
 def test_emt_offer_section_follows_annex_iii_part_c():
     english = (
         "This crypto-asset white paper concerns an offer to the public of the e-money token. The total "
@@ -128,19 +113,139 @@ def test_emt_rights_section_follows_annex_iii_part_d_and_article_49_4():
     )
 
 
-def test_german_crypto_asset_section_uses_kryptowert():
-    german = (
-        "Der Kryptowert wird öffentlich angeboten. Das Angebot, die Übertragung und die Funktionsweise des "
-        "Kryptowerts sind unten beschrieben."
-    )
-    assert _finding(WhitepaperType.OTHER, "ANNEX_I.F", "crypto_asset", german, "de").status == "pass"
+# Each Part as the Annex words its items, in English and German. The ART section references a single
+# value, as Art. 3(1)(6) allows, and names neither a basket nor a stabilisation mechanism.
+TECHNOLOGY_EN = (
+    "The distributed ledger technology, the protocols and technical standards used, the consensus mechanism "
+    "and the audit outcome of the technology used are described below."
+)
+TECHNOLOGY_DE = (
+    "Die Distributed-Ledger-Technologie, die Protokolle und technischen Standards, der Konsensmechanismus "
+    "und das Ergebnis der Prüfung der eingesetzten Technologie sind unten beschrieben."
+)
+ANNEX_WORDING = [
+    (
+        WhitepaperType.OTHER,
+        "ANNEX_I.D",
+        "project",
+        "The crypto-asset project, its past and future milestones and the resources allocated to the project "
+        "are described below.",
+        "Das Kryptowert-Projekt, die bisherigen und künftigen Projekt-Etappen und die dem Projekt "
+        "zugewiesenen Ressourcen sind unten beschrieben.",
+    ),
+    (
+        WhitepaperType.OTHER,
+        "ANNEX_I.E",
+        "offer_or_admission",
+        "The offer to the public runs at an issue price of 1 EUR, with minimum and maximum target subscription "
+        "goals. The law applicable to the offer is German law, and the competent court is in Berlin.",
+        "Das öffentliche Angebot erfolgt zu einem Ausgabepreis von 1 EUR, mit Mindest- und Höchstzielen für "
+        "die Zeichnung. Für das öffentliche Angebot gilt deutsches Recht, und das zuständige Gericht ist in "
+        "Berlin.",
+    ),
+    (
+        WhitepaperType.OTHER,
+        "ANNEX_I.F",
+        "crypto_asset",
+        "The type of crypto-asset, its characteristics and its functionality are described below.",
+        "Die Art des Kryptowerts, seine Merkmale und seine Funktionen sind unten beschrieben.",
+    ),
+    (
+        WhitepaperType.OTHER,
+        "ANNEX_I.G",
+        "rights_and_obligations",
+        "The rights and obligations of the purchaser, and the procedure and conditions for the exercise of "
+        "those rights, are described below. The law applicable to the crypto-assets is German law, and the "
+        "competent court is in Berlin.",
+        "Die Rechte und Pflichten des Käufers und das Verfahren und die Bedingungen für die Ausübung dieser "
+        "Rechte sind unten beschrieben. Für die Kryptowerte gilt deutsches Recht, und das zuständige Gericht "
+        "ist in Berlin.",
+    ),
+    (WhitepaperType.OTHER, "ANNEX_I.H", "technology", TECHNOLOGY_EN, TECHNOLOGY_DE),
+    (
+        WhitepaperType.OTHER,
+        "ANNEX_I.I",
+        "risks",
+        "The risks associated with the offer to the public, the issuer, the crypto-assets, project "
+        "implementation and the technology used, with mitigation measures, are described below.",
+        "Die mit dem öffentlichen Angebot, dem Emittenten, den Kryptowerten, der Projektdurchführung und der "
+        "eingesetzten Technologie verbundenen Risiken sowie Maßnahmen zur Risikominderung sind unten "
+        "beschrieben.",
+    ),
+    (
+        WhitepaperType.ART,
+        "ANNEX_II.B",
+        "art",
+        "The asset-referenced token references a single value, the price of one gram of gold. Its "
+        "characteristics and the plans for the token, with the past and future milestones, are described "
+        "below.",
+        "Der vermögenswertereferenzierte Token bezieht sich auf einen einzigen Wert, den Preis eines Gramms "
+        "Gold. Seine Merkmale und die Pläne für den Token mit den bisherigen und künftigen Etappen sind unten "
+        "beschrieben.",
+    ),
+    (
+        WhitepaperType.ART,
+        "ANNEX_II.C",
+        "offer_or_admission",
+        "This crypto-asset white paper concerns an offer to the public of the asset-referenced token. The "
+        "prospective holders targeted by the offer are described below. The law applicable to the offer is "
+        "German law, and the competent court is in Berlin.",
+        "Dieses Kryptowerte-Whitepaper betrifft ein öffentliches Angebot des vermögenswertereferenzierten "
+        "Token. Die potenziellen Inhaber, auf die das Angebot ausgerichtet ist, sind unten beschrieben. Für "
+        "das öffentliche Angebot gilt deutsches Recht, und das zuständige Gericht ist in Berlin.",
+    ),
+    (WhitepaperType.ART, "ANNEX_II.E", "technology", TECHNOLOGY_EN, TECHNOLOGY_DE),
+    (
+        WhitepaperType.ART,
+        "ANNEX_II.F",
+        "risks",
+        "The risks related to the reserve of assets, the issuer, the offer to the public, the asset-referenced "
+        "token, the operationalisation of the project and the technology used, with mitigation measures, are "
+        "described below.",
+        "Die Risiken im Zusammenhang mit der Vermögenswertreserve, dem Emittenten, dem öffentlichen Angebot, "
+        "dem Token, der Operationalisierung des Projekts und der eingesetzten Technologie sowie Maßnahmen zur "
+        "Risikominderung sind unten beschrieben.",
+    ),
+    (
+        WhitepaperType.ART,
+        "ANNEX_II.G.COMPOSITION_DISCLOSURE",
+        "reserve_of_assets",
+        "The mechanism aimed at aligning the value of the reserve of assets with the claim, and the reserve "
+        "of assets and its composition, are described below.",
+        "Der Mechanismus zur Angleichung des Wertes der Vermögenswertreserve an die Ansprüche sowie die "
+        "Vermögenswertreserve und ihre Zusammensetzung sind unten beschrieben.",
+    ),
+    (
+        WhitepaperType.EMT,
+        "ANNEX_III.B",
+        "emt",
+        "The e-money token, its characteristics and the persons involved in its design and development are "
+        "described below.",
+        "Der E-Geld-Token, seine Merkmale und die an Gestaltung und Entwicklung beteiligten Personen sind "
+        "unten beschrieben.",
+    ),
+    (WhitepaperType.EMT, "ANNEX_III.E", "technology", TECHNOLOGY_EN, TECHNOLOGY_DE),
+    (
+        WhitepaperType.EMT,
+        "ANNEX_III.F",
+        "risks",
+        "The risks associated with the issuer, the e-money token and the technology used, with mitigation "
+        "measures, are described below.",
+        "Die vom Emittenten ausgehenden, die mit dem E-Geld-Token und die mit der eingesetzten Technologie "
+        "verbundenen Risiken sowie Maßnahmen zur Risikominderung sind unten beschrieben.",
+    ),
+]
 
 
-def test_german_emt_section_says_amtliche_waehrung():
-    german = (
-        "Der E-Geld-Token ist auf eine amtliche Währung referenziert. Die Stückelung ist unten beschrieben."
-    )
-    assert _finding(WhitepaperType.EMT, "ANNEX_III.B", "emt", german, "de").status == "pass"
+@pytest.mark.parametrize(
+    ("whitepaper_type", "rule_id", "section", "english", "german"),
+    ANNEX_WORDING,
+    ids=[rule_id for _, rule_id, *_ in ANNEX_WORDING],
+)
+def test_sections_in_the_annex_wording_meet_the_terms(whitepaper_type, rule_id, section, english, german):
+    # A second filler reaches the 150 words the ART risk rule asks for.
+    assert _finding(whitepaper_type, rule_id, section, english + FILLER_EN).status == "pass"
+    assert _finding(whitepaper_type, rule_id, section, german + FILLER_DE, "de").status == "pass"
 
 
 @pytest.mark.parametrize(

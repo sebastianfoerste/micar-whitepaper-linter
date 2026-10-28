@@ -24,10 +24,10 @@ This markdown table is a local review artifact. It does not approve filing, publ
 | ANNEX_II.D | Anhang II Teil D i.V.m. Art. 39 MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | ANNEX_II.E | Anhang II Teil E MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | ANNEX_II.F | Anhang II Teil F MiCAR | pass | no | pending_lawyer_confirmation | yes |
-| ANNEX_II.G.COMPOSITION_DISCLOSURE | Anhang II Teil G i.V.m. Art. 36 MiCAR | review | yes | remediation_required | yes |
+| ANNEX_II.G.COMPOSITION_DISCLOSURE | Anhang II Teil G Nr. 1 und 2 MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | ANNEX_II.G.DEPOSIT_FLOOR_REVIEW | Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d, Art. 45 Abs. 3 und Art. 45 Abs. 7 Buchst. b MiCAR | review | yes | remediation_required | yes |
 | ANNEX_II.G.CUSTODY | Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR | review | yes | remediation_required | yes |
-| ANNEX_II.G.VALUATION_AUDIT | Anhang II Teil D Nr. 10 Buchst. c MiCAR | pass | no | pending_lawyer_confirmation | yes |
+| ANNEX_II.G.VALUATION_AUDIT | Anhang II Teil D Nr. 10 MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | ANNEX_II.H | Art. 19 Abs. 1 UAbs. 1 Buchst. h MiCAR i.V.m. Art. 4 VO (EU) 2025/422; Anhang Tabelle 3 Teil H VO (EU) 2024/2984 | pass | no | pending_lawyer_confirmation | yes |
 | ANNEX_II.I | Anhang II Teil D Nr. 9, 14, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39, Art. 46 Abs. 1 UAbs. 3 Buchst. c und Art. 46 Abs. 4 MiCAR | pass | no | pending_lawyer_confirmation | yes |
 

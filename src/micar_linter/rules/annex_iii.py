@@ -34,14 +34,16 @@ ANNEX_III_RULES: tuple[Rule, ...] = (
         min_words=80,
         severity=Severity.BLOCKER,
     ),
+    # Anhang III Teil B asks for the name, the characteristics ("Merkmale") and the persons involved.
+    # Referencing one official currency is the definition in Art. 3 Abs. 1 Nr. 7 MiCAR; no Part B item
+    # asks for it or for a denomination.
     Rule(
         rule_id="ANNEX_III.B",
         citation="Anhang III Teil B MiCAR",
         section="emt",
-        label="Information about the e-money token (referenced currency, denomination)",
-        required_terms=("e-money token", "referenced", "official currency", "denomination"),
-        # German MiCAR says "amtliche Währung".
-        required_terms_de=("e-geld-token", "referenziert", "amtliche währung", "stückelung"),
+        label="Information about the e-money token (name, characteristics, persons involved)",
+        required_terms=("e-money token", "characteristics"),
+        required_terms_de=("e-geld-token", "merkmale"),
         min_words=60,
         severity=Severity.BLOCKER,
     ),
@@ -70,37 +72,28 @@ ANNEX_III_RULES: tuple[Rule, ...] = (
         min_words=80,
         severity=Severity.BLOCKER,
     ),
+    # Anhang III Teil E covers the distributed ledger technology and protocols, the purchaser's technical
+    # requirements, the consensus mechanism, incentives and fees, a ledger operated by the issuer and the
+    # audit outcome; no item asks for the custody of keys.
     Rule(
         rule_id="ANNEX_III.E",
         citation="Anhang III Teil E MiCAR",
         section="technology",
-        label="Information on the underlying technology (DLT, custody, key management)",
-        required_terms=("protocol", "consensus", "custody", "key management"),
-        required_terms_de=("protokoll", "konsens", "verwahrung", "schlüsselverwaltung"),
+        label="Information on the underlying technology (DLT, protocols, consensus mechanism, audit outcome)",
+        required_terms=("ledger", "protocol", "consensus", "audit"),
+        required_terms_de=("ledger", "protokoll", "konsens", "prüfung"),
         min_words=60,
         severity=Severity.BLOCKER,
     ),
+    # Anhang III Teil F has three items: the risks of the issuer, of the e-money token, and of the
+    # technology with mitigation measures ("Risikominderung").
     Rule(
         rule_id="ANNEX_III.F",
         citation="Anhang III Teil F MiCAR",
         section="risks",
-        label="Risk factors specific to EMTs (safeguarding, redemption, operational)",
-        required_terms=(
-            "market",
-            "credit",
-            "liquidity",
-            "operational",
-            "redemption",
-            "safeguarding",
-        ),
-        required_terms_de=(
-            "markt",
-            "kredit",
-            "liquidität",
-            "operativ",
-            "rücknahme",
-            "absicherung",
-        ),
+        label="Risk factors (issuer, e-money token, technology, mitigation measures)",
+        required_terms=("issuer", "technology", "mitigation"),
+        required_terms_de=("emittent", "technologie", "minderung"),
         min_words=120,
         severity=Severity.BLOCKER,
     ),

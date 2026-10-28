@@ -30,7 +30,7 @@ The linter was run on `examples/art-stablecoin.json` with the default English ci
 MiCAR Whitepaper Linter - Synthetic EuroStable ART White Paper
 Whitepaper type: ART
 ==============================================================================
-Pass: 16  |  Review: 3  |  Missing: 1  |  Blockers: 4
+Pass: 17  |  Review: 2  |  Missing: 1  |  Blockers: 3
 
 [PASS  ] [BLOCKER] COMMON.SUMMARY  Plain-language summary
            Cite:  Art. 6(7), Art. 19(6), Art. 51(6) MiCAR
@@ -78,51 +78,50 @@ Pass: 16  |  Review: 3  |  Missing: 1  |  Blockers: 4
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'issuer'  (106 words)
 
-[PASS  ] [BLOCKER] ANNEX_II.B  Information about the asset-referenced token (reference assets, stabilisation mechanism)
+[PASS  ] [BLOCKER] ANNEX_II.B  Information about the asset-referenced token (characteristics, plans and milestones)
            Cite:  Annex II, Part B MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'art'  (95 words)
+           Section: 'art'  (143 words)
 
 [PASS  ] [BLOCKER] ANNEX_II.C  Information about the offer to the public of the ART or its admission to trading
            Cite:  Annex II, Part C MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'offer_or_admission'  (77 words)
+           Section: 'offer_or_admission'  (80 words)
 
 [PASS  ] [BLOCKER] ANNEX_II.D  Rights and obligations of holders (permanent right of redemption, complaints handling)
            Cite:  Annex II, Part D in conjunction with Art. 39 MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'rights_and_obligations'  (141 words)
 
-[PASS  ] [BLOCKER] ANNEX_II.E  Information on the underlying technology (DLT, custody architecture, key management)
+[PASS  ] [BLOCKER] ANNEX_II.E  Information on the underlying technology (DLT, protocols, consensus mechanism, audit outcome)
            Cite:  Annex II, Part E MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'technology'  (77 words)
+           Section: 'technology'  (87 words)
 
-[PASS  ] [BLOCKER] ANNEX_II.F  Risk factors specific to ARTs (de-pegging, reserve impairment, redemption suspension)
+[PASS  ] [BLOCKER] ANNEX_II.F  Risk factors specific to ARTs (reserve of assets, issuer, offer, token, operationalisation, technology, mitigation measures)
            Cite:  Annex II, Part F MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'risks'  (160 words)
+           Section: 'risks'  (183 words)
 
-[REVIEW] [BLOCKER] ANNEX_II.G.COMPOSITION_DISCLOSURE  Reserve composition disclosure (Annex II Part G)
-           Cite:  Annex II, Part G in conjunction with Art. 36 MiCAR
+[PASS  ] [BLOCKER] ANNEX_II.G.COMPOSITION_DISCLOSURE  Reserve composition and value alignment mechanism (Annex II Part G Nos. 1 and 2 MiCAR)
+           Cite:  Annex II, Part G, points 1 and 2 MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'reserve_of_assets'  (192 words)
-           -  Missing review terms: concentration.
+           Section: 'reserve_of_assets'  (222 words)
 
 [REVIEW] [BLOCKER] ANNEX_II.G.DEPOSIT_FLOOR_REVIEW  Candidate deposit floor for the reserve (30 % under Art. 36(4)(d); 60 % under Art. 45(7)(b) for significant ARTs, or for non-significant ARTs via Arts. 35(4) and 45(3) MiCAR) - lawyer review required
            Cite:  Annex II, Part G in conjunction with Art. 35(4), Art. 36(4), point (d), Art. 45(3) and Art. 45(7), point (b) MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'reserve_of_assets'  (192 words)
+           Section: 'reserve_of_assets'  (222 words)
            -  Draft percentage candidate(s) detected: 30%. The draft characterisation indicates a 30% candidate floor (Art. 36(4)(d) MiCAR). A lawyer must confirm applicability, statement context, and compliance.
 
 [REVIEW] [BLOCKER] ANNEX_II.G.CUSTODY  Custody policy and custodian selection (Art. 36(2), Art. 37 MiCAR)
            Cite:  Annex II, Part G in conjunction with Art. 36(2), Art. 37 MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'reserve_of_assets'  (192 words)
+           Section: 'reserve_of_assets'  (222 words)
            -  Missing review terms: insolvency.
 
-[PASS  ] [BLOCKER] ANNEX_II.G.VALUATION_AUDIT  Valuation of the components of the claim (Annex II Part D No. 10(c) MiCAR)
-           Cite:  Annex II, Part D, point 10(c) MiCAR
+[PASS  ] [BLOCKER] ANNEX_II.G.VALUATION_AUDIT  Referenced assets and valuation of the components of the claim (Annex II Part D No. 10 MiCAR)
+           Cite:  Annex II, Part D, point 10 MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'rights_and_obligations'  (141 words)
 
@@ -148,10 +147,10 @@ This tool is not legal advice.
 ## Compliance Coverage Statistics
 
 - **Total Checked Rules**: 20
-- **Passed Rules**: 16
-- **Rules Requiring Review**: 3 (reserve disclosure, the fact-dependent deposit floor, and custody under Annex II, Part G)
+- **Passed Rules**: 17
+- **Rules Requiring Review**: 2 (the fact-dependent deposit floor, and custody under Annex II, Part G)
 - **Missing Sections**: 1 (format: a JSON draft cannot satisfy the XHTML/iXBRL notification format)
-- **Total Blocker Violations**: 4 blockers (`COMMON.IXBRL_TAGGING`, `ANNEX_II.G.COMPOSITION_DISCLOSURE`, `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW`, `ANNEX_II.G.CUSTODY`)
+- **Total Blocker Violations**: 3 blockers (`COMMON.IXBRL_TAGGING`, `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW`, `ANNEX_II.G.CUSTODY`)
 
 ---
 

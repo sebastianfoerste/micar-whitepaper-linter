@@ -29,26 +29,29 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
         min_words=80,
         severity=Severity.BLOCKER,
     ),
-    # An ART may reference a single value (Art. 3 Abs. 1 Nr. 6 MiCAR), so no basket is asked for.
-    # German MiCAR spells the adjective "vermögenswertereferenziert" and "vermögenswertreferenziert";
-    # the stem "referenziert" matches both.
+    # Anhang II Teil B asks for the token's characteristics (Nr. 2) and the plans for the token with
+    # its past and future milestones ("Etappen", Nr. 5). The referenced assets are an item of Teil D
+    # Nr. 10 (ANNEX_II.G.VALUATION_AUDIT), the alignment of the reserve with the claim one of Teil G
+    # Nr. 1 (ANNEX_II.G.COMPOSITION_DISCLOSURE).
     Rule(
         rule_id="ANNEX_II.B",
         citation="Anhang II Teil B MiCAR",
         section="art",
-        label="Information about the asset-referenced token (reference assets, stabilisation mechanism)",
-        required_terms=("asset-referenced", "reference assets", "stabilisation"),
-        required_terms_de=("referenziert", "referenzwerte", "stabilisierung"),
+        label="Information about the asset-referenced token (characteristics, plans and milestones)",
+        required_terms=("characteristics", "milestones"),
+        required_terms_de=("merkmale", "etappen"),
         min_words=80,
         severity=Severity.BLOCKER,
     ),
+    # Anhang II Teil C Nr. 4: the prospective holders targeted by the offer ("potenzielle Inhaber");
+    # Nr. 15: the law applicable to the offer and the competent court.
     Rule(
         rule_id="ANNEX_II.C",
         citation="Anhang II Teil C MiCAR",
         section="offer_or_admission",
         label="Information about the offer to the public of the ART or its admission to trading",
-        required_terms=("offer", "issuance", "subscription", "target market", "jurisdictions"),
-        required_terms_de=("angebot", "emission", "zeichnung", "zielmarkt", "jurisdiktionen"),
+        required_terms=("offer", "holders", "court"),
+        required_terms_de=("angebot", "inhaber", "gericht"),
         min_words=60,
         severity=Severity.BLOCKER,
     ),
@@ -65,49 +68,45 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
         min_words=80,
         severity=Severity.BLOCKER,
     ),
+    # Anhang II Teil E covers the distributed ledger technology and protocols, the consensus mechanism,
+    # incentives and fees, a ledger operated by the issuer and the audit outcome; no item asks for the
+    # custody of keys.
     Rule(
         rule_id="ANNEX_II.E",
         citation="Anhang II Teil E MiCAR",
         section="technology",
-        label="Information on the underlying technology (DLT, custody architecture, key management)",
-        required_terms=("protocol", "consensus", "custody", "key management", "audit"),
-        required_terms_de=("protokoll", "konsens", "verwahrung", "schlüsselverwaltung", "prüfung"),
+        label="Information on the underlying technology (DLT, protocols, consensus mechanism, audit outcome)",
+        required_terms=("ledger", "protocol", "consensus", "audit"),
+        required_terms_de=("ledger", "protokoll", "konsens", "prüfung"),
         min_words=70,
         severity=Severity.BLOCKER,
     ),
+    # Anhang II Teil F groups the risks by source: the reserve of assets, the issuer, the offer, the token,
+    # its operationalisation and the technology with mitigation measures ("Risikominderung").
     Rule(
         rule_id="ANNEX_II.F",
         citation="Anhang II Teil F MiCAR",
         section="risks",
-        label="Risk factors specific to ARTs (de-pegging, reserve impairment, redemption suspension)",
-        required_terms=(
-            "market",
-            "credit",
-            "liquidity",
-            "operational",
-            "de-peg",
-            "redemption",
-            "reserve",
+        label=(
+            "Risk factors specific to ARTs (reserve of assets, issuer, offer, token, operationalisation, "
+            "technology, mitigation measures)"
         ),
-        required_terms_de=(
-            "markt",
-            "kredit",
-            "liquidität",
-            "operativ",
-            "de-peg",
-            "rücknahme",
-            "reserve",
-        ),
+        required_terms=("reserve", "issuer", "offer", "technology", "mitigation"),
+        required_terms_de=("reserve", "emittent", "angebot", "technologie", "minderung"),
         min_words=150,
         severity=Severity.BLOCKER,
     ),
+    # Anhang II Teil G Nr. 1: the mechanism aimed at aligning the value of the reserve with the claim
+    # ("Angleichung"); Nr. 2: the reserve of assets and its composition. No Part G item asks for the
+    # minimum deposits of Art. 36 Abs. 4 or the concentration risk of the stabilisation policy
+    # (Art. 36 Abs. 8 Buchst. c).
     Rule(
         rule_id="ANNEX_II.G.COMPOSITION_DISCLOSURE",
-        citation="Anhang II Teil G i.V.m. Art. 36 MiCAR",
+        citation="Anhang II Teil G Nr. 1 und 2 MiCAR",
         section="reserve_of_assets",
-        label="Reserve composition disclosure (Annex II Part G)",
-        required_terms=("reserve", "composition", "deposit", "concentration"),
-        required_terms_de=("reserve", "zusammensetzung", "einlagen", "konzentration"),
+        label="Reserve composition and value alignment mechanism (Annex II Part G Nos. 1 and 2 MiCAR)",
+        required_terms=("reserve", "composition", "align"),
+        required_terms_de=("reserve", "zusammensetzung", "angleich"),
         min_words=60,
         severity=Severity.BLOCKER,
     ),
@@ -142,18 +141,18 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
         min_words=60,
         severity=Severity.BLOCKER,
     ),
-    # Anhang II Teil G has no valuation or audit item. The white paper item on valuation is Teil D
-    # Nr. 10 Buchst. c, how a fair and transparent valuation of the components of the claim is
-    # undertaken, so the rule reads the rights section. No Annex II item asks for the six-monthly
-    # reserve audit of Art. 36 Abs. 9. The ID keeps "G" so that SARIF results and rule-page links
-    # stay valid.
+    # Anhang II Teil G has no valuation or audit item. Teil D Nr. 10 describes the claim the token
+    # represents: Buchst. a each referenced asset ("jedes referenzierten Vermögenswerts"), Buchst. c how
+    # a fair and transparent valuation of the components of the claim is undertaken. The rule therefore
+    # reads the rights section. No Annex II item asks for the six-monthly reserve audit of Art. 36
+    # Abs. 9. The ID keeps "G" so that SARIF results and rule-page links stay valid.
     Rule(
         rule_id="ANNEX_II.G.VALUATION_AUDIT",
-        citation="Anhang II Teil D Nr. 10 Buchst. c MiCAR",
+        citation="Anhang II Teil D Nr. 10 MiCAR",
         section="rights_and_obligations",
-        label="Valuation of the components of the claim (Annex II Part D No. 10(c) MiCAR)",
-        required_terms=("valuation",),
-        required_terms_de=("bewertung",),
+        label="Referenced assets and valuation of the components of the claim (Annex II Part D No. 10 MiCAR)",
+        required_terms=("referenced asset", "valuation"),
+        required_terms_de=("referenzierten vermögenswert", "bewertung"),
         min_words=50,
         severity=Severity.BLOCKER,
     ),

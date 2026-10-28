@@ -64,19 +64,33 @@ OJ_CHECKED = {
     "COMMON.MANAGEMENT_STATEMENT": _oj_checked("Art. 6(6), Art. 19(5), Art. 51(5) or the templates", TEMPLATES),
     "ANNEX_I.A": _oj_checked("Annex I Part A or the templates", TEMPLATES),
     "ANNEX_I.B": _oj_checked("Annex I Part B or the templates", TEMPLATES),
+    "ANNEX_I.D": _oj_checked("Annex I Part D or the templates", TEMPLATES),
+    "ANNEX_I.E": _oj_checked("Annex I Part E or the templates", TEMPLATES),
+    "ANNEX_I.F": _oj_checked("Annex I Part F or the templates", TEMPLATES),
+    "ANNEX_I.G": _oj_checked("Annex I Part G or the templates", TEMPLATES),
+    "ANNEX_I.H": _oj_checked("Annex I Part H or the templates", TEMPLATES),
+    "ANNEX_I.I": _oj_checked("Annex I Part I or the templates", TEMPLATES),
     "ANNEX_I.J": _oj_checked(
         "Art. 6(1), first subparagraph, point (j), Art. 4 of Delegated Regulation (EU) 2025/422 or the templates",
         SUSTAINABILITY,
     ),
     "ANNEX_II.A": _oj_checked("Annex II Part A or the templates", TEMPLATES),
+    "ANNEX_II.B": _oj_checked("Annex II Part B or the templates", TEMPLATES),
+    "ANNEX_II.C": _oj_checked("Annex II Part C or the templates", TEMPLATES),
+    "ANNEX_II.E": _oj_checked("Annex II Part E or the templates", TEMPLATES),
+    "ANNEX_II.F": _oj_checked("Annex II Part F or the templates", TEMPLATES),
+    "ANNEX_II.G.COMPOSITION_DISCLOSURE": _oj_checked("Annex II Part G or the templates", TEMPLATES),
     "ANNEX_II.H": _oj_checked(
         "Art. 19(1), first subparagraph, point (h), Art. 4 of Delegated Regulation (EU) 2025/422 or the "
         "templates",
         SUSTAINABILITY,
     ),
     "ANNEX_III.A": _oj_checked("Art. 48, Annex III Part A or the templates", TEMPLATES),
+    "ANNEX_III.B": _oj_checked("Annex III Part B or the templates", TEMPLATES),
     "ANNEX_III.C": _oj_checked("Annex III Part C"),
     "ANNEX_III.D": _oj_checked("Annex III Part D or Art. 49(4)"),
+    "ANNEX_III.E": _oj_checked("Annex III Part E or the templates", TEMPLATES),
+    "ANNEX_III.F": _oj_checked("Annex III Part F or the templates", TEMPLATES),
     "ANNEX_III.G": _oj_checked(
         "Art. 51(1), point (g), Art. 4 of Delegated Regulation (EU) 2025/422 or the templates", SUSTAINABILITY
     ),

@@ -8,12 +8,12 @@
     "notification_date": "REPLACE: Date of notification to the competent authority (Art. 19 Abs. 7 MiCAR).",
     "language": "REPLACE: State the language of the white paper and why it satisfies Art. 19 Abs. 8 MiCAR (official language of the home Member State or a language customary in international finance).",
     "issuer": "REPLACE: Legal form, registered seat, register number, governance, and management-body experience of the issuer (Anhang II Teil A MiCAR for ARTs).",
-    "art": "REPLACE: Description of the asset-referenced token, the reference assets, and the stabilisation mechanism.",
-    "offer_or_admission": "REPLACE: Terms of the offer to the public or admission to trading: addressees, price, subscription mechanics, target market.",
+    "art": "REPLACE: Name and ticker of the asset-referenced token, its characteristics, the persons involved in its operationalisation, and the plans for the token with its past and future milestones (Anhang II Teil B MiCAR).",
+    "offer_or_admission": "REPLACE: Whether the white paper concerns an offer to the public or an admission to trading, the prospective holders targeted, subscription mechanics, and the law applicable to the offer with the competent court (Anhang II Teil C MiCAR).",
     "rights_and_obligations": "REPLACE: Rights and obligations of the holder, including the redemption right at par under Art. 39 MiCAR, complaint procedures, and any transfer restrictions.",
-    "technology": "REPLACE: Description of the underlying technology: consensus mechanism, smart contract governance, custody of keys, audits.",
-    "risks": "REPLACE: Principal risks: market, credit, liquidity, de-peg, operational, and regulatory risk, plus the reserve-impairment cure procedure.",
-    "reserve_of_assets": "REPLACE: Composition, custody, segregation, valuation, and audit of the reserve of assets.",
+    "technology": "REPLACE: The distributed ledger technology, protocols and technical standards, the consensus mechanism, incentive mechanisms and fees, and the audit outcome of the technology used (Anhang II Teil E MiCAR).",
+    "risks": "REPLACE: The risks of the reserve of assets, the issuer, the offer, the token and its referenced assets, the operationalisation of the project, and the technology with mitigation measures (Anhang II Teil F MiCAR).",
+    "reserve_of_assets": "REPLACE: The mechanism aligning the value of the reserve with the claim, the reserve of assets and its composition, the issuance and redemption mechanisms, any investment policy, and the custody arrangements with their segregation (Anhang II Teil G MiCAR).",
     "environmental_impact": "REPLACE: Principal adverse impacts on the climate of the consensus mechanism, per the ESMA sustainability-indicator RTS.",
     "redemption": "REPLACE: Redemption procedure: how, when, at what cost, and under which narrow conditions redemption may be suspended."
   }
