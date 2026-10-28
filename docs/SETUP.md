@@ -41,7 +41,7 @@ uvx --from git+https://github.com/sebastianfoerste/micar-whitepaper-linter micar
 ```
 
 ### From source
-Clone the repository and install the `dev` extra, which includes DOCX and PDF support:
+Clone the repository and install the `dev` extra, which adds DOCX support and the test and lint tools (pytest, ruff); PDF support is in the base install:
 ```bash
 git clone https://github.com/sebastianfoerste/micar-whitepaper-linter.git && cd micar-whitepaper-linter
 make install   # uv sync --extra dev
@@ -102,10 +102,11 @@ uv run micar-lint examples/incomplete.json --review-bundle-dir /tmp/micar-incomp
 This also writes a review bundle to `/tmp/micar-incomplete-review-bundle`: compliance and remediation checklists, a coverage matrix, a review table, a reviewer sign-off record and an artifact manifest. Or write single artifacts:
 ```bash
 uv run micar-lint examples/incomplete.json \
-  --audit-log reports/incomplete-audit.md \
-  --remediation-output reports/incomplete-remediation.json \
-  --manifest-output reports/incomplete-manifest.json
+  --audit-log /tmp/micar-incomplete-audit.md \
+  --remediation-output /tmp/micar-incomplete-remediation.json \
+  --manifest-output /tmp/micar-incomplete-manifest.json
 ```
+`reports/` holds committed sample reports, so write your own outputs elsewhere. [API.md](API.md) lists every output flag, including the CI outputs (SARIF, job summary, annotations), the coverage matrix, the review table and the directory batch pack.
 
 ---
 
@@ -129,4 +130,4 @@ Details in [docs/DETAILS.md](DETAILS.md#browser-workbench).
     strict: 'true'
 ```
 
-Findings and their citations appear in the job log. With `strict: 'true'` (the default) the job fails while BLOCKER-severity findings are open; `strict: 'false'` is report mode, which only lists them. Starter repo: [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template), which ships this step for its `whitepaper.json` in report mode; set `strict` to `'true'` in its `.github/workflows/micar-lint.yml` to fail on open BLOCKERs. Details in [docs/DETAILS.md](DETAILS.md#github-action).
+Findings and their citations appear in the job log. With `strict: 'true'` (the default) the job fails while BLOCKER-severity findings are open; `strict: 'false'` is report mode, which only lists them. The iXBRL format check (`COMMON.IXBRL_TAGGING`) is a BLOCKER that never passes for a loaded draft (a JSON, DOCX, PDF or Markdown draft cannot meet it, and an XHTML or HTML draft gets Review at best because tag completeness is not checked), so a strict job fails on every draft. Starter repo: [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template), which ships this step for its `whitepaper.json` in report mode; set `strict` to `'true'` in its `.github/workflows/micar-lint.yml` to fail on open BLOCKERs. Details in [docs/DETAILS.md](DETAILS.md#github-action).

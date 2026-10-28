@@ -1,44 +1,49 @@
 # System Architecture: MiCAR Whitepaper Linter
 
-This document explains the internal modules, parsing pipeline, and rules-as-code structure of the MiCAR Whitepaper Linter.
+This document explains the internal modules, loading pipeline, and rules-as-code structure of the MiCAR Whitepaper Linter. `AGENTS.md` has a fuller module map and lists the places a change commonly has to reach.
 
 ## System Pipeline
 
-The linter acts as a deterministic parser and check engine:
+The linter is a deterministic loader and check engine:
 
 ```mermaid
 graph TD
-    Input[Input Document: JSON, XHTML, DOCX] -->|Parse| DocObj[src/micar_linter/document.py Document Object]
-    DocObj -->|Convert| WP[src/micar_linter/whitepaper.py Whitepaper Structure]
-    WP -->|Execute| Linter[src/micar_linter/linter.py Linter Engine]
+    Input[Input draft: JSON, XHTML or HTML, DOCX, PDF, Markdown] -->|load_whitepaper| WP[src/micar_linter/whitepaper.py Whitepaper]
+    WP -->|lint_whitepaper| Linter[src/micar_linter/linter.py Linter]
 
     subgraph Rule Engine
-        Linter -->|Match Annex| Rules[src/micar_linter/rules/ base.py]
-        Rules --> Common[common.py common rules]
-        Rules --> Annex1[annex_i.py Other regime]
-        Rules --> Annex2[annex_ii.py ART regime]
-        Rules --> Annex3[annex_iii.py EMT regime]
+        Linter -->|regime| Rules[src/micar_linter/rules/ RULESETS]
+        Rules --> Common[common.py rules for every regime]
+        Rules --> Annex1[annex_i.py other crypto-assets]
+        Rules --> Annex2[annex_ii.py ART]
+        Rules --> Annex3[annex_iii.py EMT]
     end
 
-    Linter -->|Compile Findings| Report[src/micar_linter/report.py Report Compiler]
-    Report --> Output[Output: Markdown Report or JSON payload]
+    Linter -->|Report| Report[src/micar_linter/report.py text, JSON, audit log, coverage table]
+    Linter -->|Report| CI[src/micar_linter/ci_outputs.py SARIF, job summary, annotations]
 ```
 
 ---
 
 ## Technical Components
 
-### 1. Document Parsing Layer
-Normalizes inputs into structural sections:
-- **`document.py`**: Base document model tracking raw text, headings, and tables.
-- **`xhtml_parser.py`** & **`ixbrl.py`**: Parse Inline XBRL XHTML files, extracting tagged compliance attributes.
+### 1. Loading Layer
+`load_whitepaper` in `whitepaper.py` picks a loader by file suffix and returns a `Whitepaper`: a title, a regime, a map of section keys to text, and metadata that rule logic reads (for JSON, every other top-level key except the reserved ones, with `ixbrl_validated` forced to false; for the other formats, the source file, the iXBRL results, any extraction notes and `script_packed_source`, which is true only for a saved iXBRL viewer page).
+- **JSON**: read directly. The draft states its regime in its `type` field (`other` when the field is absent), and `--type` is ignored for it. The other formats take the regime from `--type` (single-file runs only) or, without it, from marker phrases: in the whole text for PDF and DOCX, in the text of the recognised sections for XHTML, HTML and Markdown.
+- **`document.py`**: PDF, DOCX and Markdown section extraction, and the heading-to-section matching (`SECTION_PATTERNS`) that every heading-based loader uses. The table cells of a DOCX draft are not read; PDF and Markdown table text is read as ordinary lines.
+- **`xhtml_parser.py`**: XHTML and HTML text and heading-based sections. It reads text only from the elements its selection picks (see `xhtml_parser.py`), so text elsewhere, such as a bare table cell, can go unread. It also recognises a saved iXBRL viewer page, which carries the white paper packed in a script, and unpacks it (at most 8 MB); the loaders then read the unpacked markup, `ixbrl.py` does not run on it, and `COMMON.IXBRL_TAGGING` stays missing. A page that cannot be unpacked is refused with a message: a single-file run exits 1, and the directory batch skips the file with a `lint-failed:` warning. **`numbered_fields.py`** reads the numbered-field layout of Implementing Regulation (EU) 2024/2984, whole table cells included; its regime must be given with `--type`.
+- **`ixbrl.py`**: format checks for Inline XBRL (the iXBRL 1.1 namespace and facts tagged with the ESMA MiCA taxonomy). It does not check tag completeness.
 
-### 2. Regulatory Regimes (`rules/`)
-All validation rules inherit from `rules.base.BaseRule`:
-- **`common.py`**: Validates basic information required for all whitepapers (e.g. issuer identity details, default warning clauses).
-- **`annex_i.py`**: Specific to Other Crypto-Assets.
-- **`annex_ii.py`**: Specific to Asset-Referenced Tokens (verify reserve assets disclosures, redemption rights).
-- **`annex_iii.py`**: Specific to E-Money Tokens (verify issuer licensing, redeemability details).
+### 2. Rules (`rules/`)
+Each rule is an instance of the frozen `Rule` dataclass in `rules/base.py`: a stable rule ID, a citation, a section key (the one the generic checks read), a label, a severity (BLOCKER, MAJOR or MINOR), and its listed terms, patterns and minimum length. `RULESETS` in `rules/__init__.py` combines:
+- **`common.py`**: the rules every regime runs: summary, risk warning, management statement, notification date, language, the iXBRL format check and two LEI checks. Other crypto-assets and ARTs take them as `COMMON_RULES`; e-money tokens take `EMT_COMMON_RULES`, the same rules except that `COMMON.RISK_WARNING`, under the same ID, checks the two warnings of Art. 51(4) MiCAR.
+- **`annex_i.py`**: crypto-assets other than asset-referenced tokens and e-money tokens (Annex I).
+- **`annex_ii.py`**: asset-referenced tokens (Annex II), including the reserve of assets.
+- **`annex_iii.py`**: e-money tokens (Annex III), including the safeguarding of funds.
 
-### 3. Report Compiler (`report.py`)
-Collects and groups rule findings, prioritizing blocker flags (conditions that would cause regulatory rejection) over recommendations.
+`Linter` in `linter.py` applies the generic checks to most rules. A section that is empty or holds only placeholder text is missing; otherwise listed terms, required and prohibited patterns and a minimum word count decide between review and pass. Six rules have their own logic, dispatched by rule ID: the iXBRL format check and the ART deposit-floor review, which never pass, the two LEI checks, and the notification-date and language checks, which pass when the section names a calendar date or an official EU language, however short it is.
+
+### 3. Outputs
+`lint_whitepaper` returns a `Report` of findings, each with a status: pass, review or missing. `report.py` renders it as text, JSON, a Markdown audit log or a coverage table, and each of these counts the open BLOCKER findings. While any finding is open, BLOCKER or not, the text report says the draft is not package-ready and should not enter an external review or filing workflow until BLOCKER items are cured and a lawyer has signed off; the audit log gives that warning only while a BLOCKER finding is open. `tests/test_report.py` pins that wording. `ci_outputs.py` renders SARIF, a job summary and workflow annotations that carry no draft text. Other modules build the review table, review bundle, remediation report, coverage matrix and artifact manifest; `cli.py` writes the outputs to the paths given.
+
+A pass means a check matched. It is not a compliance opinion.

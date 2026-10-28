@@ -10,6 +10,8 @@ These checks run before the Annex-specific ruleset.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from micar_linter.rules.base import Rule, Severity
 
 COMMON_RULES: tuple[Rule, ...] = (
@@ -23,14 +25,26 @@ COMMON_RULES: tuple[Rule, ...] = (
         min_words=80,
         severity=Severity.BLOCKER,
     ),
+    # Art. 6 Abs. 5 and Art. 19 Abs. 4 MiCAR: the crypto-asset may lose its value, may not always be
+    # transferable and may not be liquid, and investor compensation and deposit guarantee schemes do not
+    # cover it. The terms come from the Regulation's wording of each statement; in German, "wert" would
+    # match every "Kryptowert". The utility-token statement of Art. 6 Abs. 5 Buchst. d applies to
+    # utility tokens only and is not checked. In German the statements fit in about 25 words.
     Rule(
         rule_id="COMMON.RISK_WARNING",
         citation="Art. 6 Abs. 5, Art. 19 Abs. 4, Art. 51 Abs. 4 MiCAR",
         section="risk_warning",
         label="Mandatory risk warning statement",
-        required_terms=("risk", "value", "loss"),
-        required_terms_de=("risiko", "wert", "verlust"),
-        min_words=40,
+        required_terms=(
+            "lose",
+            "value",
+            "transferable",
+            "liquid",
+            "investor compensation",
+            "deposit guarantee",
+        ),
+        required_terms_de=("verlier", "übertragbar", "liquid", "entschädigung", "einlagensicherung"),
+        min_words=20,
         severity=Severity.BLOCKER,
     ),
     Rule(
@@ -43,14 +57,16 @@ COMMON_RULES: tuple[Rule, ...] = (
         min_words=40,
         severity=Severity.BLOCKER,
     ),
+    # The date of notification and the language are short answers: since 23 December 2025, Implementing
+    # Regulation (EU) 2024/2984 has the white paper report the date as YYYY-MM-DD and each language from a
+    # closed list of EU languages. A correct answer can be a single word, so linter.py checks for a calendar
+    # date and for a language name instead of listed terms and a minimum length.
     Rule(
         rule_id="COMMON.NOTIFICATION_DATE",
         citation="Art. 6 Abs. 8, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR",
         section="notification_date",
         label="Date of notification to the competent authority",
-        required_terms=("date",),
-        required_terms_de=("datum",),
-        min_words=5,
+        min_words=0,
         severity=Severity.MAJOR,
     ),
     Rule(
@@ -61,9 +77,7 @@ COMMON_RULES: tuple[Rule, ...] = (
             "Language of the white paper "
             "(home Member State official language or customary in international finance)"
         ),
-        required_terms=("language",),
-        required_terms_de=("sprache",),
-        min_words=10,
+        min_words=0,
         severity=Severity.MAJOR,
     ),
     Rule(
@@ -93,4 +107,18 @@ COMMON_RULES: tuple[Rule, ...] = (
         min_words=0,
         severity=Severity.MAJOR,
     ),
+)
+
+# Art. 51 Abs. 4 MiCAR asks an e-money token white paper only to warn that investor compensation
+# and deposit guarantee schemes do not cover the token. The loss-of-value, transferability and
+# liquidity statements of Art. 6 Abs. 5 and Art. 19 Abs. 4 have no counterpart there.
+EMT_COMMON_RULES: tuple[Rule, ...] = tuple(
+    replace(
+        rule,
+        required_terms=("investor compensation", "deposit guarantee"),
+        required_terms_de=("entschädigung", "einlagensicherung"),
+    )
+    if rule.rule_id == "COMMON.RISK_WARNING"
+    else rule
+    for rule in COMMON_RULES
 )

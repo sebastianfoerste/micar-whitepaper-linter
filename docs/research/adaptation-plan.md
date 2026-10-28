@@ -30,12 +30,12 @@ States captured at 1440×900 and 390×844 (git-ignored, `research/_captures/base
 
 ### Briefing corrections
 
-1. `SOURCE_DATE_EPOCH` is read by `review_table.py` and `collaboration_workspace.py`; `workspace.py` has no timestamp code of its own.
-2. The text report's closing paragraph cites Art. 8, 16, 17, 18 and 51 in the German form (`Art. 8 Abs. 1 …`) whatever `--citation-style` says (`report.py`, `render_text`). Same class of drift as the German citations in `reports/sample-*.txt`.
+1. `SOURCE_DATE_EPOCH` is read by `review_table.py` and `collaboration_workspace.py`; `workspace.py` stamps the vault's `generated_at` with the current time.
+2. The text report's closing paragraph cites Art. 8, 16, 17, 18 and 51 in the German form (`Art. 8 Abs. 1 …`) whatever `--citation-style` says (`report.py`, `render_text`). Same class of drift as the German citations in `reports/sample-*.txt`. (Fixed on `main` since: the paragraph and the sample reports follow `--citation-style`, English by default.)
 3. `.github/ISSUE_TEMPLATE/rule-proposal.yml` already exists; the rule pages link to it rather than adding a second template.
-4. `examples/incomplete.json` is an ART draft, so `make demo` shows the 18 ART rules.
+4. `examples/incomplete.json` is an ART draft, so `make demo` shows the 18 ART rules. (20 since the two LEI rules were added.)
 5. Pyodide 0.28.2's distribution has no `python-docx` (checked against the release tarball), so H5 needs a vendored wheel, as the hypothesis assumed.
-6. The Action's `uvx --from "${GITHUB_ACTION_PATH}"` build is cached by uv on `pyproject.toml`, not on `src/`. Locally, uvx reused a stale build of the same version until `--no-cache` was passed. A moved `v1` tag without a version bump could hit this on a runner with a restored uv cache.
+6. The Action's `uvx --from "${GITHUB_ACTION_PATH}"` build is cached by uv on `pyproject.toml`, not on `src/`. Locally, uvx reused a stale build of the same version until `--no-cache` was passed. A moved `v1` tag without a version bump could hit this on a runner with a restored uv cache. (The Action has run `uvx --no-cache` since 1.2.0.)
 7. The baseline playground already carried one serious axe violation (above).
 
 Everything else in the briefing matched the code: 16/18/14 rules, the two never-pass rules, eight CLI flags missing from `docs/API.md`, `displayCitation` as `TODO(human)`, unpinned `setup-uv@v5` in `action.yml`, no `docs/index.html`, no `docs/adr/`.
@@ -201,4 +201,4 @@ with call sites passing the finding instead of `finding.citation`, and a test (t
 7. **H8 IDs and citations**: approve the point-level ID scheme and verify each point citation on EUR-Lex.
 8. **H7 versus H11**: decided 2026-10-21. The owner swapped dark mode out for H11.
 9. **H11 legal basis**: the LEI rules cite Part A of each Annex at Part level (the citation the party rules already use). Verify the point that names the LEI against the Official Journal. Severity MAJOR for both rules was confirmed by the owner on 2026-10-22.
-10. **Doc drift** proposed in the PR body: `AGENTS.md` (`BaseRule`, database migrations, "compliant"), `docs/FEATURES.md` and `docs/ARCHITECTURE.md` ("regulatory rejection", "compliant"), starter README custody claim (`ANNEX_II.G.CUSTODY` can pass), German citations in `reports/sample-*.txt` and in the text report footer.
+10. **Doc drift** proposed in the PR body: resolved 2026-10-27 at the owner's request. `AGENTS.md` (`BaseRule`, database migrations, "compliant") was fixed in #30; `docs/FEATURES.md` and `docs/ARCHITECTURE.md` ("regulatory rejection", "compliant") and the starter README custody claim (`ANNEX_II.G.CUSTODY` can pass) in #36; the sample reports in `reports/sample-*.txt` (since #31) and the text report footer print English citations by default.
