@@ -41,7 +41,7 @@ This plan contains no per-cell or per-document detector outcomes. The reviewer c
 
 **Detector freeze.** The study detector is the detector commit recorded in section 2 with its `uv.lock`. It covers `src/micar_linter/batch.py` (`STUDY_RULES` and the matching functions), `src/micar_linter/document_loader.py`, `src/micar_linter/xhtml_parser.py` and `src/micar_linter/document.py` (with `placeholders.py`, which `document.py` imports). Between the pre-registration commit and the computation of results, no other version of these files may enter the analysis: every study run of `micar-lint-batch` uses that commit and its `uv.lock`, whatever has changed on `main` since. `findings-pseudonymous.json` and `findings-pseudonymous.csv` are not edited.
 
-`STUDY_RULES` is unchanged in releases 1.2.0 and 1.2.1. Commits on `main` after v1.2.1 changed HTML and XHTML text extraction in `document_loader.py` and `xhtml_parser.py`, so a re-run at the current `main` can flag cells differently from the committed findings.
+`STUDY_RULES` is unchanged in releases 1.2.0 and 1.2.1. Commits on `main` after v1.2.1 changed HTML and XHTML text extraction in `document_loader.py` and `xhtml_parser.py`, and the notification-date and language heading patterns in `document.py`, which `document_loader.py` uses, so a re-run at the current `main` can flag cells differently from the committed findings.
 
 **Detector decision (owner).** [Decide:
 
