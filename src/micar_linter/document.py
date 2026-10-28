@@ -45,7 +45,8 @@ SECTION_PATTERNS = {
         r"\bdatum\s+der\s+(?:übermittlung|mitteilung|notifizierung)\b",
         r"\b(?:übermittlungs|mitteilungs)datum\w*",
     ],
-    "language": [r"\blanguage\b", r"\bsprache\w*"],
+    # "Plain-language summary" heads the summary; it would otherwise feed the summary to the language check.
+    "language": [r"(?<!plain[- ])\blanguage\b", r"\bsprache\w*"],
     "offeror": [r"\bofferor\b", r"\banbieter\w*"],
     "issuer": [r"\bissuer\b", r"\bemittent\w*"],
     "trading_platform_operator": [

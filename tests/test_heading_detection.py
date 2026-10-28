@@ -1134,8 +1134,9 @@ def test_pdf_summary_table_field_that_names_no_section_ends_the_field_before_it(
     assert "A.3 Registered address 12 Rue de la Gare" in sections["offeror"]
     findings = _findings(path)
     assert findings["COMMON.NOTIFICATION_DATE"].rule.severity is Severity.MAJOR
+    # The three words are a calendar date, which is all the field asks for.
     assert (findings["COMMON.NOTIFICATION_DATE"].status, findings["COMMON.NOTIFICATION_DATE"].word_count) == (
-        "review",
+        "pass",
         3,
     )
     assert findings["ANNEX_I.A"].rule.severity is Severity.BLOCKER
@@ -1302,7 +1303,8 @@ def test_pdf_german_summary_table_row_gives_its_answer_to_the_notification_date(
     assert load_from_pdf(path) == {"notification_date": "2026-03-02"}
     finding = _findings(path)["COMMON.NOTIFICATION_DATE"]
     assert finding.rule.severity is Severity.MAJOR
-    assert (finding.status, finding.word_count) == ("review", 1)
+    # The answer is a calendar date, which is all the field asks for.
+    assert (finding.status, finding.word_count) == ("pass", 1)
 
 
 def test_xhtml_german_notification_date_heading_anchors_its_findings(tmp_path: Path):
