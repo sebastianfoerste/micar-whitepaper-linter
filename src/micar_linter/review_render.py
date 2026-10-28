@@ -105,8 +105,9 @@ REMINDERS: tuple[str, ...] = (
     "The wording follows the draft templates of analysis-plan.md section 11; re-check it against the "
     "adopted plan.",
     'Under detector decision (A) of analysis-plan.md section 2, the public wording says "pilot detector '
-    'as of July 2026"; the summary does not record that decision, so the rendered text does not say it. '
-    "Add it outside the begin and end markers of the results block in the README, or to the profile line "
+    'as of July 2026" and that the detector commit is a reconstruction, dated after the findings; the '
+    "summary does not record that decision, so the rendered text does not say it. "
+    "Add this outside the begin and end markers of the results block in the README, or to the profile line "
     "and the CV sentence; an edit inside the markers fails --check.",
 )
 SECOND_REVIEWER_REMINDER = (
