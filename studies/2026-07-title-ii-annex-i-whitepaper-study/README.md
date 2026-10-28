@@ -89,7 +89,7 @@ uv run micar-review-sheets \
 
 Each reviewer labels only their own blinded sheet (`human-review-r1.csv`, and `human-review-r2.csv` for a second reviewer) under `review-protocol.md` and `codebook.md`. While labelling, reviewers do not open `human-review-matrix.csv`, `findings-pseudonymous.*` or `findings-summary.md`.
 
-Start labelling only after the commit that adopts `codebook.md` and `analysis-plan.md` with the pending sheets (`analysis-plan.md`, step 0.10). From then on, pass the adoption date recorded in `codebook.md` as `--not-before YYYY-MM-DD` to `micar-review-workbook` and to every `micar-review-merge` command below, so that a label dated before the pre-registration is refused. Without it, the earliest accepted date is the day the findings were generated (2026-07-06).
+Start labelling only after the adoption commit on `main` that adopts `codebook.md` and `analysis-plan.md` with the pending sheets (`analysis-plan.md`, step 0.10). It follows the signing order in their banners: the study tooling (#18, #19 and #24) is merged into `main` as unsigned draft tooling first, and Phase 0 is done on `main`. From then on, pass the adoption date recorded in `codebook.md` as `--not-before YYYY-MM-DD` to `micar-review-workbook` and to every `micar-review-merge` command below, so that a label dated before the pre-registration is refused. Without it, the earliest accepted date is the day the findings were generated (2026-07-06).
 
 A reviewer can enter labels in the CSV directly, or in a workbook generated from it. The workbook commands need the optional `review` extra (openpyxl):
 
