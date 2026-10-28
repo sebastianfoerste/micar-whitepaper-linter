@@ -1146,8 +1146,15 @@ def test_pdf_summary_table_field_that_names_no_section_ends_the_field_before_it(
 # German drafts head the date of notification in the words of the German texts: Art. 6 Abs. 8, Art. 19
 # Abs. 7 and Art. 51 Abs. 7 MiCAR ask for "das Datum seiner Übermittlung", and the Implementing Regulation
 # (EU) 2024/2984 template labels field 01 (I.01 for ARTs and EMTs) "Datum der Mitteilung". "Datum der
-# Notifizierung" spells out "Notifizierungsdatum".
-GERMAN_NOTIFICATION_HEADINGS = ["Datum der Übermittlung", "Datum der Mitteilung", "Datum der Notifizierung"]
+# Notifizierung" spells out "Notifizierungsdatum", and "Übermittlungsdatum" and "Mitteilungsdatum" are the
+# terms of the two texts as compounds.
+GERMAN_NOTIFICATION_HEADINGS = [
+    "Datum der Übermittlung",
+    "Datum der Mitteilung",
+    "Datum der Notifizierung",
+    "Übermittlungsdatum",
+    "Mitteilungsdatum",
+]
 # Labels of other fields of the German template that name an "Übermittlung" or a "Datum": the type of
 # submission (F.5, B.8 and B.5), the methods of transferring value on reimbursement (E.25) and the
 # publication date (F.10, B.12 and B.9).
@@ -1182,7 +1189,11 @@ def test_german_notification_date_heading_names_the_notification_date(heading: s
     assert match_heading_to_section(heading) == ["notification_date"]
 
 
-@pytest.mark.parametrize("label", GERMAN_OTHER_LABELS)
+# Marketing communications ("Marketingmitteilungen", Art. 7 MiCAR) are no notification, and the word
+# boundary keeps "Mitteilungsdatum" from matching inside a longer word.
+@pytest.mark.parametrize(
+    "label", [*GERMAN_OTHER_LABELS, "Datum der Marketingmitteilung", "Marketingmitteilungsdatum"]
+)
 def test_other_german_template_label_does_not_name_the_notification_date(label: str):
     assert "notification_date" not in match_heading_to_section(label)
 

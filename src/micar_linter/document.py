@@ -39,9 +39,11 @@ SECTION_PATTERNS = {
         r"\bnotification\s+date\b",
         # The German texts: Art. 6 Abs. 8, Art. 19 Abs. 7 and Art. 51 Abs. 7 MiCAR ask for "das Datum seiner
         # Übermittlung", and field 01 (I.01) of the Implementing Regulation (EU) 2024/2984 template is
-        # "Datum der Mitteilung". Other fields of the template, such as "Art der Übermittlung" and
-        # "Methoden der Übermittlung des Werts", do not open this section.
+        # "Datum der Mitteilung". The compounds "Übermittlungsdatum" and "Mitteilungsdatum" name the same
+        # date. Other fields of the template, such as "Art der Übermittlung" and "Methoden der Übermittlung
+        # des Werts", do not open this section.
         r"\bdatum\s+der\s+(?:übermittlung|mitteilung|notifizierung)\b",
+        r"\b(?:übermittlungs|mitteilungs)datum\w*",
     ],
     "language": [r"\blanguage\b", r"\bsprache\w*"],
     "offeror": [r"\bofferor\b", r"\banbieter\w*"],
