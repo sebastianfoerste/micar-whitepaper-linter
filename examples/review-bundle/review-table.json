@@ -1,11 +1,11 @@
 {
   "schema": "micar-whitepaper-linter.review-table",
-  "generated_at": "2026-10-27T20:56:47.854737+00:00",
+  "generated_at": "2026-10-28T13:26:24.567078+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "source": {
     "path": "examples/art-stablecoin.json",
-    "sha256": "09e19585a56e58d26e8e14cd5ba2bdce75bf0756cdc11bc1552c13ea2cc766f5"
+    "sha256": "5e38d5a04d44a24873bd2b9d88e13a0479720a0423229a49daafdcc11dbfd545"
   },
   "summary": {
     "total": 20,
@@ -600,7 +600,7 @@
       "severity": "MAJOR",
       "status": "pass",
       "blocker": false,
-      "word_count": 9,
+      "word_count": 17,
       "issues": [],
       "remediation": "Keep disclosure under lawyer review before external use.",
       "reviewer_decision": "pending_lawyer_confirmation",
@@ -608,8 +608,8 @@
       "source_anchor": {
         "section_key": "notification_date",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:notification_date:999fe7e5c1e73368",
-        "section_length": 71
+        "stable_anchor_id": "json:notification_date:d015fb69bd078a74",
+        "section_length": 109
       },
       "anchor_verified": true,
       "citation_coverage": "anchor_and_citation",
@@ -683,7 +683,7 @@
         {
           "column_id": "word_count",
           "label": "Word count",
-          "value": "9",
+          "value": "17",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -715,7 +715,7 @@
         {
           "column_id": "source_anchor",
           "label": "Source anchor",
-          "value": "json:notification_date:999fe7e5c1e73368",
+          "value": "json:notification_date:d015fb69bd078a74",
           "status": "complete",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
@@ -3101,5 +3101,5 @@
   ],
   "warnings": [],
   "review_notice": "Review table rows are deterministic linter outputs. Reviewer decisions remain pending until a qualified lawyer signs off.",
-  "digest": "ad96e186af7776dda52dfb9e796e0d8734cbc29756ef25da28fb9c357d444233"
+  "digest": "3851f65dddb77d00a2773707a5ab44d3424a787acf5f854ddd5f539783de57b3"
 }
