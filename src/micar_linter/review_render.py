@@ -12,6 +12,10 @@ is typed by hand. It renders, in the wording templates of ``analysis-plan.md`` s
 - the profile README line;
 - the CV or application sentence.
 
+Each text names the measured component, as section 11 asks: the batch study detector (its 15 Annex I
+and Article 6 checks, at the commit recorded in the summary), not the rule engine that the CLI and
+the GitHub Action run.
+
 It refuses (exit 1) and lists the reasons unless the summary is complete: no cell pending,
 ``publication_ready`` true (``micar-review-summary --require-complete`` exits 0), precision and
 recall defined in the primary set, the detector commit recorded (analysis-plan.md step 0.4), and,
@@ -88,6 +92,9 @@ SENSITIVITY_ROWS: tuple[tuple[str, str], ...] = (
 )
 # analysis-plan.md section 4 offers WP-007 as the calibration document; S1 is then the primary set.
 S1_WITHOUT_EXCLUSION = "S1, full set (the same documents as the primary set)"
+# analysis-plan.md section 11: every figure names the measured component, the batch study detector
+# (``STUDY_RULES`` in batch.py), not the rule engine of the CLI and the GitHub Action.
+COMPONENT = "batch study detector ({rules} Annex I and Article 6 checks, commit {commit})"
 REMINDERS: tuple[str, ...] = (
     '"from ESMA\'s interim register" holds only after the register reconciliation of '
     "analysis-plan.md step 0.2.",
@@ -96,6 +103,8 @@ REMINDERS: tuple[str, ...] = (
     "review-protocol.md (Publication gate, item 6) and the decision in analysis-plan.md section 11.",
     "The wording follows the draft templates of analysis-plan.md section 11; re-check it against the "
     "adopted plan.",
+    'Under detector decision (A) of analysis-plan.md section 2, the public wording says "pilot detector '
+    'as of July 2026"; the summary does not record that decision, so the rendered text does not say it.',
 )
 SECOND_REVIEWER_REMINDER = (
     "The text calls the second reviewer a lawyer and their labels independent of the first "
@@ -297,7 +306,8 @@ def _study_paragraph(summary: Mapping[str, Any], *, in_sample: bool) -> str:
         clauses.append(f"{calibration} used as the calibration document and excluded from every metric")
     clauses.append(f"{primary['excluded_cells']} excluded as uncertain, not applicable or extraction failure")
     return (
-        f"Precision {precision} and recall {recall} on {primary['evaluable_cells']} evaluable of "
+        f"{_component(summary, capital=True)}: precision {precision} and recall {recall} on "
+        f"{primary['evaluable_cells']} evaluable of "
         f"{summary['rows_total']} document-rule cells ({'; '.join(clauses)}), against "
         f"{_labels_phrase(summary)}.{_s1_sentence(summary)} "
         f"{'In-sample pilot' if in_sample else 'Pilot'} on a convenience sample; not a prevalence or "
@@ -354,9 +364,10 @@ def _profile_line(summary: Mapping[str, Any], *, in_sample: bool) -> str:
         else "my own partially blinded, single-reviewed labels"
     )
     return (
-        f"{'In-sample pilot' if in_sample else 'Pilot'} on {summary['documents_total']} public "
-        f"ESMA-register white papers: precision {_pct(primary['metrics']['precision']['estimate'])}, "
-        f"recall {recall} against {labels} ([study]({STUDY_URL}))."
+        f"{'In-sample pilot' if in_sample else 'Pilot'} of my MiCAR linter's {_component(summary)} on "
+        f"{summary['documents_total']} public ESMA-register white papers: precision "
+        f"{_pct(primary['metrics']['precision']['estimate'])}, recall {recall} against {labels} "
+        f"([study]({STUDY_URL}))."
     )
 
 
@@ -372,7 +383,7 @@ def _cv_sentence(summary: Mapping[str, Any], *, in_sample: bool) -> str:
         recall_ci += f"; {gaps}"
     agreement = f"; second-reviewer agreement κ = {_kappa(pair)}" if pair else ""
     return (
-        f"I measured my MiCAR white-paper linter against my own {review} of "
+        f"I measured the {_component(summary, linter=True)} against my own {review} of "
         f"{summary['documents_total']} public white papers from ESMA's register: "
         f"{'in-sample ' if in_sample else ''}precision {_pct(precision['estimate'])} "
         f"(95% CI {_interval(precision['headline'])}), recall {_pct(recall['estimate'])} ({recall_ci}) on "
@@ -519,6 +530,18 @@ def _gaps(block: Mapping[str, Any]) -> str:
     if gaps >= GAPS_AS_COUNT_BELOW:
         return ""
     return f"{counts['tp']} of {gaps} reviewer-identified gaps"
+
+
+def _component(summary: Mapping[str, Any], *, linter: bool = False, capital: bool = False) -> str:
+    """The measured component in the words of analysis-plan.md section 11.
+
+    ``linter`` gives the CV form, "batch study detector of my MiCAR white-paper linter (...)";
+    ``capital`` starts the text with a capital letter, as the results paragraph does.
+    """
+    text = COMPONENT.format(rules=summary["rules_per_document"], commit=summary["detector"]["commit"])
+    if linter:
+        text = text.replace(" (", " of my MiCAR white-paper linter (", 1)
+    return text[:1].upper() + text[1:] if capital else text
 
 
 def _labels_phrase(summary: Mapping[str, Any]) -> str:

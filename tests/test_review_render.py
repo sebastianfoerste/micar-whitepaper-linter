@@ -130,8 +130,10 @@ def test_renders_only_numbers_from_the_summary():
     primary = summary["analyses"]["primary"]
     precision, recall = primary["metrics"]["precision"], primary["metrics"]["recall"]
     paragraph = texts["study"].splitlines()[1]
+    # The measured component comes first (analysis-plan.md section 11), never the CLI's rule engine.
     assert paragraph.startswith(
-        f"Precision {_expected_pct(precision['estimate'])} (95% CI "
+        "Batch study detector (15 Annex I and Article 6 checks, commit abc1234): "
+        f"precision {_expected_pct(precision['estimate'])} (95% CI "
         f"{_expected_pct(precision['headline']['lower'])} to {_expected_pct(precision['headline']['upper'])}, "
         f"{precision['headline']['label']}) and recall {_expected_pct(recall['estimate'])}"
     )
@@ -157,13 +159,15 @@ def test_renders_only_numbers_from_the_summary():
         "uncertain, not applicable or extraction failure). In-sample pilot"
     ) in paragraph
     assert texts["profile"] == (
-        f"In-sample pilot on 10 public ESMA-register white papers: precision {_expected_pct(precision['estimate'])}, "
+        "In-sample pilot of my MiCAR linter's batch study detector (15 Annex I and Article 6 checks, commit "
+        f"abc1234) on 10 public ESMA-register white papers: precision {_expected_pct(precision['estimate'])}, "
         f"recall {_expected_pct(recall['estimate'])} against my own partially blinded, single-reviewed labels "
         f"([study]({review_render.STUDY_URL}))."
     )
     assert texts["cv"].startswith(
-        "I measured my MiCAR white-paper linter against my own partially blinded, single-reviewed legal "
-        "review of 10 public white papers from ESMA's register: in-sample precision"
+        "I measured the batch study detector of my MiCAR white-paper linter (15 Annex I and Article 6 "
+        "checks, commit abc1234) against my own partially blinded, single-reviewed legal review of 10 "
+        "public white papers from ESMA's register: in-sample precision"
     )
     # Every percentage in the output is one the summary implies.
     allowed = set()
@@ -222,7 +226,7 @@ def test_recall_is_also_a_count_below_ten_gaps():
 def test_not_in_sample_drops_the_qualifier_only_when_asked():
     texts = render(_summary(), in_sample=False)
     assert "In-sample" not in texts["study"].splitlines()[1]
-    assert texts["profile"].startswith("Pilot on 10 public")
+    assert texts["profile"].startswith("Pilot of my MiCAR linter's batch study detector")
     assert "register: precision" in texts["cv"]
     assert "not-in-sample" in texts["study"].splitlines()[0]
 

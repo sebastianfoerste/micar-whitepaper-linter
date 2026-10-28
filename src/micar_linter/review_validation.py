@@ -127,7 +127,9 @@ _PLAN_COMMIT = re.compile(
 )
 _DOC_NUMBER = re.compile(r"(\d+)")
 # The banner of analysis-plan.md: "> **DRAFT, not adopted; ...**" until adoption, then
-# "> - Adopted by: <name>, on <YYYY-MM-DD>" and "> - Pre-registration commit: <SHA>".
+# "> - Adopted by: <name>, on <YYYY-MM-DD>". Its signing order records the adoption commit's SHA
+# outside the signed files, so "> - Pre-registration commit:" normally names none; a SHA there is
+# still read.
 _PLAN_DRAFT = re.compile(r"^>\s*\*\*DRAFT, not adopted\b", re.MULTILINE)
 _PLAN_ADOPTED = re.compile(
     r"^>\s*-\s*Adopted by:\s*(?P<who>[^\n]*?),\s*on\s*(?P<date>[^\s]+)\s*$", re.MULTILINE
@@ -498,7 +500,8 @@ def plan_status(text: str | None, reason: str = "no study directory was read") -
 
     ``draft`` while the banner says "DRAFT, not adopted" and the "Adopted by" line is still a
     placeholder; ``adopted`` once the banner is gone and that line names a reviewer and an ISO date,
-    with the pre-registration commit when the banner names one; otherwise ``unknown`` with the reason.
+    with the pre-registration commit when the banner names one (the signing order records it outside
+    the signed files, so normally it does not); otherwise ``unknown`` with the reason.
     """
     record: dict[str, Any] = {
         "file": ANALYSIS_PLAN_FILENAME,
@@ -550,7 +553,11 @@ def plan_phrase(plan: Mapping[str, Any], *, short: bool = False) -> str:
         if short:
             return f"adopted on {plan['adopted_on']}"
         commit = plan.get("preregistration_commit")
-        named = f"pre-registration commit {commit}" if commit else "pre-registration commit not yet named"
+        named = (
+            f"pre-registration commit {commit}"
+            if commit
+            else "pre-registration commit not named in the plan (signing order, step 5)"
+        )
         return f"adopted on {plan['adopted_on']}; {named}"
     return "adoption status unknown" if short else f"adoption status unknown: {plan.get('reason')}"
 

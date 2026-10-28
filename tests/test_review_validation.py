@@ -15,6 +15,7 @@ from micar_linter.review_validation import (
     StudyContext,
     internal_detail,
     load_context,
+    plan_phrase,
     plan_status,
     summarize_rows,
     summary_json,
@@ -162,10 +163,10 @@ def test_f1_is_undefined_only_when_its_denominator_is_zero():
 
 BANNER_DRAFT = """# Analysis plan
 
-> **DRAFT, not adopted; the reviewer signs and merges this as the pre-registration.**
+> **DRAFT, not adopted; it reaches `main` as unsigned draft tooling and is adopted there in a separate commit.**
 >
 > - Adopted by: [reviewer name], on [YYYY-MM-DD]
-> - Pre-registration commit: [SHA]
+> - Pre-registration commit: not recorded in this file (signing order, step 5)
 """
 
 
@@ -173,7 +174,8 @@ def test_plan_status_is_read_from_the_banner():
     draft = plan_status(BANNER_DRAFT)
     assert (draft["status"], draft["adopted_on"], draft["preregistration_commit"]) == ("draft", None, None)
     adopted_text = (
-        "# Analysis plan\n\n> - Adopted by: A. Reviewer, on 2026-11-02\n> - Pre-registration commit: [SHA]\n"
+        "# Analysis plan\n\n> - Adopted by: A. Reviewer, on 2026-11-02\n"
+        "> - Pre-registration commit: not recorded in this file (signing order, step 5)\n"
     )
     adopted = plan_status(adopted_text)
     assert (adopted["status"], adopted["adopted_on"], adopted["preregistration_commit"]) == (
@@ -181,7 +183,13 @@ def test_plan_status_is_read_from_the_banner():
         "2026-11-02",
         None,
     )
-    named = plan_status(adopted_text.replace("[SHA]", "`ABC1234`"))
+    assert plan_phrase(adopted) == (
+        "adopted on 2026-11-02; pre-registration commit not named in the plan (signing order, step 5)"
+    )
+    # A SHA on that line is still read, although the signing order records it outside the plan.
+    named = plan_status(
+        adopted_text.replace("not recorded in this file (signing order, step 5)", "`ABC1234`")
+    )
     assert named["preregistration_commit"] == "abc1234"
     contradictory = plan_status(BANNER_DRAFT.replace("[reviewer name], on [YYYY-MM-DD]", "A. Reviewer, on 2026-11-02"))
     assert contradictory["status"] == "unknown"
