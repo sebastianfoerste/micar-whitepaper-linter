@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Legal Entity Identifiers agree across the party sections and the rest of the draft. Annex I, Part A, Annex II, Part A, Annex III, Part A MiCAR.">
+<meta name="description" content="Legal Entity Identifiers agree across the party sections and the rest of the draft. Annex I, Part A, point 5, Part B, point 5, Part C, point 5, Annex II, Part A, point 5, Annex III, Part A, point 5 MiCAR.">
 <title>COMMON.LEI_CONSISTENCY: MiCAR Whitepaper Linter rule</title>
 <link rel="stylesheet" href="../assets/site.css">
 </head>
@@ -18,8 +18,8 @@
 <h1>COMMON.LEI_CONSISTENCY</h1>
 <p class="lede">Legal Entity Identifiers agree across the party sections and the rest of the draft</p>
 <div class="panel"><dl class="facts">
-<dt>Citation</dt><dd>Annex I, Part A, Annex II, Part A, Annex III, Part A MiCAR</dd>
-<dt>Canonical form</dt><dd lang="de">Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR</dd>
+<dt>Citation</dt><dd>Annex I, Part A, point 5, Part B, point 5, Part C, point 5, Annex II, Part A, point 5, Annex III, Part A, point 5 MiCAR</dd>
+<dt>Canonical form</dt><dd lang="de">Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, Anhang III Teil A Nr. 5 MiCAR</dd>
 <dt>Runs for</dt><dd>Annex I · other crypto-assets; Annex II · asset-referenced tokens; Annex III · e-money tokens</dd>
 <dt>Severity if open</dt><dd>MAJOR</dd>
 <dt>Section key</dt><dd>all sections; anchored to <code>issuer</code></dd>
@@ -30,14 +30,20 @@
 <dt>Source</dt><dd><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/rules/common.py">rules/common.py</a></dd>
 </dl></div>
 <h2>How the status is set</h2>
-<ul class="plain"><li><strong>Missing</strong>: no section <code>issuer</code>, <code>offeror</code> or <code>trading_platform_operator</code> carries an LEI with valid check digits.</li><li><strong>Review</strong>: a valid LEI in another section appears in no party section, or the <code>issuer</code> section names more than one valid LEI.</li><li><strong>Pass</strong>: none of the above. Codes with invalid check digits are reported by <a href="COMMON.LEI_CHECK_DIGITS.html">COMMON.LEI_CHECK_DIGITS</a>, not here.</li></ul>
+<ul class="plain"><li><strong>Missing</strong>: no section <code>issuer</code>, <code>offeror</code> or <code>trading_platform_operator</code> has text other than a placeholder.</li><li><strong>Review</strong>: a party section has text but no party section carries an LEI with valid check digits, since point 5 allows another identifier in place of the LEI; a valid LEI in another section appears in no party section; or the <code>issuer</code> section names more than one valid LEI.</li><li><strong>Pass</strong>: none of the above. Codes with invalid check digits are reported by <a href="COMMON.LEI_CHECK_DIGITS.html">COMMON.LEI_CHECK_DIGITS</a>, not here.</li></ul>
 <h2>Legal basis</h2>
-<p>Annex I, Part A, Annex II, Part A, Annex III, Part A MiCAR</p>
+<p>Annex I, Part A, point 5, Part B, point 5, Part C, point 5, Annex II, Part A, point 5, Annex III, Part A, point 5 MiCAR</p>
 <ul class="plain"><li><a href="https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng">https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng</a></li></ul>
-<p class="callout">Not re-verified since these pages were introduced (2026-10-20): EUR-Lex was unreachable from the build environment. The citation is the rule&#x27;s own, unchanged. The citation is the Part of each Annex that the party rules already cite. The point that names the LEI has not been verified against the Official Journal; treat the legal basis as pending owner review.</p>
+<p class="callout">Checked on 2026-10-27 against the Official Journal text in English and German: point 5 of Annex I Parts A, B and C and of Annex II and III Part A names the legal entity identifier or another identifier required pursuant to applicable national law, and Art. 2(1)(b) and (c) of Implementing Regulation (EU) 2024/2984 ask for the LEI where available.</p>
 <h2>Synthetic examples</h2>
 <p class="small muted">Each example is linted when this page is generated. The build fails if a result differs.</p>
-<div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>No LEI in a party section</strong></div><p class="small muted">The issuer, offeror and trading platform operator sections carry no valid LEI.</p><pre><code>{
+<div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>No party section</strong></div><p class="small muted">The draft has no issuer, offeror or trading platform operator section to compare the LEI with.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;sections&quot;: {
+    &quot;summary&quot;: &quot;LEI 9999SYNTH0000ZZQ0166.&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>No LEI in a party section</strong></div><p class="small muted">The issuer section carries no valid LEI. It may give another identifier required under national law, which a reviewer checks.</p><pre><code>{
   &quot;title&quot;: &quot;Synthetic rule example&quot;,
   &quot;type&quot;: &quot;other&quot;,
   &quot;sections&quot;: {
@@ -60,7 +66,7 @@
   }
 }</code></pre></div>
 <h2>Limitations</h2>
-<ul class="plain"><li>Reads every section of the draft; findings are anchored to the <code>issuer</code> section.</li><li>Works offline on the characters of each code. It does not confirm that an LEI is registered, current or held by the entity the draft names.</li><li>Status and severity are fixed by the rule. A draft cannot waive or downgrade them.</li><li>The citation is the Part of each Annex that the party rules already cite. The point that names the LEI has not been verified against the Official Journal; treat the legal basis as pending owner review.</li></ul>
+<ul class="plain"><li>Reads every section of the draft; findings are anchored to the <code>issuer</code> section.</li><li>Works offline on the characters of each code. It does not confirm that an LEI is registered, current or held by the entity the draft names.</li><li>Status and severity are fixed by the rule. A draft cannot waive or downgrade them.</li><li>Does not recognise the other identifiers that point 5 allows in place of the LEI, so a party section without an LEI goes to review.</li></ul>
 <p class="small muted">Disagree with this rule, or missing one? <a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/issues/new?template=rule-proposal.yml">Propose a rule change</a>.</p>
 
 </main>

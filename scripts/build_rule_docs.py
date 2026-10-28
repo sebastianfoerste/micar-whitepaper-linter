@@ -107,8 +107,10 @@ SYNTHETIC_LEI = "9999SYNTH0000ZZQ01" + check_digits_for("9999SYNTH0000ZZQ01")
 OTHER_SYNTHETIC_LEI = "9999SYNTH0000ZZQ02" + check_digits_for("9999SYNTH0000ZZQ02")
 BROKEN_LEI = SYNTHETIC_LEI[:-2] + f"{(int(SYNTHETIC_LEI[-2:]) + 1) % 100:02d}"
 LEI_VERIFICATION_NOTE = (
-    "The citation is the Part of each Annex that the party rules already cite. The point that names the "
-    "LEI has not been verified against the Official Journal; treat the legal basis as pending owner review."
+    "Checked on 2026-10-27 against the Official Journal text in English and German: point 5 of Annex I "
+    "Parts A, B and C and of Annex II and III Part A names the legal entity identifier or another identifier "
+    "required pursuant to applicable national law, and Art. 2(1)(b) and (c) of Implementing Regulation (EU) "
+    "2024/2984 ask for the LEI where available."
 )
 NEVER_PASS = {"COMMON.IXBRL_TAGGING", "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW"}
 UNTESTED_REGIMES = {
@@ -202,10 +204,18 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
         if rule.rule_id == "COMMON.LEI_CHECK_DIGITS":
             return [
                 Example(
-                    "No LEI in the draft",
+                    "No LEI and no party section",
                     "missing",
+                    {**base, "sections": {"summary": "Synthetic summary of a fictional token."}},
+                    "Without an LEI there are no check digits to verify, and no party section says who the "
+                    "parties are, so the rule fails closed.",
+                ),
+                Example(
+                    "Party section without an LEI",
+                    "review",
                     {**base, "sections": {"issuer": "Synthetic Issuer AG."}},
-                    "Without an LEI there are no check digits to verify, so the rule fails closed.",
+                    "Point 5 of each party Part allows another identifier required under national law in place "
+                    "of the LEI, so a reviewer checks which one the draft gives.",
                 ),
                 Example(
                     "Check digits do not match",
@@ -223,10 +233,17 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
             ]
         return [
             Example(
-                "No LEI in a party section",
+                "No party section",
                 "missing",
+                {**base, "sections": {"summary": f"LEI {SYNTHETIC_LEI}."}},
+                "The draft has no issuer, offeror or trading platform operator section to compare the LEI with.",
+            ),
+            Example(
+                "No LEI in a party section",
+                "review",
                 {**base, "sections": {"issuer": "Synthetic Issuer AG.", "summary": f"LEI {SYNTHETIC_LEI}."}},
-                "The issuer, offeror and trading platform operator sections carry no valid LEI.",
+                "The issuer section carries no valid LEI. It may give another identifier required under national "
+                "law, which a reviewer checks.",
             ),
             Example(
                 "LEI outside the party sections",
@@ -423,16 +440,22 @@ def status_logic(rule: Rule) -> str:
     if rule.rule_id == "COMMON.LEI_CHECK_DIGITS":
         return (
             '<ul class="plain"><li><strong>Missing</strong>: no LEI-shaped code (18 letters or digits and two '
-            "check digits) appears in any section. A 20-digit number counts only next to an LEI label.</li>"
-            "<li><strong>Review</strong>: an LEI-shaped code fails the ISO/IEC 7064 MOD 97-10 check digits.</li>"
+            "check digits) appears in any section, and no section <code>issuer</code>, <code>offeror</code> or "
+            "<code>trading_platform_operator</code> has text other than a placeholder. A 20-digit number counts "
+            "only next to an LEI label.</li>"
+            "<li><strong>Review</strong>: an LEI-shaped code fails the ISO/IEC 7064 MOD 97-10 check digits; or no "
+            "LEI-shaped code appears while a party section has text, since point 5 allows another identifier "
+            "required under national law in place of the LEI.</li>"
             "<li><strong>Pass</strong>: every LEI-shaped code has valid check digits. No registry is asked.</li></ul>"
         )
     if rule.rule_id == "COMMON.LEI_CONSISTENCY":
         return (
             '<ul class="plain"><li><strong>Missing</strong>: no section <code>issuer</code>, <code>offeror</code> or '
-            "<code>trading_platform_operator</code> carries an LEI with valid check digits.</li>"
-            "<li><strong>Review</strong>: a valid LEI in another section appears in no party section, or the "
-            "<code>issuer</code> section names more than one valid LEI.</li>"
+            "<code>trading_platform_operator</code> has text other than a placeholder.</li>"
+            "<li><strong>Review</strong>: a party section has text but no party section carries an LEI with valid "
+            "check digits, since point 5 allows another identifier in place of the LEI; a valid LEI in another "
+            "section appears in no party section; or the <code>issuer</code> section names more than one valid "
+            "LEI.</li>"
             "<li><strong>Pass</strong>: none of the above. Codes with invalid check digits are reported by "
             '<a href="COMMON.LEI_CHECK_DIGITS.html">COMMON.LEI_CHECK_DIGITS</a>, not here.</li></ul>'
         )
@@ -552,7 +575,10 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
     if family in UNTESTED_REGIMES:
         limitations.append(UNTESTED_REGIMES[family])
     if rule.rule_id in LEI_RULES:
-        limitations.append(LEI_VERIFICATION_NOTE)
+        limitations.append(
+            "Does not recognise the other identifiers that point 5 allows in place of the LEI, so a party "
+            "section without an LEI goes to review."
+        )
     if rule.rule_id in NEVER_PASS:
         limitations.append("This rule never reports Pass.")
     example_html = []
@@ -590,7 +616,7 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
 <h2>Legal basis</h2>
 <p>{_e(citation_en)}</p>
 <ul class="plain">{sources}</ul>
-<p class="callout">{_e(OJ_CHECKED.get(rule.rule_id, VERIFICATION_NOTE))}{" " + _e(LEI_VERIFICATION_NOTE) if rule.rule_id in LEI_RULES else ""}</p>
+<p class="callout">{_e(LEI_VERIFICATION_NOTE if rule.rule_id in LEI_RULES else OJ_CHECKED.get(rule.rule_id, VERIFICATION_NOTE))}</p>
 <h2>Synthetic examples</h2>
 <p class="small muted">Each example is linted when this page is generated. The build fails if a result differs.</p>
 {"".join(example_html)}
