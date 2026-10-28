@@ -19,7 +19,7 @@ from pathlib import Path
 
 from micar_linter import __version__, citations
 from micar_linter.lei import check_digits_for
-from micar_linter.linter import Linter
+from micar_linter.linter import EU_LANGUAGES, Linter
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Rule
 from micar_linter.whitepaper import _RESERVED_METADATA_KEYS, Whitepaper, WhitepaperType
@@ -80,6 +80,24 @@ OJ_CHECKED = {
     "ANNEX_III.G": _oj_checked(
         "Art. 51(1), point (g), Art. 4 of Delegated Regulation (EU) 2025/422 or the templates", SUSTAINABILITY
     ),
+    "COMMON.NOTIFICATION_DATE": (
+        "Checked on 2026-10-27 against the Official Journal text in English and German (OJ L 150, 9.6.2023) "
+        "and the consolidated version of 9 January 2024. No amendment and no English or German corrigendum "
+        "changes Art. 6(8), Art. 19(7) or Art. 51(7). The date format was read in the English and German text "
+        "of Implementing Regulation (EU) 2024/2984, which has no amendment or corrigendum."
+    ),
+    "COMMON.LANGUAGE": (
+        "Checked on 2026-10-27 against the Official Journal text in English and German (OJ L 150, 9.6.2023) "
+        "and the consolidated version of 9 January 2024. No amendment and no English or German corrigendum "
+        "changes Art. 6(9), Art. 19(8) or Art. 51(8). The list of languages is Art. 1 of Council Regulation "
+        "No 1 in its consolidated version of 1 July 2013."
+    ),
+}
+# Rules that pass when the section holds a value of the right kind, a date or a language, at any length
+# (linter.py).
+ANSWER_CHECKS = {
+    "COMMON.NOTIFICATION_DATE": "a calendar date",
+    "COMMON.LANGUAGE": "an official EU language",
 }
 FILLER = "This synthetic sentence only adds length and states no fact about any issuer or token."
 FORMAT_GATE = {"COMMON.IXBRL_TAGGING"}
@@ -226,6 +244,60 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
                 "Every valid LEI in the draft matches a party section, and the issuer states one.",
             ),
         ]
+    if rule.rule_id in ANSWER_CHECKS:
+        absent = [
+            Example(
+                "Section absent",
+                "missing",
+                {"title": "Synthetic rule example", "type": regime.value, "sections": {}},
+                "The section key is missing or empty.",
+            ),
+            Example(
+                "Placeholder",
+                "missing",
+                _draft(rule, regime, "TBD"),
+                "A placeholder alone is no answer, so the section counts as missing.",
+            ),
+        ]
+        if rule.rule_id == "COMMON.NOTIFICATION_DATE":
+            return [
+                *absent,
+                Example(
+                    "Month without a day",
+                    "review",
+                    _draft(rule, regime, "Notified in March 2026."),
+                    "A month and a year name no calendar date.",
+                ),
+                Example(
+                    "Date in the template format",
+                    "pass",
+                    _draft(rule, regime, "Date of notification: 2026-03-02"),
+                    "Since 23 December 2025 the template of Implementing Regulation (EU) 2024/2984 has the "
+                    "date reported as YYYY-MM-DD (field 01 of Table 2, I.01 of Tables 3 and 4). Four words "
+                    "suffice. The check does not confirm that the date is the date of notification.",
+                ),
+            ]
+        return [
+            *absent,
+            Example(
+                "No language named",
+                "review",
+                _draft(
+                    rule,
+                    regime,
+                    "This white paper is drawn up in a language customary in the sphere of international finance.",
+                ),
+                "The sentence repeats the wording of the requirement and names no language.",
+            ),
+            Example(
+                "Answer to the template field",
+                "pass",
+                _draft(rule, regime, "Language or languages of the crypto-asset white paper: English"),
+                "Since 23 December 2025 the template of Implementing Regulation (EU) 2024/2984 asks for the "
+                "language or languages of the white paper, from a closed list of EU languages. The check does "
+                "not decide whether the language meets the home or host Member State requirement.",
+            ),
+        ]
     if rule.rule_id == "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW":
         flags = {
             "references_official_currency": True,
@@ -364,6 +436,30 @@ def status_logic(rule: Rule) -> str:
             "<li><strong>Pass</strong>: none of the above. Codes with invalid check digits are reported by "
             '<a href="COMMON.LEI_CHECK_DIGITS.html">COMMON.LEI_CHECK_DIGITS</a>, not here.</li></ul>'
         )
+    if rule.rule_id in ANSWER_CHECKS:
+        missing = (
+            f'<ul class="plain"><li><strong>Missing</strong>: section <code>{_e(rule.section)}</code> is absent '
+            "or empty, or holds only placeholder text such as TBD or TBC.</li>"
+        )
+        if rule.rule_id == "COMMON.NOTIFICATION_DATE":
+            return (
+                missing + "<li><strong>Review</strong>: the section names no calendar date, that is no day, month "
+                "and four-digit year that exist together. A month with its year, a two-digit year and an "
+                "impossible date such as 31.02.2026 count as no date.</li>"
+                "<li><strong>Pass</strong>: the section names such a date, however short the section. It may read "
+                "<code>2026-03-02</code>, <code>02.03.2026</code> or <code>2/3/2026</code>, or write the month in "
+                "English or German, as in <code>2 March 2026</code>, <code>March 2, 2026</code> or "
+                "<code>2. März 2026</code>. A pass means a date was found, nothing more.</li></ul>"
+            )
+        names = ", ".join(f"{english} ({german})" for english, german in EU_LANGUAGES)
+        return (
+            missing + "<li><strong>Review</strong>: the section names none of the 24 official languages of the "
+            "EU.</li><li><strong>Pass</strong>: the section names at least one of them by its English or German "
+            f"name, however short the section: {_e(names)}. Slovene counts as well. English names count as "
+            "written or in capitals. German names count in any case, also inflected or with "
+            "<code>-sprachig</code>: <code>in deutscher Sprache</code>, <code>englischsprachig</code>. A pass "
+            "means a language name was found, nothing more.</li></ul>"
+        )
     if rule.rule_id == "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW":
         return (
             '<ul class="plain"><li><strong>Review</strong>: a characterisation flag '
@@ -434,6 +530,20 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             else "Works offline on the characters of each code. It does not confirm that an LEI is registered, "
             "current or held by the entity the draft names."
             if rule.rule_id in LEI_RULES
+            else "Looks for a calendar date only. It does not confirm that the date is the date of notification "
+            "or that it is plausible, and it does not check the table of contents that the same provisions "
+            "require. Since 23 December 2025 the template of Implementing Regulation (EU) 2024/2984 has the "
+            "date reported as YYYY-MM-DD; the check accepts the other formats above as well and does not test that form."
+            if rule.rule_id == "COMMON.NOTIFICATION_DATE"
+            else "Looks for a language name only. The cited paragraphs require the white paper to be drawn up in "
+            "an official language of the home Member State or in a language customary in the sphere of "
+            "international finance, and likewise for a host Member State where the crypto-asset is also "
+            "offered. They do not require the white paper to name its language; since 23 December 2025 the "
+            "template of Implementing Regulation (EU) 2024/2984 asks for it (field F.12 of Table 2, B.14 of "
+            "Table 3, B.11 of Table 4). The check cannot tell which language the white paper is drawn up in, "
+            "or whether that language meets the requirement. Language codes such as EN and names in other "
+            "languages, such as français, do not count."
+            if rule.rule_id == "COMMON.LANGUAGE"
             else "Matches words and counts length. It does not test accuracy, consistency with other sections or "
             "the point-level items of the cited Part."
         ),
@@ -469,7 +579,7 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
 <dt>Runs for</dt><dd>{_e("; ".join(REGIME_NAMES[r] for r in regimes))}</dd>
 <dt>Severity if open</dt><dd>{_e(rule.severity.label)}</dd>
 <dt>Section key</dt><dd>{"none: checks the file format" if rule.rule_id in FORMAT_GATE else "all sections; anchored to <code>issuer</code>" if rule.rule_id in LEI_RULES else f"<code>{_e(rule.section)}</code>"}</dd>
-<dt>Minimum words</dt><dd>{by_regime(lambda r: str(r.min_words))}</dd>
+<dt>Minimum words</dt><dd>{f"none: checks for {ANSWER_CHECKS[rule.rule_id]}" if rule.rule_id in ANSWER_CHECKS else by_regime(lambda r: str(r.min_words))}</dd>
 <dt>Listed terms (English)</dt><dd>{by_regime(lambda r: _terms(r.required_terms))}</dd>
 <dt>Listed terms (German)</dt><dd lang="de">{by_regime(lambda r: _terms(r.required_terms_de))}</dd>
 <dt>Package version</dt><dd>{_e(__version__)}, built from source that may include unreleased changes</dd>
