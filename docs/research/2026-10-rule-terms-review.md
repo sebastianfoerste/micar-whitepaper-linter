@@ -129,7 +129,7 @@ These choices need a decision from the owner:
 5. `ANNEX_III.SAFEGUARDING` has no white paper item, and on its wording Art. 54 may not reach credit-institution issuers. It can stay as a prompt, lose its blocker severity, or be retired; retiring it removes a rule page and a SARIF rule ID that users may refer to. If it stays, the German "sicher" also matches "sichere Aktiva" in Art. 54(b), so it can pass a section that describes the investment of the funds and says nothing on how they are safeguarded.
 6. `COMMON.LEI_CHECK_DIGITS` and `COMMON.LEI_CONSISTENCY`: whether a draft that gives another identifier, as No. 5 allows, gets review in place of missing.
 
-The owner decided choices 3 to 6 on 27 October 2026. The legal form and registered address terms go (3). The valuation check moves to Annex II Part D No. 10(c) and drops "audit" (4). `ANNEX_III.SAFEGUARDING` stays as a prompt for review with the proposed terms and MAJOR severity (5). A party section without an LEI goes to review (6). Choices 1 and 2 remain open and belong to the class 3 fix.
+The owner decided choices 3 to 6 on 27 October 2026. The legal form and registered address terms go (3). The valuation check moves to Annex II Part D No. 10(c) and drops "audit" (4). `ANNEX_III.SAFEGUARDING` stays as a prompt for review with the proposed terms and MAJOR severity (5). A party section without an LEI goes to review (6). The owner decided choices 1 and 2 on 28 October 2026. The rules use the Annex word "milestones" (2). The referenced assets and the alignment mechanism move to the existing rules without a new rule ID (1): `ANNEX_II.G.VALUATION_AUDIT` also asks for the referenced assets of Annex II Part D No. 10(a) ("referenced asset", "referenzierten Vermögenswert"), and `ANNEX_II.G.COMPOSITION_DISCLOSURE` for the alignment mechanism of Part G No. 1 ("align", "Angleichung").
 
 ## Effect on the examples
 
@@ -157,7 +157,7 @@ Two points affect the choice of German terms. The adjective appears as "vermöge
 3. Class 3: the remaining terms, `ANNEX_II.G.COMPOSITION_DISCLOSURE` included, with the examples rewritten to the Annex items and the generated outputs refreshed.
 4. `ANNEX_II.G.VALUATION_AUDIT` and `ANNEX_III.SAFEGUARDING`, once the owner has decided what each rule checks.
 
-Fixes 1, 2 and 4 went up on 27 October 2026 as #51, #52 and #53. The `ANNEX_II.I` citation of fix 2 went into #49, which already rewrites that rule. Fix 3 waits for choices 1 and 2.
+Fixes 1, 2 and 4 went up on 27 October 2026 as #51, #52 and #53. The `ANNEX_II.I` citation of fix 2 went into #49, which already rewrites that rule. Fix 3 went up on 28 October 2026 as #62, built on #49, #51, #52 and #53.
 
 ## Limits
 
