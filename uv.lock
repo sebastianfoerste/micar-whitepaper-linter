@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.13"
 
 [[package]]
@@ -93,7 +93,7 @@ wheels = [
 
 [[package]]
 name = "micar-whitepaper-linter"
-version = "0.2.1"
+version = "1.2.1"
 source = { editable = "." }
 dependencies = [
     { name = "lxml" },

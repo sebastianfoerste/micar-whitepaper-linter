@@ -1,11 +1,11 @@
 {
   "schema": "micar-whitepaper-linter.coverage-matrix.v1",
-  "generated_at": "2026-09-05T08:56:24.628912+00:00",
+  "generated_at": "2026-10-25T18:14:22.956278+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "summary": {
-    "total": 18,
-    "pass": 14,
+    "total": 20,
+    "pass": 16,
     "review": 3,
     "missing": 1,
     "blockers": 4
@@ -114,20 +114,54 @@
       }
     },
     {
+      "rule_id": "COMMON.LEI_CHECK_DIGITS",
+      "annex": "COMMON",
+      "section": "issuer",
+      "citation": "Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR",
+      "severity": "MAJOR",
+      "status": "pass",
+      "word_count": 0,
+      "blocker": false,
+      "next_action": "Keep disclosure under lawyer review before external use.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:c3834ef82da3c4f2",
+        "section_length": 738
+      }
+    },
+    {
+      "rule_id": "COMMON.LEI_CONSISTENCY",
+      "annex": "COMMON",
+      "section": "issuer",
+      "citation": "Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR",
+      "severity": "MAJOR",
+      "status": "pass",
+      "word_count": 0,
+      "blocker": false,
+      "next_action": "Keep disclosure under lawyer review before external use.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:dff196932bf49acb",
+        "section_length": 738
+      }
+    },
+    {
       "rule_id": "ANNEX_II.A",
       "annex": "ANNEX_II",
       "section": "issuer",
       "citation": "Anhang II Teil A MiCAR",
       "severity": "BLOCKER",
       "status": "pass",
-      "word_count": 94,
+      "word_count": 106,
       "blocker": false,
       "next_action": "Keep disclosure under lawyer review before external use.",
       "source_anchor": {
         "section_key": "issuer",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:issuer:774aa124539a6b12",
-        "section_length": 638
+        "stable_anchor_id": "json:issuer:da249e20d09a5abd",
+        "section_length": 738
       }
     },
     {
@@ -326,5 +360,5 @@
   ],
   "warnings": [],
   "review_notice": "Coverage matrix is a deterministic disclosure checklist. It is not legal advice, a signature, a notification, or filing approval.",
-  "digest": "4be92ed5241dc193c35da91e032c9268a5ed12bdb76e5d7513237d0312b7efd6"
+  "digest": "36d9e9668c7953f5855ed059637b9061871382d0cae7f40e9615f3cd6be7967e"
 }

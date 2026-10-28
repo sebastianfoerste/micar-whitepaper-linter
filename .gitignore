@@ -31,3 +31,10 @@ studies/**/human-review-disagreements.csv
 node_modules/
 *.db
 *.sqlite
+
+# Competitive research captures (third-party material stays local)
+research/_captures/
+
+# Claude Code local settings and worktrees
+.claude/settings.local.json
+.claude/worktrees/

@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass, field
 
 from micar_linter.anchors import SourceAnchor, build_source_anchors
+from micar_linter.lei import PARTY_SECTIONS, has_valid_check_digits, leis_by_section
 from micar_linter.placeholders import is_placeholder
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Finding, Rule, Severity
@@ -59,6 +60,12 @@ class Linter:
 
         if rule.rule_id == "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW":
             return _deposit_floor_finding(rule, whitepaper)
+
+        if rule.rule_id == "COMMON.LEI_CHECK_DIGITS":
+            return _lei_check_digits_finding(rule, whitepaper)
+
+        if rule.rule_id == "COMMON.LEI_CONSISTENCY":
+            return _lei_consistency_finding(rule, whitepaper)
 
         is_de = whitepaper.language == "de"
 
@@ -194,12 +201,25 @@ def _ixbrl_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     Only a source that actually went through iXBRL validation can pass. A draft
     format (JSON, DOCX, PDF, Markdown) cannot satisfy the notification format, so
     it leaves the blocker open instead of reporting a pass it has not evidenced.
+    A saved iXBRL viewer page is not validated either: its text is a viewer's
+    rendering of the document.
     """
     is_de = whitepaper.language == "de"
     metadata = whitepaper.metadata
     if not bool(metadata.get("ixbrl_validated", False)):
         source_file = str(metadata.get("source_file", ""))
-        if source_file.lower().endswith((".xhtml", ".html")):
+        if metadata.get("script_packed_source"):
+            msg = (
+                "Gespeicherte iXBRL-Viewer-Seite: Die inhaltlichen Prüfungen beruhen auf dem Text, wie der "
+                "Viewer ihn darstellt. Diese Darstellung ist nicht das XHTML-Dokument selbst. "
+                "Die Inline-XBRL-Prüfung wurde daher nicht ausgeführt; "
+                "die Formatkonformität ist nicht nachgewiesen."
+                if is_de
+                else "Saved iXBRL viewer page: the content checks read the text as the viewer renders it. "
+                "That rendering is not the XHTML document itself, so Inline XBRL validation did not run; "
+                "format compliance is unverified."
+            )
+        elif source_file.lower().endswith((".xhtml", ".html")):
             msg = (
                 "Inline-XBRL-Prüfung wurde für diese XHTML-Quelle nicht ausgeführt; "
                 "die Formatkonformität ist nicht nachgewiesen."
@@ -329,3 +349,73 @@ def _deposit_floor_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
         "of applicability remains required."
     )
     return Finding(rule=rule, status="missing", word_count=words, issues=(msg,))
+
+
+def _lei_check_digits_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """Fails closed: a draft without any LEI cannot show valid check digits."""
+    is_de = whitepaper.language == "de"
+    found = leis_by_section(whitepaper.sections)
+    if not found:
+        msg = (
+            "Im Entwurf wurde keine Rechtsträgerkennung (LEI, 20 Zeichen nach ISO 17442) gefunden; "
+            "die Prüfziffern konnten nicht geprüft werden."
+            if is_de
+            else "No Legal Entity Identifier (20 characters, ISO 17442) was found in the draft, "
+            "so its check digits could not be checked."
+        )
+        return Finding(rule=rule, status="missing", word_count=0, issues=(msg,))
+    issues = []
+    for section, codes in found.items():
+        for code in codes:
+            if not has_valid_check_digits(code):
+                issues.append(
+                    f"LEI '{code}' im Abschnitt '{section}' hat ungültige Prüfziffern "
+                    "(ISO/IEC 7064 MOD 97-10)."
+                    if is_de
+                    else f"LEI '{code}' in section '{section}' fails the ISO/IEC 7064 MOD 97-10 check digits."
+                )
+    return Finding(rule=rule, status="review" if issues else "pass", word_count=0, issues=tuple(issues))
+
+
+def _lei_consistency_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """Every valid LEI in the draft must belong to a party section; the issuer states one LEI.
+
+    Fails closed when no party section carries a valid LEI. Invalid codes are left to
+    COMMON.LEI_CHECK_DIGITS so that one typo is not reported twice.
+    """
+    is_de = whitepaper.language == "de"
+    valid = {
+        section: tuple(code for code in codes if has_valid_check_digits(code))
+        for section, codes in leis_by_section(whitepaper.sections).items()
+    }
+    valid = {section: codes for section, codes in valid.items() if codes}
+    party_codes = {code for section in PARTY_SECTIONS for code in valid.get(section, ())}
+    if not party_codes:
+        msg = (
+            "Keine gültige LEI in den Abschnitten issuer, offeror oder trading_platform_operator; "
+            "die Übereinstimmung kann nicht geprüft werden."
+            if is_de
+            else "No valid LEI was found in the issuer, offeror or trading_platform_operator sections, "
+            "so consistency cannot be checked."
+        )
+        return Finding(rule=rule, status="missing", word_count=0, issues=(msg,))
+    issues = []
+    issuer_codes = valid.get("issuer", ())
+    if len(issuer_codes) > 1:
+        issues.append(
+            f"Der Abschnitt 'issuer' nennt {len(issuer_codes)} verschiedene LEIs; ein Emittent hat eine LEI."
+            if is_de
+            else f"Section 'issuer' names {len(issuer_codes)} different LEIs; an issuer has one LEI."
+        )
+    for section, codes in valid.items():
+        if section in PARTY_SECTIONS:
+            continue
+        for code in codes:
+            if code not in party_codes:
+                issues.append(
+                    f"LEI '{code}' im Abschnitt '{section}' erscheint in keinem Abschnitt zu den Beteiligten."
+                    if is_de
+                    else f"LEI '{code}' in section '{section}' appears in no party section "
+                    "(issuer, offeror, trading_platform_operator)."
+                )
+    return Finding(rule=rule, status="review" if issues else "pass", word_count=0, issues=tuple(issues))

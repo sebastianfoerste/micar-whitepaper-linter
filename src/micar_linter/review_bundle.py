@@ -13,7 +13,7 @@ from micar_linter.artifact_manifest import (
 from micar_linter.coverage import build_coverage_matrix, render_coverage_matrix
 from micar_linter.linter import Report
 from micar_linter.remediation import render_remediation_report
-from micar_linter.report import render_audit_log
+from micar_linter.report import markdown_line, render_audit_log, render_extraction_notes
 from micar_linter.review_table import build_review_table, render_review_table, render_review_table_markdown
 
 REVIEW_BUNDLE_SCHEMA = "micar-whitepaper-linter.review-bundle.v1"
@@ -82,12 +82,13 @@ def render_signoff_page(report: Report, generated_at: datetime | None = None) ->
         "This page is a draft review record for a qualified lawyer.",
         "It does not certify a white paper, approve a notification or replace legal review.",
         "",
-        f"- Document title: {report.title}",
+        f"- Document title: {markdown_line(report.title)}",
         f"- White paper type: {report.whitepaper_type.value}",
         f"- Generated at: {timestamp.isoformat()}",
         f"- Automated status: {status}",
         f"- Open blocker count: {len(blockers)}",
         "",
+        *render_extraction_notes(report.warnings),
         "## Required Review Steps",
         "",
         "- Confirm the white paper type and applicable MiCAR annex.",

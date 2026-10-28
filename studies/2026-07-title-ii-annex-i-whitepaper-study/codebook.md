@@ -1,18 +1,28 @@
 # Codebook: human review of the 150 document-rule cells
 
-> **DRAFT, not adopted; the reviewer signs and merges this as the pre-registration.**
+> **DRAFT, not adopted; it reaches `main` as unsigned draft tooling and is adopted there in a separate commit.**
 >
 > Drafted with AI assistance (Claude) on 2026-10-14 for the reviewer's decision. No lawyer has reviewed this draft. Until the reviewer adopts it, it states options and recommended defaults, not rules.
 >
+> **Signing order.**
+>
+> 1. Merge pull requests #18, #19 and #24 into `main` as unsigned DRAFT tooling. Merging them adopts nothing.
+> 2. On `main`, complete Phase 0 (steps 0.1 to 0.10, `analysis-plan.md` section 3).
+> 3. Make ONE adoption commit on `main`. It contains the adopted `codebook.md`, `analysis-plan.md` with the Detector row of its section 2 filled in, and the pending review sheets, with the DRAFT line of each banner removed and the "Adopted by" line filled in. This commit is the pre-registration and precedes the commit that adds any label.
+> 4. Mark the adoption commit with an annotated tag.
+> 5. Record the adoption commit's SHA in a follow-up commit or in the study README, never inside the signed files.
+>
+> The adoption commit is made on `main` after everything the study needs from `main` has been merged, so that no later merge changes the files that `analysis-plan.md` section 2 freezes between the pre-registration commit and the results.
+>
 > - Adopted by: [reviewer name], on [YYYY-MM-DD]
-> - Pre-registration commit: [SHA]
+> - Pre-registration commit: not recorded in this file (signing order, step 5)
 > - Policy decisions recorded in section 6: [ ] all decided
 
 ## 1. Status of the legal text
 
 The requirement descriptions below follow MiCAR (Regulation (EU) 2023/1114) Article 6 and Annex I **as encoded in this repository**:
 
-- the rule IDs, Annex labels and element descriptions in `STUDY_RULES` (`src/micar_linter/batch.py`, as of the pre-registration commit);
+- the rule IDs, Annex labels and element descriptions in `STUDY_RULES` (`src/micar_linter/batch.py` at the detector commit recorded in `analysis-plan.md` section 2);
 - the Article 6 citations in `src/micar_linter/rules/common.py`;
 - the Article 6(3), 6(5), 6(6) and 6(7) statement fields of the synthetic template example `examples/numbered-other-draft.xhtml`.
 
@@ -89,6 +99,10 @@ Each card gives the element, what counts as `present` and `missing`, and the pol
 - **missing:** no address. A city or country alone: P11.
 - **[OJ check]:** the drafting reading is that item 3 asks for the registered address and, where different, the head office. Recommended: label on the registered address; if the document indicates a different head office without giving it, say so in the note.
 - **Policies:** P1, P2, P11.
+
+> **Documents that give a valid LEI (5.1 and 5.2).** Open draft pull request #51 reads recital 2 of Implementing Regulation (EU) 2024/2984 as allowing a white paper that gives a valid LEI to omit the legal form, registered address, head office and parent company, because they can be retrieved from the LEI. This codebook has no policy for that case. The legal merits of that reading are unverified here: EUR-Lex could not be reached while drafting.
+>
+> [Decide: present, missing or not_applicable when a valid LEI is given; align with the CLI if #51 is adopted.]
 
 ### 5.3 `ANNEX_I_PART_A_04_REGISTRATION_DATE`: Registration date (Annex I, Part A, item 4)
 
@@ -230,3 +244,4 @@ Before adopting this codebook, the reviewer labels one calibration document unde
 | --- | --- | --- | --- |
 | 2026-10-14 | First draft. | Phase 0 of the study plan. | Before |
 | 2026-10-14 | Rule-card judgments moved into section 6 as P11 to P17; `STUDY_RULES` cited by symbol; section 4 cross-reference corrected; WP-001's crypto-asset no longer named here. | Draft review. | Before |
+| 2026-10-28 | Signing order in the banner (adoption on `main` after the tooling is merged); open LEI decision for 5.1 and 5.2. | Main merged into the draft; open pull request #51. | Before |
