@@ -102,7 +102,7 @@ For evaluable labels:
 
 Precision, recall, and F1 exclude uncertain, extraction-failure, not-applicable, and pending rows. No metric is publication-ready while any row remains pending.
 
-`micar-review-summary --require-complete` exits with status 2 until the matrix is complete.
+`micar-review-summary --require-complete` exits with status 2 until the matrix is complete; it writes its output first, so point `--out` at a scratch path until then.
 
 ## Next population study
 
