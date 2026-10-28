@@ -11,7 +11,7 @@ You can also lint drafts [live in the browser](https://sebastianfoerste.github.i
 ## How to use it
 
 1. **Use this template** → create your repository (private is fine).
-2. Edit `whitepaper.json`. Replace every `REPLACE:` placeholder; each section's placeholder states the disclosure the section must carry, and some cite a MiCAR provision (check each citation against your token type). The linter does not treat `REPLACE:` text as a placeholder (the untouched template already passes the notification-date and language checks), so search for any `REPLACE:` left over yourself.
+2. Edit `whitepaper.json`. Replace every `REPLACE:` placeholder; each section's placeholder states the disclosure the section must carry, and some cite a MiCAR provision (check each citation against your token type). The linter does not treat `REPLACE:` text as a placeholder (an untouched section reports Review, not Missing), so search for any `REPLACE:` left over yourself.
 3. Set `"type"` to `art`, `emt`, or `other` depending on your token. Section requirements follow the type (Anhang I-III MiCAR).
 4. Push to `main` or open a pull request. Open the **Actions** tab: the `micar-lint` run lists every open finding with a pinpoint citation (article, paragraph, annex).
 5. Work the findings down, then hand the draft to counsel. The linter checks structure and required disclosure elements, not legal sufficiency.

@@ -3,8 +3,8 @@
 - **Document Title**: Synthetic EuroStable ART White Paper
 - **Regime/Type**: ART
 - **Source File**: examples/art-stablecoin.json
-- **SHA-256 Checksum**: `aba778f9ac18355010618d26f96f95cd53699ca56ef9503d18b20d41b16a3fc1`
-- **Review Timestamp**: 2026-10-27 20:53:04
+- **SHA-256 Checksum**: `1abd43dc14a580f9955bb59c1532df8b5b73b939610df43192fbfb12e8031da8`
+- **Review Timestamp**: 2026-10-28 13:27:40
 
 ## Rule Compliance Checklist
 

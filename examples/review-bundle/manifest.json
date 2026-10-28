@@ -1,9 +1,9 @@
 {
   "schema": "micar-whitepaper-linter.artifact-manifest.v1",
-  "generated_at": "2026-10-27T20:53:04.672911+00:00",
+  "generated_at": "2026-10-28T13:27:40.958639+00:00",
   "source": {
     "path": "examples/art-stablecoin.json",
-    "sha256": "aba778f9ac18355010618d26f96f95cd53699ca56ef9503d18b20d41b16a3fc1"
+    "sha256": "1abd43dc14a580f9955bb59c1532df8b5b73b939610df43192fbfb12e8031da8"
   },
   "report": {
     "title": "Synthetic EuroStable ART White Paper",
@@ -22,7 +22,7 @@
   "outputs": [
     {
       "path": "dist/review-bundle/compliance-checklist.md",
-      "sha256": "023b10bdb478f1abc0b7b93597fda95024ffce99769d009d3d949547cad075e2",
+      "sha256": "4ac6df85cddb361c23f82987cbfbf5e89d34603bc46fb423826bdc5ec61b38b9",
       "role": "compliance_checklist"
     },
     {
@@ -32,12 +32,12 @@
     },
     {
       "path": "dist/review-bundle/coverage-matrix.json",
-      "sha256": "307becd5a758d778682b3b4b60732534f116b257c0e4e9f6fd62001dce0994d6",
+      "sha256": "eb72eef4188aa9b32a869449590c8c9d515285663afb6a18084e35d77dd1fc7c",
       "role": "coverage_matrix"
     },
     {
       "path": "dist/review-bundle/review-table.json",
-      "sha256": "b3954397f5c9ccd666cfa6ba5b2ad79795890202164b01a346ff151d937c8ce2",
+      "sha256": "d55c5e854dbd0925daa6acb8a7b467e623d3dc0b76f9d3cadb1f21c32b9cc0da",
       "role": "review_table_json"
     },
     {
@@ -47,7 +47,7 @@
     },
     {
       "path": "dist/review-bundle/reviewer-signoff.md",
-      "sha256": "db99e9d6c96f638c30548564f7c003720eca20614cd743d7dd53f2efd96bd01b",
+      "sha256": "0d4fdb8c8dd5fe7be83c2efe2e6c3ad90007fd2ae53f9e8e959c8c74ad68cc8a",
       "role": "lawyer_signoff"
     }
   ],
@@ -64,6 +64,6 @@
     "notice": "Automated linter output requires substantive lawyer review before external use."
   },
   "review_notice": "Manifest proves local artifact integrity only. It is not a legal opinion, signature, notification, or filing approval.",
-  "overall_digest": "baadae46686b31b725e638f493b079d450992de7a0f798c4c1bd0749ce384594",
+  "overall_digest": "1e8ccb7b48844bad66dce4011157daa6ca6b92892a73bc1d54480482e502d19f",
   "bundle_schema": "micar-whitepaper-linter.review-bundle.v1"
 }

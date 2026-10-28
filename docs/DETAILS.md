@@ -47,7 +47,7 @@ A saved iXBRL viewer page packs the white paper into a script and shows it only 
 
 ## Coverage caveats
 
-The Table 2 mapping (crypto-assets other than ARTs and EMTs) has been run against public register documents. The Table 3 and Table 4 mappings follow the Official Journal text and have not yet been run against a real ART or EMT white paper. The iXBRL check tests well-formedness, the Inline XBRL 1.1 namespace and the ESMA MiCA taxonomy namespace. It does not evaluate the taxonomy's existence and value assertions, so it never reports Pass. For a saved iXBRL viewer page it does not run at all and reports Missing.
+The Table 2 mapping (crypto-assets other than ARTs and EMTs) has been run against public register documents. The Table 3 and Table 4 mappings follow the Official Journal text and have not yet been run against a real ART or EMT white paper. Where a white paper runs its field labels into the answers, as a conversion from PDF can, the loader recognises the English field names of the template's three tables, also in slightly other words, and splits them off; a label in another language, or worded further from the template, stays in the answer, and the report warns about those fields. The iXBRL check tests well-formedness, the Inline XBRL 1.1 namespace and the ESMA MiCA taxonomy namespace. It does not evaluate the taxonomy's existence and value assertions, so it never reports Pass. For a saved iXBRL viewer page it does not run at all and reports Missing.
 
 ## GitHub Action
 
@@ -158,7 +158,7 @@ Real output of `uv run micar-lint examples/incomplete.json` (a synthetic, delibe
 MiCAR Whitepaper Linter - Incomplete Synthetic EuroStable ART Draft
 Whitepaper type: ART
 ==============================================================================
-Pass: 0  |  Review: 14  |  Missing: 6  |  Blockers: 15
+Pass: 1  |  Review: 13  |  Missing: 6  |  Blockers: 15
 
 [REVIEW] [BLOCKER] COMMON.SUMMARY  Plain-language summary
            Cite:  Art. 6(7), Art. 19(6), Art. 51(6) MiCAR

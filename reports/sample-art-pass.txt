@@ -21,7 +21,7 @@ Pass: 16  |  Review: 3  |  Missing: 1  |  Blockers: 4
 [PASS  ] [MAJOR  ] COMMON.NOTIFICATION_DATE  Date of notification to the competent authority
            Cite:  Art. 6(8), Art. 19(7), Art. 51(7) MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'notification_date'  (9 words)
+           Section: 'notification_date'  (17 words)
 
 [PASS  ] [MAJOR  ] COMMON.LANGUAGE  Language of the white paper (home Member State official language or customary in international finance)
            Cite:  Art. 6(9), Art. 19(8), Art. 51(8) MiCAR

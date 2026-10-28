@@ -1,7 +1,7 @@
 MiCAR Whitepaper Linter - Incomplete Synthetic EuroStable ART Draft
 Whitepaper type: ART
 ==============================================================================
-Pass: 0  |  Review: 14  |  Missing: 6  |  Blockers: 15
+Pass: 1  |  Review: 13  |  Missing: 6  |  Blockers: 15
 
 [REVIEW] [BLOCKER] COMMON.SUMMARY  Plain-language summary
            Cite:  Art. 6(7), Art. 19(6), Art. 51(6) MiCAR
@@ -29,12 +29,10 @@ Pass: 0  |  Review: 14  |  Missing: 6  |  Blockers: 15
            Section: 'notification_date'  (0 words)
            -  Section holds only placeholder text such as TBD or TBC.
 
-[REVIEW] [MAJOR  ] COMMON.LANGUAGE  Language of the white paper (home Member State official language or customary in international finance)
+[PASS  ] [MAJOR  ] COMMON.LANGUAGE  Language of the white paper (home Member State official language or customary in international finance)
            Cite:  Art. 6(9), Art. 19(8), Art. 51(8) MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'language'  (1 words)
-           -  Section is thin: 1 words, expected at least 10.
-           -  Missing review terms: language.
 
 [MISS  ] [BLOCKER] COMMON.IXBRL_TAGGING  Inline XBRL (iXBRL) compliance and ESMA metadata tagging
            Cite:  Art. 2 Regulation (EU) 2024/2984
