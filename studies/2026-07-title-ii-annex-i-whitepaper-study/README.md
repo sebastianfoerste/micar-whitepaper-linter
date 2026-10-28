@@ -86,6 +86,8 @@ uv run micar-review-sheets \
 
 ## Validate against human labels
 
+Start labelling only after the adoption commit on `main` that adopts `codebook.md` and `analysis-plan.md` with the pending sheets (`analysis-plan.md`, step 0.10). It follows the signing order in their banners: the study tooling is merged into `main` as unsigned draft tooling first, and Phase 0 is done on `main`.
+
 Each reviewer labels only their own blinded sheet (`human-review-r1.csv`, and `human-review-r2.csv` for a second reviewer) under `review-protocol.md` and `codebook.md`. While labelling, reviewers do not open `human-review-matrix.csv`, `findings-pseudonymous.*` or `findings-summary.md`. Each reviewer's labels are committed on their own. Only then are the final labels merged into `human-review-matrix.csv` with the detector outcomes. Then run:
 
 ```bash
