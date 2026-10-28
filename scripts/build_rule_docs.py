@@ -63,6 +63,16 @@ OJ_CHECKED = {
         "changes Art. 6(9), Art. 19(8) or Art. 51(8). The list of languages is Art. 1 of Council Regulation "
         "No 1 in its consolidated version of 1 July 2013."
     ),
+    "ANNEX_II.D": (
+        "Checked on 2026-10-27 against the Official Journal text in English and German (OJ L 150, 9.6.2023) "
+        "and the consolidated version of 9 January 2024. No amendment and no English or German corrigendum "
+        "changes Annex II Part D or Art. 39."
+    ),
+    "ANNEX_II.I": (
+        "Checked on 2026-10-27 against the Official Journal text in English and German (OJ L 150, 9.6.2023) "
+        "and the consolidated version of 9 January 2024. No amendment and no English or German corrigendum "
+        "changes Annex II Parts D and G, Art. 39 or Art. 46."
+    ),
 }
 # Rules that pass when the section holds a value of the right kind, a date or a language, at any length
 # (linter.py).
