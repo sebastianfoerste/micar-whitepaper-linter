@@ -178,13 +178,13 @@ uv run micar-review-summary \
 
 The command exits with status 2 while any row remains pending, and with status 1, writing nothing, when an input is invalid or the study files contradict each other. With status 2 it has already written its output, so copy that output over `human-review-summary.json` only once the command exits 0. Then update the reviewed count (`basis-reviewed`) in `docs/playground/index.html`, which `tests/playground/model.test.mjs` checks against `rows_completed`. Metrics exclude uncertain, extraction-failure, and not-applicable labels.
 
-The summary (schema v2) implements sections 7 to 10 of the draft `analysis-plan.md`. Besides the matrix, it reads the study directory: `human-review-sheets.json` and the reviewers' sheets, the findings file, `source-manifest.json` (offerors) and `analysis-plan.md` (whether its banner still says "DRAFT, not adopted" or names the adoption, and the detector's generating commit, once the Detector row of section 2 names it at step 0.4). It records:
+The summary (schema v2) implements sections 7 to 10 of the draft `analysis-plan.md`. Besides the matrix, it reads the study directory: `human-review-sheets.json` and the reviewers' sheets, the findings file, `source-manifest.json` (offerors) and `analysis-plan.md` (whether its banner still says "DRAFT, not adopted" or names the adoption, and the detector commit, once the Detector row of section 2 names it at step 0.4). It records:
 
 - completion and label counts;
 - for the primary set (without WP-007 and without an in-sample calibration document, which is the document whose every cell carries the note `calibration`) and for the full set S1: TP, FP, FN and TN; precision, recall and specificity, each with a Wilson and a Clopper-Pearson interval, a document-cluster bootstrap (10,000 replicates, seed 20261014) and the headline interval; F1 as 2TP / (2TP + FP + FN); and, for the primary set only, per-rule counts;
 - the sensitivity analyses S2 (an offeror-cluster bootstrap, and one document per offeror), S3 and S4 (`uncertain` counted as `missing`, then as `present`). S5 is marked as not computed, because the stricter readings it needs are recorded in free-text notes;
 - with two reviewers, their raw agreement, Cohen's kappa, PABAK and Gwet's AC1, over all labels and over the cells both labelled `present` or `missing`;
-- the detector identity: the findings file's SHA-256, schema, digest and generation date, and the generating commit.
+- the detector identity: the findings file's SHA-256, schema, digest and generation date, and the detector commit.
 
 A metric whose denominator is 0 is `null`, with the reason; while cells are pending, the reason says that nothing is labelled yet. While any cell is pending, the summary does not report how many detector flags fall in WP-007.
 
@@ -208,7 +208,7 @@ uv run micar-review-render \
   --summary studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-summary.json
 ```
 
-The output holds the results block for this README (not for `findings-summary.md`, which `micar-study-report` generates and `tests/test_study_report_drift.py` keeps identical to the renderer), the profile README line and the CV sentence, in the draft wording templates of `analysis-plan.md`, section 11. Each of the three names the measured component: the batch study detector (its 15 Annex I and Article 6 checks, at the commit the summary records), not the rule engine that the CLI and the GitHub Action run. Under detector decision (A) of `analysis-plan.md` section 2, the public wording also says "pilot detector as of July 2026"; the summary does not record that decision, so the renderer prints it as a reminder instead. The results block contains:
+The output holds the results block for this README (not for `findings-summary.md`, which `micar-study-report` generates and `tests/test_study_report_drift.py` keeps identical to the renderer), the profile README line and the CV sentence, in the draft wording templates of `analysis-plan.md`, section 11. Each of the three names the measured component: the batch study detector (its 15 Annex I and Article 6 checks, at the commit the summary records), not the rule engine that the CLI and the GitHub Action run. Under detector decision (A) of `analysis-plan.md` section 2, the public wording also says "pilot detector as of July 2026"; the summary does not record that decision, so the renderer prints it as a reminder instead. The phrase goes outside the begin and end markers of the results block, or into the profile line and the CV sentence; an edit inside the markers fails `--check`. The results block contains:
 
 - the results paragraph, with a sentence on S1 in the same form as the primary result;
 - a table of the primary and sensitivity analyses, with N evaluable and the count of each excluded label;

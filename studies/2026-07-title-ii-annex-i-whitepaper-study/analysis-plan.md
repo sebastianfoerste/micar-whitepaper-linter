@@ -8,7 +8,7 @@
 >
 > 1. Merge pull requests #18, #19 and #24 into `main` as unsigned DRAFT tooling. Merging them adopts nothing.
 > 2. On `main`, complete Phase 0 steps 0.1 to 0.9 (`analysis-plan.md` section 3). Step 0.10 is steps 3 to 5 below.
-> 3. Make ONE adoption commit on `main`. It contains the adopted `codebook.md`, `analysis-plan.md` with the Detector row of its section 2 filled in, and the pending review sheets, with the DRAFT line of each banner removed and the "Adopted by" line filled in. This commit is the pre-registration and precedes the commit that adds any label.
+> 3. Make ONE adoption commit on `main`. It contains the adopted `codebook.md`, `analysis-plan.md` with the Detector row of its section 2 filled in, and the pending review sheets, with the DRAFT line of each banner removed and the "Adopted by" line filled in, and `human-review-summary.json` refreshed in place with `micar-review-summary` (study README, without `--require-complete`), since the summary reads the banner and the Detector row and `tests/test_study_consistency.py` requires it to equal a fresh run. This commit is the pre-registration and precedes the commit that adds any label.
 > 4. Mark the adoption commit with an annotated tag.
 > 5. In a follow-up commit, record the adoption commit's SHA and its tag in the study README ("Current status"), never inside the signed files.
 >
@@ -37,7 +37,7 @@ This plan contains no per-cell or per-document detector outcomes. The reviewer c
 | Codebook | `codebook.md` as adopted in the pre-registration commit |
 | Detector | `micar-lint-batch` at the detector commit, with its `uv.lock` (see "Detector freeze" below); detector commit: [SHA, see step 0.4 and the detector decision below] |
 
-`micar-review-summary` reads the generating commit from the Detector row once it reads `generating commit: <SHA>`, and records it in `human-review-summary.json`; `micar-review-render` refuses until it is recorded.
+`micar-review-summary` reads the detector commit from the Detector row once it reads `detector commit: <SHA>`, and records it in `human-review-summary.json`; `micar-review-render` refuses until it is recorded. Any commit that changes the Detector row or the banner also refreshes `human-review-summary.json` (study README, the in-place `micar-review-summary` command), or `tests/test_study_consistency.py` fails.
 
 **Detector freeze.** The study detector is the detector commit recorded in section 2 with its `uv.lock`: every module that `micar-lint-batch` imports at that commit. On the current `main` these include `src/micar_linter/batch.py` (`STUDY_RULES` and the matching functions), `src/micar_linter/document_loader.py`, `src/micar_linter/xhtml_parser.py` and `src/micar_linter/document.py`, with `placeholders.py`, which `document.py` imports; at `8f37b7c`, `placeholders.py` does not exist and `document_loader.py` does not import `xhtml_parser.py`. Between the pre-registration commit and the computation of results, no other version of these files may enter the analysis: every study run of `micar-lint-batch` uses that commit and its `uv.lock`, whatever has changed on `main` since. `findings-pseudonymous.json` and `findings-pseudonymous.csv` are not edited.
 
@@ -63,7 +63,7 @@ This plan contains no per-cell or per-document detector outcomes. The reviewer c
 | 0.7 | Confirm or reject the WP-007 exclusion rule and its stated ground (section 5), including whether it rests on eligibility criterion 4 or on the unit definition. | Reviewer | [ ] |
 | 0.8 | Decide between single review by the tool author, disclosed, and a second reviewer (section 6). For a second reviewer: recruit and name them, record their study ID, and generate their sheet with `micar-review-sheets --reviewer r2` before the pre-registration commit. | Reviewer | [ ] |
 | 0.9 | Label the calibration document (section 4), outside the committed review sheets, and finalise the codebook. | Reviewer | [ ] |
-| 0.10 | On `main`, make the one adoption commit of the signing order (banner): the adopted codebook, this plan with the Detector row filled in, and the pending sheets; tag it and record its SHA outside the signed files. | Reviewer | [ ] |
+| 0.10 | On `main`, make the one adoption commit of the signing order (banner): the adopted codebook, this plan with the Detector row filled in, the pending sheets and the refreshed `human-review-summary.json`; tag it and record its SHA outside the signed files. | Reviewer | [ ] |
 
 ## 4. Calibration document
 

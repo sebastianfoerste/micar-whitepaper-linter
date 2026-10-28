@@ -119,10 +119,10 @@ EVALUABLE_CATEGORIES: tuple[str, ...] = ("present", "missing")
 # `calibration`". A document is the calibration document when every one of its cells' notes
 # contains the word.
 _CALIBRATION_NOTE = re.compile(r"(?<![\w-])calibration(?![\w-])", re.IGNORECASE)
-# The Detector row of analysis-plan.md section 2 ends "generating commit: [SHA, see step 0.4]"
+# The Detector row of analysis-plan.md section 2 ends "detector commit: [SHA, see step 0.4 ...]"
 # until the reviewer names the commit.
 _PLAN_COMMIT = re.compile(
-    r"^\|\s*Detector\s*\|.*?generating commit:\s*`?(?P<sha>[0-9a-f]{7,40})`?(?![0-9a-zA-Z])",
+    r"^\|\s*Detector\s*\|.*?detector commit:\s*`?(?P<sha>[0-9a-f]{7,40})`?(?![0-9a-zA-Z])",
     re.MULTILINE,
 )
 _DOC_NUMBER = re.compile(r"(\d+)")
@@ -556,7 +556,7 @@ def plan_phrase(plan: Mapping[str, Any], *, short: bool = False) -> str:
         named = (
             f"pre-registration commit {commit}"
             if commit
-            else "pre-registration commit not named in the plan (signing order, step 5)"
+            else "pre-registration commit: see the study README (signing order, step 5)"
         )
         return f"adopted on {plan['adopted_on']}; {named}"
     return "adoption status unknown" if short else f"adoption status unknown: {plan.get('reason')}"
@@ -958,7 +958,7 @@ def _detector_identity(
     if match is None:
         identity["commit_status"] = (
             f"not recorded: {findings_name} names no detector commit, and the Detector row of "
-            f"{ANALYSIS_PLAN_FILENAME} section 2 names no generating commit yet (step 0.4)"
+            f"{ANALYSIS_PLAN_FILENAME} section 2 names no detector commit yet (step 0.4)"
         )
         return identity
     identity.update(

@@ -27,7 +27,7 @@
     "findings_generated_at": "2026-07-06T07:52:42.712075+00:00",
     "commit": null,
     "commit_source": null,
-    "commit_status": "not recorded: findings-pseudonymous.json names no detector commit, and the Detector row of analysis-plan.md section 2 names no generating commit yet (step 0.4)"
+    "commit_status": "not recorded: findings-pseudonymous.json names no detector commit, and the Detector row of analysis-plan.md section 2 names no detector commit yet (step 0.4)"
   },
   "settings": {
     "definitions": "analysis-plan.md sections 7 to 10 (DRAFT, not adopted)",

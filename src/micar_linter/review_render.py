@@ -96,7 +96,8 @@ S1_WITHOUT_EXCLUSION = "S1, full set (the same documents as the primary set)"
 # (``STUDY_RULES`` in batch.py), not the rule engine of the CLI and the GitHub Action.
 COMPONENT = "batch study detector ({rules} Annex I and Article 6 checks, commit {commit})"
 REMINDERS: tuple[str, ...] = (
-    '"from ESMA\'s interim register" holds only after the register reconciliation of '
+    '"ESMA\'s interim register" in the results block, "ESMA-register" in the profile line and '
+    '"ESMA\'s register" in the CV sentence hold only after the register reconciliation of '
     "analysis-plan.md step 0.2.",
     'Drop "In-sample" (--not-in-sample) only if analysis-plan.md step 0.5 rules it out.',
     "Publish aggregate figures only, after the conflicts check and the legal review of "
@@ -104,7 +105,9 @@ REMINDERS: tuple[str, ...] = (
     "The wording follows the draft templates of analysis-plan.md section 11; re-check it against the "
     "adopted plan.",
     'Under detector decision (A) of analysis-plan.md section 2, the public wording says "pilot detector '
-    'as of July 2026"; the summary does not record that decision, so the rendered text does not say it.',
+    'as of July 2026"; the summary does not record that decision, so the rendered text does not say it. '
+    "Add it outside the begin and end markers of the results block in the README, or to the profile line "
+    "and the CV sentence; an edit inside the markers fails --check.",
 )
 SECOND_REVIEWER_REMINDER = (
     "The text calls the second reviewer a lawyer and their labels independent of the first "

@@ -184,7 +184,7 @@ def test_plan_status_is_read_from_the_banner():
         None,
     )
     assert plan_phrase(adopted) == (
-        "adopted on 2026-11-02; pre-registration commit not named in the plan (signing order, step 5)"
+        "adopted on 2026-11-02; pre-registration commit: see the study README (signing order, step 5)"
     )
     # A SHA on that line is still read, although the signing order records it outside the plan.
     named = plan_status(
@@ -372,9 +372,9 @@ def test_detector_identity_comes_from_the_findings_file_or_the_analysis_plan(tmp
     assert "no analysis-plan.md" in detector["commit_status"]
 
     plan = study / "analysis-plan.md"
-    plan.write_text("| Detector | code; generating commit: [SHA, see step 0.4] |\n", encoding="utf-8")
+    plan.write_text("| Detector | code; detector commit: [SHA, see step 0.4] |\n", encoding="utf-8")
     assert _summary(rows, load_context(study))["detector"]["commit"] is None
-    plan.write_text("| Detector | code; generating commit: `abc1234` |\n", encoding="utf-8")
+    plan.write_text("| Detector | code; detector commit: `abc1234` |\n", encoding="utf-8")
     detector = _summary(rows, load_context(study))["detector"]
     assert detector["commit"] == "abc1234"
     assert detector["commit_source"] == "analysis-plan.md, section 2, Detector row"
