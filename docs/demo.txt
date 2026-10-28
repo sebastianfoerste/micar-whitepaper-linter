@@ -57,14 +57,14 @@ Pass: 1  |  Review: 11  |  Missing: 8  |  Blockers: 15
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'issuer'  (6 words)
            -  Section is thin: 6 words, expected at least 80.
-           -  Missing review terms: legal form, registered, address, management body.
+           -  Missing review terms: address, management body.
 
 [REVIEW] [BLOCKER] ANNEX_II.B  Information about the asset-referenced token (reference assets, stabilisation mechanism)
            Cite:  Annex II, Part B MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'art'  (4 words)
            -  Section is thin: 4 words, expected at least 80.
-           -  Missing review terms: asset-referenced, reference assets, stabilisation, basket.
+           -  Missing review terms: asset-referenced, reference assets, stabilisation.
 
 [MISS  ] [BLOCKER] ANNEX_II.C  Information about the offer to the public of the ART or its admission to trading
            Cite:  Annex II, Part C MiCAR

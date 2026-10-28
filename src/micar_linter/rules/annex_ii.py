@@ -22,18 +22,23 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
         citation="Anhang II Teil A MiCAR",
         section="issuer",
         label="Information about the issuer of the ART (legal form, governance, prudential profile)",
-        required_terms=("issuer", "legal form", "registered", "address", "management body"),
-        required_terms_de=("emittent", "rechtsform", "eingetragen", "anschrift", "leitungsorgan"),
+        # Legal form and registered address are not asked for: a white paper that gives an LEI
+        # need not state them (recital 2 and Anhang Tabelle 3 Teil A VO (EU) 2024/2984).
+        required_terms=("issuer", "address", "management body"),
+        required_terms_de=("emittent", "anschrift", "leitungsorgan"),
         min_words=80,
         severity=Severity.BLOCKER,
     ),
+    # An ART may reference a single value (Art. 3 Abs. 1 Nr. 6 MiCAR), so no basket is asked for.
+    # German MiCAR spells the adjective "vermögenswertereferenziert" and "vermögenswertreferenziert";
+    # the stem "referenziert" matches both.
     Rule(
         rule_id="ANNEX_II.B",
         citation="Anhang II Teil B MiCAR",
         section="art",
         label="Information about the asset-referenced token (reference assets, stabilisation mechanism)",
-        required_terms=("asset-referenced", "reference assets", "stabilisation", "basket"),
-        required_terms_de=("vermögenswertreferenziert", "referenzwerte", "stabilisierung", "korb"),
+        required_terms=("asset-referenced", "reference assets", "stabilisation"),
+        required_terms_de=("referenziert", "referenzwerte", "stabilisierung"),
         min_words=80,
         severity=Severity.BLOCKER,
     ),
@@ -155,7 +160,7 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
         ),
         section="environmental_impact",
         label="Principal adverse environmental and climate-related impact of the consensus mechanism",
-        required_terms=("consensus", "energy", "climate", "environmental"),
+        required_terms=("consensus", "energy", "climate", "environment"),
         required_terms_de=("konsens", "energie", "klima", "umwelt"),
         min_words=80,
         severity=Severity.MAJOR,

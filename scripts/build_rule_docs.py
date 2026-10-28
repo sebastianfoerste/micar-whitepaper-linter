@@ -45,11 +45,40 @@ VERIFICATION_NOTE = (
     "Not re-verified since these pages were introduced (2026-10-20): EUR-Lex was unreachable from the "
     "build environment. The citation is the rule's own, unchanged."
 )
-OJ_CHECKED = {
-    "COMMON.RISK_WARNING": (
+
+
+def _oj_checked(provisions: str, also: str = "") -> str:
+    return (
         "Checked on 2026-10-27 against the Official Journal text in English and German (OJ L 150, 9.6.2023) "
-        "and the consolidated version of 9 January 2024. No amendment and no English or German corrigendum "
-        "changes Art. 6(5), Art. 19(4) or Art. 51(4)."
+        f"and the consolidated version of 9 January 2024{also}. No amendment and no English or German "
+        f"corrigendum changes {provisions}."
+    )
+
+
+TEMPLATES = ", and against the templates of Implementing Regulation (EU) 2024/2984"
+SUSTAINABILITY = (
+    ", and against Delegated Regulation (EU) 2025/422 and the templates of Implementing Regulation (EU) 2024/2984"
+)
+OJ_CHECKED = {
+    "COMMON.RISK_WARNING": _oj_checked("Art. 6(5), Art. 19(4) or Art. 51(4)"),
+    "COMMON.MANAGEMENT_STATEMENT": _oj_checked("Art. 6(6), Art. 19(5), Art. 51(5) or the templates", TEMPLATES),
+    "ANNEX_I.A": _oj_checked("Annex I Part A or the templates", TEMPLATES),
+    "ANNEX_I.B": _oj_checked("Annex I Part B or the templates", TEMPLATES),
+    "ANNEX_I.J": _oj_checked(
+        "Art. 6(1), first subparagraph, point (j), Art. 4 of Delegated Regulation (EU) 2025/422 or the templates",
+        SUSTAINABILITY,
+    ),
+    "ANNEX_II.A": _oj_checked("Annex II Part A or the templates", TEMPLATES),
+    "ANNEX_II.H": _oj_checked(
+        "Art. 19(1), first subparagraph, point (h), Art. 4 of Delegated Regulation (EU) 2025/422 or the "
+        "templates",
+        SUSTAINABILITY,
+    ),
+    "ANNEX_III.A": _oj_checked("Art. 48, Annex III Part A or the templates", TEMPLATES),
+    "ANNEX_III.C": _oj_checked("Annex III Part C"),
+    "ANNEX_III.D": _oj_checked("Annex III Part D or Art. 49(4)"),
+    "ANNEX_III.G": _oj_checked(
+        "Art. 51(1), point (g), Art. 4 of Delegated Regulation (EU) 2025/422 or the templates", SUSTAINABILITY
     ),
     "COMMON.NOTIFICATION_DATE": (
         "Checked on 2026-10-27 against the Official Journal text in English and German (OJ L 150, 9.6.2023) "

@@ -53,7 +53,9 @@ COMMON_RULES: tuple[Rule, ...] = (
         section="management_statement",
         label="Statement by the management body on completeness, fairness, and clarity",
         required_terms=("management body", "complies", "fair", "clear", "not misleading"),
-        required_terms_de=("leitungsorgan", "entspricht", "redlich", "eindeutig", "nicht irreführend"),
+        # The German paragraphs use three verbs ("Rechnung trägt", "entspricht", "erfüllt"), and the
+        # predefined statement of the templates in VO (EU) 2024/2984 says "erfüllt"; all name the "Titel".
+        required_terms_de=("leitungsorgan", "titel", "redlich", "eindeutig", "nicht irreführend"),
         min_words=40,
         severity=Severity.BLOCKER,
     ),

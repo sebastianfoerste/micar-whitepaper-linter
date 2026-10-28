@@ -24,8 +24,8 @@
 <dt>Severity if open</dt><dd>BLOCKER</dd>
 <dt>Section key</dt><dd><code>art</code></dd>
 <dt>Minimum words</dt><dd>80</dd>
-<dt>Listed terms (English)</dt><dd><code>asset-referenced</code>, <code>reference assets</code>, <code>stabilisation</code>, <code>basket</code></dd>
-<dt>Listed terms (German)</dt><dd lang="de"><code>vermögenswertreferenziert</code>, <code>referenzwerte</code>, <code>stabilisierung</code>, <code>korb</code></dd>
+<dt>Listed terms (English)</dt><dd><code>asset-referenced</code>, <code>reference assets</code>, <code>stabilisation</code></dd>
+<dt>Listed terms (German)</dt><dd lang="de"><code>referenziert</code>, <code>referenzwerte</code>, <code>stabilisierung</code></dd>
 <dt>Package version</dt><dd>1.2.1, built from source that may include unreleased changes</dd>
 <dt>Source</dt><dd><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/rules/annex_ii.py">rules/annex_ii.py</a></dd>
 </dl></div>
@@ -45,13 +45,13 @@
   &quot;title&quot;: &quot;Synthetic rule example&quot;,
   &quot;type&quot;: &quot;art&quot;,
   &quot;sections&quot;: {
-    &quot;art&quot;: &quot;asset-referenced reference assets stabilisation basket&quot;
+    &quot;art&quot;: &quot;asset-referenced reference assets stabilisation&quot;
   }
 }</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>Section that matches</strong></div><p class="small muted">This text passes and shows what the check measures: listed terms and length. It is not model disclosure wording and does not meet MiCAR.</p><pre><code>{
   &quot;title&quot;: &quot;Synthetic rule example&quot;,
   &quot;type&quot;: &quot;art&quot;,
   &quot;sections&quot;: {
-    &quot;art&quot;: &quot;Synthetic example naming asset-referenced, reference assets, stabilisation, basket. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token.&quot;
+    &quot;art&quot;: &quot;Synthetic example naming asset-referenced, reference assets, stabilisation. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token.&quot;
   }
 }</code></pre></div>
 <h2>Limitations</h2>
