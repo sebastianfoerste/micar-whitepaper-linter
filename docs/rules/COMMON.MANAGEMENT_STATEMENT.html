@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Statement by the management body on completeness, fairness, and clarity. Art. 6(6), Art. 19(5), Art. 51(5) MiCAR.">
+<title>COMMON.MANAGEMENT_STATEMENT: MiCAR Whitepaper Linter rule</title>
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <a class="brand" href="../"><span class="brand-mark" aria-hidden="true">M</span><span>MiCAR <strong>Whitepaper Linter</strong></span></a>
+  <nav aria-label="Site"><a href="../">Overview</a><a href="../rules/">Rules</a><a href="../playground/">Playground</a><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter">Source</a></nav>
+</header>
+<main id="main">
+<p class="eyebrow">Rule · BLOCKER</p>
+<h1>COMMON.MANAGEMENT_STATEMENT</h1>
+<p class="lede">Statement by the management body on completeness, fairness, and clarity</p>
+<div class="panel"><dl class="facts">
+<dt>Citation</dt><dd>Art. 6(6), Art. 19(5), Art. 51(5) MiCAR</dd>
+<dt>Canonical form</dt><dd lang="de">Art. 6 Abs. 6, Art. 19 Abs. 5, Art. 51 Abs. 5 MiCAR</dd>
+<dt>Runs for</dt><dd>Annex I · other crypto-assets; Annex II · asset-referenced tokens; Annex III · e-money tokens</dd>
+<dt>Severity if open</dt><dd>BLOCKER</dd>
+<dt>Section key</dt><dd><code>management_statement</code></dd>
+<dt>Minimum words</dt><dd>40</dd>
+<dt>Listed terms (English)</dt><dd><code>management body</code>, <code>complies</code>, <code>fair</code>, <code>clear</code>, <code>not misleading</code></dd>
+<dt>Listed terms (German)</dt><dd lang="de"><code>leitungsorgan</code>, <code>entspricht</code>, <code>redlich</code>, <code>eindeutig</code>, <code>nicht irreführend</code></dd>
+<dt>Package version</dt><dd>1.2.1, built from source that may include unreleased changes</dd>
+<dt>Source</dt><dd><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/rules/common.py">rules/common.py</a></dd>
+</dl></div>
+<h2>How the status is set</h2>
+<ul class="plain"><li><strong>Missing</strong>: section <code>management_statement</code> is absent or empty, or holds only placeholder text such as TBD or TBC.</li><li><strong>Review</strong>: the section has fewer than 40 words, or a listed term does not appear (case-insensitive substring match).</li><li><strong>Pass</strong>: none of the above. A pass means the check matched, nothing more.</li></ul>
+<h2>Legal basis</h2>
+<p>Art. 6(6), Art. 19(5), Art. 51(5) MiCAR</p>
+<ul class="plain"><li><a href="https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng">https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng</a></li></ul>
+<p class="callout">Not re-verified since these pages were introduced (2026-10-20): EUR-Lex was unreachable from the build environment. The citation is the rule&#x27;s own, unchanged.</p>
+<h2>Synthetic examples</h2>
+<p class="small muted">Each example is linted when this page is generated. The build fails if a result differs.</p>
+<div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>Section absent</strong></div><p class="small muted">The section key is missing or empty.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;sections&quot;: {}
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>Thin section</strong></div><p class="small muted">Every listed term appears, but the section is shorter than 40 words.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;sections&quot;: {
+    &quot;management_statement&quot;: &quot;management body complies fair clear not misleading&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>Section that matches</strong></div><p class="small muted">This text passes and shows what the check measures: listed terms and length. It is not model disclosure wording and does not meet MiCAR.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;sections&quot;: {
+    &quot;management_statement&quot;: &quot;Synthetic example naming management body, complies, fair, clear, not misleading. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token.&quot;
+  }
+}</code></pre></div>
+<h2>Limitations</h2>
+<ul class="plain"><li>Reads one section key, <code>management_statement</code>. Text elsewhere in the draft is not considered.</li><li>Matches words and counts length. It does not test accuracy, consistency with other sections or the point-level items of the cited Part.</li><li>Status and severity are fixed by the rule. A draft cannot waive or downgrade them.</li></ul>
+<p class="small muted">Disagree with this rule, or missing one? <a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/issues/new?template=rule-proposal.yml">Propose a rule change</a>.</p>
+
+</main>
+<footer><span>MiCAR Whitepaper Linter 1.2.1 · MIT licence · First-pass screening, not legal advice.</span><span>Generated from the rule set by <code>scripts/build_rule_docs.py</code>.</span></footer>
+</body>
+</html>

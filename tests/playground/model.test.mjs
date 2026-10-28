@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { MAX_BYTES, MAX_XHTML_BYTES, displayCitation, draftFormat, validateDraft, formatDraft, parseDraft, reportIsCurrent, sectionSelection, selectFindings } from "../../docs/playground/model.mjs";
+import { MAX_BYTES, MAX_XHTML_BYTES, displayCitation, draftFormat, validateDraft, formatDraft, parseDraft, reportIsCurrent, ruleDocHref, sectionSelection, selectFindings } from "../../docs/playground/model.mjs";
 
 const valid = { type: "art", sections: { summary: "A synthetic draft." } };
 const parse = data => parseDraft(JSON.stringify(data));
@@ -112,7 +112,8 @@ test("a draft that opens with markup is XHTML and states no regime of its own", 
   assert.equal(draftFormat(JSON.stringify(valid)), "json");
   assert.deepEqual(validateDraft(JSON.stringify({ ...valid, type: "ART" })), { format: "json", regime: "art" });
   assert.throws(() => validateDraft("not a draft"), /valid JSON/);
-  assert.throws(() => validateDraft(`<html>${" ".repeat(MAX_XHTML_BYTES)}</html>`), /up to 4 MB/);
+  assert.deepEqual(validateDraft(`<html>${" ".repeat(6 * 1024 * 1024)}</html>`), { format: "xhtml", regime: null });
+  assert.throws(() => validateDraft(`<html>${" ".repeat(MAX_XHTML_BYTES)}</html>`), /up to 8 MB/);
 });
 
 test("display citations never alter a pinpoint", () => {
@@ -148,4 +149,13 @@ test("the evidence note states the committed study figures", () => {
   assert.equal(stated("cells"), review.rows_total);
   assert.equal(stated("reviewed"), review.rows_completed);
   assert.equal(Object.keys(JSON.parse(repoFile("docs/playground/samples.json"))).length, 4);
+});
+
+test("links a finding to its rule page beside the playground", () => {
+  const page = "https://example.test/micar-whitepaper-linter/playground/";
+  assert.equal(ruleDocHref("ANNEX_II.G.DEPOSIT_FLOOR_REVIEW", page),
+    "https://example.test/micar-whitepaper-linter/rules/ANNEX_II.G.DEPOSIT_FLOOR_REVIEW.html");
+  assert.equal(ruleDocHref("COMMON.SUMMARY", page + "index.html"),
+    "https://example.test/micar-whitepaper-linter/rules/COMMON.SUMMARY.html");
+  assert.equal(ruleDocHref("A/B?#", page), "https://example.test/micar-whitepaper-linter/rules/A%2FB%3F%23.html");
 });
