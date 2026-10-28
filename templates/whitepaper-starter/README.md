@@ -2,9 +2,9 @@
 
 A starter repository for drafting a MiCAR crypto-asset white paper with continuous linting. Click **Use this template**, fill in `whitepaper.json` section by section, and let CI tell you which mandatory disclosures are still open.
 
-Every push runs [micar-whitepaper-linter](https://github.com/sebastianfoerste/micar-whitepaper-linter) and reports each open finding with a pinpoint MiCAR citation in the **Actions** tab. The default workflow runs in report mode (`strict: 'false'`) so the check stays green while you draft. Flip `strict` to `'true'` in `.github/workflows/micar-lint.yml` when you want the build to **fail on any open BLOCKER** before you notify.
+Every push to `main` and every pull request runs [micar-whitepaper-linter](https://github.com/sebastianfoerste/micar-whitepaper-linter) and reports each open finding with a pinpoint citation in the **Actions** tab. The default workflow runs in report mode (`strict: 'false'`) so the check stays green while you draft. Flip `strict` to `'true'` in `.github/workflows/micar-lint.yml` when you want the build to **fail on any open BLOCKER** before you notify. The build then always fails: the iXBRL format BLOCKER can never pass for `whitepaper.json`, and for an asset-referenced token (the default `"type": "art"`) neither can the deposit-floor BLOCKER (see below). Read the log for the others.
 
-Two items are always staged for human review rather than auto-passed: reserve composition (Art. 36 MiCAR) and custody. That is deliberate: a green pipeline never means the white paper is lawful, complete, or ready to notify. That judgment stays with your lawyer.
+Two BLOCKER checks never pass for this draft, by design. The iXBRL format check cannot be met by a JSON draft, because the notification format is XHTML with Inline XBRL tagging. For an asset-referenced token, the deposit floor of the reserve of assets (Art. 35(4), 36(4)(d), 45(3) and 45(7)(b) MiCAR) always stays open for a lawyer. A green pipeline never means the white paper is lawful, complete, or ready to notify. That judgment stays with your lawyer.
 
 You can also lint drafts [live in the browser](https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/). Nothing you paste leaves the page.
 
@@ -22,7 +22,7 @@ Deterministic rules (no LLM, same input, same findings): mandatory sections pres
 
 ## Scope and honesty
 
-- Not legal advice. A draft can pass every check and still be misleading.
+- Not legal advice. A draft can pass every check that can pass and still be misleading.
 - The template covers the white paper content requirements, not the authorization or notification procedure itself.
 - Template text is synthetic guidance; nothing in it describes a real issuer or token.
 
