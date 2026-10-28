@@ -13,6 +13,7 @@ jobs:
       - uses: sebastianfoerste/micar-whitepaper-linter@v1
         with:
           whitepaper: whitepaper.json
-          # Report mode: the check stays green and lists findings in the log.
-          # Set to 'true' to fail the build on any open BLOCKER before you notify.
+          # Report mode: open findings do not fail the check; they are listed in the log.
+          # Set to 'true' to fail the build on any open BLOCKER before you notify. The build then
+          # always fails: the iXBRL format BLOCKER never passes for whitepaper.json (see README).
           strict: 'false'

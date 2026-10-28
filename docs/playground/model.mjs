@@ -6,8 +6,9 @@ export const REGIMES = {
   emt: "Annex III · E-money tokens",
 };
 
-// Notified XHTML white papers run to a few megabytes once fonts and images are inlined.
-export const MAX_XHTML_BYTES = 4 * 1024 * 1024;
+// Notified XHTML white papers run to a few megabytes once fonts and images are inlined. The Python
+// loader unpacks a saved iXBRL viewer page up to the same size (MAX_UNPACKED_BYTES in xhtml_parser.py).
+export const MAX_XHTML_BYTES = 8 * 1024 * 1024;
 export const FORMATS = { json: "JSON", xhtml: "XHTML" };
 
 // A draft that opens with markup is XHTML; anything else has to be JSON.
@@ -20,7 +21,7 @@ export function draftFormat(text) {
 export function validateDraft(text) {
   if (draftFormat(text) === "json") return { format: "json", regime: parseDraft(text).type.toLowerCase() };
   if (new TextEncoder().encode(text).length > MAX_XHTML_BYTES) {
-    throw new Error("This playground accepts XHTML drafts up to 4 MB. Use the CLI for larger files.");
+    throw new Error(`This playground accepts XHTML drafts up to ${MAX_XHTML_BYTES / 1024 / 1024} MB. Use the CLI for larger files.`);
   }
   return { format: "xhtml", regime: null };
 }
@@ -53,6 +54,11 @@ export function parseDraft(text) {
 export function displayCitation(citation) {
   // TODO(human): render the engine's German-style citation in the English house style.
   return citation;
+}
+
+// Rule pages sit beside the playground on the same site: <site>/rules/<RULE_ID>.html.
+export function ruleDocHref(ruleId, pageUrl) {
+  return new URL(`../rules/${encodeURIComponent(ruleId)}.html`, pageUrl).href;
 }
 
 export function selectFindings(findings, filter = "open", search = "") {

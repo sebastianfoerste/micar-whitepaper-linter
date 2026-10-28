@@ -4,7 +4,7 @@ Study title: **MiCAR White Paper Study 2026: Annex I Disclosure Patterns in Noti
 
 This study runs deterministic first-pass checks over publicly available Title II crypto-asset white-paper text. A candidate flag means that a specified Annex I or Article 6 element was not found in extracted text. It is not a reviewed legal finding.
 
-The output is a research artifact. It does not provide legal advice or assess the full legal sufficiency of any white paper. Tables use WP identifiers, but the public source manifest links those identifiers to issuer names and URLs. The data are pseudonymous, not anonymous.
+The output is a research artifact. It does not provide legal advice and does not assess the full legal sufficiency of any white paper. Findings tables use WP-ID identifiers rather than printing issuer names inline; the source manifest links each WP-ID to its public ESMA register entry, so findings are traceable to their source and are not anonymized. Findings are machine-flagged and pending human legal review; a flag is a candidate gap in extracted text, not a confirmed deficiency by the named issuer.
 
 ## Sample
 
@@ -151,20 +151,20 @@ Excluded documents are listed in `findings-pseudonymous.json` with reasons.
 
 ## Reproducibility
 
+Write a re-run to a scratch folder and compare it with the committed files, which it must not overwrite. The batch needs the source documents under `.study-cache/title-ii-whitepapers/`; the study README explains the checks before comparing.
+
 ```bash
-uv run python -m micar_linter.esma_register \
-  --csv studies/2026-07-title-ii-annex-i-whitepaper-study/sample-manifest.csv \
-  --out studies/2026-07-title-ii-annex-i-whitepaper-study/source-manifest.json
+mkdir -p /tmp/micar-study
 
 uv run micar-lint-batch \
   --manifest studies/2026-07-title-ii-annex-i-whitepaper-study/source-manifest.json \
   --cache .study-cache/title-ii-whitepapers \
   --annex annex-i \
-  --out studies/2026-07-title-ii-annex-i-whitepaper-study/findings-pseudonymous.json
+  --out /tmp/micar-study/findings-pseudonymous.json
 
 uv run micar-study-report \
-  --findings studies/2026-07-title-ii-annex-i-whitepaper-study/findings-pseudonymous.json \
-  --out studies/2026-07-title-ii-annex-i-whitepaper-study/findings-summary.md
+  --findings /tmp/micar-study/findings-pseudonymous.json \
+  --out /tmp/micar-study/findings-summary.md
 ```
 
 ## Sources

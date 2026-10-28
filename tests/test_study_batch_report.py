@@ -173,6 +173,10 @@ def test_study_report_contains_required_sections_and_pending_review(tmp_path: Pa
     assert "- Documents processed: 1" in report
     assert "Documents reviewed" not in report
     assert "human-review-r1.csv" in report
+    # The reproduction commands must not overwrite the committed study files.
+    reproducibility = report.split("## Reproducibility", 1)[1].split("\n## ", 1)[0]
+    assert "--out /tmp/micar-study/" in reproducibility
+    assert "--out studies/" not in reproducibility
 
 
 def test_study_report_reads_v1_findings_and_lists_every_flagged_rule():

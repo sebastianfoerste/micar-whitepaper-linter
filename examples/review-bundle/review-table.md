@@ -16,6 +16,8 @@ This markdown table is a local review artifact. It does not approve filing, publ
 | COMMON.NOTIFICATION_DATE | Art. 6 Abs. 8, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | COMMON.LANGUAGE | Art. 6 Abs. 9, Art. 19 Abs. 8, Art. 51 Abs. 8 MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | COMMON.IXBRL_TAGGING | Art. 2 VO (EU) 2024/2984 | missing | yes | remediation_required | yes |
+| COMMON.LEI_CHECK_DIGITS | Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR | pass | no | pending_lawyer_confirmation | yes |
+| COMMON.LEI_CONSISTENCY | Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | ANNEX_II.A | Anhang II Teil A MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | ANNEX_II.B | Anhang II Teil B MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | ANNEX_II.C | Anhang II Teil C MiCAR | pass | no | pending_lawyer_confirmation | yes |

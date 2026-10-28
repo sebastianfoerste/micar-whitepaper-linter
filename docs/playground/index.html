@@ -24,8 +24,8 @@
 <body>
 <a class="skip-link" href="#workspace">Skip to draft</a>
 <header class="site-header">
-  <a class="brand" href="./" aria-label="MiCAR Whitepaper Linter home"><span class="brand-mark" aria-hidden="true">M<span>✓</span></span><span>MiCAR <strong>Whitepaper Linter</strong></span></a>
-  <nav aria-label="Resources"><span class="local-badge"><span aria-hidden="true">●</span> Runs in your browser</span><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter">View source <span aria-hidden="true">↗</span></a></nav>
+  <a class="brand" href="../"><span class="brand-mark" aria-hidden="true">M<span>✓</span></span><span>MiCAR <strong>Whitepaper Linter</strong></span></a>
+  <nav aria-label="Resources"><span class="local-badge"><span aria-hidden="true">●</span> Runs in your browser</span><a href="../rules/">Rules</a><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter">View source <span aria-hidden="true">↗</span></a></nav>
 </header>
 <main>
   <section class="intro" aria-labelledby="page-title">
@@ -40,7 +40,7 @@
       <div class="draft-controls">
         <label for="example">Start with a synthetic example</label>
         <div class="example-row"><select id="example"><option value="incomplete">Incomplete ART draft</option><option value="other">Annex I · Other crypto-asset</option><option value="art">Annex II · Asset-referenced token</option><option value="emt">Annex III · E-money token</option><option value="numbered">XHTML · Annex I in the numbered-field layout</option></select><button id="load-example" disabled>Load</button></div>
-        <div class="import-row"><button id="import" class="text-button">↑ Import JSON or XHTML</button><span>Local file · JSON up to 1 MB, XHTML up to 4 MB</span><input type="file" id="file" accept=".json,.xhtml,.html,.htm,application/json,application/xhtml+xml,text/html" hidden></div>
+        <div class="import-row"><button id="import" class="text-button">↑ Import JSON or XHTML</button><span>Local file · JSON up to 1 MB, XHTML up to 8 MB</span><input type="file" id="file" accept=".json,.xhtml,.html,.htm,application/json,application/xhtml+xml,text/html" hidden></div>
         <div class="regime-row" id="regime-row" hidden><label for="regime-select">Regime of this XHTML file</label><select id="regime-select" aria-describedby="regime-help"><option value="">Choose the regime…</option><option value="other">Annex I · Other crypto-assets</option><option value="art">Annex II · Asset-referenced tokens</option><option value="emt">Annex III · E-money tokens</option></select><p id="regime-help">You choose the regime. It is never inferred from the text.</p></div>
         <p id="sample-error" class="error" role="alert" hidden></p>
       </div>
@@ -71,11 +71,11 @@
       <p id="run-error" class="error" role="alert" hidden></p>
     </section>
   </div>
-  <section class="explainer" aria-label="How to read the findings"><div><span class="badge missing">Missing</span><p>The section is empty or absent, or a required element was not found. For a JSON draft the iXBRL check always shows Missing, because JSON cannot meet the notification format.</p></div><div><span class="badge review">Review</span><p>A check needs attention or human assessment. Inspect its reasons and source text. For an XHTML draft the iXBRL check always shows Review: it tests the format and the taxonomy namespace, and leaves tag completeness to a validator.</p></div><div><span class="badge pass">Pass</span><p>The automated check matched. Accuracy, completeness and legal sufficiency still need review.</p></div></section>
+  <section class="explainer" aria-label="How to read the findings"><div><span class="badge missing">Missing</span><p>The section is empty or absent, or a required element was not found. For a JSON draft the iXBRL check always shows Missing, because JSON cannot meet the notification format. A saved iXBRL viewer page shows Missing too: the checks read the white paper it carries, and the viewer's rendering is not the XHTML document itself.</p></div><div><span class="badge review">Review</span><p>A check needs attention or human assessment. Inspect its reasons and source text. For any other XHTML draft the iXBRL check always shows Review: it tests the format and the taxonomy namespace, and leaves tag completeness to a validator.</p></div><div><span class="badge pass">Pass</span><p>The automated check matched. Accuracy, completeness and legal sufficiency still need review.</p></div></section>
   <section class="basis" aria-labelledby="basis-heading"><h2 id="basis-heading">What the checks rest on</h2><p>The rules encode the text of MiCAR and the white-paper format rules. They are regression-tested against the synthetic drafts offered above. A separate pilot ran a different detector with <span id="basis-controls">15</span> Annex I and Article 6 controls over <span id="basis-documents">10</span> public Title II white papers from ESMA's interim register. Its <span id="basis-cells">150</span> results await human review (<span id="basis-reviewed">0</span> reviewed), so this page claims no accuracy rate. <a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/tree/main/studies/2026-07-title-ii-annex-i-whitepaper-study">Read the study and its limitations ↗</a></p></section>
 </main>
 <footer><span>MiCAR Whitepaper Linter <span class="footer-dot">·</span> Open source, MIT license</span><span>First-pass screening · Not legal advice <a href="https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng">Read MiCAR ↗</a></span></footer>
 <noscript><p class="error">JavaScript is required for the browser checks. You can also use the Python CLI linked under View source.</p></noscript>
-<script type="module" src="app.mjs" data-wheel="micar_whitepaper_linter-0.2.1-py3-none-any.whl"></script>
+<script type="module" src="app.mjs" data-wheel="micar_whitepaper_linter-1.2.1-py3-none-any.whl"></script>
 </body>
 </html>
