@@ -119,12 +119,16 @@ _SUMMARY_SECTIONS: dict[WhitepaperType, dict[str, tuple[str, ...]]] = {
 }
 
 # The language field sits at F.12, B.14 or B.11 depending on the table, and authors
-# renumber, so it is found by its label ("Language or languages of the ... white paper").
-_LANGUAGE_LABEL = re.compile(r"\blanguages?\b", re.I)
+# renumber, so it is found by its label ("Language or languages of the ... white paper",
+# in the German text "Sprache oder Sprachen des Kryptowerte-Whitepapers" or "... des Whitepaper").
+_LANGUAGE_LABEL = re.compile(r"\blanguages?\b|\bsprachen?\b", re.I)
 # Where the label shares a cell or paragraph with its answer, the field has no separate label and its
-# content opens with the template label ("Language or languages of the white paper English").
+# content opens with the template label ("Language or languages of the white paper English", "Sprache
+# oder Sprachen des Whitepaper Deutsch").
 _LANGUAGE_CONTENT = re.compile(
-    r"^\W*languages?(?:\s+or\s+languages)?\s+of\s+the\s+(?:crypto-?\s*assets?\s+)?white\s+paper\b", re.I
+    r"^\W*(?:languages?(?:\s+or\s+languages)?\s+of\s+the\s+(?:crypto-?\s*assets?\s+)?white\s+paper"
+    r"|sprachen?(?:\s+oder\s+sprachen)?\s+des\s+(?:kryptowerte-?\s*)?whitepapers?)\b",
+    re.I,
 )
 # Table 4 has no field for the safeguarding of funds received (Art. 54 MiCAR), so for an EMT the
 # safeguarding section collects the answered lettered fields that describe it.
