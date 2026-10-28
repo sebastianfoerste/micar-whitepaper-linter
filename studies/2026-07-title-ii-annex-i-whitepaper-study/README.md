@@ -12,6 +12,7 @@ Raw white papers are not committed. Downloaded source files belong under `.study
 - Document-rule cells: 150.
 - Machine-flagged candidate gaps: 21.
 - Human-review status: `pending_review`.
+- Pre-registration: not yet made. `codebook.md` and `analysis-plan.md` are unsigned drafts; their signing order says how they are adopted on `main` and where the adoption commit's SHA is recorded.
 - Prevalence, precision, recall, and issuer-compliance conclusions: not yet supportable.
 
 ## Files
@@ -27,7 +28,7 @@ Raw white papers are not committed. Downloaded source files belong under `.study
 - `human-review-summary.json`: current completion and validation metrics; it remains publication-blocking while rows are pending.
 - `review-protocol.md`: label definitions, review procedure, adjudication, and publication gate.
 - `codebook.md`: DRAFT, not adopted. Per-rule decision rules and open codebook policies for the reviewer.
-- `analysis-plan.md`: DRAFT, not adopted. Pre-registered metrics, exclusions, intervals and reporting rules.
+- `analysis-plan.md`: DRAFT, not adopted. Metrics, exclusions, intervals, reporting rules and the detector freeze, to be pre-registered in one adoption commit on `main`.
 - `findings-summary.md`: rendered pilot report.
 - `methodology.md`: source, sampling, extraction, rule, and metric methodology.
 - `limitations.md`: limitations and prohibited inferences.
