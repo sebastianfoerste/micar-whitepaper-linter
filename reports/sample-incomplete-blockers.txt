@@ -115,12 +115,12 @@ Pass: 1  |  Review: 13  |  Missing: 6  |  Blockers: 15
            -  Section is thin: 3 words, expected at least 60.
            -  Missing review terms: custody, custodian, segregation, insolvency.
 
-[REVIEW] [BLOCKER] ANNEX_II.G.VALUATION_AUDIT  Valuation procedure and audit frequency (Art. 36(3) MiCAR)
-           Cite:  Annex II, Part G in conjunction with Art. 36(3) MiCAR
+[REVIEW] [BLOCKER] ANNEX_II.G.VALUATION_AUDIT  Valuation of the components of the claim (Annex II Part D No. 10(c) MiCAR)
+           Cite:  Annex II, Part D, point 10(c) MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'reserve_of_assets'  (3 words)
+           Section: 'rights_and_obligations'  (3 words)
            -  Section is thin: 3 words, expected at least 50.
-           -  Missing review terms: valuation, audit.
+           -  Missing review terms: valuation.
 
 [MISS  ] [MAJOR  ] ANNEX_II.H  Principal adverse environmental and climate-related impact of the consensus mechanism
            Cite:  Art. 19(1), first subparagraph, point (h) MiCAR in conjunction with Art. 4 Regulation (EU) 2025/422; Annex, Table 3, Part H Regulation (EU) 2024/2984

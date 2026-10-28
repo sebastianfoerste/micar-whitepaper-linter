@@ -142,13 +142,18 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
         min_words=60,
         severity=Severity.BLOCKER,
     ),
+    # Anhang II Teil G has no valuation or audit item. The white paper item on valuation is Teil D
+    # Nr. 10 Buchst. c, how a fair and transparent valuation of the components of the claim is
+    # undertaken, so the rule reads the rights section. No Annex II item asks for the six-monthly
+    # reserve audit of Art. 36 Abs. 9. The ID keeps "G" so that SARIF results and rule-page links
+    # stay valid.
     Rule(
         rule_id="ANNEX_II.G.VALUATION_AUDIT",
-        citation="Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR",
-        section="reserve_of_assets",
-        label="Valuation procedure and audit frequency (Art. 36(3) MiCAR)",
-        required_terms=("valuation", "audit"),
-        required_terms_de=("bewertung", "prüfung"),
+        citation="Anhang II Teil D Nr. 10 Buchst. c MiCAR",
+        section="rights_and_obligations",
+        label="Valuation of the components of the claim (Annex II Part D No. 10(c) MiCAR)",
+        required_terms=("valuation",),
+        required_terms_de=("bewertung",),
         min_words=50,
         severity=Severity.BLOCKER,
     ),

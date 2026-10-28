@@ -1,6 +1,6 @@
 {
   "schema": "micar-whitepaper-linter.coverage-matrix.v1",
-  "generated_at": "2026-10-28T13:26:24.670069+00:00",
+  "generated_at": "2026-10-28T13:29:38.843490+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "summary": {
@@ -117,7 +117,7 @@
       "rule_id": "COMMON.LEI_CHECK_DIGITS",
       "annex": "COMMON",
       "section": "issuer",
-      "citation": "Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR",
+      "citation": "Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, Anhang III Teil A Nr. 5 MiCAR",
       "severity": "MAJOR",
       "status": "pass",
       "word_count": 0,
@@ -134,7 +134,7 @@
       "rule_id": "COMMON.LEI_CONSISTENCY",
       "annex": "COMMON",
       "section": "issuer",
-      "citation": "Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR",
+      "citation": "Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, Anhang III Teil A Nr. 5 MiCAR",
       "severity": "MAJOR",
       "status": "pass",
       "word_count": 0,
@@ -205,14 +205,14 @@
       "citation": "Anhang II Teil D i.V.m. Art. 39 MiCAR",
       "severity": "BLOCKER",
       "status": "pass",
-      "word_count": 103,
+      "word_count": 141,
       "blocker": false,
       "next_action": "Keep disclosure under lawyer review before external use.",
       "source_anchor": {
         "section_key": "rights_and_obligations",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:rights_and_obligations:c76f6f3f9bcae095",
-        "section_length": 635
+        "stable_anchor_id": "json:rights_and_obligations:cc232aa14ef9e697",
+        "section_length": 890
       }
     },
     {
@@ -303,18 +303,18 @@
     {
       "rule_id": "ANNEX_II.G.VALUATION_AUDIT",
       "annex": "ANNEX_II",
-      "section": "reserve_of_assets",
-      "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 3 MiCAR",
+      "section": "rights_and_obligations",
+      "citation": "Anhang II Teil D Nr. 10 Buchst. c MiCAR",
       "severity": "BLOCKER",
       "status": "pass",
-      "word_count": 192,
+      "word_count": 141,
       "blocker": false,
       "next_action": "Keep disclosure under lawyer review before external use.",
       "source_anchor": {
-        "section_key": "reserve_of_assets",
+        "section_key": "rights_and_obligations",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:5852d30038a35798",
-        "section_length": 1231
+        "stable_anchor_id": "json:rights_and_obligations:a1a49bd69dfd305c",
+        "section_length": 890
       }
     },
     {
@@ -360,5 +360,5 @@
   ],
   "warnings": [],
   "review_notice": "Coverage matrix is a deterministic disclosure checklist. It is not legal advice, a signature, a notification, or filing approval.",
-  "digest": "ab07964f4ffa2bd52a9281cd027e9f209a0e7628d590f5b1d5fe50f12dc9b446"
+  "digest": "6aca75d3c14e3469e60db8dbdecc6c7ce23261eaf955e466edd10a2355d799cf"
 }

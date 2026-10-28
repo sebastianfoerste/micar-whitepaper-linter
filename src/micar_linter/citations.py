@@ -46,6 +46,8 @@ def to_english(citation: str) -> str:
     text = re.sub(r" Buchst\. ([a-z])", r", point (\1)", text)
     # Nr. 9, 15 und 16 -> , points 9, 15 and 16
     text = re.sub(r" Nr\. (\d+(?:(?:, | und )\d+)*)", _points, text)
+    # Nr. 10 Buchst. c -> point 10(c)
+    text = re.sub(r"point (\d+), point \(([a-z])\)", r"point \1(\2)", text)
     # Anhang Tabelle 3 Teil H -> Annex, Table 3, Part H
     text = re.sub(r"Anhang Tabelle (\d+)", r"Annex, Table \1", text)
     text = re.sub(r"Anhang ([IVX]+)", r"Annex \1", text)
