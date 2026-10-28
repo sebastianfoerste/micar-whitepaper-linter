@@ -86,14 +86,14 @@ def test_german_template_statement_meets_the_management_statement_terms(whitepap
 def test_art_section_needs_no_basket_and_takes_either_german_spelling():
     # Art. 3(1)(6): an ART may reference "another value or right or a combination thereof".
     english = (
-        "The asset-referenced token references one official currency. Its reference assets and its "
-        "stabilisation mechanism are described below."
+        "The asset-referenced token references a single value, the price of one gram of gold. Its reference "
+        "assets and its stabilisation mechanism are described below."
     )
     assert _finding(WhitepaperType.ART, "ANNEX_II.B", "art", english).status == "pass"
     for adjective in ("vermögenswertereferenzierte", "vermögenswertreferenzierte"):
         german = (
-            f"Der {adjective} Token bezieht sich auf eine amtliche Währung. Die Referenzwerte und der "
-            "Mechanismus zur Stabilisierung sind unten beschrieben."
+            f"Der {adjective} Token bezieht sich auf einen einzigen Wert, den Preis eines Gramms Gold. Die "
+            "Referenzwerte und der Mechanismus zur Stabilisierung sind unten beschrieben."
         )
         assert _finding(WhitepaperType.ART, "ANNEX_II.B", "art", german, "de").status == "pass"
 
