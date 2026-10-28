@@ -85,7 +85,7 @@ def test_leading_fields_of_tables_3_and_4_do_not_collide_with_part_i(tmp_path: P
     assert "German" in whitepaper.section("language")
 
 
-def _emt_table(tmp_path: Path, rows: list[tuple[str, ...]]) -> Path:
+def _table(tmp_path: Path, rows: list[tuple[str, ...]]) -> Path:
     cells = "".join("<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>" for row in rows)
     return _write(tmp_path, f"<table>{cells}</table>")
 
@@ -100,7 +100,7 @@ _EMT_BASE = [
 
 def test_language_field_whose_label_shares_the_answer_cell(tmp_path: Path):
     # Some white papers set "B.11" in one cell and the label with its answer in the next.
-    path = _emt_table(tmp_path, [*_EMT_BASE, ("B.11", "Language or languages of the white paper English")])
+    path = _table(tmp_path, [*_EMT_BASE, ("B.11", "Language or languages of the white paper English")])
     whitepaper = load_whitepaper(path, WhitepaperType.EMT)
     assert whitepaper.section("language").endswith("English")
     report = lint_whitepaper(whitepaper)
@@ -108,9 +108,75 @@ def test_language_field_whose_label_shares_the_answer_cell(tmp_path: Path):
 
 
 def test_unlabelled_field_mentioning_a_language_is_not_the_language_field(tmp_path: Path):
-    path = _emt_table(
+    path = _table(
         tmp_path, [*_EMT_BASE, ("E.1", "Smart contracts are written in a programming language.")]
     )
+    assert "language" not in load_whitepaper(path, WhitepaperType.EMT).sections
+
+
+# German white papers: the leading field and a field of each of three parts, by regime, then the German
+# label of the language field. Tables 2 and 3 label F.12 and B.14 "Sprache oder Sprachen des
+# Kryptowerte-Whitepapers", Table 4 labels B.11 "Sprache oder Sprachen des Whitepaper".
+_GERMAN_FIELDS = {
+    WhitepaperType.OTHER: (
+        [
+            ("01", "Datum der Mitteilung", "2026-03-02"),
+            ("A.1", "Name", "Quillmoor Ledger S.A."),
+            ("E.1", "Öffentliches Angebot oder Zulassung zum Handel", "Öffentliches Angebot."),
+            ("I.1", "Risiken", "Die Inhaber tragen das Risiko eines Ausfalls des Anbieters."),
+        ],
+        ("F.12", "Sprache oder Sprachen des Kryptowerte-Whitepapers"),
+    ),
+    WhitepaperType.ART: (
+        [
+            ("I.01", "Datum der Mitteilung", "2026-03-02"),
+            ("A.1", "Name", "Quillmoor Reserve AG"),
+            ("C.1", "Öffentliches Angebot oder Zulassung zum Handel", "Öffentliches Angebot."),
+            ("F.1", "Risiken", "Die Inhaber tragen das Risiko eines Ausfalls des Emittenten."),
+        ],
+        ("B.14", "Sprache oder Sprachen des Kryptowerte-Whitepapers"),
+    ),
+    WhitepaperType.EMT: (
+        [
+            ("I.01", "Datum der Mitteilung", "2026-03-02"),
+            ("A.1", "Name", "Quillmoor E-Geld-Institut SAS"),
+            ("C.1", "Öffentliches Angebot oder Zulassung zum Handel", "Öffentliches Angebot."),
+            ("F.1", "Risiken", "Die Inhaber tragen das Risiko eines Ausfalls des Emittenten."),
+        ],
+        ("B.11", "Sprache oder Sprachen des Whitepaper"),
+    ),
+}
+
+
+@pytest.mark.parametrize("whitepaper_type", list(_GERMAN_FIELDS), ids=lambda regime: regime.value)
+@pytest.mark.parametrize("own_label", [True, False], ids=["own-label", "label-in-answer-cell"])
+def test_german_language_field_is_the_language_section(
+    tmp_path: Path, whitepaper_type: WhitepaperType, own_label: bool
+):
+    # With its own label, or with the label and the answer in one cell after the field number.
+    base, (number, label) = _GERMAN_FIELDS[whitepaper_type]
+    row = (number, label, "Deutsch") if own_label else (number, f"{label} Deutsch")
+    whitepaper = load_whitepaper(_table(tmp_path, [*base, row]), whitepaper_type)
+    assert whitepaper.section("language") == (f"{label}: Deutsch" if own_label else f"{label} Deutsch")
+    report = lint_whitepaper(whitepaper)
+    assert not any("labelled as the language" in warning for warning in report.warnings)
+    # The label and the answer have 6 words, fewer than the 10 the check asks for, so it reviews them.
+    finding = next(f for f in report.findings if f.rule.rule_id == "COMMON.LANGUAGE")
+    assert (finding.status, finding.word_count) == ("review", 6)
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "Die Smart Contracts sind in einer Programmiersprache geschrieben.",
+        "Sprache der Smart Contracts: Solidity",
+    ],
+)
+def test_unlabelled_german_field_mentioning_a_language_is_not_the_language_field(
+    tmp_path: Path, content: str
+):
+    base, _ = _GERMAN_FIELDS[WhitepaperType.EMT]
+    path = _table(tmp_path, [*base, ("E.1", content)])
     assert "language" not in load_whitepaper(path, WhitepaperType.EMT).sections
 
 
@@ -119,7 +185,7 @@ def test_emt_safeguarding_reads_the_fields_that_describe_it(tmp_path: Path):
         "Funds received in exchange for the tokens are safeguarded in segregated accounts "
         "at a credit institution, protected in the insolvency of the issuer."
     )
-    path = _emt_table(tmp_path, [*_EMT_BASE, ("D.3", "Rights of holders", funds)])
+    path = _table(tmp_path, [*_EMT_BASE, ("D.3", "Rights of holders", funds)])
     whitepaper = load_whitepaper(path, WhitepaperType.EMT)
     assert "segregated accounts" in whitepaper.section("safeguarding")
     report = lint_whitepaper(whitepaper)
@@ -129,7 +195,7 @@ def test_emt_safeguarding_reads_the_fields_that_describe_it(tmp_path: Path):
 
 
 def test_emt_safeguarding_stays_missing_when_no_field_describes_it(tmp_path: Path):
-    whitepaper = load_whitepaper(_emt_table(tmp_path, _EMT_BASE), WhitepaperType.EMT)
+    whitepaper = load_whitepaper(_table(tmp_path, _EMT_BASE), WhitepaperType.EMT)
     assert "safeguarding" not in whitepaper.sections
     report = lint_whitepaper(whitepaper)
     finding = next(f for f in report.findings if f.rule.rule_id == "ANNEX_III.SAFEGUARDING")
@@ -221,14 +287,14 @@ def test_fields_with_their_own_label_raise_no_merged_label_note():
 
 def test_merged_label_note_needs_four_in_five_unlabelled_fields(tmp_path: Path):
     # Eleven of fourteen lettered fields keep the label in the answer cell: just under four in five.
-    path = _emt_table(tmp_path, [*_EMT_BASE, *((f"B.{n}", f"Field B{n} label N/A") for n in range(1, 12))])
+    path = _table(tmp_path, [*_EMT_BASE, *((f"B.{n}", f"Field B{n} label N/A") for n in range(1, 12))])
     whitepaper = load_whitepaper(path, WhitepaperType.EMT)
     assert MERGED_LABELS_NOTE not in whitepaper.metadata["extraction_notes"]
 
 
 def test_label_sharing_the_answer_cell_raises_the_merged_label_note(tmp_path: Path):
     # Twelve of fifteen lettered fields keep the label in the answer cell.
-    path = _emt_table(tmp_path, [*_EMT_BASE, *((f"B.{n}", f"Field B{n} label N/A") for n in range(1, 13))])
+    path = _table(tmp_path, [*_EMT_BASE, *((f"B.{n}", f"Field B{n} label N/A") for n in range(1, 13))])
     whitepaper = load_whitepaper(path, WhitepaperType.EMT)
     assert whitepaper.metadata["extraction_notes"][0] == MERGED_LABELS_NOTE
 
