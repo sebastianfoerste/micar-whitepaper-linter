@@ -70,6 +70,58 @@ def test_inline_fields_split_without_following_cross_references(tmp_path: Path):
     assert is_numbered_layout(list(fields.values()))
 
 
+# Part titles of Table 2 as the Official Journal prints them, in English and German. Only the English
+# title of Part B has fewer than 20 words; every German title starts with "Teil".
+PART_TITLES = {
+    "en-B": "Part B - Information about the issuer, if different from the offeror or person seeking admission "
+    "to trading",
+    "en-C": "Part C- Information about the operator of the trading platform in cases where it draws up the "
+    "crypto-asset white paper and information about other persons drawing the crypto-asset white paper "
+    "pursuant to Article 6(1), second subparagraph, of Regulation (EU) 2023/1114",
+    "en-J": "Part J \u2013 Information on the sustainability indicators in relation to adverse impact on the "
+    "climate and other environment-related adverse impacts",
+    "de-B": "Teil B \u2013 Informationen über den Emittenten, wenn es sich hierbei nicht um den Anbieter oder "
+    "die Person handelt, die die Zulassung zum Handel beantragt",
+    "de-C": "Teil C \u2013 Informationen über den Betreiber der Handelsplattform in Fällen, in denen er das "
+    "Kryptowerte-Whitepaper erstellt, und Informationen über andere Personen, die das "
+    "Kryptowerte-Whitepaper gemäß Artikel 6 Absatz 1 Unterabsatz 2 der Verordnung (EU) 2023/1114 erstellen",
+    "de-D": "Teil D \u2013 Informationen über das Kryptowert-Projekt",
+    "de-J": "Teil J \u2013 Informationen zu den Nachhaltigkeitsindikatoren in Bezug auf nachteilige "
+    "Auswirkungen auf das Klima und andere umweltbezogene nachteilige Auswirkungen",
+}
+
+
+@pytest.mark.parametrize("key", sorted(PART_TITLES))
+def test_part_title_between_paragraph_fields_ends_the_field_before_it(tmp_path: Path, key: str):
+    # A part title is no answer: the field before it keeps "N/A", so the template's wording cannot
+    # count toward a check, whatever the length or language of the title.
+    path = _write(
+        tmp_path,
+        "<p>A.1 Name: Quillmoor Ledger S.A.</p><p>A.2 Legal form: N/A</p>"
+        f"<h2>{PART_TITLES[key]}</h2>"
+        "<p>B.1 Name: Quillmoor Issuer AG</p>",
+    )
+    fields = {field.field_id: field for field in extract_numbered_fields(path)}
+    assert fields["A.2"].content == "N/A"
+    assert not fields["A.2"].answered
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "A. The offeror runs the shared ledger service for logistics firms in three Member States and has "
+        "done so since the ledger went live in the spring of last year.",
+        "Teile der Erlöse fließen in den Betrieb des gemeinsamen Ledgers.",
+    ],
+)
+def test_long_or_ordinary_paragraph_after_a_field_stays_in_it(tmp_path: Path, text: str):
+    # Only a part title leaves its field: a long paragraph that starts with a letter and a full stop,
+    # and a sentence that starts with "Teile", belong to the field before them.
+    path = _write(tmp_path, f"<p>A.13 Business activity: Ledger services.</p><p>{text}</p>")
+    fields = {field.field_id: field for field in extract_numbered_fields(path)}
+    assert fields["A.13"].content == f"Ledger services. {text}"
+
+
 def test_leading_fields_of_tables_3_and_4_do_not_collide_with_part_i(tmp_path: Path):
     rows = "".join(
         f"<tr><td>{number}</td><td>{label}</td><td>{content}</td></tr>"
