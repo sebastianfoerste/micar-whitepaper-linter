@@ -12,7 +12,7 @@ Raw white papers are not committed. Downloaded source files belong under `.study
 - Document-rule cells: 150.
 - Machine-flagged candidate gaps: 21.
 - Human-review status: `pending_review`.
-- Pre-registration: not yet made. `codebook.md` and `analysis-plan.md` are unsigned drafts; their signing order says how they are adopted on `main` and where the adoption commit's SHA is recorded.
+- Pre-registration: not yet made. `codebook.md` and `analysis-plan.md` are unsigned drafts; their signing order says how they are adopted on `main`. Once they are, this line records the adoption commit's SHA and its tag.
 - Prevalence, precision, recall, and issuer-compliance conclusions: not yet supportable.
 
 ## Files
@@ -86,7 +86,7 @@ uv run micar-review-sheets \
 
 ## Validate against human labels
 
-Start labelling only after the adoption commit on `main` that adopts `codebook.md` and `analysis-plan.md` with the pending sheets (`analysis-plan.md`, step 0.10). It follows the signing order in their banners: the study tooling is merged into `main` as unsigned draft tooling first, and Phase 0 is done on `main`.
+Start labelling the 150 cells only after the adoption commit on `main` that adopts `codebook.md` and `analysis-plan.md` with the pending sheets (`analysis-plan.md`, step 0.10). It follows the signing order in their banners: the study tooling is merged into `main` as unsigned draft tooling first, and Phase 0 is done on `main`. The calibration document is labelled before that commit, in Phase 0 (step 0.9), outside the committed sheets (`analysis-plan.md` section 4).
 
 Each reviewer labels only their own blinded sheet (`human-review-r1.csv`, and `human-review-r2.csv` for a second reviewer) under `review-protocol.md` and `codebook.md`. While labelling, reviewers do not open `human-review-matrix.csv`, `findings-pseudonymous.*` or `findings-summary.md`. Each reviewer's labels are committed on their own. Only then are the final labels merged into `human-review-matrix.csv` with the detector outcomes. Then run:
 

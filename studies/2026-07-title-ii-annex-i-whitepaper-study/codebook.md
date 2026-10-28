@@ -7,16 +7,17 @@
 > **Signing order.**
 >
 > 1. Merge pull requests #18, #19 and #24 into `main` as unsigned DRAFT tooling. Merging them adopts nothing.
-> 2. On `main`, complete Phase 0 (steps 0.1 to 0.10, `analysis-plan.md` section 3).
+> 2. On `main`, complete Phase 0 steps 0.1 to 0.9 (`analysis-plan.md` section 3). Step 0.10 is steps 3 to 5 below.
 > 3. Make ONE adoption commit on `main`. It contains the adopted `codebook.md`, `analysis-plan.md` with the Detector row of its section 2 filled in, and the pending review sheets, with the DRAFT line of each banner removed and the "Adopted by" line filled in. This commit is the pre-registration and precedes the commit that adds any label.
 > 4. Mark the adoption commit with an annotated tag.
-> 5. Record the adoption commit's SHA in a follow-up commit or in the study README, never inside the signed files.
+> 5. In a follow-up commit, record the adoption commit's SHA and its tag in the study README ("Current status"), never inside the signed files.
 >
-> The adoption commit is made on `main` after everything the study needs from `main` has been merged, so that no later merge changes the files that `analysis-plan.md` section 2 freezes between the pre-registration commit and the results.
+> Later changes on `main` to the detector's files do not enter the study: every study run uses the detector commit recorded in `analysis-plan.md` section 2, with its `uv.lock`. Make the adoption commit once the pull requests that change the inputs that `analysis-plan.md` section 2 freezes (the findings files, `document-provenance.json`, the review sheets and `codebook.md`) or `analysis-plan.md` are merged or closed: #18, #19 and #24, and any other, such as #17. A later change to those inputs is a deviation (`analysis-plan.md` section 12).
 >
 > - Adopted by: [reviewer name], on [YYYY-MM-DD]
 > - Pre-registration commit: not recorded in this file (signing order, step 5)
 > - Policy decisions recorded in section 6: [ ] all decided
+> - LEI decision in section 5 (documents that give a valid LEI, cards 5.1 and 5.2): [ ] decided
 
 ## 1. Status of the legal text
 
@@ -244,4 +245,4 @@ Before adopting this codebook, the reviewer labels one calibration document unde
 | --- | --- | --- | --- |
 | 2026-10-14 | First draft. | Phase 0 of the study plan. | Before |
 | 2026-10-14 | Rule-card judgments moved into section 6 as P11 to P17; `STUDY_RULES` cited by symbol; section 4 cross-reference corrected; WP-001's crypto-asset no longer named here. | Draft review. | Before |
-| 2026-10-28 | Signing order in the banner (adoption on `main` after the tooling is merged); open LEI decision for 5.1 and 5.2. | Main merged into the draft; open pull request #51. | Before |
+| 2026-10-28 | Signing order in the banner (adoption on `main` after the tooling is merged); open LEI decision for 5.1 and 5.2, with its own banner checkbox. | Main merged into the draft; open pull request #51. | Before |
