@@ -18,10 +18,10 @@ _PLACEHOLDER = re.compile(
     re.I,
 )
 # "N/A", "n. a.", "not applicable", "none", "nil" or a dash: the field is marked as not applying. German
-# drafts write "entf\u00e4llt", "nicht anwendbar", "nicht zutreffend", "keine" or "keine Angabe" ("k. A.").
+# drafts write "entfällt", "nicht anwendbar", "nicht zutreffend", "keine" or "keine Angabe" ("k. A.").
 _NOT_APPLICABLE = re.compile(
     r"^(?:n\s*/?\s*a|n\.\s?a|not\s+applicable|none|nil|[-\u2013\u2014]+"
-    r"|entf(?:\u00e4|ae)llt|nicht\s+(?:anwendbar|zutreffend)|keine(?:\s+angaben?)?|k\.\s?a)?\.?$",
+    r"|entf(?:ä|ae)llt|nicht\s+(?:anwendbar|zutreffend)|keine(?:\s+angaben?)?|k\.\s?a)?\.?$",
     re.I,
 )
 
