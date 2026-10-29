@@ -18,6 +18,8 @@
     "micar-review-summary",
     "micar-review-sheets",
     "micar-study-verify-cache",
+    "micar-review-workbook",
+    "micar-review-merge",
     "action.yml"
   ],
   "outputContract": "micar-whitepaper-linter.review-control-profile.v1",

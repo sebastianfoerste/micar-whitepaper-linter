@@ -41,7 +41,7 @@ One cell is one question: **do the exact source bytes with the recorded SHA-256 
 - The unit is the cached document whose hash matches `document-provenance.json`. Run `micar-study-verify-cache` first; do not label a document whose bytes do not verify.
 - The question is **presence** of a responsive disclosure, not its legal sufficiency or accuracy (policy P3).
 - The reviewer reads the source document itself (rendered XHTML or HTML, or the PDF), not the text the detector extracted.
-- The reviewer answers without seeing the detector's result. During labelling, work only in your own sheet (`human-review-r1.csv`) with this codebook, `review-protocol.md` and the source document. Do not open `human-review-matrix.csv`, `findings-pseudonymous.json`, `findings-pseudonymous.csv`, `findings-summary.md` or any playground output for these documents.
+- The reviewer answers without seeing the detector's result. During labelling, work only in your own sheet (`human-review-r1.csv`, or the workbook generated from it by `micar-review-workbook` and imported with `micar-review-merge import`) with this codebook, `review-protocol.md` and the source document. Do not open `human-review-matrix.csv`, `findings-pseudonymous.json`, `findings-pseudonymous.csv`, `findings-summary.md` or any playground output for these documents.
 - This codebook contains no detector patterns and no detector outcomes. The reviewer wrote the detector, so blinding is partial; the analysis plan discloses this.
 
 ## 3. Labels

@@ -21,6 +21,11 @@ htmlcov/
 studies/**/raw/
 studies/**/downloads/
 studies/**/review-worksheet.md
+# Local review workbooks (micar-review-workbook), spreadsheet lock files and the regenerated
+# disagreement report (micar-review-merge matrix).
+studies/**/*.xlsx
+studies/**/.~lock.*#
+studies/**/human-review-disagreements.csv
 
 # Safety rules (auto-added)
 node_modules/
