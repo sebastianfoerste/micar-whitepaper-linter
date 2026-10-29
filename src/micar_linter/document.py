@@ -6,17 +6,28 @@ import math
 import re
 import statistics
 from collections import Counter
-from collections.abc import Iterable
-from dataclasses import dataclass
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass, replace
 from functools import partial
 from itertools import pairwise
 from pathlib import Path
 
 from micar_linter.placeholders import is_not_applicable, is_placeholder
+from micar_linter.rules.annex_i import NOT_APPROVED_STATEMENT_EN
+
+# The start of a redemption pattern: a heading that names a risk, in English or German ("Redemption risk",
+# "Rücknahmerisiko", "Risiken beim Rücktausch"), heads a risk and does not open the redemption section, so
+# no risk text reaches the redemption check. (?s) reads past a line break inside a DOCX heading.
+_NOT_A_RISK = r"(?s)^(?!.*(?:\brisk|risik)).*?"
 
 # Common patterns (in English and German) matching whitepaper section headings.
 # Word boundaries are used to avoid false positives.
 SECTION_PATTERNS = {
+    # The Art. 6(3) / Art. 51(3) statement, labelled as in Implementing Regulation (EU) 2024/2984.
+    "not_approved_statement": [
+        r"\bstatement\s+in\s+accordance\s+with\s+art(?:icle|\.)\s*(?:6|51)\s*\(3\)",
+        r"\berklärung\s+gemäß\s+art(?:ikel|\.)\s*(?:6|51)\s+abs(?:atz|\.)\s*3\b",
+    ],
     "summary": [
         r"\bsummary\b",
         r"\bzusammenfassung\w*",
@@ -107,19 +118,207 @@ SECTION_PATTERNS = {
     ],
     "reserve_of_assets": [r"\breserve\b.*\bassets\b", r"\breservevermögen\w*", r"\basset\s+reserve\b"],
     "redemption": [
-        r"\bredemption\b",
-        r"\brücknahme\w*",
-        r"\bredemption\s+right\b",
+        rf"{_NOT_A_RISK}\bredemption\b",
+        rf"{_NOT_A_RISK}\brücknahme\w*",
+        rf"{_NOT_A_RISK}\bredemption\s+right\b",
         # The German text of MiCAR calls redemption "Rücktausch": "Recht auf Rücktausch" (Art. 39),
         # "Rücktauschplan" (Art. 47), "Rücktauschbarkeit" (Art. 49) and "dauerhaften Rücktauschrechte"
         # (Anhang II Teil D Nr. 9), as do the labels of Implementing Regulation (EU) 2024/2984 ("Recht auf
-        # Rücktausch", "Form des Rücktauschs"). A heading that also names a risk ("Rücktauschrisiko",
-        # "Risiken beim Rücktausch") heads a risk and does not open this section, so no risk text reaches
-        # the redemption check. (?s) reads past a line break inside a DOCX heading.
-        r"(?s)^(?!.*risik).*?\brücktausch\w*",
+        # Rücktausch", "Form des Rücktauschs").
+        rf"{_NOT_A_RISK}\brücktausch\w*",
     ],
     "safeguarding": [r"\bsafeguarding\b", r"\babsicherung\w*", r"\bsicherung\w*.*\bgelder\w*"],
 }
+
+
+# Art. 6(3) and Art. 51(3) MiCAR put the statement on the first page without a heading of
+# its own, so a paragraph that opens with it is routed by its content. The German opening
+# is a routing heuristic only; the rule does not treat it as verified statutory wording.
+_STATEMENT_START = re.compile(
+    r"^\W*(?:this\s+crypto-asset\s+white\s+paper\s+has\s+not\s+been\s+approved"
+    r"|dieses\s+kryptowerte-whitepaper\s+wurde\s+von\s+keiner)\b",
+    re.IGNORECASE,
+)
+# The statement has two sentences: the one opening above, then the one naming who is solely
+# responsible for the content. Each is about 20 words in Art. 6(3) and Art. 51(3).
+_RESPONSIBILITY = re.compile(r"\b(?:responsib|verantwort)\w*", re.IGNORECASE)
+# The responsibility sentence as Art. 6(3) and Art. 51(3) word it: the person it names, then the clause
+# "is solely responsible for the content of this crypto-asset white paper". The German pair is a
+# routing heuristic, like the German opening.
+_RESPONSIBILITY_CLAUSE = re.compile(
+    r"\bsolely\s+responsible\s+for\s+the\s+content\b|\balleinige\s+verantwortung\s+für\s+den\s+inhalt\b",
+    re.IGNORECASE,
+)
+_RESPONSIBLE_PERSON = re.compile(
+    r"\bthe\s+(?:offeror|issuer|person|operator)\b|\b(?:der|die)\s+(?:anbieter|emittent|betreiber|person)\b",
+    re.IGNORECASE,
+)
+# The words the statutory sentence puts between the person and the clause: "of the crypto-asset is",
+# "seeking admission to trading of the crypto-asset is", "of the e-money token is", "des Kryptowerts
+# trägt die". A person named elsewhere, as in a part title above a sentence with a subject of its own
+# ("Example AG is solely responsible ..."), is not the one the clause makes responsible.
+_PERSON_TO_CLAUSE = re.compile(
+    r"(?:\s+(?:seeking\s+admission\s+to\s+trading|of\s+the\s+trading\s+platform))?"
+    r"(?:\s+of\s+the\s+[\w-]+(?:(?<=-)\s+[\w-]+)?(?:\s+tokens?)?)?\s+is\s+"
+    r"|(?:\s+(?:des|der)\s+[\w-]+(?:(?<=-)\s+[\w-]+)?)?"
+    r"(?:,\s+die\s+die\s+zulassung\s+zum\s+handel\s+beantragt,)?\s+trägt\s+die\s+",
+    re.IGNORECASE,
+)
+# The words that end the clause, "of this crypto-asset white paper" ("dieses Kryptowerte-Whitepapers"), with
+# any stop, quote or note mark attached, and however a line break or a hyphen at a line end splits them.
+_CLAUSE_WORDS = re.compile(
+    r"\s+(?:of\s+this\s+crypto-\s*asset\s+white\s+paper|dieses\s+kryptowerte-\s*whitepapers?)"
+    # A letter may not follow ("papers"); a note mark stuck to the word may ("paper2", "paper\u00b2").
+    r"(?![^\W\d_\u00b9\u00b2\u00b3\u2070-\u2079])\S*",
+    re.IGNORECASE,
+)
+# Where the clause ends in other words, the rest of its sentence up to the stop.
+_CLAUSE_TAIL_MAX_WORDS = 8
+# A full stop may sit inside closing quotes, brackets or Markdown emphasis, or before a note mark:
+# 'paper.”', 'Whitepapers.“', 'paper.**', 'paper.[^1]', 'paper.¹', and 'Union.1' in extracted PDF text.
+# A note mark follows a word, never a field or outline number such as "A.1", "I.03" or "IV.2".
+_STATEMENT_SENTENCE_END = re.compile(
+    r"[.!?](?:[\"'\u2018\u2019\u201c\u201d\u00ab\u00bb)\]*_]|\[\^\w+\]|[\u00b9\u00b2\u00b3\u2070-\u2079])*"
+    r"(?:(?<=[^\W\d_]{2}[.!?])(?<!\b[IVX]{2}[.!?])(?<!\b[IVX]{3}[.!?])(?<!\b[IVX]{4}[.!?])\d{1,2})?(?=\s|$)"
+)
+_STATEMENT_MAX_LINES = 12
+_SENTENCE_MAX_WORDS = 30
+_HEADING_MAX_WORDS = 12
+
+
+def is_statement_start(text: str) -> bool:
+    """True where a line or paragraph opens with the Art. 6(3) / Art. 51(3) statement."""
+    return bool(_STATEMENT_START.match(text))
+
+
+def looks_like_heading(text: str) -> bool:
+    """True for a Markdown heading, or a short line without closing punctuation that names a section."""
+    stripped = text.strip()
+    if stripped.startswith("#"):
+        return True
+    if not stripped or len(stripped.split()) > _HEADING_MAX_WORDS or stripped[-1] in ".,;:!?":
+        return False
+    return bool(match_heading_to_section(stripped))
+
+
+def statement_extent(lines: list[str], start: int, is_heading: Callable[[int], bool] | None = None) -> int:
+    """Index after the last line of the statement that opens at lines[start].
+
+    A wrapped statement in a PDF or a hard-wrapped Markdown file spans several lines, and
+    its continuation lines often contain words such as "crypto-asset" or "offeror" that the
+    heading heuristics would otherwise read as new section headings. The statement ends
+    with its opening sentence, or with the next sentence where that one is short and says
+    who is responsible. It never runs past a heading, so an incomplete or reworded
+    statement cannot swallow the sections that follow it.
+
+    is_heading(index) reports a heading the loader reads from the layout, such as a DOCX
+    paragraph in a Heading style or a PDF line in a heading font. A statement may be set
+    apart in bold, capitals or a larger font, so the lines of the statutory responsibility
+    sentence, from the person it names to the end of the clause, are recognised by their
+    words and never read as a heading, whatever their layout or spacing.
+    """
+    window = lines[start : start + _STATEMENT_MAX_LINES]
+    text = " ".join(window)
+    line_ends: list[int] = []
+    offset = 0
+    for line in window:
+        line_ends.append(offset + len(line))
+        offset += len(line) + 1
+
+    def line_at(position: int) -> int:
+        return next(i for i, line_end in enumerate(line_ends) if line_end >= position)
+
+    def marked(i: int) -> bool:
+        return window[i].lstrip().startswith("#") or (is_heading is not None and is_heading(start + i))
+
+    own: range = range(0)
+    # Whether the responsibility sentence holds every statutory word, so the statement is whole at its end.
+    complete = False
+    clause = _RESPONSIBILITY_CLAUSE.search(text)
+    if clause:
+        persons = [
+            person
+            for person in _RESPONSIBLE_PERSON.finditer(text, 0, clause.start())
+            if _PERSON_TO_CLAUSE.fullmatch(text, person.end(), clause.start())
+        ]
+        own_end = line_at(clause.end())
+        words = _CLAUSE_WORDS.match(text, clause.end())
+        tail = _STATEMENT_SENTENCE_END.search(text, clause.end())
+        if words:
+            # The statutory words, however they are set, with or without the stop.
+            own_end, complete = line_at(words.end()), True
+        elif tail and len(text[clause.end() : tail.end()].split()) <= _CLAUSE_TAIL_MAX_WORDS:
+            # The rest of the sentence ("of this crypto-asset white paper."), but never a line that opens a
+            # heading or a numbered label: a sentence that has lost its stop ends before it.
+            own_end = next(
+                (
+                    i - 1
+                    for i in range(own_end + 1, line_at(tail.end()) + 1)
+                    if marked(i) or _NUMBERING.match(window[i].lstrip())
+                ),
+                line_at(tail.end()),
+            )
+        own = range(line_at((persons[-1] if persons else clause).start() + 1), own_end + 1)
+
+    def firm_heading(i: int) -> bool:
+        return i not in own and marked(i)
+
+    # Continuation lines of the opening sentence never name a section, so a line that ends
+    # inside it and looks like a heading means the sentence was cut short. The line where
+    # the sentence ends may already start the next one ("Union. The offeror"), so it is
+    # not read as a heading.
+    first = _STATEMENT_SENTENCE_END.search(text)
+    first_end = first.end() if first else len(text) + 1
+    for i in range(1, len(window)):
+        if line_ends[i] < first_end and i not in own and (looks_like_heading(window[i]) or firm_heading(i)):
+            return start + i
+    last = line_at(first_end) if first else None
+    # A responsibility sentence with every statutory word, right after the opening one, ends the statement
+    # with its last word, whatever follows it: no stop, a heading, a label, a note or a run-on.
+    if (
+        complete
+        and (last is None or own.start <= last + 1)
+        and not any(firm_heading(i) for i in range(1, own.start))
+    ):
+        return start + own.stop
+    if first is None or last is None:
+        return start + 1
+
+    # The responsibility sentence of a narrow PDF column can look like a heading
+    # ("The offeror of the crypto-asset is solely"), so only firm headings end it early.
+    second = _STATEMENT_SENTENCE_END.search(text, first_end)
+    if second is None:
+        return start + last + 1
+    sentence = text[first_end : second.end()]
+    if len(sentence.split()) > _SENTENCE_MAX_WORDS or not _RESPONSIBILITY.search(sentence):
+        return start + last + 1
+    closing = line_at(second.end())
+    heading = next((i for i in range(last + 1, closing + 1) if firm_heading(i)), None)
+    if heading is not None:
+        # A responsibility sentence that has lost its stop ends with its own lines, before the heading.
+        return start + (
+            own.stop if own and own.start <= last + 1 and last < own.stop <= heading else last + 1
+        )
+    return start + closing + 1
+
+
+def paragraph_statement_extent(
+    paragraphs: list[str], start: int, is_heading: Callable[[int], bool] | None = None
+) -> int:
+    """statement_extent for a loader that reads paragraphs (DOCX, XHTML) rather than wrapped lines.
+
+    An opening paragraph without a full stop was cut off, unless the paragraphs after it carry on the
+    English opening sentence word for word, as a statement set a line per paragraph does. So the paragraph
+    after a cut-off opening is not taken in, whatever its first sentence.
+    """
+    end = statement_extent(paragraphs, start, is_heading)
+    for index in range(start + 1, end):
+        if _STATEMENT_SENTENCE_END.search(" ".join(paragraphs[start:index])):
+            break
+        joined = re.sub(r"^\W+", "", " ".join(" ".join(paragraphs[start : index + 1]).split()).lower())
+        if not (NOT_APPROVED_STATEMENT_EN.startswith(joined) or joined.startswith(NOT_APPROVED_STATEMENT_EN)):
+            return index
+    return end
 
 
 def match_heading_to_section(heading: str) -> list[str]:
@@ -344,6 +543,34 @@ def _opening_number(number: str | None, opener_number: str | None) -> str | None
     """The outline number of the section a heading opens or ends: a heading numbered below the heading
     that opened the current section ("12.2 Technology risks" under "12.") keeps that heading's number."""
     return opener_number if _numbered_below(number, opener_number) else number
+
+
+def _below_opener(
+    kind: str | None,
+    level: float | None,
+    number: str | None,
+    opener: str | None,
+    section_level: float | None,
+    opener_number: str | None,
+) -> bool:
+    """Whether a heading ranks below the heading that opened the current section: a field of the template
+    in a section that a part or another field opened, a number that extends the opener's ("12.1" under
+    "12."), or a lower level (a smaller heading font, a deeper outline level). The arguments are those of
+    _ends_section, with the outline numbers of the heading and of the opener."""
+    return (
+        (kind == "field" and opener in ("part", "field"))
+        or _numbered_below(number, opener_number)
+        or (level is not None and section_level is not None and level > section_level)
+    )
+
+
+def _within_rights(keys: list[str], current_keys: list[str], below: bool) -> bool:
+    """Whether a heading that names the redemption alone sits within the open rights section, below the
+    heading that opened it (see _below_opener). The rights section then stays open with its level and
+    opener, and its text from that heading on counts for the redemption too, as Part D of an ART white
+    paper does in the numbered-field layout: Annex II Part D No. 9 and Annex III Part D No. 1 list the
+    right of redemption among the rights of the holders."""
+    return below and keys == ["redemption"] and "rights_and_obligations" in current_keys
 
 
 def _field_answer(text: str, keys: list[str]) -> str:
@@ -661,7 +888,43 @@ def _merge_wrapped(
     return merged, merged_styled, merged_running, merged_fills
 
 
-def _line_sections(lines: list[_Line]) -> DocumentSections:
+# The statement's first words as the answer of field 02 (Table 2) or I.02 (Table 4) of 2024/2984, where pypdf
+# reads the field number, the label and the start of the answer as one line.
+_STATEMENT_ANSWER = re.compile(
+    r"\b(?:this\s+crypto-asset\s+white\s+paper|dieses\s+kryptowerte-whitepaper)\b", re.IGNORECASE
+)
+
+
+def _split_statement_fields(
+    lines: list[_Line], styled: list[bool], running: list[bool], fills: list[bool]
+) -> tuple[list[_Line], list[bool], list[bool], list[bool], set[int]]:
+    """Split a summary-table line whose answer is the statement, such as "02 Statement in accordance with
+    Article 6(3) of Regulation (EU) 2023/1114 This crypto-asset white paper has not been", into its label
+    and the statement's first line. The statement is then routed as one that starts a line of its own,
+    and its words ("crypto-asset") do not add a section to the label. Returns the lines, their flags and
+    the indices of the statement lines split off."""
+    result: tuple[list[_Line], list[bool], list[bool], list[bool]] = ([], [], [], [])
+    starts: set[int] = set()
+    for line, *flags in zip(lines, styled, running, fills, strict=True):
+        answer = _STATEMENT_ANSWER.search(line.text)
+        label = line.text[: answer.start()].rstrip() if answer else ""
+        parts = [line]
+        if (
+            answer
+            and _template_kind(line.text) in ("field", "summary")
+            and "not_approved_statement" in match_heading_to_section(label)
+        ):
+            parts = [replace(line, text=label), replace(line, text=line.text[answer.start() :])]
+            starts.add(len(result[0]) + 1)
+        for part in parts:
+            for values, value in zip(result, (part, *flags), strict=True):
+                values.append(value)
+    return (*result, starts)
+
+
+def _line_sections(lines: list[_Line], statement: bool = False) -> DocumentSections:
+    """The sections of a draft read line by line. With statement, the Art. 6(3) / Art. 51(3) statement is
+    routed by its content to not_approved_statement (see statement_extent), as in the other loaders."""
     text = "\n".join(line.text for line in lines)
     body_font = _body_font(lines)
     styled = [_styled(line, body_font) for line in lines]
@@ -681,6 +944,12 @@ def _line_sections(lines: list[_Line]) -> DocumentSections:
         )
         >= 2
     )
+    # Split after the heading-font count, which a statement in a heading font must not tip.
+    statement_starts: set[int] = set()
+    if statement:
+        lines, styled, running, fills, statement_starts = _split_statement_fields(
+            lines, styled, running, fills
+        )
     # A running page header or footer is body text that is not read as context for the lines around it.
     content = [index for index, line_running in enumerate(running) if not line_running]
     following_index = dict(pairwise(content))
@@ -695,7 +964,65 @@ def _line_sections(lines: list[_Line]) -> DocumentSections:
     previous: str | None = None
     previous_role: str | None = None
     previous_styled = False
+    line_texts = [line.text for line in lines]
+    statement_end = 0
+    statement_role = _BODY
+    # The first and last two lines of each page, where a page header or footer sits (see _running).
+    page_lines: dict[int, list[int]] = {}
+    for position, page_line in enumerate(lines):
+        if page_line.page is not None:
+            page_lines.setdefault(page_line.page, []).append(position)
+    page_edges = {i for indices in page_lines.values() for i in (*indices[:2], *indices[-2:])}
+    line_counts = Counter(_page_text(page_line.text) for page_line in lines)
+
+    def statement_heading(index: int, statement_line: _Line) -> bool:
+        # A heading inside the statement's lines (see statement_extent): a template part or field title,
+        # or a line shaped like a heading in a heading font other than the statement's own, since a
+        # statement may be set in bold. Where the statement runs over a page break, a line at the edge
+        # of the next page may be a page header that names the current part ("Part A ..."), not running
+        # because it changes from page to page: one in the body font, one set smaller than the
+        # statement, or one that repeats another line of the draft, as a header repeats its heading.
+        line = lines[index]
+        statement_font = _font(statement_line)
+        if running[index]:
+            return False
+        later_page = line.page != statement_line.page
+        smaller = (
+            later_page
+            and line.size is not None
+            and statement_font is not None
+            and round(line.size, 1) < statement_font[0]
+        )
+        page_header = (
+            index in page_edges
+            and later_page
+            and (not styled[index] or line_counts[_page_text(line.text)] > 1)
+        )
+        if _template_kind(line.text) and _heading_shaped(line.text, styled[index]):
+            return not (smaller or page_header)
+        return (
+            styled[index]
+            and _font(line) != statement_font
+            and _heading_shaped(line.text, True)
+            and not page_header
+        )
+
     for index, line in enumerate(lines):
+        if statement and (
+            index < statement_end or index in statement_starts or is_statement_start(line.text)
+        ):
+            if index >= statement_end:
+                statement_end = statement_extent(
+                    line_texts, index, partial(statement_heading, statement_line=line)
+                )
+                # A statement cut off before its first full stop ends at a line read as a heading, which
+                # does not continue its sentence ("approved by the"). A statement that ends with a full
+                # sentence may share its last line with the next sentence, which runs on as body text.
+                cut = not _STATEMENT_SENTENCE_END.search(" ".join(line_texts[index:statement_end]))
+                statement_role = _BREAK if cut else _BODY
+            sections.setdefault("not_approved_statement", []).append(line.text)
+            previous, previous_role, previous_styled = line.text, statement_role, styled[index]
+            continue
         if running[index]:
             for key in current_keys:
                 sections.setdefault(key, []).append(line.text)
@@ -741,16 +1068,20 @@ def _line_sections(lines: list[_Line]) -> DocumentSections:
                 sections.setdefault(key, []).append(line.text)
         else:
             headings.append(line.text)
-            if role == _HEADING:
+            below = _below_opener(kind, level, number, opener, section_level, opener_number)
+            if role == _HEADING and _within_rights(keys, current_keys, below):
+                current_keys = [*current_keys, *(key for key in keys if key not in current_keys)]
+            elif role == _HEADING:
                 section_level = _opening_level(level, section_level, bool(set(keys) & set(current_keys)))
                 current_keys = keys
-                answer = _field_answer(line.text, keys)
-                for key in keys if answer else ():
-                    sections.setdefault(key, []).append(answer)
+                opener, opener_number = kind, _opening_number(number, opener_number)
             else:
                 section_level = level
                 current_keys = []
-            opener, opener_number = kind, _opening_number(number, opener_number)
+                opener, opener_number = kind, _opening_number(number, opener_number)
+            answer = _field_answer(line.text, keys) if role == _HEADING else ""
+            for key in current_keys if answer else ():
+                sections.setdefault(key, []).append(answer)
         previous, previous_role, previous_styled = line.text, role, styled[index]
     return DocumentSections({k: "\n".join(v) for k, v in sections.items()}, tuple(headings), text)
 
@@ -854,7 +1185,8 @@ def parse_docx(path: Path) -> DocumentSections:
 
     A heading has a Heading style or an outline level, or is a short label that is entirely bold
     or in capitals. Heading text is not section body. A heading that names no section ends the
-    current section unless it is a sub-heading of the heading that opened it (see _ends_section).
+    current section unless it is a sub-heading of the heading that opened it (see _ends_section),
+    and a sub-heading that names the redemption alone keeps the rights section open (see _within_rights).
     """
     try:
         import docx
@@ -873,12 +1205,31 @@ def parse_docx(path: Path) -> DocumentSections:
     opener: str | None = None
     opener_number: str | None = None
     section_level: float | None = None
+    paragraphs = [(para, para.text.strip()) for para in doc.paragraphs if para.text.strip()]
+    paragraph_texts = [text for _, text in paragraphs]
+    statement_end = 0
 
-    for para in doc.paragraphs:
-        text = para.text.strip()
-        if not text:
-            continue
+    for index, (para, text) in enumerate(paragraphs):
         texts.append(text)
+        if index < statement_end or is_statement_start(text):
+            if index >= statement_end:
+                # A heading as parse_docx reads one below: a Heading style, an outline level, or a label
+                # that is entirely bold or in capitals. A label marked as the statement's first paragraph
+                # is one of its lines, as a statement may be set in bold or capitals a paragraph per line.
+                marks = (text.isupper(), _docx_fully_bold(para))
+                statement_end = paragraph_statement_extent(
+                    paragraph_texts,
+                    index,
+                    lambda i, marks=marks: (
+                        _docx_heading_level(paragraphs[i][0]) is not None
+                        or (
+                            _docx_label_heading(*paragraphs[i])
+                            and (paragraphs[i][1].isupper(), _docx_fully_bold(paragraphs[i][0])) != marks
+                        )
+                    ),
+                )
+            sections.setdefault("not_approved_statement", []).append(text)
+            continue
 
         # The Title style names the white paper, not one of its sections.
         if para.style is not None and para.style.name == "Title":
@@ -896,7 +1247,11 @@ def parse_docx(path: Path) -> DocumentSections:
         keys = match_heading_to_section(text)
         kind = _template_kind(text)
         number = _outline_number(text)
-        if keys:
+        if _within_rights(
+            keys, current_keys, _below_opener(kind, level, number, opener, section_level, opener_number)
+        ):
+            current_keys = [*current_keys, *(key for key in keys if key not in current_keys)]
+        elif keys:
             section_level = _opening_level(level, section_level, bool(set(keys) & set(current_keys)))
             current_keys, opener = keys, kind
             opener_number = _opening_number(number, opener_number)
@@ -992,8 +1347,9 @@ def parse_pdf(path: Path) -> DocumentSections:
     shaped like a heading (see _line_role); where the draft sets its headings in a heading font, a line
     in the body font is a heading only if numbered as in the template. A short line that names a section
     but is not accepted as a heading ends the current section, and so does a heading that names no
-    section unless it is a sub-heading (see _ends_section). A running page header or footer is body
-    text. Heading text is not section body.
+    section unless it is a sub-heading (see _ends_section). A sub-heading that names the redemption alone
+    keeps the rights section open (see _within_rights). A running page header or footer is body text.
+    Heading text is not section body.
     """
     try:
         import pypdf
@@ -1002,7 +1358,7 @@ def parse_pdf(path: Path) -> DocumentSections:
             "PDF support requires the optional 'pdf' extra: pip install micar-whitepaper-linter[pdf]"
         ) from exc
 
-    return _line_sections(_pdf_lines(pypdf.PdfReader(path)))
+    return _line_sections(_pdf_lines(pypdf.PdfReader(path)), statement=True)
 
 
 def load_from_pdf(path: Path) -> dict[str, str]:
@@ -1018,10 +1374,14 @@ def load_from_markdown(path: Path) -> dict[str, str]:
 
     sections: dict[str, list[str]] = {}
     current_keys = []
+    lines = [line.strip() for line in content.splitlines() if line.strip()]
+    statement_end = 0
 
-    for line in content.splitlines():
-        line_clean = line.strip()
-        if not line_clean:
+    for index, line_clean in enumerate(lines):
+        if index < statement_end or is_statement_start(line_clean):
+            if index >= statement_end:
+                statement_end = statement_extent(lines, index)
+            sections.setdefault("not_approved_statement", []).append(line_clean)
             continue
 
         # Detect Markdown headings (e.g. # Heading 1, ## Heading 2)

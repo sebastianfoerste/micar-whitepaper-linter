@@ -201,6 +201,22 @@ def test_viewer_page_without_sections_says_why_everything_is_missing(tmp_path: P
     assert whitepaper.metadata["extraction_notes"] == (VIEWER_PAGE_NOTE, VIEWER_EMPTY_NOTE)
 
 
+# Regression: the first-page statement, found by its wording without a heading, counted as a
+# section found, so a page without any heading lost the note that explains its Missing results.
+def test_viewer_page_with_only_the_statement_still_says_why_the_rest_is_missing(tmp_path: Path):
+    statement = (
+        "This crypto-asset white paper has not been approved by any competent authority in any Member "
+        "State of the European Union. The offeror of the crypto-asset is solely responsible for the "
+        "content of this crypto-asset white paper."
+    )
+    page = _write_page(tmp_path, f"<html><body><p>{statement}</p><p>{_clauses(150)}</p></body></html>".encode())
+
+    whitepaper = load_whitepaper(page, WhitepaperType.OTHER)
+
+    assert set(whitepaper.sections) == {"not_approved_statement"}
+    assert whitepaper.metadata["extraction_notes"] == (VIEWER_PAGE_NOTE, VIEWER_EMPTY_NOTE)
+
+
 def test_viewer_page_warns_when_field_labels_run_into_answers(tmp_path: Path):
     # A PDF rendering puts each field number in its own text run, so the label joins the answer.
     rows = "".join(

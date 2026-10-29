@@ -14,11 +14,12 @@ For local preview, run `python3 -m http.server 8765 --bind 127.0.0.1 --directory
 
 This repository includes a reproducible pilot study over publicly available Title II crypto-asset white papers listed in ESMA's MiCA register.
 
-The study runs deterministic Annex I checks over a reproducible convenience sample and publishes machine-flagged candidate gaps, exact document hashes, extraction metadata, limitations, and a 150-cell human-review matrix. The candidate flags are not reviewed legal findings.
+The study runs deterministic Annex I checks over a reproducible convenience sample and publishes machine-flagged candidate gaps, exact document hashes, extraction metadata and limitations. It also contains a human-review matrix of 150 document-rule cells, but no cell has been reviewed yet (0 of 150). The study therefore reports no precision, recall or prevalence figures, and the candidate flags are not reviewed legal findings.
 
 - [`findings-summary.md`](../studies/2026-07-title-ii-annex-i-whitepaper-study/findings-summary.md)
 - [`review-protocol.md`](../studies/2026-07-title-ii-annex-i-whitepaper-study/review-protocol.md)
-- [`human-review-matrix.csv`](../studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-matrix.csv)
+- [`human-review-matrix.csv`](../studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-matrix.csv) (review template; 0 of 150 cells completed)
+- [`REVIEWING.md`](../studies/2026-07-title-ii-annex-i-whitepaper-study/REVIEWING.md) (how to fill in the matrix)
 
 Raw white papers are not committed. Study outputs are deterministic first-pass research artifacts and are not legal advice.
 
@@ -80,7 +81,7 @@ Versions: `@v1` follows the latest 1.x release. From v1.2.0, one tag such as `v1
 
 The job fails while BLOCKER-severity findings are open. The iXBRL format check (`COMMON.IXBRL_TAGGING`) is a BLOCKER that never passes for a loaded draft: a JSON, DOCX, PDF or Markdown draft cannot meet it, and an XHTML or HTML draft gets Review at best because tag completeness is not checked. A strict job therefore fails on every draft; `strict: 'false'` (report mode) lists the findings without failing. A failing job means open blockers to review, or a draft that could not be loaded, not a legal conclusion. The summary, annotations and SARIF log carry rule IDs, statuses, citations and line numbers, never draft text or the draft title, and they change no status or exit code. The job log still prints the full text report, which includes the draft title and quoted figures such as reserve percentages; treat the log as being as sensitive as the draft. The `summary`, `annotations` and `upload-sarif` inputs and the `sarif-file` output need v1.2.0 or later. The iXBRL format check never passes, so it is listed in its own summary section and not annotated.
 
-Line numbers point at the section key in a JSON draft or the first `h1` to `h6` heading that maps to the section in an XHTML or HTML draft; numbered-field XHTML, saved iXBRL viewer pages, DOCX, PDF, Markdown, sections absent from a JSON draft and sections with no matching `h1` to `h6` heading point at line 1.
+Line numbers point at the section key in a JSON draft or the first `h1` to `h6` heading that maps to the section in an XHTML or HTML draft, other than a heading the loader reads as part of the first-page statement; numbered-field XHTML, saved iXBRL viewer pages, DOCX, PDF, Markdown, sections absent from a JSON draft and sections with no matching `h1` to `h6` heading (one opened by a bold label, or the first-page statement found by its wording) point at line 1.
 
 Code scanning needs extra permissions and works on public repositories, or private ones with GitHub Code Security. Uploads from fork pull requests fail with the default read-only token:
 
@@ -114,7 +115,7 @@ This route keeps the human-review boundary visible while showing the determinist
 
 ## Features
 
-- Deterministic first-pass checks for MiCAR Annex I, II and III.
+- Deterministic first-pass checks for the disclosures required by MiCAR Annex I, II and III (keywords, minimum length and structure, not legal review).
 - JSON, XHTML or HTML, DOCX, PDF and Markdown parsing.
 - Rules-as-code severity engine.
 - JSON reports for automated checks.
@@ -125,9 +126,9 @@ This route keeps the human-review boundary visible while showing the determinist
 
 See also [FEATURES.md](FEATURES.md), [SETUP.md](SETUP.md), [ARCHITECTURE.md](ARCHITECTURE.md).
 
-## Verified behaviour
+## What the checks establish
 
-MiCAR white-paper requirements can be encoded as deterministic, cited and testable rules. Annex selection is explicit for JSON drafts and numbered-field XHTML, and for other formats is set by `--type` or else inferred from English phrases in the text; rule IDs are stable, unmatched disclosure patterns produce cited candidate flags, severity is tested, and JSON outputs can be used by review workflows without hiding the legal basis.
+A pass means that the section exists, meets the minimum length and contains the rule's keywords; for the LEI checks, that the LEIs found have valid check digits and agree across sections; for the notification date and the language, that the section names a calendar date or an official EU language in a form the rule page lists. It does not mean that the disclosure is correct, complete or compliant. Annex selection is explicit for JSON drafts and numbered-field XHTML, and for other formats is set by `--type` or else inferred from English phrases in the text; rule IDs are stable, unmatched keywords produce cited candidate flags, severity is tested, and JSON outputs can be used by review workflows without hiding the legal basis.
 
 The tool preserves legal judgment. It flags candidate disclosure gaps and produces draft review artifacts. It does not decide whether a white paper is lawful or complete.
 

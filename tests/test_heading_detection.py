@@ -1212,14 +1212,16 @@ def _write_markdown(path: Path, blocks: list[tuple[str, str]]) -> Path:
 
 
 def _write_xhtml(path: Path, blocks: list[tuple[str, str]]) -> Path:
-    """An XHTML draft with one element per line from line 4: each heading block an h2 whose id is
-    "heading-" and its number, counted from 1, each other block a paragraph."""
+    """An XHTML draft with one element per line from line 4: each heading or large block an h2 and each
+    subheading block an h3, whose id is "heading-" and its number, counted from 1, each other block a
+    paragraph."""
     elements = []
     headings = 0
     for kind, text in blocks:
-        if kind == "heading":
+        if kind in ("heading", "large", "subheading"):
             headings += 1
-            elements.append(f'<h2 id="heading-{headings}">{escape(text)}</h2>')
+            tag = "h3" if kind == "subheading" else "h2"
+            elements.append(f'<{tag} id="heading-{headings}">{escape(text)}</{tag}>')
         else:
             elements.append(f"<p>{escape(text)}</p>")
     body = "\n".join(elements)
@@ -1292,7 +1294,7 @@ def test_other_german_template_labels_open_no_notification_date_section(tmp_path
 
 def test_pdf_german_summary_table_row_gives_its_answer_to_the_notification_date(tmp_path: Path):
     # Field 01 of the German summary table as pypdf reads it, with the answer on the label line. Field 02
-    # names no section, so it ends field 01 and its statement is no answer to it.
+    # opens the first-page statement's section, so it ends field 01 and its statement is no answer to it.
     blocks = [
         ("large", "Zusammenfassung"),
         ("line", "01 Datum der Mitteilung 2026-03-02"),
@@ -1305,7 +1307,10 @@ def test_pdf_german_summary_table_row_gives_its_answer_to_the_notification_date(
     ]
     path = _write_pdf(tmp_path / "quillmoor.pdf", blocks)
 
-    assert load_from_pdf(path) == {"notification_date": "2026-03-02"}
+    sections = load_from_pdf(path)
+    assert sections["notification_date"] == "2026-03-02"
+    assert "Dieses Kryptowerte-Whitepaper" in sections["not_approved_statement"]
+    assert sections.keys() == {"notification_date", "not_approved_statement"}
     finding = _findings(path)["COMMON.NOTIFICATION_DATE"]
     assert finding.rule.severity is Severity.MAJOR
     # The answer is a calendar date, which is all the field asks for.
@@ -1332,11 +1337,19 @@ GERMAN_ART_SUMMARY = (
     "Korb aus Euro-Einlagen und Anleihen bezieht."
 )
 # Art. 39 Abs. 1 and 2 MiCAR: redemption at all times, here by paying the market value of the referenced
-# assets. At 31 words the section is too thin for ANNEX_II.I (100 words), so the check reviews it whatever
-# its terms.
+# assets. At 31 words (REDEMPTION, its English counterpart, has 22) the section is too thin for ANNEX_II.I
+# (100 words), so the check reviews it whatever its terms.
 GERMAN_REDEMPTION = (
     "Die Inhaber des QAR-Token können jederzeit den Rücktausch bei der Quillmoor Ledger S.A. verlangen. Der "
     "Emittent zahlt einen Geldbetrag in Höhe des Marktwerts der Vermögenswerte, auf die der Token Bezug nimmt."
+)
+ART_SUMMARY = (
+    "The QAR token of Quillmoor Ledger S.A. is an asset-referenced token that references a basket of euro "
+    "deposits and bonds."
+)
+REDEMPTION = (
+    "Holders of the QAR token may redeem it at any time for funds equal to the market value of the "
+    "referenced assets."
 )
 
 
@@ -1352,14 +1365,18 @@ GERMAN_REDEMPTION = (
         "D.31 Form des Rücktauschs",
         # A DOCX heading with a line break in it.
         "Recht auf\nRücktausch",
+        "Rücknahme der Token",
+        "Right of redemption",
+        "Redemption rights",
+        "D.30 Rights in redemption plan implementation",
     ],
 )
-def test_german_redemption_heading_names_the_redemption(heading: str):
+def test_redemption_heading_names_the_redemption(heading: str):
     assert match_heading_to_section(heading) == ["redemption"]
 
 
-# A heading that also names a risk heads a risk. It opens the sections it opened before, so the redemption
-# section takes no risk text from the risks.
+# A heading that also names a risk heads a risk, in English as in German: it opens no redemption section, so
+# the redemption section takes no risk text from the risks.
 @pytest.mark.parametrize(
     "heading,keys",
     [
@@ -1367,9 +1384,13 @@ def test_german_redemption_heading_names_the_redemption(heading: str):
         ("Risiko der Aussetzung des Rücktauschs", []),
         ("Liquiditätsrisiken der dauerhaften Rücktauschrechte", []),
         ("Risiken im Zusammenhang mit dem Rücktausch", ["risks"]),
+        ("Rücknahmerisiko", []),
+        ("Redemption risk", []),
+        ("Risk of a suspended redemption", []),
+        ("Risks relating to redemption", ["risks"]),
     ],
 )
-def test_german_risk_heading_that_names_the_redemption_does_not_name_it(heading: str, keys: list[str]):
+def test_risk_heading_that_names_the_redemption_does_not_name_it(heading: str, keys: list[str]):
     assert match_heading_to_section(heading) == keys
 
 
@@ -1389,15 +1410,18 @@ def test_german_redemption_heading_opens_its_section(tmp_path: Path, suffix: str
     assert (finding.status, finding.word_count) == ("review", len(GERMAN_REDEMPTION.split()))
 
 
+GERMAN_RIGHTS = (
+    "Die Inhaber können ihre Ansprüche aus den Bedingungen des QAR-Token vor den Gerichten in Luxemburg "
+    "geltend machen."
+)
+
+
 @pytest.mark.parametrize("suffix", sorted(ALL_WRITERS))
 def test_german_rights_heading_that_names_the_redemption_opens_both_sections(tmp_path: Path, suffix: str):
     # A heading names every section whose pattern it matches, so the rights section keeps its heading and
     # the redemption check reads the same chapter.
     heading = "Rechte und Pflichten, Rücktausch"
-    rights = (
-        "Die Inhaber können ihre Ansprüche aus den Bedingungen des QAR-Token vor den Gerichten in Luxemburg "
-        f"geltend machen. {GERMAN_REDEMPTION}"
-    )
+    rights = f"{GERMAN_RIGHTS} {GERMAN_REDEMPTION}"
     write, load = ALL_WRITERS[suffix]
     path = write(tmp_path / f"quillmoor{suffix}", _german_draft(heading, rights, GERMAN_ART_SUMMARY))
 
@@ -1409,6 +1433,168 @@ def test_german_rights_heading_that_names_the_redemption_opens_both_sections(tmp
     for rule_id in ("ANNEX_II.D", "ANNEX_II.I"):
         assert findings[rule_id].rule.severity is Severity.BLOCKER
         assert findings[rule_id].word_count == len(rights.split())
+
+
+GERMAN_COMPLAINTS = (
+    "Beschwerden richten die Inhaber an die Beschwerdestelle der Quillmoor Ledger S.A., die binnen zehn "
+    "Werktagen antwortet."
+)
+HOLDER_RIGHTS = (
+    "Holders may enforce their claims under the terms of the QAR token before the courts of Luxembourg."
+)
+COMPLAINTS = (
+    "Holders send complaints to the complaints office of Quillmoor Ledger S.A., which replies within ten "
+    "working days."
+)
+# A rights chapter in three parts with the redemption heading second, between a summary and a technology
+# section: (the summary blocks, the chapter headings, the texts under them, the technology blocks). The
+# second and third headings rank below the first: by a smaller heading font, a Heading 2 or an h3
+# (subheading blocks), or by the number "7.2" under "7.".
+GERMAN_FRAME = ([("large", "Zusammenfassung"), ("body", GERMAN_ART_SUMMARY)], [("body", GERMAN_TECHNOLOGY)])
+RIGHTS_CHAPTERS = {
+    "de": (
+        GERMAN_FRAME[0],
+        [
+            ("large", "Rechte und Pflichten"),
+            ("subheading", "Rücktausch"),
+            ("subheading", "Beschwerdeverfahren"),
+        ],
+        [GERMAN_RIGHTS, GERMAN_REDEMPTION, GERMAN_COMPLAINTS],
+        [("large", "Technologie"), *GERMAN_FRAME[1]],
+    ),
+    "en": (
+        [("large", "Summary"), ("body", ART_SUMMARY)],
+        [
+            ("large", "Rights and Obligations"),
+            ("subheading", "Redemption"),
+            ("subheading", "Complaints Handling"),
+        ],
+        [HOLDER_RIGHTS, REDEMPTION, COMPLAINTS],
+        [("large", "Technology"), ("body", TECHNOLOGY)],
+    ),
+    "de-numbered": (
+        GERMAN_FRAME[0],
+        [
+            ("large", "7. Rechte und Pflichten"),
+            ("large", "7.2 Rücktausch"),
+            ("large", "7.3 Beschwerdeverfahren"),
+        ],
+        [GERMAN_RIGHTS, GERMAN_REDEMPTION, GERMAN_COMPLAINTS],
+        [("large", "8. Technologie"), *GERMAN_FRAME[1]],
+    ),
+}
+# Markdown is left out: there every heading ends the section before it.
+SUB_HEADING_WRITERS = {suffix: ALL_WRITERS[suffix] for suffix in (".docx", ".pdf", ".xhtml")}
+
+
+def _rights_chapter(case: str, redemption_kind: str | None = None) -> tuple[list[tuple[str, str]], list[str]]:
+    """The blocks of a draft with the rights chapter of case, and the texts of the chapter. redemption_kind
+    replaces the kind of the redemption heading."""
+    before, headings, texts, after = RIGHTS_CHAPTERS[case]
+    if redemption_kind:
+        headings = [headings[0], (redemption_kind, headings[1][1]), headings[2]]
+    chapter = [
+        block for heading, text in zip(headings, texts, strict=True) for block in (heading, ("body", text))
+    ]
+    return [*before, *chapter, *after], texts
+
+
+@pytest.mark.parametrize("suffix", sorted(SUB_HEADING_WRITERS))
+@pytest.mark.parametrize("case", sorted(RIGHTS_CHAPTERS))
+def test_redemption_sub_heading_keeps_the_rights_section_open(tmp_path: Path, suffix: str, case: str):
+    # The redemption heading ranks below the rights heading, so the rights section reads the whole chapter,
+    # as Part D does in the numbered-field layout, and the redemption section reads it from the redemption
+    # heading to its end.
+    write, load = SUB_HEADING_WRITERS[suffix]
+    blocks, (rights, redemption, complaints) = _rights_chapter(case)
+    path = write(tmp_path / f"quillmoor{suffix}", blocks)
+
+    sections = load(path)
+    assert sorted(sections) == ["redemption", "rights_and_obligations", "summary", "technology"]
+    rights_section, redemption_section = (
+        _words(sections[key]) for key in ("rights_and_obligations", "redemption")
+    )
+    assert all(_words(text) in rights_section for text in (rights, redemption, complaints))
+    assert all(_words(text) in redemption_section for text in (redemption, complaints))
+    assert _words(rights) not in redemption_section
+    findings = _findings(path, WhitepaperType.ART)
+    assert findings["ANNEX_II.D"].rule.severity is Severity.BLOCKER
+    assert findings["ANNEX_II.D"].word_count == len(rights_section.split())
+    assert findings["ANNEX_II.I"].word_count == len(redemption_section.split())
+
+
+@pytest.mark.parametrize("suffix", sorted(SUB_HEADING_WRITERS))
+@pytest.mark.parametrize("case", ["de", "en"])
+def test_redemption_heading_at_the_level_of_the_rights_heading_opens_the_redemption_alone(
+    tmp_path: Path, suffix: str, case: str
+):
+    # A redemption heading of the rank of the rights heading opens its own chapter, and the complaints
+    # heading below it belongs to that chapter.
+    write, load = SUB_HEADING_WRITERS[suffix]
+    blocks, (rights, redemption, complaints) = _rights_chapter(case, redemption_kind="large")
+    path = write(tmp_path / f"quillmoor{suffix}", blocks)
+
+    sections = load(path)
+    assert _words(sections["rights_and_obligations"]) == _words(rights)
+    assert all(_words(text) in _words(sections["redemption"]) for text in (redemption, complaints))
+
+
+# Part D of the ART template as pypdf reads it, with the part titles in a heading font: (the summary
+# blocks, the part D title, fields D.28, D.30 and D.36, their answers, the part E title and its text). The
+# German D.28 names no section, so the redemption field sits under the part title; the English D.28 names
+# the rights, so the redemption field sits under D.28.
+TEMPLATE_PART_D = {
+    "de": (
+        GERMAN_FRAME[0],
+        f"Teil D {DASH} Informationen über die mit dem vermögenswertereferenzierten Token verbundenen Rechte und "
+        "Pflichten",
+        [
+            "D.28 Rechte der Inhaber bei Zahlungsausfall oder Insolvenz",
+            "D.30 Rechte bei der Durchführung des Rücktauschplans",
+            "D.36 Geltendes Recht",
+        ],
+        [
+            "Bei einer Insolvenz der Quillmoor Ledger S.A. behalten die Inhaber ihre Ansprüche.",
+            "Nach dem Rücktauschplan erhalten die Inhaber ihren Anteil am Erlös im Verhältnis ihrer Bestände.",
+            "Für den QAR-Token gilt luxemburgisches Recht.",
+        ],
+        [("large", f"Teil E {DASH} Informationen über die zugrunde liegende Technologie"), *GERMAN_FRAME[1]],
+    ),
+    "en": (
+        [("large", "Summary"), ("body", ART_SUMMARY)],
+        f"Part D {DASH} Information about the rights and obligations attached to the asset-referenced token",
+        [
+            "D.28 Holder rights in default or insolvency",
+            "D.30 Rights in redemption plan implementation",
+            "D.36 Applicable law",
+        ],
+        [
+            "Holders keep their claims against Quillmoor Ledger S.A. in an insolvency of the company.",
+            "Under the redemption plan, holders receive their share of the proceeds in proportion to their holdings.",
+            "Luxembourg law applies to the QAR token.",
+        ],
+        [("large", f"Part E {DASH} Information on the underlying technology"), ("body", TECHNOLOGY)],
+    ),
+}
+
+
+@pytest.mark.parametrize("case", sorted(TEMPLATE_PART_D))
+def test_pdf_redemption_field_of_the_rights_part_keeps_the_rights_section_open(tmp_path: Path, case: str):
+    # A field of the template belongs to its part, so the fields after D.30 stay in the rights section.
+    before, part_d, fields, answers, after = TEMPLATE_PART_D[case]
+    chapter = [
+        block
+        for field, answer in zip(fields, answers, strict=True)
+        for block in (("line", field), ("line", answer))
+    ]
+    path = _write_pdf(tmp_path / "quillmoor.pdf", [*before, ("large", part_d), *chapter, *after])
+
+    sections = load_from_pdf(path)
+    rights, redemption = (_words(sections[key]) for key in ("rights_and_obligations", "redemption"))
+    assert all(answer in rights for answer in answers)
+    assert answers[1] in redemption and answers[2] in redemption
+    assert answers[0] not in redemption
+    assert _words(sections["technology"]) == _words(after[-1][1])
 
 
 # A risk section whose paragraphs sit under headings that each name one risk.
@@ -1434,6 +1620,7 @@ GERMAN_RISK_PARTS = [
         "Rücktauschrisiko",
         "Risiko der Aussetzung des Rücktauschs",
         "Risiken im Zusammenhang mit dem Rücktausch",
+        "Rücknahmerisiko",
     ],
 )
 def test_german_risk_sub_heading_that_names_the_redemption_stays_in_the_risks(
@@ -1460,6 +1647,35 @@ def test_german_risk_sub_heading_that_names_the_redemption_stays_in_the_risks(
         "review",
         len(GERMAN_REDEMPTION.split()),
     )
+
+
+REDEMPTION_RISK = "If the redemption is delayed, holders receive their money later than expected."
+
+
+@pytest.mark.parametrize("suffix", sorted(WRITERS))
+@pytest.mark.parametrize(
+    "heading", ["Redemption risk", "Risk of a suspended redemption", "Risks relating to redemption"]
+)
+def test_risk_sub_heading_that_names_the_redemption_stays_in_the_risks(
+    tmp_path: Path, suffix: str, heading: str
+):
+    # The English counterpart of the test above: the paragraph under the second risk heading and the one
+    # after it stay in the risks, and the redemption section holds only the chapter under "Redemption".
+    write, load = WRITERS[suffix]
+    parts = [RISK_PARTS[0], (heading, REDEMPTION_RISK), RISK_PARTS[1]]
+    blocks = [("large", "Summary"), ("body", ART_SUMMARY), ("large", "Risk Factors")]
+    for label, text in parts:
+        blocks += [("subheading", label), ("body", text)]
+    blocks += [("large", "Redemption"), ("body", REDEMPTION)]
+    path = write(tmp_path / f"quillmoor{suffix}", blocks)
+
+    sections = load(path)
+    assert sorted(sections) == ["redemption", "risks", "summary"]
+    risks = _words(sections["risks"])
+    assert all(_words(text) in risks for _, text in parts)
+    assert _words(sections["redemption"]) == REDEMPTION
+    finding = _findings(path, WhitepaperType.ART)["ANNEX_II.I"]
+    assert (finding.status, finding.word_count) == ("review", len(REDEMPTION.split()))
 
 
 def test_xhtml_german_redemption_heading_anchors_its_findings(tmp_path: Path):

@@ -13,7 +13,17 @@ from pathlib import Path
 
 from lxml import etree
 
-from micar_linter.document import match_heading_to_section
+from micar_linter.document import (
+    _below_opener,
+    _opening_level,
+    _opening_number,
+    _outline_number,
+    _template_kind,
+    _within_rights,
+    is_statement_start,
+    match_heading_to_section,
+    paragraph_statement_extent,
+)
 
 # A saved iXBRL viewer page packs the white paper into a script and writes it into the page
 # only when a browser runs that script, so the file itself shows next to no text.
@@ -53,6 +63,10 @@ _BLOCK_TAGS = {
 # label, so the number never runs on into a letter or a dash.
 _FIELD_NUMBER = re.compile(r"(?:[A-Z]{1,2}\.\d{1,2}|\d{2})[.:)]?")
 _LABEL_START = re.compile(r"[^\W\d_]|[-\u2013\u2014]")
+# A word broken after its hyphen, such as "crypto-" before a <br>.
+_BROKEN_AFTER_HYPHEN = re.compile(r"[^\W\d_]-\s*$")
+# Stands in the text flow for a <br>, a line break inside a block.
+_LINE_BREAK = object()
 # pdf2htmlEX writes a shift inside a line as a span of class "_ _N" whose CSS rule moves the next
 # glyph: "._N{width:7.6px;}", or "._N{margin-left:-1.1px;}" for kerning. It writes a space into a
 # shift of an eighth of an em or more, its threshold for a gap between words; converters in its
@@ -97,16 +111,20 @@ def parse_html(source: Path | bytes) -> etree._ElementTree:
 
 def _text_flow(
     element: etree._Element, stop: Callable[[etree._Element], bool] | None
-) -> Iterator[str | etree._Element | None]:
-    """Text nodes in document order, None where a block element or <br> breaks the line, and
-    each element for which ``stop`` is true in place of its content."""
+) -> Iterator[str | etree._Element | object | None]:
+    """Text nodes in document order, None where a block element breaks the line, _LINE_BREAK for a
+    <br>, and each element for which ``stop`` is true in place of its content."""
     if stop is not None and stop(element):
         yield element
         return
     # A comment or processing instruction shows no text; its tail belongs to the parent.
     if not isinstance(element.tag, str):
         return
-    block = element.tag.rsplit("}", 1)[-1].lower() in _BLOCK_TAGS
+    tag = element.tag.rsplit("}", 1)[-1].lower()
+    if tag == "br":
+        yield _LINE_BREAK
+        return
+    block = tag in _BLOCK_TAGS
     if block:
         yield None
     if element.text:
@@ -134,12 +152,24 @@ def text_fragments(
     Text nodes that meet inside a word make one fragment, so an empty spacer span inside a word
     ("Financ<span class="_ _0"></span>ial", as pdf2htmlEX and similar PDF conversions write it)
     leaves the word whole. Whitespace, a block element, <br> and the gap after a field number end
-    a fragment. An element for which ``stop`` is true is yielded in place of its content.
+    a fragment. A word broken after its hyphen at a <br> ("crypto-" / "asset") is joined with its
+    hyphen, as at a line end in a PDF, DOCX or Markdown draft. An element for which ``stop`` is true
+    is yielded in place of its content.
     """
     fragment = ""
+    rejoin = False
     pieces = (piece for element in elements for piece in _text_flow(element, stop))
     # The closing None flushes the last fragment.
     for piece in chain(pieces, [None]):
+        if piece is _LINE_BREAK and _BROKEN_AFTER_HYPHEN.search(fragment):
+            rejoin = True
+            continue
+        if rejoin and isinstance(piece, str):
+            # Whitespace around the <br> is source layout; the word goes on with the next text.
+            if piece.strip():
+                fragment, rejoin = fragment.rstrip() + piece.lstrip(), False
+            continue
+        rejoin = False
         if isinstance(piece, str) and _inside_word(fragment, piece):
             fragment += piece
             continue
@@ -264,14 +294,24 @@ def _is_markup(document: bytes) -> bool:
 
 
 def load_from_xhtml(source: Path | bytes) -> dict[str, str]:
-    """Parse an XHTML file, or markup unpacked from one, and extract sections mapped by headings."""
+    """Parse an XHTML file, or markup unpacked from one, and extract sections mapped by headings.
+
+    A heading that names a section opens it, and a heading that names none leaves the current section
+    open. A sub-heading that names the redemption alone keeps the rights section open (see
+    _within_rights in document.py).
+    """
     try:
         tree = parse_html(source)
     except Exception as exc:
         raise ValueError(f"Failed to parse HTML/XHTML: {exc}") from exc
 
     sections: dict[str, list[str]] = {}
-    current_keys = []
+    current_keys: list[str] = []
+    # The template numbering, the outline number and the level of the heading that opened the current
+    # section (see blocks below).
+    opener: str | None = None
+    opener_number: str | None = None
+    section_level: float | None = None
 
     # Select headings, paragraphs, list items, and leaf divs in document order
     elements = tree.xpath(
@@ -283,22 +323,55 @@ def load_from_xhtml(source: Path | bytes) -> dict[str, str]:
         " or self::p or self::li or self::div or self::b or self::strong])]"
     )
 
+    # Each non-empty block: its own text, whether it is a heading tag, whether it is entirely bold, and its
+    # level as a heading: 1 to 6 for h1 to h6, and 7 for a standalone bold run, which ranks below them.
     selected = set(elements)
+    blocks: list[tuple[str, bool, bool, int]] = []
     for elem in elements:
         text = _own_text(elem, selected)
-        if not text:
+        if text:
+            is_tag_heading = elem.tag in ("h1", "h2", "h3", "h4", "h5", "h6")
+            level = int(elem.tag[1]) if is_tag_heading else 7
+            blocks.append((text, is_tag_heading, _is_fully_bold(elem, text), level))
+    texts = [text for text, *_ in blocks]
+    statement_end = 0
+
+    for index, (text, is_tag_heading, is_bold, level) in enumerate(blocks):
+        is_bold_heading = len(text) < 120 and is_bold
+        if index < statement_end or is_statement_start(text):
+            # The Art. 6(3) / 51(3) statement carries no heading of its own, and its sentences may sit
+            # in separate blocks. After a bold first block, a bold label is a heading only where it names
+            # a section, as a statement may be set in bold a sentence per paragraph.
+            if index >= statement_end:
+                statement_end = paragraph_statement_extent(
+                    texts,
+                    index,
+                    lambda i, bold=is_bold: (
+                        blocks[i][1]
+                        or (
+                            blocks[i][2]
+                            and len(texts[i]) < 120
+                            and (not bold or bool(match_heading_to_section(texts[i])))
+                        )
+                    ),
+                )
+            sections.setdefault("not_approved_statement", []).append(text)
             continue
 
-        is_heading = False
-        is_tag_heading = elem.tag in ("h1", "h2", "h3", "h4", "h5", "h6")
-        is_bold_heading = len(text) < 120 and _is_fully_bold(elem, text)
         if is_tag_heading or is_bold_heading:
-            is_heading = True
-
-        if is_heading:
             matched_keys = match_heading_to_section(text)
-            if matched_keys:
+            kind, number = _template_kind(text), _outline_number(text)
+            if _within_rights(
+                matched_keys,
+                current_keys,
+                _below_opener(kind, level, number, opener, section_level, opener_number),
+            ):
+                current_keys = [*current_keys, *(key for key in matched_keys if key not in current_keys)]
+            elif matched_keys:
+                in_section = bool(set(matched_keys) & set(current_keys))
+                section_level = _opening_level(level, section_level, in_section)
                 current_keys = matched_keys
+                opener, opener_number = kind, _opening_number(number, opener_number)
         else:
             if current_keys:
                 for k in current_keys:

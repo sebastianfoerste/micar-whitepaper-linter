@@ -109,6 +109,20 @@ def test_block_boundaries_separate_words_and_inline_spacers_do_not(tmp_path: Pat
     assert _xhtml_heading_lines(path)["issuer"] == 2
 
 
+def test_word_broken_after_its_hyphen_at_a_line_break_keeps_its_hyphen(tmp_path: Path):
+    path = tmp_path / "hyphen.html"
+    path.write_text(
+        "<html><body><h2>Information about the<br/>issuer</h2>"
+        "<p>The issuer of the crypto-<br/>\n  asset is EuroStable AG.<br/>Field 02 -<br/>none.</p>"
+        "</body></html>",
+        encoding="utf-8",
+    )
+    # As at a line end in a PDF, DOCX or Markdown draft; a dash after a space is not a broken word.
+    assert (
+        load_from_xhtml(path)["issuer"] == "The issuer of the crypto-asset is EuroStable AG. Field 02 - none."
+    )
+
+
 def test_nested_blocks_are_read_once(tmp_path: Path):
     path = tmp_path / "nested.html"
     path.write_text(

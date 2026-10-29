@@ -18,7 +18,37 @@ from __future__ import annotations
 from micar_linter.rules.base import Rule, Severity
 from micar_linter.rules.terms import ADDRESS_DE, ADDRESS_EN, COURT_DE, OFFER_DE, OFFER_EN
 
+# Art. 6(3) MiCAR prescribes this first-page statement word for word. "Offeror" is
+# replaced by "person seeking admission to trading" or "operator of the trading
+# platform" where that person drew up the white paper, so the English check takes the
+# part of the sentence common to all three. The English wording was checked against the
+# EUR-Lex texts of Art. 6(3) and 51(3) MiCAR and of Table 2 field 02 and Table 4 field
+# I.02 of Implementing Regulation (EU) 2024/2984 (CELEX 32023R1114 and 32024R2984, as
+# mirrored in legalize-dev/legalize-eu). The linter cannot see page placement. The German
+# wording is not yet verified, so German drafts go to review
+# (linter.NOT_APPROVED_STATEMENT_RULE_IDS).
+NOT_APPROVED_STATEMENT_EN = (
+    "this crypto-asset white paper has not been approved by any competent authority "
+    "in any member state of the european union"
+)
+NOT_APPROVED_STATEMENT_LABEL = (
+    "First-page statement that no competent authority has approved the white paper "
+    "(wording only; first-page placement not checked)"
+)
+
 ANNEX_I_RULES: tuple[Rule, ...] = (
+    Rule(
+        rule_id="ANNEX_I.NOT_APPROVED_STATEMENT",
+        citation="Art. 6 Abs. 3 MiCAR",
+        section="not_approved_statement",
+        label=NOT_APPROVED_STATEMENT_LABEL,
+        required_terms=(
+            NOT_APPROVED_STATEMENT_EN,
+            "of the crypto-asset is solely responsible for the content of this crypto-asset white paper",
+        ),
+        min_words=0,
+        severity=Severity.BLOCKER,
+    ),
     # A white paper that gives an LEI need not state the legal form or the registered address
     # (recital 2 and Anhang Tabelle 2 Teil A to C VO (EU) 2024/2984), so the party rules do not
     # ask for them. Every party Part asks for the business addresses of the management body; the

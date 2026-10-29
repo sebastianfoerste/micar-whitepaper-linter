@@ -23,8 +23,9 @@ Raw white papers are not committed. Downloaded source files belong under `.study
 - `findings-pseudonymous.csv`: flat candidate-flag table.
 - `human-review-blinded.csv`: detector-hidden sheet for independent first review.
 - `human-review-matrix.csv`: all 150 document-rule cells with detector status for adjudication and metric calculation.
-- `human-review-summary.json`: current completion and validation metrics; it remains publication-blocking while rows are pending.
+- `human-review-summary.json`: completion and validation metrics written by `micar-review-summary`; it remains publication-blocking while rows are pending. The committed copy predates the protocol-gap, review-disclosure and publication-scope fields of schema v2, which the command below adds when it regenerates the file.
 - `review-protocol.md`: label definitions, review procedure, adjudication, and publication gate.
+- `REVIEWING.md`: reviewer checklist with the reference-standard decision the owner must record before labelling, the commands in order, the disclosures for the report, and a time estimate.
 - `findings-summary.md`: rendered pilot report.
 - `methodology.md`: source, sampling, extraction, rule, and metric methodology.
 - `limitations.md`: limitations and prohibited inferences.
@@ -59,20 +60,35 @@ uv run python -m micar_linter.esma_register \
   --out /tmp/micar-study/source-manifest.json
 ```
 
-The scripts in `scripts/` write to the committed files: `run_batch.py` to the findings, `render_report.py` to `findings-summary.md`, and `fetch_esma_register.py` (from the live ESMA register) and `select_sample.py` to `source-manifest.json` and `sample-manifest.csv`. Do not run `fetch_esma_register.py` or `select_sample.py`: they replace the curated manifest. Run `run_batch.py` only with the full cache in place, and `render_report.py` only to refresh the summary on purpose. A refresh can put committed files out of step that no script rebuilds. One that changes the flags, or a flag's `confidence` or `matched_text`, affects the detector columns of `human-review-matrix.csv` (`detector_status`, `detector_confidence`, `detector_context`); one that changes the flags also affects the candidate-gap figures in `docs/overview.md` and this README. One that changes the number of documents processed affects the document and cell counts in this README ("Current status", the file list and the "10 documents processed" check above), `docs/overview.md`, `docs/playground/index.html`, `docs/DETAILS.md`, `methodology.md` and `limitations.md`, the number of rows in `human-review-blinded.csv` and `human-review-matrix.csv` (and so `rows_total` in `human-review-summary.json`), and the 150 cells that `study_report.py` writes into `findings-summary.md` as fixed text. One that changes the documents processed, or their bytes, affects the sample description in `methodology.md` and `limitations.md`, the inclusion, `detected_format` and `document_hash_sha256` fields of `source-manifest.json`, the rows of `sample-manifest.csv` (it lists only the included entries), the `study_doc_id` and `document_hash_sha256` columns of `human-review-blinded.csv` and `human-review-matrix.csv`, and the `documents` and `excluded_documents` entries of `document-provenance.json`. One that changes a document's extraction affects its `extraction_metadata` in `document-provenance.json`.
+The scripts in `scripts/` write to the committed files: `run_batch.py` to the findings, `render_report.py` to `findings-summary.md`, and `fetch_esma_register.py` (from the live ESMA register) and `select_sample.py` to `source-manifest.json` and `sample-manifest.csv`. Do not run `fetch_esma_register.py` or `select_sample.py`: they replace the curated manifest. Run `run_batch.py` only with the full cache in place, and `render_report.py` only to refresh the summary on purpose. A refresh can put committed files out of step. `scripts/build_review_matrix.py` (below) rebuilds the two review sheets from the new findings, keeping filled reviewer cells; no script rebuilds the rest. One that changes the flags, or a flag's `confidence` or `matched_text`, affects the detector columns of `human-review-matrix.csv` (`detector_status`, `detector_confidence`, `detector_context`); one that changes the flags also affects the candidate-gap figures in `docs/overview.md` and this README. One that changes the number of documents processed affects the document and cell counts in this README ("Current status", the file list and the "10 documents processed" check above), `docs/overview.md`, `docs/playground/index.html`, `docs/DETAILS.md`, `methodology.md` and `limitations.md`, the number of rows in `human-review-blinded.csv` and `human-review-matrix.csv` (and so `rows_total` in `human-review-summary.json`), and the 150 cells that `study_report.py` writes into `findings-summary.md` as fixed text. One that changes the documents processed, or their bytes, affects the sample description in `methodology.md` and `limitations.md`, the inclusion, `detected_format` and `document_hash_sha256` fields of `source-manifest.json`, the rows of `sample-manifest.csv` (it lists only the included entries), the `study_doc_id` and `document_hash_sha256` columns of `human-review-blinded.csv` and `human-review-matrix.csv`, and the `documents` and `excluded_documents` entries of `document-provenance.json`. One that changes a document's extraction affects its `extraction_metadata` in `document-provenance.json`.
 
 ## Validate against human labels
 
-`human-review-blinded.csv` and `human-review-matrix.csv` already differ from the findings in `rule_id` and `annex_item`: they keep the study's earlier rule IDs and Part-level items, so 11 of the 15 IDs differ (for example `ANNEX_I_PART_A_01_LEGAL_FORM` and "Annex I, Part A" where the findings have `ANNEX_I_PART_A_02_LEGAL_FORM` and "Annex I, Part A, item 2"). Each document's 15 rows follow the order of `rules` in `findings-pseudonymous.json`, so the n-th row belongs to the n-th rule; match the worksheets to the findings by that position, not by `rule_id`. `micar-review-summary` reads only the matrix, so its figures are not affected.
+The two review sheets are built from `findings-pseudonymous.json`, so their rule IDs match the detector output. Rebuild them after a detector run with:
 
-Complete `human-review-matrix.csv` under `review-protocol.md`, then run:
+```bash
+python3 studies/2026-07-title-ii-annex-i-whitepaper-study/scripts/build_review_matrix.py
+```
+
+The script carries over reviewer cells that are already filled and stops if a filled cell no longer matches a document-rule pair or two filled rows share one. As of this commit no cell has been reviewed.
+
+Before any labelling, the owner records in `review-protocol.md` whether labels are measured against the rules' missing-element descriptions or against the provisions as a whole (`REVIEWING.md`, step 2). Then label `human-review-blinded.csv` under `review-protocol.md` and merge the labels into `human-review-matrix.csv`:
+
+```bash
+uv run python studies/2026-07-title-ii-annex-i-whitepaper-study/scripts/build_review_matrix.py --merge-blinded
+```
+
+Compute the metrics with:
 
 ```bash
 uv run micar-review-summary \
   --matrix studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-matrix.csv \
   --out /tmp/micar-study/human-review-summary.json \
+  --findings studies/2026-07-title-ii-annex-i-whitepaper-study/findings-pseudonymous.json \
   --require-complete
 ```
+
+The command exits with status 2 while any row remains pending, or a labelled row lacks a field that publication gate item 2 or "First review" steps 6 and 7 of `review-protocol.md` require, or has a review date after today or, with `--findings`, before the detector run. With `--findings` it exits with status 1 and writes nothing if the matrix does not hold exactly the detector's cells and detector statuses. Exit status 0 covers publication gate items 1, 2 and 4 only and is necessary for publication, not sufficient (`REVIEWING.md`, step 5).
 
 Copy the output over `human-review-summary.json` only once the command exits 0. Then update the reviewed count (`basis-reviewed`) in `docs/playground/index.html`, which `tests/playground/model.test.mjs` checks against `rows_completed`.
 

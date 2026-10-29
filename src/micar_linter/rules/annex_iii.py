@@ -21,10 +21,30 @@ Point-level extensions are the practitioner's contribution.
 
 from __future__ import annotations
 
+from micar_linter.rules.annex_i import NOT_APPROVED_STATEMENT_EN, NOT_APPROVED_STATEMENT_LABEL
 from micar_linter.rules.base import Rule, Severity
 from micar_linter.rules.terms import ADDRESS_DE, ADDRESS_EN, COURT_DE
 
 ANNEX_III_RULES: tuple[Rule, ...] = (
+    Rule(
+        # Art. 51(3) MiCAR: the same first-page statement, naming the issuer. Art. 19 MiCAR
+        # prescribes no such statement for an ART white paper, so Annex II has no
+        # counterpart: Table 3 field I.02 of Implementing Regulation (EU) 2024/2984 holds
+        # the Art. 19(4) warning instead. Approval is not the reason: the white paper of an
+        # authorised issuer is deemed approved (Art. 21(1)) and that of a credit institution
+        # is approved (Art. 17(1)(a)), but an issuer exempt under Art. 16(2) only notifies it.
+        rule_id="ANNEX_III.NOT_APPROVED_STATEMENT",
+        citation="Art. 51 Abs. 3 MiCAR",
+        section="not_approved_statement",
+        label=NOT_APPROVED_STATEMENT_LABEL,
+        required_terms=(
+            NOT_APPROVED_STATEMENT_EN,
+            "the issuer of the crypto-asset is solely responsible for the content of this "
+            "crypto-asset white paper",
+        ),
+        min_words=0,
+        severity=Severity.BLOCKER,
+    ),
     # An issuer is a credit institution or an electronic money institution, or exempt under
     # Art. 48 Abs. 4 or 5 MiCAR, so the rule names no institution type. A white paper that gives an
     # LEI need not state the legal form or the registered address (recital 2 and Anhang Tabelle 4
