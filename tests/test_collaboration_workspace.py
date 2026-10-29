@@ -5,6 +5,9 @@ from pathlib import Path
 
 import docx
 import pytest
+from docx.opc.constants import RELATIONSHIP_TYPE
+from docx.oxml import parse_xml
+from docx.oxml.ns import qn
 from lxml import etree
 
 from micar_linter.collaboration_workspace import (
@@ -129,3 +132,496 @@ def test_workflow_pack_blocks_unreviewed_cells() -> None:
     pack = build_workflow_pack(workspace, sidecar, build_change_set(workspace))
     assert pack["run"]["status"] == "blocked"
     assert pack["run"]["external_action_allowed"] is False
+
+
+def _accepted_change_set(source: Path, original: str, proposed: str) -> dict:
+    return {
+        "source_digests": {"source": hashlib.sha256(source.read_bytes()).hexdigest()},
+        "export_allowed": True,
+        "changes": [{"decision": "accepted", "original_text": original, "proposed_text": proposed}],
+    }
+
+
+def _paragraph_views(paragraph) -> tuple[str, str]:
+    """Text of the paragraph with every change accepted, and with every change rejected."""
+    ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+    accepted = "".join(paragraph.xpath(".//w:t[not(ancestor::w:del)]/text()", namespaces=ns))
+    rejected = "".join(
+        paragraph.xpath(".//w:t[not(ancestor::w:ins)]/text() | .//w:delText/text()", namespaces=ns)
+    )
+    return accepted, rejected
+
+
+def test_docx_partial_paragraph_match_keeps_surrounding_text(tmp_path) -> None:
+    source = tmp_path / "partial-source.docx"
+    document = docx.Document()
+    paragraph = document.add_paragraph("The issuer ", style="List Bullet")
+    bold = paragraph.add_run("Example Issuer AG")
+    bold.bold = True
+    revision = bold._r.get_or_add_rPr().makeelement(qn("w:rPrChange"), {qn("w:id"): "3", qn("w:author"): "Other"})
+    bold._r.get_or_add_rPr().append(revision)
+    paragraph.add_run(" is TBD and will notify BaFin.")
+    document.add_paragraph("Next paragraph stays.")
+    document.save(source)
+    change_set = _accepted_change_set(source, "AG is TBD", "AG is incorporated in Germany")
+    output = render_tracked_docx(source, tmp_path / "partial-reviewed.docx", change_set)
+    with zipfile.ZipFile(output) as package:
+        xml = etree.fromstring(package.read("word/document.xml"))
+    ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    assert _paragraph_views(paragraphs[0]) == (
+        "The issuer Example Issuer AG is incorporated in Germany and will notify BaFin.",
+        "The issuer Example Issuer AG is TBD and will notify BaFin.",
+    )
+    assert _paragraph_views(paragraphs[1]) == ("Next paragraph stays.", "Next paragraph stays.")
+    assert paragraphs[0].xpath("string(w:pPr/w:pStyle/@w:val)", namespaces=ns) == "ListBullet"
+    kept_bold = paragraphs[0].xpath(
+        ".//w:r[not(ancestor::w:del) and not(ancestor::w:ins)][w:rPr/w:b]//w:t/text()", namespaces=ns
+    )
+    assert "".join(kept_bold) == "Example Issuer "
+    deleted_bold = paragraphs[0].xpath(".//w:del/w:r[w:rPr/w:b]/w:delText/text()", namespaces=ns)
+    assert "".join(deleted_bold) == "AG"
+    assert paragraphs[0].xpath("count(w:ins/w:r/w:rPr/w:b)", namespaces=ns) == 1
+    assert paragraphs[0].xpath("count(w:ins//w:rPrChange)", namespaces=ns) == 0
+    ids = xml.xpath(".//w:ins/@w:id | .//w:del/@w:id", namespaces=ns)
+    assert len(ids) == len(set(ids))
+
+
+def test_docx_redlines_two_changes_in_one_paragraph(tmp_path) -> None:
+    source = tmp_path / "two-source.docx"
+    document = docx.Document()
+    document.add_paragraph("Name TBD, address TBC, LEI pending.")
+    document.save(source)
+    change_set = _accepted_change_set(source, "Name TBD", "Name Example AG")
+    change_set["changes"].append(
+        {"decision": "accepted", "original_text": "address TBC", "proposed_text": "address Berlin"}
+    )
+    output = render_tracked_docx(source, tmp_path / "two-reviewed.docx", change_set)
+    with zipfile.ZipFile(output) as package:
+        xml = etree.fromstring(package.read("word/document.xml"))
+    ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    assert len(paragraphs) == 1
+    assert _paragraph_views(paragraphs[0]) == (
+        "Name Example AG, address Berlin, LEI pending.",
+        "Name TBD, address TBC, LEI pending.",
+    )
+
+
+def test_docx_redline_splits_pending_insertion_of_another_author(tmp_path) -> None:
+    source = tmp_path / "pending-source.docx"
+    document = docx.Document()
+    paragraph = document.add_paragraph("Start ")
+    pending = paragraph._p.makeelement(qn("w:ins"), {qn("w:id"): "1", qn("w:author"): "Other reviewer"})
+    pending_run = paragraph._p.makeelement(qn("w:r"), {})
+    pending_run.append(paragraph._p.makeelement(qn("w:t"), {}))
+    pending_run[0].text = "inserted words"
+    pending.append(pending_run)
+    paragraph._p.append(pending)
+    paragraph.add_run(" end.")
+    document.save(source)
+    change_set = _accepted_change_set(source, "inserted", "added")
+    output = render_tracked_docx(source, tmp_path / "pending-reviewed.docx", change_set)
+    with zipfile.ZipFile(output) as package:
+        xml = etree.fromstring(package.read("word/document.xml"))
+    ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+    paragraph_xml = xml.xpath(".//w:body/w:p", namespaces=ns)[0]
+    assert "".join(paragraph_xml.xpath(".//w:t[not(ancestor::w:del)]/text()", namespaces=ns)) == (
+        "Start added words end."
+    )
+    assert xml.xpath("count(//w:ins//w:ins)", namespaces=ns) == 0
+    assert xml.xpath("string(//w:ins[@w:author='Other reviewer']//w:delText)", namespaces=ns) == "inserted"
+    ids = xml.xpath("//w:ins/@w:id | //w:del/@w:id", namespaces=ns)
+    assert len(ids) == len(set(ids))
+
+
+_W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+_DECLARATIONS = (
+    f'xmlns:w="{_W}" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" '
+    'xmlns:v="urn:schemas-microsoft-com:vml" '
+    'xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" '
+    'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'
+)
+
+
+def _docx_with_paragraphs(path: Path, *paragraphs: str) -> None:
+    document = docx.Document()
+    body = document.element.body
+    for paragraph in paragraphs:
+        body.insert(len(body) - 1, parse_xml(f"<w:p {_DECLARATIONS}>{paragraph}</w:p>"))
+    document.save(path)
+
+
+def _run(text: str) -> str:
+    return f'<w:r><w:t xml:space="preserve">{text}</w:t></w:r>'
+
+
+def _field_char(kind: str) -> str:
+    return f'<w:r><w:fldChar w:fldCharType="{kind}"/></w:r>'
+
+
+def _render(tmp_path: Path, source: Path, changes: list[tuple[str, str]]) -> etree._Element:
+    change_set = _accepted_change_set(source, *changes[0])
+    for original, proposed in changes[1:]:
+        change_set["changes"].append({"decision": "accepted", "original_text": original, "proposed_text": proposed})
+    output = render_tracked_docx(source, tmp_path / f"{source.stem}-reviewed.docx", change_set)
+    with zipfile.ZipFile(output) as package:
+        return etree.fromstring(package.read("word/document.xml"))
+
+
+def test_docx_redline_leaves_field_results_and_codes_alone(tmp_path) -> None:
+    source = tmp_path / "fields.docx"
+    _docx_with_paragraphs(
+        source,
+        _run("Issuer: ")
+        + '<w:fldSimple w:instr=" DOCPROPERTY IssuerName ">'
+        + _run("TBD")
+        + "</w:fldSimple>"
+        + _run(" is registered."),
+        _run("Name ")
+        + _field_char("begin")
+        + '<w:r><w:instrText xml:space="preserve"> REF _RefIssuer \\h </w:instrText></w:r>'
+        + _field_char("separate")
+        + _run("TBD")
+        + _field_char("end")
+        + _run(" is pending."),
+        _run("Status TBD."),
+    )
+    xml = _render(tmp_path, source, [("TBD", "confirmed"), ("Name TBD is pending", "Name confirmed")])
+    ns = {"w": _W}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    for field_paragraph in paragraphs[:2]:
+        assert field_paragraph.xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
+    assert _paragraph_views(paragraphs[2]) == ("Status confirmed.", "Status TBD.")
+    assert paragraphs[-1].xpath("string(w:del//w:delText)", namespaces=ns) == "Name TBD is pending"
+
+
+def test_docx_redline_skips_table_of_contents_and_hidden_fallback_copy(tmp_path) -> None:
+    source = tmp_path / "toc.docx"
+    _docx_with_paragraphs(
+        source,
+        _field_char("begin")
+        + '<w:r><w:instrText xml:space="preserve"> TOC \\o "1-3" </w:instrText></w:r>'
+        + _field_char("separate")
+        + _run("Risk factors"),
+        _run("Summary") + _field_char("end"),
+        "<w:r><mc:AlternateContent><mc:Choice Requires=\"wps\"><w:drawing/></mc:Choice><mc:Fallback>"
+        "<w:pict><v:shape><v:textbox><w:txbxContent><w:p>"
+        + _run("Risk factors")
+        + "</w:p></w:txbxContent></v:textbox></v:shape></w:pict></mc:Fallback></mc:AlternateContent></w:r>",
+        _run("Risk factors"),
+    )
+    xml = _render(tmp_path, source, [("Risk factors", "Risk factors and mitigations")])
+    ns = {"w": _W}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    assert len(paragraphs) == 4
+    assert xml.xpath("count(//w:del)", namespaces=ns) == 1
+    assert _paragraph_views(paragraphs[3]) == ("Risk factors and mitigations", "Risk factors")
+
+
+def test_docx_redline_skips_moved_away_text_and_splits_the_move(tmp_path) -> None:
+    source = tmp_path / "move.docx"
+    revision = 'w:author="Other reviewer" w:date="2026-10-01T00:00:00Z"'
+    _docx_with_paragraphs(
+        source,
+        _run("Moved away: ") + f'<w:moveFrom w:id="20" {revision}>' + _run("Issuer TBD") + "</w:moveFrom>",
+        _run("Moved here: ") + f'<w:moveTo w:id="21" {revision}>' + _run("Issuer TBD here") + "</w:moveTo>",
+        _run("Fee ") + f'<w:moveFrom w:id="22" {revision}>' + _run("moved away ") + "</w:moveFrom>" + _run("is TBD."),
+        _run("Rate ")
+        + f'<w:del w:id="23" {revision}><w:r><w:delText xml:space="preserve">old </w:delText></w:r></w:del>'
+        + _run("is TBD."),
+    )
+    changes = [("Issuer TBD", "Issuer Example AG"), ("Fee is TBD", "Fee is EUR 5"), ("Rate is TBD", "Rate is 5%")]
+    xml = _render(tmp_path, source, changes)
+    ns = {"w": _W}
+    moved_away, moved_here, fee, rate = xml.xpath(".//w:body/w:p", namespaces=ns)
+    live = ".//w:t[not(ancestor::w:del) and not(ancestor::w:moveFrom)]/text()"
+    assert fee.xpath("count(w:moveFrom//w:del | w:moveFrom//w:ins)", namespaces=ns) == 0
+    assert "".join(fee.xpath(live, namespaces=ns)) == "Fee is EUR 5."
+    assert "".join(rate.xpath(live, namespaces=ns)) == "Rate is 5%."
+    assert moved_away.xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
+    assert moved_here.xpath("string(w:moveTo/w:del//w:delText)", namespaces=ns) == "Issuer TBD"
+    assert moved_here.xpath("count(.//w:moveTo//w:ins)", namespaces=ns) == 0
+    accepted = "".join(moved_here.xpath(".//w:t[not(ancestor::w:del)]/text()", namespaces=ns))
+    assert accepted == "Moved here: Issuer Example AG here"
+    ids = xml.xpath("//@w:id", namespaces=ns)
+    assert len(ids) == len(set(ids))
+
+
+def test_docx_redline_skips_bound_content_controls_and_hidden_text(tmp_path) -> None:
+    source = tmp_path / "bound.docx"
+    binding = (
+        '<w:dataBinding w:xpath="/ns1:coreProperties[1]/ns0:title[1]" '
+        'w:storeItemID="{6C3C8BC8-F283-45AE-878A-BAB7291924A1}"/>'
+    )
+    _docx_with_paragraphs(
+        source,
+        _run("Title: ") + f"<w:sdt><w:sdtPr>{binding}</w:sdtPr><w:sdtContent>" + _run("Token TBD") + "</w:sdtContent></w:sdt>",
+        '<w:r><w:rPr><w:vanish/></w:rPr><w:t xml:space="preserve">Guidance: replace Token TBD.</w:t></w:r>',
+        _run("Token ") + '<w:r><w:rPr><w:vanish w:val="1"/></w:rPr><w:t>[note] </w:t></w:r>' + _run("TBD is pending."),
+        _run("The Token TBD is offered."),
+    )
+    xml = _render(tmp_path, source, [("Token TBD", "Token EXT")])
+    ns = {"w": _W}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    for untouched in paragraphs[:3]:
+        assert untouched.xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
+    assert _paragraph_views(paragraphs[3]) == ("The Token EXT is offered.", "The Token TBD is offered.")
+    assert xml.xpath("count(//w:ins//w:vanish)", namespaces=ns) == 0
+
+
+def test_docx_redline_skips_managed_content_controls_and_equations(tmp_path) -> None:
+    source = tmp_path / "controls.docx"
+    _docx_with_paragraphs(
+        source,
+        _run("Issuer: ")
+        + "<w:sdt><w:sdtPr><w:showingPlcHdr/><w:text/></w:sdtPr><w:sdtContent>"
+        + '<w:r><w:rPr><w:rStyle w:val="PlaceholderText"/></w:rPr><w:t>Issuer name TBD</w:t></w:r>'
+        + "</w:sdtContent></w:sdt>"
+        + _run(" (registered)."),
+        _run("Date: ")
+        + '<w:sdt><w:sdtPr><w:date><w:dateFormat w:val="dd.MM.yyyy"/></w:date></w:sdtPr><w:sdtContent>'
+        + _run("01.01.2026")
+        + "</w:sdtContent></w:sdt>",
+        _run("The reserve rate ") + "<m:oMath><m:r><m:t>r=0.05</m:t></m:r></m:oMath>" + _run(" is TBD for holders."),
+        _run("Issuer name TBD") + '<w:bookmarkStart w:id="40" w:name="Offer"/>' + _run(" offers from 01.01.2026."),
+    )
+    changes = [("Issuer name TBD", "Example Issuer AG"), ("01.01.2026", "31.12.2026"), ("rate  is TBD", "rate is set")]
+    xml = _render(tmp_path, source, changes)
+    ns = {"w": _W}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    for untouched in paragraphs[:3]:
+        assert untouched.xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
+    assert _paragraph_views(paragraphs[3]) == (
+        "Example Issuer AG offers from 31.12.2026.",
+        "Issuer name TBD offers from 01.01.2026.",
+    )
+    assert paragraphs[-1].xpath("string(w:del//w:delText)", namespaces=ns) == "rate  is TBD"
+
+
+def test_docx_redline_stays_within_links_and_content_controls_and_deletes_soft_hyphens(tmp_path) -> None:
+    source = tmp_path / "links.docx"
+    link = '<w:hyperlink w:anchor="Offer">' + _run("example.invalid/token") + "</w:hyperlink>"
+    control = '<w:sdt><w:sdtPr><w:tag w:val="issuer_name"/></w:sdtPr><w:sdtContent>'
+    _docx_with_paragraphs(
+        source,
+        _run("Details are published at ") + link + _run(" every quarter."),
+        _run("Mirror at ") + link.replace("example.invalid", "mirror.invalid") + _run("."),
+        control + _run("Example Issuer AG") + "</w:sdtContent></w:sdt>" + _run(" is the issuer."),
+        '<w:r><w:t xml:space="preserve">Der vermögenswert</w:t><w:softHyphen/><w:t>referenzierte Token gilt.</w:t></w:r>',
+    )
+    changes = [
+        ("published at example.invalid", "posted at example.invalid"),
+        ("mirror.invalid/token", "mirror.invalid/token-v2"),
+        ("Example Issuer AG is", "Example Issuer SE is"),
+        ("vermögenswertreferenzierte Token", "E-Geld-Token"),
+    ]
+    xml = _render(tmp_path, source, changes)
+    ns = {"w": _W}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    assert paragraphs[0].xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
+    assert paragraphs[1].xpath("string(w:hyperlink/w:ins)", namespaces=ns) == "mirror.invalid/token-v2"
+    assert paragraphs[2].xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
+    assert _paragraph_views(paragraphs[3])[0] == "Der E-Geld-Token gilt."
+    assert paragraphs[3].xpath("count(.//w:softHyphen[not(ancestor::w:del)])", namespaces=ns) == 0
+    fallbacks = ["".join(p.xpath("w:del//w:delText/text()", namespaces=ns)) for p in paragraphs[4:]]
+    assert fallbacks == ["published at example.invalid", "Example Issuer AG is"]
+
+
+def test_docx_redline_runs_through_a_whole_link_and_smart_tags(tmp_path) -> None:
+    source = tmp_path / "whole-link.docx"
+    mail = '<w:hyperlink w:anchor="Contact"><w:r><w:rPr><w:rStyle w:val="Hyperlink"/></w:rPr>'
+    _docx_with_paragraphs(
+        source,
+        _run("Write to ") + mail + "<w:t>info@example.invalid</w:t></w:r></w:hyperlink>" + _run(" within ten days."),
+        _run("The offer starts on ")
+        + '<w:smartTag w:uri="urn:schemas-microsoft-com:office:smarttags" w:element="date">'
+        + _run("1 March 2027")
+        + "</w:smartTag>"
+        + _run(" in Berlin."),
+    )
+    changes = [
+        ("Write to info@example.invalid within ten days", "Write to the complaints desk within five days"),
+        ("March 2027 in Berlin", "April 2027 in Leipzig"),
+    ]
+    xml = _render(tmp_path, source, changes)
+    ns = {"w": _W}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    assert len(paragraphs) == 2
+    assert _paragraph_views(paragraphs[0]) == (
+        "Write to the complaints desk within five days.",
+        "Write to info@example.invalid within ten days.",
+    )
+    assert paragraphs[0].xpath("string(w:hyperlink/w:del//w:delText)", namespaces=ns) == "info@example.invalid"
+    assert paragraphs[0].xpath("count(w:ins//w:rStyle)", namespaces=ns) == 0
+    assert _paragraph_views(paragraphs[1]) == (
+        "The offer starts on 1 April 2027 in Leipzig.",
+        "The offer starts on 1 March 2027 in Berlin.",
+    )
+
+
+def test_docx_redline_replaces_external_link_after_it_and_keeps_custom_xml_extent(tmp_path) -> None:
+    source = tmp_path / "external.docx"
+    document = docx.Document()
+    target = document.part.relate_to("mailto:info@old.invalid", RELATIONSHIP_TYPE.HYPERLINK, is_external=True)
+    website = document.part.relate_to("https://www.old.invalid", RELATIONSHIP_TYPE.HYPERLINK, is_external=True)
+    style = '<w:rPr><w:rStyle w:val="Hyperlink"/></w:rPr>'
+    look = '<w:rPr><w:rStyle w:val="Hyperlink"/><w:rFonts w:ascii="Arial"/><w:color w:val="0563C1"/><w:u w:val="single"/>'
+    link = f'<w:hyperlink r:id="{target}"><w:r>{look}</w:rPr><w:t>info@old.invalid</w:t></w:r></w:hyperlink>'
+    body = document.element.body
+    for paragraph in (
+        '<w:bookmarkStart w:id="\u00b2" w:name="Odd"/>'
+        + '<w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">Contact: </w:t></w:r>'
+        + link
+        + _run("."),
+        _run("Mail ") + link + _run(" today."),
+        _run("The fee is ") + '<w:customXml w:element="feeAmount">' + _run("EUR 5") + "</w:customXml>" + _run(" per token."),
+        _run("Web: ")
+        + f'<w:hyperlink r:id="{website}"><w:r>{style}<w:t>www.old.invalid</w:t></w:r><w:r><w:br/></w:r></w:hyperlink>'
+        + _run("Phone: 000"),
+    ):
+        body.insert(len(body) - 1, parse_xml(f"<w:p {_DECLARATIONS}>{paragraph}</w:p>"))
+    document.save(source)
+    changes = [
+        ("info@old.invalid", "info@new.invalid"),
+        ("old.invalid", "new.invalid"),
+        ("EUR 5 per token", "EUR 7 per token"),
+        ("www.old.invalid", "www.new.invalid"),
+    ]
+    xml = _render(tmp_path, source, changes)
+    ns = {"w": _W}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    assert _paragraph_views(paragraphs[0]) == ("Contact: info@new.invalid.", "Contact: info@old.invalid.")
+    assert paragraphs[0].xpath("count(w:hyperlink//w:ins)", namespaces=ns) == 0
+    assert paragraphs[0].xpath("string(w:ins/w:r/w:rPr/w:rFonts/@w:ascii)", namespaces=ns) == "Arial"
+    assert paragraphs[0].xpath("count(w:ins//w:rStyle | w:ins//w:color | w:ins//w:u | w:ins//w:b)", namespaces=ns) == 0
+    for untouched in paragraphs[1:4]:
+        assert untouched.xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
+    fallbacks = ["".join(p.xpath("w:del//w:delText/text()", namespaces=ns)) for p in paragraphs[4:]]
+    assert fallbacks == ["old.invalid", "EUR 5 per token", "www.old.invalid"]
+
+
+def test_docx_later_change_does_not_match_an_earlier_insertion(tmp_path) -> None:
+    source = tmp_path / "chain.docx"
+    _docx_with_paragraphs(source, _run("The issuer is TBD."))
+    changes = [("is TBD", "is Example AG, seat TBC"), ("TBC", "Berlin"), ("Missing clause", "Seat TBA"), ("TBA", "Leipzig")]
+    xml = _render(tmp_path, source, changes)
+    ns = {"w": _W}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    assert _paragraph_views(paragraphs[0]) == ("The issuer is Example AG, seat TBC.", "The issuer is TBD.")
+    fallbacks = ["".join(p.xpath("w:del//w:delText/text()", namespaces=ns)) for p in paragraphs[1:]]
+    assert fallbacks == ["TBC", "Missing clause", "TBA"]
+
+
+def test_docx_redline_spans_markers_and_stays_inside_tagged_controls_and_custom_xml(tmp_path) -> None:
+    source = tmp_path / "markers.docx"
+    _docx_with_paragraphs(
+        source,
+        _run("The Tokken ")
+        + '<w:proofErr w:type="spellStart"/>'
+        + _run("Exmple")
+        + '<w:proofErr w:type="spellEnd"/>'
+        + '<w:bookmarkStart w:id="5" w:name="Term"/><w:commentRangeStart w:id="6"/>'
+        + _run(" is")
+        + '<w:bookmarkEnd w:id="5"/><w:commentRangeEnd w:id="6"/>'
+        + '<w:r><w:t xml:space="preserve"> offered</w:t><w:lastRenderedPageBreak/><w:commentReference w:id="6"/>'
+        + "<w:t> now.</w:t></w:r>",
+        _run("Issuer: ")
+        + '<w:sdt><w:sdtPr><w:tag w:val="issuer_name"/></w:sdtPr><w:sdtContent>'
+        + _run("Example Issuer AG")
+        + "</w:sdtContent></w:sdt>",
+        _run("The fee is ") + '<w:customXml w:element="feeAmount">' + _run("EUR 5") + "</w:customXml>" + _run(" per token."),
+        _run("Kind: ")
+        + "<w:sdt><w:sdtPr><w:dropDownList/></w:sdtPr><w:sdtContent>"
+        + _run("Utility token")
+        + "</w:sdtContent></w:sdt>"
+        + "<w:sdt><w:sdtPr><w:comboBox/></w:sdtPr><w:sdtContent>"
+        + _run(" (Utility token)")
+        + "</w:sdtContent></w:sdt>"
+        + '<w:sdt><w:sdtPr><w14:checkbox xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"/>'
+        + "</w:sdtPr><w:sdtContent>"
+        + _run(" Utility token")
+        + "</w:sdtContent></w:sdt>",
+    )
+    changes = [
+        ("Tokken Exmple is offered now", "Token Example is offered today"),
+        ("Example Issuer", "Sample Issuer"),
+        ("fee is EUR 5 per", "fee is EUR 7 per"),
+        ("Utility token", "Payment token"),
+    ]
+    xml = _render(tmp_path, source, changes)
+    ns = {"w": _W}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    assert _paragraph_views(paragraphs[0]) == ("The Token Example is offered today.", "The Tokken Exmple is offered now.")
+    assert paragraphs[1].xpath("string(w:sdt/w:sdtContent/w:ins)", namespaces=ns) == "Sample Issuer"
+    assert _paragraph_views(paragraphs[2]) == ("The fee is EUR 7 per token.", "The fee is EUR 5 per token.")
+    assert paragraphs[3].xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
+    assert "".join(paragraphs[4].xpath("w:del//w:delText/text()", namespaces=ns)) == "Utility token"
+
+
+def test_docx_redline_deletes_a_link_at_either_end_of_the_match(tmp_path) -> None:
+    source = tmp_path / "link-edges.docx"
+    document = docx.Document()
+    target = document.part.relate_to("https://www.old.invalid", RELATIONSHIP_TYPE.HYPERLINK, is_external=True)
+    look = '<w:rPr><w:rStyle w:val="Hyperlink"/></w:rPr>'
+    link = f'<w:hyperlink r:id="{target}"><w:r>{look}<w:t>www.old.invalid</w:t></w:r></w:hyperlink>'
+    body = document.element.body
+    for paragraph in (
+        _run("Published at ") + link + _run("."),
+        link + _run(" is the offeror website."),
+        _run("Mirror at ") + link + _run(" and ") + link + _run("."),
+        _run("Mail: ")
+        + f'<w:hyperlink r:id="{target}"><w:sdt><w:sdtPr><w:tag w:val="contact"/></w:sdtPr><w:sdtContent>'
+        + _run("info@old.invalid")
+        + "</w:sdtContent></w:sdt></w:hyperlink>",
+    ):
+        body.insert(len(body) - 1, parse_xml(f"<w:p {_DECLARATIONS}>{paragraph}</w:p>"))
+    document.save(source)
+    changes = [
+        ("Published at www.old.invalid", "Published at www.new.invalid"),
+        ("www.old.invalid is the offeror", "www.new.invalid is the issuer"),
+        ("old.invalid and www.old", "new.invalid and www.new"),
+        ("info@old.invalid", "info@new.invalid"),
+    ]
+    xml = _render(tmp_path, source, changes)
+    ns = {"w": _W}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    assert _paragraph_views(paragraphs[0]) == ("Published at www.new.invalid.", "Published at www.old.invalid.")
+    assert _paragraph_views(paragraphs[1]) == (
+        "www.new.invalid is the issuer website.",
+        "www.old.invalid is the offeror website.",
+    )
+    for replaced in paragraphs[:2]:
+        assert replaced.xpath("count(w:hyperlink//w:ins | w:hyperlink//w:t)", namespaces=ns) == 0
+        assert replaced.xpath("count(w:ins//w:rStyle)", namespaces=ns) == 0
+    for untouched in paragraphs[2:4]:
+        assert untouched.xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
+    fallbacks = ["".join(p.xpath("w:del//w:delText/text()", namespaces=ns)) for p in paragraphs[4:]]
+    assert fallbacks == ["old.invalid and www.old", "info@old.invalid"]
+
+
+def test_docx_redline_reaches_the_heading_before_a_static_table_of_contents(tmp_path) -> None:
+    source = tmp_path / "static-toc.docx"
+    document = docx.Document()
+    document.styles.element.append(
+        parse_xml(f'<w:style {_DECLARATIONS} w:type="paragraph" w:styleId="Verzeichnis1"><w:name w:val="toc 1"/></w:style>')
+    )
+    body = document.element.body
+    toc = '<w:docPartObj><w:docPartGallery w:val="Table of Contents"/></w:docPartObj>'
+    for block in (
+        f"<w:sdt {_DECLARATIONS}><w:sdtPr>{toc}</w:sdtPr><w:sdtContent>"
+        f'<w:p><w:hyperlink w:anchor="_Toc1">{_run("Risk factors")}</w:hyperlink></w:p></w:sdtContent></w:sdt>',
+        f'<w:p {_DECLARATIONS}><w:pPr><w:pStyle w:val="Verzeichnis1"/></w:pPr>{_run("Information on the issuer")}</w:p>',
+        f"<w:p {_DECLARATIONS}>{_run('Risk factors')}</w:p>",
+        f"<w:p {_DECLARATIONS}>{_run('Information on the issuer')}</w:p>",
+    ):
+        body.insert(len(body) - 1, parse_xml(block))
+    document.save(source)
+    changes = [("Risk factors", "Risk factors and mitigation"), ("Information on the issuer", "Information about the issuer")]
+    xml = _render(tmp_path, source, changes)
+    ns = {"w": _W}
+    assert xml.xpath("count(//w:sdt//w:del | //w:sdt//w:ins)", namespaces=ns) == 0
+    paragraphs = xml.xpath("w:body/w:p", namespaces=ns)
+    assert paragraphs[0].xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
+    assert _paragraph_views(paragraphs[1]) == ("Risk factors and mitigation", "Risk factors")
+    assert _paragraph_views(paragraphs[2]) == ("Information about the issuer", "Information on the issuer")

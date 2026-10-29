@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
+import itertools
 import json
 import os
 import tempfile
 import zipfile
+from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -14,7 +17,49 @@ from typing import Any
 from lxml import etree
 
 W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+MC_NS = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 NSMAP = {"w": W_NS}
+# Paragraph content skipped without ending a match: deleted or moved-away text, properties and range markers.
+# A drawing, including its hidden mc:Fallback copy, ends a match; paragraphs inside mc:Fallback are never
+# candidates (see render_tracked_docx).
+_SKIPPED = {
+    f"{{{W_NS}}}{name}"
+    for name in [
+        "del",
+        "moveFrom",
+        "pPr",
+        "sdtPr",
+        "sdtEndPr",
+        "smartTagPr",
+        "customXmlPr",
+        "proofErr",
+        "bookmarkStart",
+        "bookmarkEnd",
+        "commentRangeStart",
+        "commentRangeEnd",
+        "permStart",
+        "permEnd",
+        "moveFromRangeStart",
+        "moveFromRangeEnd",
+        "moveToRangeStart",
+        "moveToRangeEnd",
+    ]
+}
+# Containers a match runs through: pending insertions and moves, smart tags, custom XML and hyperlinks. A
+# match must start and end in the same custom XML element, or outside any, so it keeps its extent; for
+# hyperlinks see _links_kept.
+_TRANSPARENT = {f"{{{W_NS}}}{name}" for name in ["ins", "moveTo", "smartTag", "customXml", "hyperlink"]}
+# Containers a match may lie inside but not cross, so a content control keeps its value. Other paragraph
+# content (an equation or a simple field, for example) ends a match.
+_CONTAINERS = {f"{{{W_NS}}}{name}" for name in ["sdt", "sdtContent", "dir", "bdo"]}
+# Run content a match may span. Other run content (tabs, breaks, field characters, drawings) ends a match,
+# as do hidden runs, regenerated text and this export's own insertions.
+_SPANNABLE = {
+    f"{{{W_NS}}}{name}"
+    for name in ("rPr", "t", "lastRenderedPageBreak", "softHyphen", "commentReference", "annotationRef")
+}
+_LIVE_TEXT = ".//w:t[not(ancestor::w:del) and not(ancestor::w:moveFrom)]/text()"
 
 
 def _reproducible_timestamp() -> str:
@@ -180,6 +225,284 @@ def decide_change(change_set: dict[str, Any], change_id: str, decision: str) -> 
     return result
 
 
+def _revision(tag: str, ids: Iterator[int], author: str, date: str) -> etree._Element:
+    return etree.Element(
+        f"{{{W_NS}}}{tag}",
+        {f"{{{W_NS}}}id": str(next(ids)), f"{{{W_NS}}}author": author, f"{{{W_NS}}}date": date},
+    )
+
+
+def _text_element(tag: str, text: str) -> etree._Element:
+    element = etree.Element(f"{{{W_NS}}}{tag}")
+    element.text = text
+    element.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+    return element
+
+
+def _sibling_run(run: etree._Element, ids: Iterator[int]) -> etree._Element:
+    sibling = etree.Element(run.tag, dict(run.attrib))
+    properties = run.find("w:rPr", NSMAP)
+    if properties is not None:
+        properties = copy.deepcopy(properties)
+        for change in properties.iter(f"{{{W_NS}}}rPrChange"):
+            change.set(f"{{{W_NS}}}id", str(next(ids)))
+        sibling.append(properties)
+    return sibling
+
+
+def _regenerated_text(body: etree._Element) -> set[etree._Element]:
+    """``w:t`` nodes Word manages itself: complex field results and the text of content controls that are
+    bound to a data store, show their placeholder, or hold a date, list or checkbox value. A simple field
+    (``w:fldSimple``) needs no entry, because _text_segments ends a match at it without entering it.
+
+    Word and LibreOffice regenerate or reset that text, so a redline placed there is lost or misread.
+    """
+    managed = " or ".join(
+        f"local-name()='{name}'"
+        for name in ("dataBinding", "showingPlcHdr", "date", "dropDownList", "comboBox", "checkbox")
+    )
+    query = f".//w:sdt[w:sdtPr/*[{managed}]]/w:sdtContent//w:t"
+    inside = set(body.xpath(query, namespaces=NSMAP))
+    depth = 0
+    for element in body.iter(f"{{{W_NS}}}fldChar", f"{{{W_NS}}}t"):
+        if element.tag == f"{{{W_NS}}}t":
+            if depth:
+                inside.add(element)
+        elif element.get(f"{{{W_NS}}}fldCharType") == "begin":
+            depth += 1
+        elif element.get(f"{{{W_NS}}}fldCharType") == "end":
+            depth = max(depth - 1, 0)
+    return inside
+
+
+def _hidden(element: etree._Element) -> bool:
+    vanish = element.find("w:rPr/w:vanish", NSMAP) if element.tag == f"{{{W_NS}}}r" else None
+    return vanish is not None and vanish.get(f"{{{W_NS}}}val", "true") not in {"0", "false", "off"}
+
+
+def _text_segments(
+    element: etree._Element, excluded: set[etree._Element], segments: list[list[etree._Element]]
+) -> list[list[etree._Element]]:
+    """Group the live ``w:t`` nodes of a paragraph into stretches that a match may span."""
+    for child in element:
+        if child.tag in _SKIPPED:
+            continue
+        if child in excluded or _hidden(child):
+            segments.append([])
+        elif child.tag == f"{{{W_NS}}}r":
+            for item in child:
+                if item.tag == f"{{{W_NS}}}t" and item not in excluded:
+                    segments[-1].append(item)
+                elif item.tag not in _SPANNABLE or item.tag == f"{{{W_NS}}}t":
+                    segments.append([])
+        elif child.tag in _TRANSPARENT:
+            _text_segments(child, excluded, segments)
+        elif child.tag in _CONTAINERS:
+            segments.append([])
+            _text_segments(child, excluded, segments)
+            segments.append([])
+        else:
+            segments.append([])
+    return segments
+
+
+def _covered(nodes: list[etree._Element], start: int, end: int) -> list[tuple[etree._Element, int, int]]:
+    """The nodes that ``[start, end)`` of their joined text covers, with the covered slice of each."""
+    covered = []
+    offset = 0
+    for node in nodes:
+        length = len(node.text or "")
+        overlap_start, overlap_end = max(start, offset), min(end, offset + length)
+        if overlap_start < overlap_end:
+            covered.append((node, overlap_start - offset, overlap_end - offset))
+        offset += length
+    return covered
+
+
+def _bounds(node: etree._Element) -> tuple[etree._Element | None, etree._Element | None]:
+    """The nearest hyperlink and custom XML element around ``node`` within its paragraph."""
+    link = tagged = None
+    for ancestor in node.iterancestors():
+        if ancestor.tag == f"{{{W_NS}}}p":
+            break
+        if ancestor.tag == f"{{{W_NS}}}hyperlink" and link is None:
+            link = ancestor
+        elif ancestor.tag == f"{{{W_NS}}}customXml" and tagged is None:
+            tagged = ancestor
+    return link, tagged
+
+
+def _external(link: etree._Element | None) -> bool:
+    return link is not None and link.get(f"{{{R_NS}}}id") is not None
+
+
+def _whole_plain(link: etree._Element, covered: list[tuple[etree._Element, int, int]]) -> bool:
+    """Whether the match covers all of ``link``'s content, and that content is plain text.
+
+    A link that wraps a content control, custom XML or a bidi element does not qualify: the replacement goes
+    after the link and would leave that element empty.
+    """
+    if link.xpath(".//w:sdt | .//w:customXml | .//w:dir | .//w:bdo", namespaces=NSMAP):
+        return False
+    runs = link.xpath(".//w:r[not(ancestor::w:del) and not(ancestor::w:moveFrom)]", namespaces=NSMAP)
+    if not all(child.tag in _SPANNABLE for run in runs for child in run):
+        return False
+    full = {node for node, start, end in covered if start == 0 and end == len(node.text or "")}
+    return all(node in full or not node.text for run in runs for node in run.iterchildren(f"{{{W_NS}}}t"))
+
+
+def _links_kept(
+    first_link: etree._Element | None,
+    last_link: etree._Element | None,
+    covered: list[tuple[etree._Element, int, int]],
+) -> bool:
+    """Whether redlining the match leaves every hyperlink it touches with the right extent and target.
+
+    A match inside an internal link stays there. A match that only partly covers a link at either end would
+    move the link's edge, and new text inside a link to an external target would inherit the old target. A
+    link the match covers wholly, holding plain text, is fine: it is deleted and the replacement follows it.
+    """
+    if first_link is last_link and not _external(first_link):
+        return True
+    return all(link is None or _whole_plain(link, covered) for link in (first_link, last_link))
+
+
+def _find_match(
+    paragraph: etree._Element, original: str, excluded: set[etree._Element]
+) -> tuple[list[etree._Element], int] | None:
+    for nodes in _text_segments(paragraph, excluded, [[]]):
+        text = "".join(node.text or "" for node in nodes)
+        start = text.find(original)
+        while start >= 0:
+            covered = _covered(nodes, start, start + len(original))
+            (first_link, first_tagged), (last_link, last_tagged) = (
+                _bounds(covered[0][0]),
+                _bounds(covered[-1][0]),
+            )
+            if first_tagged is last_tagged and _links_kept(first_link, last_link, covered):
+                return nodes, start
+            start = text.find(original, start + 1)
+    return None
+
+
+def _isolate(item: etree._Element, ids: Iterator[int]) -> etree._Element:
+    """Move the rest of the run of ``item`` into sibling runs; return the run, now holding only ``item``."""
+    run = item.getparent()
+    content = [child for child in run if child.tag != f"{{{W_NS}}}rPr"]
+    position = content.index(item)
+    if content[:position]:
+        before = _sibling_run(run, ids)
+        before.extend(content[:position])
+        run.addprevious(before)
+    if content[position + 1 :]:
+        after = _sibling_run(run, ids)
+        after.extend(content[position + 1 :])
+        run.addnext(after)
+    return run
+
+
+def _isolate_text(node: etree._Element, start: int, end: int, ids: Iterator[int]) -> etree._Element:
+    """Split the run of ``node`` so that a run of its own holds ``node.text[start:end]``; return that run."""
+    run = _isolate(node, ids)
+    text = node.text or ""
+    if text[:start]:
+        prefix = _sibling_run(run, ids)
+        prefix.append(_text_element("t", text[:start]))
+        run.addprevious(prefix)
+    if text[end:]:
+        suffix = _sibling_run(run, ids)
+        suffix.append(_text_element("t", text[end:]))
+        run.addnext(suffix)
+    node.text = text[start:end]
+    node.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+    return run
+
+
+def _redline_match(
+    nodes: list[etree._Element],
+    match_start: int,
+    original: str,
+    proposed: str,
+    ids: Iterator[int],
+    author: str,
+    date: str,
+    excluded: set[etree._Element],
+) -> None:
+    """Track the deletion of ``original`` at ``match_start`` in ``nodes`` and the insertion of ``proposed``.
+
+    Text before and after the match, the paragraph properties and the run formatting stay as they are,
+    so rejecting the change in Word restores the paragraph.
+    """
+    matched = _covered(nodes, match_start, match_start + len(original))
+    first, last = matched[0][0], matched[-1][0]
+    soft_hyphens, inside = [], False
+    for element in next(first.iterancestors(f"{{{W_NS}}}p")).iter(f"{{{W_NS}}}t", f"{{{W_NS}}}softHyphen"):
+        if element is last:
+            break
+        if element is first:
+            inside = True
+        elif (
+            inside
+            and element.tag == f"{{{W_NS}}}softHyphen"
+            and not any(ancestor.tag in _SKIPPED for ancestor in element.iterancestors())
+        ):
+            soft_hyphens.append(element)
+    deleted_runs = []
+    for node, start, end in matched:
+        deleted_runs.append(_isolate_text(node, start, end, ids))
+        node.tag = f"{{{W_NS}}}delText"
+    for run in [_isolate(hyphen, ids) for hyphen in soft_hyphens] + deleted_runs:
+        anchor = _revision("del", ids, author, date)
+        run.addprevious(anchor)
+        anchor.append(run)
+    # A link the match covers wholly is deleted with it, and the replacement goes after the link without the
+    # link's look, so it neither extends the link nor keeps its target. A match inside an internal link stays
+    # inside it.
+    first_link, last_link = _bounds(first)[0], _bounds(last)[0]
+    inside_link = first_link is not None and first_link is last_link and not _external(first_link)
+    if last_link is not None and not inside_link:
+        anchor = last_link
+    while anchor.getparent().tag in {f"{{{W_NS}}}ins", f"{{{W_NS}}}moveTo"}:
+        outer = anchor.getparent()
+        following = list(anchor.itersiblings())
+        if following:
+            rest = etree.Element(outer.tag, dict(outer.attrib))
+            rest.set(f"{{{W_NS}}}id", str(next(ids)))
+            rest.extend(following)
+            outer.addnext(rest)
+        anchor = outer
+    inserted = _revision("ins", ids, author, date)
+    # The replacement takes the formatting of the first replaced character, as Word does when text is typed
+    # over a selection, without another author's pending formatting revision.
+    inserted_run = _sibling_run(deleted_runs[0], ids)
+    dropped = "w:rPr/w:rPrChange"
+    if first_link is not None and not inside_link:
+        dropped += " | w:rPr/w:rStyle | w:rPr/w:color | w:rPr/w:u"
+    for prop in inserted_run.xpath(dropped, namespaces=NSMAP):
+        prop.getparent().remove(prop)
+    inserted_run.append(_text_element("t", proposed))
+    inserted.append(inserted_run)
+    anchor.addnext(inserted)
+    excluded.add(inserted)
+
+
+def _contents_styles(styles_path: Path, parser: etree.XMLParser) -> set[str]:
+    """Ids of the table-of-contents paragraph styles: Word's built-in ids, and any style named "toc 1" to
+    "toc 9" or "contents 1" to "contents 9", whatever id the document language gives it."""
+    levels = range(1, 10)
+    ids = {f"TOC{level}" for level in levels}
+    if not styles_path.exists():
+        return ids
+    names = {f"{prefix} {level}" for prefix in ("toc", "contents") for level in levels}
+    return ids | {
+        style.get(f"{{{W_NS}}}styleId")
+        for style in etree.parse(str(styles_path), parser=parser).xpath(
+            "w:style[@w:type='paragraph']", namespaces=NSMAP
+        )
+        if style.xpath("string(w:name/@w:val)", namespaces=NSMAP).lower() in names
+    }
+
+
 def render_tracked_docx(
     source: Path, output: Path, change_set: dict[str, Any], author: str = "MiCAR reviewer"
 ) -> Path:
@@ -202,47 +525,53 @@ def render_tracked_docx(
         if body is None:
             raise ValueError("DOCX is missing word/document.xml body")
         section = body.find("w:sectPr", NSMAP)
-        for index, change in enumerate(
-            (item for item in change_set["changes"] if item["decision"] == "accepted"), start=1
-        ):
-            paragraph = etree.Element(f"{{{W_NS}}}p")
-            deleted = etree.SubElement(
-                paragraph,
-                f"{{{W_NS}}}del",
-                {
-                    f"{{{W_NS}}}id": str(index * 2),
-                    f"{{{W_NS}}}author": author,
-                    f"{{{W_NS}}}date": change_timestamp,
-                },
+        used_ids = [
+            int(value)
+            for value in tree.xpath("//@w:id", namespaces=NSMAP)
+            if value.isascii() and value.isdigit()
+        ]
+        ids = itertools.count(max(used_ids, default=0) + 1)
+        excluded = _regenerated_text(body)
+        namespaces = {**NSMAP, "mc": MC_NS}
+        # A table of contents that is not a field repeats the headings as plain text: try its paragraphs last,
+        # so a change to a heading reaches the heading.
+        candidates = body.xpath(".//w:p[not(ancestor::mc:Fallback)]", namespaces=namespaces)
+        contents_styles = _contents_styles(extracted / "word" / "styles.xml", parser)
+        contents = {
+            paragraph
+            for paragraph in candidates
+            if paragraph.xpath("string(w:pPr/w:pStyle/@w:val)", namespaces=NSMAP) in contents_styles
+            or paragraph.xpath(
+                "ancestor::w:sdt[w:sdtPr/w:docPartObj/w:docPartGallery/@w:val='Table of Contents']",
+                namespaces=NSMAP,
             )
-            deleted_run = etree.SubElement(deleted, f"{{{W_NS}}}r")
-            etree.SubElement(deleted_run, f"{{{W_NS}}}delText").text = (
-                change["original_text"] or "Missing disclosure"
-            )
-            inserted = etree.SubElement(
-                paragraph,
-                f"{{{W_NS}}}ins",
-                {
-                    f"{{{W_NS}}}id": str(index * 2 + 1),
-                    f"{{{W_NS}}}author": author,
-                    f"{{{W_NS}}}date": change_timestamp,
-                },
-            )
-            inserted_run = etree.SubElement(inserted, f"{{{W_NS}}}r")
-            etree.SubElement(inserted_run, f"{{{W_NS}}}t").text = change.get("proposed_text") or ""
-            source_paragraph = next(
+        }
+        candidates = [p for p in candidates if p not in contents] + [p for p in candidates if p in contents]
+        for change in (item for item in change_set["changes"] if item["decision"] == "accepted"):
+            original = change["original_text"]
+            proposed = change.get("proposed_text") or ""
+            match = next(
                 (
-                    candidate
-                    for candidate in body.xpath(".//w:p", namespaces=NSMAP)
-                    if change["original_text"]
-                    and change["original_text"] in "".join(candidate.xpath(".//w:t/text()", namespaces=NSMAP))
+                    found
+                    for candidate in (candidates if original else [])
+                    if original in "".join(candidate.xpath(_LIVE_TEXT, namespaces=namespaces))
+                    and (found := _find_match(candidate, original, excluded))
                 ),
                 None,
             )
-            if source_paragraph is not None:
-                source_paragraph.getparent().replace(source_paragraph, paragraph)
-            else:
-                body.insert(body.index(section) if section is not None else len(body), paragraph)
+            if match is not None:
+                _redline_match(*match, original, proposed, ids, author, change_timestamp, excluded)
+                continue
+            deletion = _revision("del", ids, author, change_timestamp)
+            deleted_run = etree.SubElement(deletion, f"{{{W_NS}}}r")
+            etree.SubElement(deleted_run, f"{{{W_NS}}}delText").text = original or "Missing disclosure"
+            insertion = _revision("ins", ids, author, change_timestamp)
+            inserted_run = etree.SubElement(insertion, f"{{{W_NS}}}r")
+            etree.SubElement(inserted_run, f"{{{W_NS}}}t").text = proposed
+            excluded.add(insertion)
+            paragraph = etree.Element(f"{{{W_NS}}}p")
+            paragraph.extend([deletion, insertion])
+            body.insert(body.index(section) if section is not None else len(body), paragraph)
         tree.write(str(document_path), xml_declaration=True, encoding="UTF-8", standalone=True)
         output.parent.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as target:
