@@ -32,10 +32,16 @@ _FIELD_ID = re.compile(
 )
 # A part title of the template, whatever its length ("Part C- Information about the operator of the trading
 # platform ..." runs to 40 words), also in German ("Teil B \u2013 Informationen über den Emittenten, ...").
-_PART_TITLE = re.compile(r"^(?:part|teil)\s+[A-Z]\s*[.:)\u2013\u2014-]\s*\S", re.I)
-# A short line that opens a part without a dash ("Part B", "B. Issuer"); a longer line that starts with a
-# letter and a full stop is body text.
-_PART_HEADING = re.compile(r"^(?:(?:part|teil)\s+[A-Z]\b|[A-Z]\.\s+\S)", re.I)
+# Table 3 prints Part AA without "Part" ("AA- information on other persons ...", "AA \u2013 Gemäß Artikel 19
+# ..."), so that form needs the first word of the title: "AA-rated bonds" is body text.
+_PART_TITLE = re.compile(
+    r"^(?:(?:part|teil)\s+(?:[A-Z]|(?-i:AA))\s*[.:)\u2013\u2014-]\s*\S"
+    r"|(?-i:AA)\s*[.:)\u2013\u2014-]\s*(?:information|gemäß))",
+    re.I,
+)
+# A short line that opens a part without a dash ("Part B", "Part AA", "B. Issuer"); a longer line that starts
+# with a letter and a full stop is body text.
+_PART_HEADING = re.compile(r"^(?:(?:part|teil)\s+(?:[A-Z]|(?-i:AA))\b|[A-Z]\.\s+\S)", re.I)
 # Some authors run several fields together in one paragraph ("A.1 Name: N/A A.2 Legal form: N/A").
 # The colon requirement keeps cross-references such as "see F.14" from opening a field.
 _INLINE_FIELD = re.compile(r"(?<=\s)(?=[A-Z]\.\d{1,2}\s+(?:(?![A-Z]\.\d)[^:]){1,120}:)")
@@ -62,6 +68,9 @@ _PART_SECTIONS: dict[WhitepaperType, dict[str, tuple[str, ...]]] = {
     },
     WhitepaperType.ART: {
         "A": ("issuer",),
+        # Part AA names the persons other than the issuer who offer the token, seek its admission to trading
+        # or draw up the white paper (Art. 19(1), second subparagraph, MiCAR), as the offeror section does.
+        "AA": ("offeror",),
         "B": ("art",),
         "C": ("offer_or_admission",),
         # ANNEX_II.I reads the redemption items of Part D and Part G.

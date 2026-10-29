@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from datetime import date
 
 from micar_linter.anchors import SourceAnchor, build_source_anchors
-from micar_linter.lei import PARTY_SECTIONS, has_valid_check_digits, leis_by_section
+from micar_linter.lei import PARTY_SECTIONS, has_valid_check_digits, leis_by_section, other_person_leis
 from micar_linter.placeholders import is_placeholder
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Finding, Rule, Severity
@@ -168,8 +168,9 @@ def lint_whitepaper(whitepaper: Whitepaper) -> Report:
     rules = RULESETS[whitepaper.type]
     findings = Linter(rules).lint(whitepaper)
 
-    # Check for unrecognized/misspelled sections
-    valid_sections = {rule.section for rule in rules}
+    # Check for unrecognized/misspelled sections. The LEI rules read every party section in every regime: an
+    # ART white paper names the persons other than the issuer who offer the token in its offeror section.
+    valid_sections = {rule.section for rule in rules} | set(PARTY_SECTIONS)
     warnings: list[str] = list(whitepaper.metadata.get("extraction_notes", ()))
     for section_name in whitepaper.sections:
         if section_name not in valid_sections:
@@ -428,8 +429,11 @@ def _lei_check_digits_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
 def _lei_consistency_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     """Every valid LEI in the draft must belong to a party section; the issuer states one LEI.
 
-    Fails closed when no party section carries a valid LEI (see _no_lei_finding). Invalid codes
-    are left to COMMON.LEI_CHECK_DIGITS so that one typo is not reported twice.
+    An LEI that the draft gives for a person other than the parties (other_person_leis: the provider in
+    charge of the placing, a custodian, a person other than the issuer) is neither compared with the party
+    sections nor counted as an issuer LEI. Fails closed when no party section carries a valid LEI (see
+    _no_lei_finding). Invalid codes are left to COMMON.LEI_CHECK_DIGITS so that one typo is not reported
+    twice.
     """
     is_de = whitepaper.language == "de"
     valid = {
@@ -447,8 +451,9 @@ def _lei_consistency_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
             "so consistency cannot be checked."
         )
         return _no_lei_finding(rule, whitepaper, msg)
+    others = {code for text in whitepaper.sections.values() for code in other_person_leis(str(text))}
     issues = []
-    issuer_codes = valid.get("issuer", ())
+    issuer_codes = [code for code in valid.get("issuer", ()) if code not in others]
     if len(issuer_codes) > 1:
         issues.append(
             f"Der Abschnitt 'issuer' nennt {len(issuer_codes)} verschiedene LEIs; ein Emittent hat eine LEI."
@@ -459,7 +464,7 @@ def _lei_consistency_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
         if section in PARTY_SECTIONS:
             continue
         for code in codes:
-            if code not in party_codes:
+            if code not in party_codes and code not in others:
                 issues.append(
                     f"LEI '{code}' im Abschnitt '{section}' erscheint in keinem Abschnitt zu den Beteiligten."
                     if is_de

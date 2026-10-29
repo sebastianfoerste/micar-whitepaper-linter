@@ -308,6 +308,19 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
                 {**base, "sections": {"issuer": issuer, "summary": f"The issuer's LEI is {SYNTHETIC_LEI}."}},
                 "Every valid LEI in the draft matches a party section, and the issuer states one.",
             ),
+            Example(
+                "LEI of the provider in charge of the placing",
+                "pass",
+                {
+                    **base,
+                    "sections": {
+                        "issuer": issuer,
+                        "offer_or_admission": f"CASP identifier: {OTHER_SYNTHETIC_LEI}",
+                    },
+                },
+                "Field E.31 of Table 2 asks for the LEI of the crypto-asset service provider in charge of the "
+                "placing. Its label names the role, so the code is not compared with the party sections.",
+            ),
         ]
     if rule.rule_id in ANSWER_CHECKS:
         absent = [
@@ -506,7 +519,11 @@ def status_logic(rule: Rule) -> str:
             "check digits, since point 5 allows another identifier required pursuant to applicable national law "
             "in place of the LEI; a valid LEI in another "
             "section appears in no party section; or the <code>issuer</code> section names more than one valid "
-            "LEI.</li>"
+            "LEI. An LEI that the draft gives for a person other than the parties counts for neither: the "
+            "crypto-asset service provider in charge of the placing (field E.31 of Table 2, C.22 of Table 3), a "
+            "custodian of the reserve assets (G.8 of Table 3), or a person other than the issuer who offers the "
+            "token, seeks its admission to trading or draws up the white paper (AA.1 and AA.3 of Table 3, A.27 of "
+            "Table 4). The field label, or the sentence that holds the code, names that role before it.</li>"
             "<li><strong>Pass</strong>: none of the above. Codes with invalid check digits are reported by "
             '<a href="COMMON.LEI_CHECK_DIGITS.html">COMMON.LEI_CHECK_DIGITS</a>, not here.</li></ul>'
         )
@@ -646,6 +663,13 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             "Does not recognise the other identifiers that point 5 allows in place of the LEI, so a draft "
             "whose party sections carry no valid LEI goes to review. Once one party section carries a valid "
             "LEI, another party section without an LEI does not change the result."
+        )
+        limitations.append(
+            "Knows a person other than the parties only from the words before the code in its sentence or "
+            "field label (CASP, crypto-asset service provider, custodian, other than the issuer, other persons "
+            "drawing up, and the German Kryptowerte-Dienstleistungen, Verwahrer, nicht mit dem Emittenten "
+            "identisch). A role named in an earlier sentence does not carry over: in \"The custodian is Example "
+            "Bank AG. Its LEI is ...\" the code is still compared with the party sections."
         )
     if rule.rule_id in NEVER_PASS:
         limitations.append("This rule never reports Pass.")
