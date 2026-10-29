@@ -9,6 +9,7 @@ says only that the characters are internally consistent.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 
 # 18 alphanumerics and 2 digits, not part of a longer code.
 _LEI_SHAPE = re.compile(r"(?<![A-Z0-9])[A-Z0-9]{18}[0-9]{2}(?![A-Z0-9])")
@@ -22,6 +23,23 @@ _LABEL_WINDOW = 60
 
 # Sections that name the parties to the white paper.
 PARTY_SECTIONS = ("issuer", "offeror", "trading_platform_operator")
+
+# The template of Implementing Regulation (EU) 2024/2984 also asks for the LEI of persons other than the
+# parties: the crypto-asset service provider in charge of the placing (Table 2 field E.31, Table 3 C.22,
+# "CASP identifier" or "CASP-Kennung"), the custodian of the reserve assets (Table 3 G.8, "Custodian service
+# providers" or "Verwahrer"), and persons other than the issuer who offer the token, seek its admission to
+# trading or draw up the white paper (Table 3 AA.1 and AA.3, Table 4 A.27). These are the roles' words in the
+# English and German field names, and as a draft writes them in prose.
+_OTHER_PERSON = re.compile(
+    r"\bCASP\b|\bcrypto-asset service provider|\bKryptowerte-Dienstleist|\bcustod(?:ian|y)|\bverwahr"
+    r"|\bother than the issuer\b|\bother persons? drawing up\b"
+    r"|\bnicht mit dem Emittenten identisch|\bandere Personen, die das Kryptowerte-Whitepaper\b",
+    re.IGNORECASE,
+)
+# A sentence ends at a full stop, question mark, exclamation mark or semicolon before a capital letter, so
+# "Example CASP S.A., LEI ..." and "the custodian under Art. 37 MiCAR" stay one sentence. A line ends a field
+# of the numbered layout.
+_SENTENCE_END = re.compile(r"[.!?;](?=\s+[A-ZÄÖÜ])|\n")
 
 
 def has_valid_check_digits(lei: str) -> bool:
@@ -39,18 +57,44 @@ def check_digits_for(base: str) -> str:
     return f"{98 - remainder:02d}"
 
 
-def find_leis(text: str) -> tuple[str, ...]:
-    """LEI-shaped codes in a text, in order of first appearance, without duplicates."""
-    found: list[str] = []
+def _lei_matches(text: str) -> Iterator[re.Match[str]]:
+    """Every LEI-shaped code in a text, in order; a purely numeric one only after an LEI label."""
     for match in _LEI_SHAPE.finditer(text):
-        code = match.group(0)
-        if code.isdigit():
+        if match.group(0).isdigit():
             window = text[max(0, match.start() - _LABEL_WINDOW) : match.start()]
             if not _LEI_LABEL.search(window):
                 continue
-        if code not in found:
-            found.append(code)
+        yield match
+
+
+def find_leis(text: str) -> tuple[str, ...]:
+    """LEI-shaped codes in a text, in order of first appearance, without duplicates."""
+    return tuple(dict.fromkeys(match.group(0) for match in _lei_matches(text)))
+
+
+def other_person_leis(text: str) -> tuple[str, ...]:
+    """LEI-shaped codes that the text gives for a person other than the parties, without duplicates.
+
+    That is the provider in charge of the placing, a custodian, or a person other than the issuer who
+    offers the token, seeks its admission to trading or draws up the white paper. The role must be named
+    before the code in its own sentence or line, with no other code in between: a template label ("CASP
+    identifier: ...") or a sentence such as "The crypto-asset service provider in charge of the placing has
+    the LEI ...". A role named in an earlier sentence does not carry over.
+    """
+    found: list[str] = []
+    start = 0
+    for match in _lei_matches(text):
+        context = _last_sentence(text[start : match.start()])
+        if _OTHER_PERSON.search(context) and match.group(0) not in found:
+            found.append(match.group(0))
+        start = match.end()
     return tuple(found)
+
+
+def _last_sentence(text: str) -> str:
+    """The text after the last sentence or line end."""
+    ends = list(_SENTENCE_END.finditer(text))
+    return text[ends[-1].end() :] if ends else text
 
 
 def leis_by_section(sections: dict[str, str]) -> dict[str, tuple[str, ...]]:

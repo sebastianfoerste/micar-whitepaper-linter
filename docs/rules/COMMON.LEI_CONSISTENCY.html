@@ -30,7 +30,7 @@
 <dt>Source</dt><dd><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/rules/common.py">rules/common.py</a></dd>
 </dl></div>
 <h2>How the status is set</h2>
-<ul class="plain"><li><strong>Missing</strong>: no section <code>issuer</code>, <code>offeror</code> or <code>trading_platform_operator</code> has text other than a placeholder.</li><li><strong>Review</strong>: a party section has text but no party section carries an LEI with valid check digits, since point 5 allows another identifier required pursuant to applicable national law in place of the LEI; a valid LEI in another section appears in no party section; or the <code>issuer</code> section names more than one valid LEI.</li><li><strong>Pass</strong>: none of the above. Codes with invalid check digits are reported by <a href="COMMON.LEI_CHECK_DIGITS.html">COMMON.LEI_CHECK_DIGITS</a>, not here.</li></ul>
+<ul class="plain"><li><strong>Missing</strong>: no section <code>issuer</code>, <code>offeror</code> or <code>trading_platform_operator</code> has text other than a placeholder.</li><li><strong>Review</strong>: a party section has text but no party section carries an LEI with valid check digits, since point 5 allows another identifier required pursuant to applicable national law in place of the LEI; a valid LEI in another section appears in no party section; or the <code>issuer</code> section names more than one valid LEI. An LEI that the draft gives for a person other than the parties counts for neither: the crypto-asset service provider in charge of the placing (field E.31 of Table 2, C.22 of Table 3), a custodian of the reserve assets (G.8 of Table 3), or a person other than the issuer who offers the token, seeks its admission to trading or draws up the white paper (AA.1 and AA.3 of Table 3, A.27 of Table 4). The field label, or the sentence that holds the code, names that role before it.</li><li><strong>Pass</strong>: none of the above. Codes with invalid check digits are reported by <a href="COMMON.LEI_CHECK_DIGITS.html">COMMON.LEI_CHECK_DIGITS</a>, not here.</li></ul>
 <h2>Legal basis</h2>
 <p>Annex I, Part A, point 5, Part B, point 5, Part C, point 5, Annex II, Part A, point 5, Annex III, Part A, point 5 MiCAR</p>
 <ul class="plain"><li><a href="https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng">https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng</a></li></ul>
@@ -64,9 +64,16 @@
     &quot;issuer&quot;: &quot;Synthetic Issuer AG, a fictional company. LEI: 9999SYNTH0000ZZQ0166.&quot;,
     &quot;summary&quot;: &quot;The issuer&#x27;s LEI is 9999SYNTH0000ZZQ0166.&quot;
   }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>LEI of the provider in charge of the placing</strong></div><p class="small muted">Field E.31 of Table 2 asks for the LEI of the crypto-asset service provider in charge of the placing. Its label names the role, so the code is not compared with the party sections.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;sections&quot;: {
+    &quot;issuer&quot;: &quot;Synthetic Issuer AG, a fictional company. LEI: 9999SYNTH0000ZZQ0166.&quot;,
+    &quot;offer_or_admission&quot;: &quot;CASP identifier: 9999SYNTH0000ZZQ0263&quot;
+  }
 }</code></pre></div>
 <h2>Limitations</h2>
-<ul class="plain"><li>Reads every section of the draft; findings are anchored to the <code>issuer</code> section.</li><li>Works offline on the characters of each code. It does not confirm that an LEI is registered, current or held by the entity the draft names.</li><li>Status and severity are fixed by the rule. A draft cannot waive or downgrade them.</li><li>Does not recognise the other identifiers that point 5 allows in place of the LEI, so a draft whose party sections carry no valid LEI goes to review. Once one party section carries a valid LEI, another party section without an LEI does not change the result.</li></ul>
+<ul class="plain"><li>Reads every section of the draft; findings are anchored to the <code>issuer</code> section.</li><li>Works offline on the characters of each code. It does not confirm that an LEI is registered, current or held by the entity the draft names.</li><li>Status and severity are fixed by the rule. A draft cannot waive or downgrade them.</li><li>Does not recognise the other identifiers that point 5 allows in place of the LEI, so a draft whose party sections carry no valid LEI goes to review. Once one party section carries a valid LEI, another party section without an LEI does not change the result.</li><li>Knows a person other than the parties only from the words before the code in its sentence or field label (CASP, crypto-asset service provider, custodian, other than the issuer, other persons drawing up, and the German Kryptowerte-Dienstleistungen, Verwahrer, nicht mit dem Emittenten identisch). A role named in an earlier sentence does not carry over: in "The custodian is Example Bank AG. Its LEI is ..." the code is still compared with the party sections.</li></ul>
 <p class="small muted">Disagree with this rule, or missing one? <a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/issues/new?template=rule-proposal.yml">Propose a rule change</a>.</p>
 
 </main>

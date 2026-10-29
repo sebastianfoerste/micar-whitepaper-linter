@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/LICENSE)
 [![Python >=3.13](https://img.shields.io/badge/python-%3E%3D3.13-blue.svg)](https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/pyproject.toml)
 
-**Flag missing and thin disclosures in draft MiCAR white papers before substantive legal review, using deterministic Annex I, II and III checks with pinpoint citations.**
+**Flag missing and thin disclosures in draft MiCAR white papers before substantive legal review, using deterministic Annex I, II and III checks with citations.**
 
 A deterministic Python linter for draft white papers under MiCAR (Regulation (EU) 2023/1114). It checks required sections for presence, length and keywords (or a date or language), accepts JSON, XHTML or HTML (incl. numbered-field iXBRL layouts), DOCX, PDF and Markdown, and runs as a CLI, [a GitHub Action](https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/docs/SETUP.md#github-action), or [in your browser](https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/) (JSON, (X)HTML).
 

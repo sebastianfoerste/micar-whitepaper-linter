@@ -4,7 +4,9 @@ Implementing Regulation (EU) 2024/2984, by field number as the tables print them
 Taken from the "Field" column of the Official Journal text (OJ L, 2024/2984, 3.12.2024), read on
 2026-10-27, with its spelling and capitals. numbered_fields.py reads them to recognise a label that a
 white paper prints in front of its answer. Field 09 of Table 2 has no name in the OJ text, only a
-description of its content, so it is not listed.
+description of its content, so it is not listed. Part AA of Table 3 was added on 2026-10-29 from the same
+text; its fields AA.1.2 and AA.3.1 repeat the names of AA.1 and AA.3 and are not listed, because the loader
+reads field numbers of two levels only.
 """
 
 from __future__ import annotations
@@ -215,6 +217,22 @@ _TABLE_3 = {
     "A.22": "Activities related to other crypto-assets",
     "A.23": "Connection between the issuer and the entity running the DLT",
     "A.24": "Description of the connection between the issuer and the entity running the DLT",
+    "AA.1": (
+        "Persons other than the issuer offering to the public or seeking admission to trading of the asset "
+        "referenced token according to Article 19(1), second subparagraph, of Regulation (EU) 2023/1114"
+    ),
+    "AA.2": (
+        "Reason for offering to the public or seeking admission to trading the asset-referenced token by "
+        "persons referred to in Article 19(1), second subparagraph, of Regulation (EU) 2023/1114"
+    ),
+    "AA.3": (
+        "Other persons drawing up the crypto-asset white paper according to Article 19(1), second "
+        "subparagraph, of Regulation (EU) 2023/1114"
+    ),
+    "AA.4": (
+        "Reason for drawing the white paper by persons referred to in Article 19(1), second subparagraph, "
+        "of Regulation (EU) 2023/1114"
+    ),
     "B.1": "Asset-referenced token name",
     "B.2": "Token abbreviation",
     "B.3": (
