@@ -17,8 +17,13 @@ _PLACEHOLDER = re.compile(
     r"|\bnoch\s+offen\b|\bfolgt\b|\bwird\s+nachgereicht\b|\bn\.\s?n\.",
     re.I,
 )
-# "N/A", "not applicable", "none", "nil" or a dash: the field is marked as not applying.
-_NOT_APPLICABLE = re.compile(r"^(?:n\s*/?\s*a|not\s+applicable|none|nil|[-\u2013\u2014]+)?\.?$", re.I)
+# "N/A", "n. a.", "not applicable", "none", "nil" or a dash: the field is marked as not applying. German
+# drafts write "entfällt", "nicht anwendbar", "nicht zutreffend", "keine" or "keine Angabe" ("k. A.").
+_NOT_APPLICABLE = re.compile(
+    r"^(?:n\s*/?\s*a|n\.\s?a|not\s+applicable|none|nil|[-\u2013\u2014]+"
+    r"|entf(?:ä|ae)llt|nicht\s+(?:anwendbar|zutreffend)|keine(?:\s+angaben?)?|k\.\s?a)?\.?$",
+    re.I,
+)
 
 
 def is_placeholder(text: str) -> bool:
@@ -30,5 +35,5 @@ def is_placeholder(text: str) -> bool:
 
 
 def is_not_applicable(text: str) -> bool:
-    """True if the text is empty or says only that the item does not apply: "N/A", "none", "-"."""
+    """True if the text is empty or says only that the item does not apply: "N/A", "none", "-", "entfällt"."""
     return bool(_NOT_APPLICABLE.match(text.strip()))

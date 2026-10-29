@@ -30,7 +30,12 @@ _FIELD_ID = re.compile(
     r"^(?:(?P<part>[A-Z]{1,2})\.(?P<number>\d{1,2})|(?P<summary>\d{2}))(?![\d.]*\d)[.:)]?(?:\s+(?P<rest>.*))?$",
     re.S,
 )
-_PART_HEADING = re.compile(r"^(?:part\s+[A-Z]\b|[A-Z]\.\s+\S)", re.I)
+# A part title of the template, whatever its length ("Part C- Information about the operator of the trading
+# platform ..." runs to 40 words), also in German ("Teil B \u2013 Informationen über den Emittenten, ...").
+_PART_TITLE = re.compile(r"^(?:part|teil)\s+[A-Z]\s*[.:)\u2013\u2014-]\s*\S", re.I)
+# A short line that opens a part without a dash ("Part B", "B. Issuer"); a longer line that starts with a
+# letter and a full stop is body text.
+_PART_HEADING = re.compile(r"^(?:(?:part|teil)\s+[A-Z]\b|[A-Z]\.\s+\S)", re.I)
 # Some authors run several fields together in one paragraph ("A.1 Name: N/A A.2 Legal form: N/A").
 # The colon requirement keeps cross-references such as "see F.14" from opening a field.
 _INLINE_FIELD = re.compile(r"(?<=\s)(?=[A-Z]\.\d{1,2}\s+(?:(?![A-Z]\.\d)[^:]){1,120}:)")
@@ -114,12 +119,16 @@ _SUMMARY_SECTIONS: dict[WhitepaperType, dict[str, tuple[str, ...]]] = {
 }
 
 # The language field sits at F.12, B.14 or B.11 depending on the table, and authors
-# renumber, so it is found by its label ("Language or languages of the ... white paper").
-_LANGUAGE_LABEL = re.compile(r"\blanguages?\b", re.I)
+# renumber, so it is found by its label ("Language or languages of the ... white paper",
+# in the German text "Sprache oder Sprachen des Kryptowerte-Whitepapers" or "... des Whitepaper").
+_LANGUAGE_LABEL = re.compile(r"\blanguages?\b|\bsprachen?\b", re.I)
 # Where the label shares a cell or paragraph with its answer, the field has no separate label and its
-# content opens with the template label ("Language or languages of the white paper English").
+# content opens with the template label ("Language or languages of the white paper English", "Sprache
+# oder Sprachen des Whitepaper Deutsch").
 _LANGUAGE_CONTENT = re.compile(
-    r"^\W*languages?(?:\s+or\s+languages)?\s+of\s+the\s+(?:crypto-?\s*assets?\s+)?white\s+paper\b", re.I
+    r"^\W*(?:languages?(?:\s+or\s+languages)?\s+of\s+the\s+(?:crypto-?\s*assets?\s+)?white\s+paper"
+    r"|sprachen?(?:\s+oder\s+sprachen)?\s+des\s+(?:kryptowerte-?\s*)?whitepapers?)\b",
+    re.I,
 )
 # Table 4 has no field for the safeguarding of funds received (Art. 54 MiCAR), so for an EMT the
 # safeguarding section collects the answered lettered fields that describe it.
@@ -194,6 +203,11 @@ def _text_nodes(
             yield table_rows[node]
 
 
+def _is_part_heading(text: str) -> bool:
+    """A part title, or a line of under 20 words that opens a part: neither belongs to the field before it."""
+    return bool(_PART_TITLE.match(text)) or (bool(_PART_HEADING.match(text)) and len(text.split()) < 20)
+
+
 def extract_numbered_fields(source: Path | bytes) -> list[NumberedField]:
     """Read the numbered fields of a white paper, merging repeated field numbers.
 
@@ -225,7 +239,7 @@ def extract_numbered_fields(source: Path | bytes) -> list[NumberedField]:
             contents.setdefault(current, [])
             if inline.strip():
                 contents[current].append(inline.strip())
-        elif current and not (_PART_HEADING.match(node) and len(node.split()) < 20):
+        elif current and not _is_part_heading(node):
             contents[current].append(node)
 
     return [
