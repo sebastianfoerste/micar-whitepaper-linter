@@ -14,6 +14,11 @@ from pathlib import Path
 
 from micar_linter.placeholders import is_not_applicable, is_placeholder
 
+# The start of a redemption pattern: a heading that names a risk, in English or German ("Redemption risk",
+# "Rücknahmerisiko", "Risiken beim Rücktausch"), heads a risk and does not open the redemption section, so
+# no risk text reaches the redemption check. (?s) reads past a line break inside a DOCX heading.
+_NOT_A_RISK = r"(?s)^(?!.*(?:\brisk|risik)).*?"
+
 # Common patterns (in English and German) matching whitepaper section headings.
 # Word boundaries are used to avoid false positives.
 SECTION_PATTERNS = {
@@ -107,16 +112,14 @@ SECTION_PATTERNS = {
     ],
     "reserve_of_assets": [r"\breserve\b.*\bassets\b", r"\breservevermögen\w*", r"\basset\s+reserve\b"],
     "redemption": [
-        r"\bredemption\b",
-        r"\brücknahme\w*",
-        r"\bredemption\s+right\b",
+        rf"{_NOT_A_RISK}\bredemption\b",
+        rf"{_NOT_A_RISK}\brücknahme\w*",
+        rf"{_NOT_A_RISK}\bredemption\s+right\b",
         # The German text of MiCAR calls redemption "Rücktausch": "Recht auf Rücktausch" (Art. 39),
         # "Rücktauschplan" (Art. 47), "Rücktauschbarkeit" (Art. 49) and "dauerhaften Rücktauschrechte"
         # (Anhang II Teil D Nr. 9), as do the labels of Implementing Regulation (EU) 2024/2984 ("Recht auf
-        # Rücktausch", "Form des Rücktauschs"). A heading that also names a risk ("Rücktauschrisiko",
-        # "Risiken beim Rücktausch") heads a risk and does not open this section, so no risk text reaches
-        # the redemption check. (?s) reads past a line break inside a DOCX heading.
-        r"(?s)^(?!.*risik).*?\brücktausch\w*",
+        # Rücktausch", "Form des Rücktauschs").
+        rf"{_NOT_A_RISK}\brücktausch\w*",
     ],
     "safeguarding": [r"\bsafeguarding\b", r"\babsicherung\w*", r"\bsicherung\w*.*\bgelder\w*"],
 }

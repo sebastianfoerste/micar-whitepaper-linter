@@ -1352,14 +1352,18 @@ GERMAN_REDEMPTION = (
         "D.31 Form des Rücktauschs",
         # A DOCX heading with a line break in it.
         "Recht auf\nRücktausch",
+        "Rücknahme der Token",
+        "Right of redemption",
+        "Redemption rights",
+        "D.30 Rights in redemption plan implementation",
     ],
 )
-def test_german_redemption_heading_names_the_redemption(heading: str):
+def test_redemption_heading_names_the_redemption(heading: str):
     assert match_heading_to_section(heading) == ["redemption"]
 
 
-# A heading that also names a risk heads a risk. It opens the sections it opened before, so the redemption
-# section takes no risk text from the risks.
+# A heading that also names a risk heads a risk, in English as in German: it opens no redemption section, so
+# the redemption section takes no risk text from the risks.
 @pytest.mark.parametrize(
     "heading,keys",
     [
@@ -1367,9 +1371,13 @@ def test_german_redemption_heading_names_the_redemption(heading: str):
         ("Risiko der Aussetzung des Rücktauschs", []),
         ("Liquiditätsrisiken der dauerhaften Rücktauschrechte", []),
         ("Risiken im Zusammenhang mit dem Rücktausch", ["risks"]),
+        ("Rücknahmerisiko", []),
+        ("Redemption risk", []),
+        ("Risk of a suspended redemption", []),
+        ("Risks relating to redemption", ["risks"]),
     ],
 )
-def test_german_risk_heading_that_names_the_redemption_does_not_name_it(heading: str, keys: list[str]):
+def test_risk_heading_that_names_the_redemption_does_not_name_it(heading: str, keys: list[str]):
     assert match_heading_to_section(heading) == keys
 
 
@@ -1434,6 +1442,7 @@ GERMAN_RISK_PARTS = [
         "Rücktauschrisiko",
         "Risiko der Aussetzung des Rücktauschs",
         "Risiken im Zusammenhang mit dem Rücktausch",
+        "Rücknahmerisiko",
     ],
 )
 def test_german_risk_sub_heading_that_names_the_redemption_stays_in_the_risks(
@@ -1460,6 +1469,44 @@ def test_german_risk_sub_heading_that_names_the_redemption_stays_in_the_risks(
         "review",
         len(GERMAN_REDEMPTION.split()),
     )
+
+
+ART_SUMMARY = (
+    "The QAR token of Quillmoor Ledger S.A. is an asset-referenced token that references a basket of euro "
+    "deposits and bonds."
+)
+REDEMPTION_RISK = "If the redemption is delayed, holders receive their money later than expected."
+# Art. 39(1) and (2) MiCAR: redemption at all times, here by paying the market value of the referenced assets.
+REDEMPTION = (
+    "Holders of the QAR token may redeem it at any time for funds equal to the market value of the "
+    "referenced assets."
+)
+
+
+@pytest.mark.parametrize("suffix", sorted(WRITERS))
+@pytest.mark.parametrize(
+    "heading", ["Redemption risk", "Risk of a suspended redemption", "Risks relating to redemption"]
+)
+def test_risk_sub_heading_that_names_the_redemption_stays_in_the_risks(
+    tmp_path: Path, suffix: str, heading: str
+):
+    # The English counterpart of the test above: the paragraph under the second risk heading and the one
+    # after it stay in the risks, and the redemption section holds only the chapter under "Redemption".
+    write, load = WRITERS[suffix]
+    parts = [RISK_PARTS[0], (heading, REDEMPTION_RISK), RISK_PARTS[1]]
+    blocks = [("large", "Summary"), ("body", ART_SUMMARY), ("large", "Risk Factors")]
+    for label, text in parts:
+        blocks += [("subheading", label), ("body", text)]
+    blocks += [("large", "Redemption"), ("body", REDEMPTION)]
+    path = write(tmp_path / f"quillmoor{suffix}", blocks)
+
+    sections = load(path)
+    assert sorted(sections) == ["redemption", "risks", "summary"]
+    risks = _words(sections["risks"])
+    assert all(_words(text) in risks for _, text in parts)
+    assert _words(sections["redemption"]) == REDEMPTION
+    finding = _findings(path, WhitepaperType.ART)["ANNEX_II.I"]
+    assert (finding.status, finding.word_count) == ("review", len(REDEMPTION.split()))
 
 
 def test_xhtml_german_redemption_heading_anchors_its_findings(tmp_path: Path):
