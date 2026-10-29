@@ -24,8 +24,8 @@
 <dt>Severity if open</dt><dd>BLOCKER</dd>
 <dt>Section key</dt><dd><code>project</code></dd>
 <dt>Minimum words</dt><dd>80</dd>
-<dt>Listed terms (English)</dt><dd><code>project</code>, <code>purpose</code>, <code>business model</code>, <code>team</code></dd>
-<dt>Listed terms (German)</dt><dd lang="de"><code>projekt</code>, <code>zweck</code>, <code>geschäftsmodell</code>, <code>team</code></dd>
+<dt>Listed terms (English)</dt><dd><code>project</code>, <code>milestones</code></dd>
+<dt>Listed terms (German)</dt><dd lang="de"><code>projekt</code>, <code>etappen</code></dd>
 <dt>Package version</dt><dd>1.2.1, built from source that may include unreleased changes</dd>
 <dt>Source</dt><dd><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/rules/annex_i.py">rules/annex_i.py</a></dd>
 </dl></div>
@@ -34,7 +34,7 @@
 <h2>Legal basis</h2>
 <p>Annex I, Part D MiCAR</p>
 <ul class="plain"><li><a href="https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng">https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng</a></li></ul>
-<p class="callout">Not re-verified since these pages were introduced (2026-10-20): EUR-Lex was unreachable from the build environment. The citation is the rule&#x27;s own, unchanged.</p>
+<p class="callout">Checked on 2026-10-27 against the Official Journal text in English and German (OJ L 150, 9.6.2023) and the consolidated version of 9 January 2024, and against the templates of Implementing Regulation (EU) 2024/2984. No amendment and no English or German corrigendum changes Annex I Part D or the templates.</p>
 <h2>Synthetic examples</h2>
 <p class="small muted">Each example is linted when this page is generated. The build fails if a result differs.</p>
 <div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>Section absent</strong></div><p class="small muted">The section key is missing or empty.</p><pre><code>{
@@ -45,13 +45,13 @@
   &quot;title&quot;: &quot;Synthetic rule example&quot;,
   &quot;type&quot;: &quot;other&quot;,
   &quot;sections&quot;: {
-    &quot;project&quot;: &quot;project purpose business model team&quot;
+    &quot;project&quot;: &quot;project milestones&quot;
   }
 }</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>Section that matches</strong></div><p class="small muted">This text passes and shows what the check measures: listed terms and length. It is not model disclosure wording and does not meet MiCAR.</p><pre><code>{
   &quot;title&quot;: &quot;Synthetic rule example&quot;,
   &quot;type&quot;: &quot;other&quot;,
   &quot;sections&quot;: {
-    &quot;project&quot;: &quot;Synthetic example naming project, purpose, business model, team. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token.&quot;
+    &quot;project&quot;: &quot;Synthetic example naming project, milestones. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token.&quot;
   }
 }</code></pre></div>
 <h2>Limitations</h2>

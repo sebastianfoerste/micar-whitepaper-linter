@@ -39,7 +39,8 @@ Each rule is an instance of the frozen `Rule` dataclass in `rules/base.py`: a st
 - **`common.py`**: the rules every regime runs: summary, risk warning, management statement, notification date, language, the iXBRL format check and two LEI checks. Other crypto-assets and ARTs take them as `COMMON_RULES`; e-money tokens take `EMT_COMMON_RULES`, the same rules except that `COMMON.RISK_WARNING`, under the same ID, checks the two warnings of Art. 51(4) MiCAR.
 - **`annex_i.py`**: crypto-assets other than asset-referenced tokens and e-money tokens (Annex I).
 - **`annex_ii.py`**: asset-referenced tokens (Annex II), including the reserve of assets.
-- **`annex_iii.py`**: e-money tokens (Annex III), including the safeguarding of funds.
+- **`annex_iii.py`**: e-money tokens (Annex III), and a review prompt on the funds received. An electronic money institution safeguards them under Art. 7(1) EMD2 (applied by Art. 48(3) MiCAR), and funds so safeguarded are deposited and invested under Art. 54 MiCAR; no Annex III item asks the white paper to describe them.
+- **`terms.py`**: the named patterns that stand for terms a plain substring would also find inside other words, such as "fee" in "feedback". A report names the pattern's group among the missing terms.
 
 `Linter` in `linter.py` applies the generic checks to most rules. A section that is empty or holds only placeholder text is missing; otherwise listed terms, required and prohibited patterns and a minimum word count decide between review and pass. Six rules have their own logic, dispatched by rule ID: the iXBRL format check and the ART deposit-floor review, which never pass, the two LEI checks, and the notification-date and language checks, which pass when the section names a calendar date or an official EU language, however short it is.
 
