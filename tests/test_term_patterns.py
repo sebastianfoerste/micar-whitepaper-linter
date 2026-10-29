@@ -6,12 +6,14 @@ uses the term itself. The issuers are fictional.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
-from micar_linter.linter import Linter
+from micar_linter.linter import Linter, lint_whitepaper
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Finding
-from micar_linter.whitepaper import Whitepaper, WhitepaperType
+from micar_linter.whitepaper import Whitepaper, WhitepaperType, load_whitepaper
 
 
 def _finding(whitepaper_type: WhitepaperType, rule_id: str, text: str, lang: str = "en") -> Finding:
@@ -66,16 +68,18 @@ CASES = [
         "en",
         "permanent",
         "Tokens returned to the issuer are permanently burned.",
-        "Holders have a right of redemption at all times.",
+        "Holders have a permanent right of redemption.",
     ),
     (
+        # "At all times" also describes the reserve, the policy and complaints, so it does not count.
         WhitepaperType.ART,
         "ANNEX_II.D",
         "en",
         "permanent",
-        "Redemption is possible on the last business day of each quarter only. Complaints from any holder can "
-        "be submitted at all times through the complaints form.",
-        "Holders may redeem their tokens at all times.",
+        "Redemption is available only on the last business day of each calendar quarter. The reserve of assets "
+        "shall at all times be sufficient to meet redemption requests, and holders may at all times submit "
+        "complaints about redemption requests.",
+        "Holders have a permanent right of redemption against the issuer.",
     ),
     (
         WhitepaperType.ART,
@@ -83,16 +87,16 @@ CASES = [
         "de",
         "dauerhaft",
         "Beschwerden können auf einem dauerhaften Datenträger eingereicht werden.",
-        "Die Inhaber haben jederzeit das Recht auf Rücktausch.",
+        "Die Inhaber haben dauerhafte Rücktauschrechte.",
     ),
     (
         WhitepaperType.ART,
         "ANNEX_II.D",
         "de",
         "dauerhaft",
-        "Ein Rücktausch ist nur am letzten Geschäftstag jedes Quartals möglich. Beschwerden kann jeder Inhaber "
-        "jederzeit einreichen.",
-        "Der Rücktausch ist jederzeit möglich.",
+        "Ein Rücktausch ist nur am letzten Geschäftstag jedes Quartals möglich. Die Vermögenswertreserve muss "
+        "jederzeit ausreichen, um Rücktauschanträge zu erfüllen.",
+        "Das Recht auf Rücktausch ist dauerhaft.",
     ),
     (
         WhitepaperType.ART,
@@ -100,7 +104,16 @@ CASES = [
         "de",
         "aussetzung",
         "Die Vorraussetzungen des Rücktauschs regelt die Rücktauschstrategie.",
-        "Die zuständige Behörde kann den Rücktausch vorübergehend aussetzen.",
+        "Eine vorübergehende Aussetzung des Rücktauschs ist nur nach Artikel 46 möglich.",
+    ),
+    (
+        WhitepaperType.ART,
+        "ANNEX_II.I",
+        "de",
+        "aussetzung",
+        "Der Rücktausch erfolgt binnen fünf Geschäftstagen, vorausgesetzt, dass der Inhaber identifiziert ist. "
+        "Bis zur Auszahlung sind die Inhaber dem Risiko ausgesetzt, dass der Marktwert sinkt.",
+        "Die Aussetzung des Rücktauschs regelt Artikel 46.",
     ),
     (
         WhitepaperType.ART,
@@ -126,6 +139,15 @@ CASES = [
         "referenzierter vermögenswert",
         "Die Referenzwerte des vermögenswertereferenzierten Token werden täglich bewertet.",
         "Die Vermögenswerte, auf die sich der Token bezieht, werden täglich bewertet.",
+    ),
+    (
+        WhitepaperType.ART,
+        "ANNEX_II.G.VALUATION_AUDIT",
+        "de",
+        "referenzierter vermögenswert",
+        "Die Vermögenswertreserve, auf die sich der Anspruch der Inhaber im Insolvenzfall bezieht, wird täglich "
+        "bewertet.",
+        "Jeder Vermögenswert, auf den der Token Bezug nimmt, wird täglich bewertet.",
     ),
     (
         WhitepaperType.ART,
@@ -231,19 +253,11 @@ def test_look_alike_words_do_not_stand_in_for_the_term(
     assert term not in _missing(_finding(whitepaper_type, rule_id, with_term, lang))
 
 
-@pytest.mark.parametrize(
-    ("rule_id", "lang", "text"),
-    [
-        # Art. 46(4) MiCAR: "temporarily suspend the redemption"; German "vorübergehend auszusetzen".
-        ("ANNEX_II.I", "en", "The competent authority may temporarily suspend the redemption."),
-        ("ANNEX_II.I", "en", "Redemption may be suspended only under the recovery plan."),
-        ("ANNEX_II.I", "de", "Die zuständige Behörde ist befugt, den Rücktausch vorübergehend auszusetzen."),
-        ("ANNEX_II.I", "de", "Der Rücktausch kann nach dem Sanierungsplan ausgesetzt werden."),
-    ],
-)
-def test_suspension_counts_as_a_verb(rule_id, lang, text):
-    term = "aussetzung" if lang == "de" else "suspension"
-    assert term not in _missing(_finding(WhitepaperType.ART, rule_id, text, lang))
+def test_untouched_starter_template_passes_no_rule():
+    # The linter does not treat "REPLACE:" text as a placeholder, so each placeholder stays below its
+    # rule's minimum length or leaves out one of its terms (templates/whitepaper-starter/README.md).
+    report = lint_whitepaper(load_whitepaper(Path("templates/whitepaper-starter/whitepaper.json")))
+    assert [finding.rule.rule_id for finding in report.findings if finding.status == "pass"] == []
 
 
 @pytest.mark.parametrize(
