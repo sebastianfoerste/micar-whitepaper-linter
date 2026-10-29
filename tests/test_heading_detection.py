@@ -1294,7 +1294,7 @@ def test_other_german_template_labels_open_no_notification_date_section(tmp_path
 
 def test_pdf_german_summary_table_row_gives_its_answer_to_the_notification_date(tmp_path: Path):
     # Field 01 of the German summary table as pypdf reads it, with the answer on the label line. Field 02
-    # names no section, so it ends field 01 and its statement is no answer to it.
+    # opens the first-page statement's section, so it ends field 01 and its statement is no answer to it.
     blocks = [
         ("large", "Zusammenfassung"),
         ("line", "01 Datum der Mitteilung 2026-03-02"),
@@ -1307,7 +1307,10 @@ def test_pdf_german_summary_table_row_gives_its_answer_to_the_notification_date(
     ]
     path = _write_pdf(tmp_path / "quillmoor.pdf", blocks)
 
-    assert load_from_pdf(path) == {"notification_date": "2026-03-02"}
+    sections = load_from_pdf(path)
+    assert sections["notification_date"] == "2026-03-02"
+    assert "Dieses Kryptowerte-Whitepaper" in sections["not_approved_statement"]
+    assert sections.keys() == {"notification_date", "not_approved_statement"}
     finding = _findings(path)["COMMON.NOTIFICATION_DATE"]
     assert finding.rule.severity is Severity.MAJOR
     # The answer is a calendar date, which is all the field asks for.
