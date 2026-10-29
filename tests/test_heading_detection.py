@@ -1234,11 +1234,11 @@ ALL_WRITERS = {
 }
 
 
-def _german_draft(heading: str, text: str) -> list[tuple[str, str]]:
+def _german_draft(heading: str, text: str, summary: str = GERMAN_SUMMARY) -> list[tuple[str, str]]:
     """A German draft: a summary, text under heading, and a technology section that ends it."""
     return [
         ("heading", "Zusammenfassung"),
-        ("body", GERMAN_SUMMARY),
+        ("body", summary),
         ("heading", heading),
         ("body", text),
         ("heading", "Technologie"),
@@ -1315,6 +1315,165 @@ def test_xhtml_german_notification_date_heading_anchors_its_findings(tmp_path: P
 
     assert _xhtml_section_identifiers(path)["notification_date"] == "xhtml:heading-2"
     assert _xhtml_heading_lines(path)["notification_date"] == 6
+
+
+# German drafts call the redemption "Rücktausch", as the German text of MiCAR does: "Recht auf Rücktausch"
+# (Art. 39), "Rücktauschplan" (Art. 47) and "dauerhaften Rücktauschrechte" (Anhang II Teil D Nr. 9).
+# Implementing Regulation (EU) 2024/2984 labels field I.06 of the ART summary "Recht auf Rücktausch" and
+# field D.31 "Form des Rücktauschs".
+GERMAN_REDEMPTION_HEADINGS = ["Rücktausch", "Recht auf Rücktausch", "Dauerhafte Rücktauschrechte"]
+GERMAN_ART_SUMMARY = (
+    "Der QAR-Token der Quillmoor Ledger S.A. ist ein vermögenswertereferenzierter Token, der sich auf einen "
+    "Korb aus Euro-Einlagen und Anleihen bezieht."
+)
+# Art. 39 Abs. 1 and 2 MiCAR: redemption at all times, here by paying the market value of the referenced
+# assets. At 31 words the section is too thin for ANNEX_II.I (100 words), so the check reviews it whatever
+# its terms.
+GERMAN_REDEMPTION = (
+    "Die Inhaber des QAR-Token können jederzeit den Rücktausch bei der Quillmoor Ledger S.A. verlangen. Der "
+    "Emittent zahlt einen Geldbetrag in Höhe des Marktwerts der Vermögenswerte, auf die der Token Bezug nimmt."
+)
+
+
+@pytest.mark.parametrize(
+    "heading",
+    [
+        *GERMAN_REDEMPTION_HEADINGS,
+        "RÜCKTAUSCH",
+        "Rücktauschrechte",
+        "Rücktausch des Token",
+        "Rücktauschplan",
+        "I.06 Recht auf Rücktausch",
+        "D.31 Form des Rücktauschs",
+        # A DOCX heading with a line break in it.
+        "Recht auf\nRücktausch",
+    ],
+)
+def test_german_redemption_heading_names_the_redemption(heading: str):
+    assert match_heading_to_section(heading) == ["redemption"]
+
+
+# A heading that also names a risk heads a risk. It opens the sections it opened before, so the redemption
+# section takes no risk text from the risks.
+@pytest.mark.parametrize(
+    "heading,keys",
+    [
+        ("Rücktauschrisiko", []),
+        ("Risiko der Aussetzung des Rücktauschs", []),
+        ("Liquiditätsrisiken der dauerhaften Rücktauschrechte", []),
+        ("Risiken im Zusammenhang mit dem Rücktausch", ["risks"]),
+    ],
+)
+def test_german_risk_heading_that_names_the_redemption_does_not_name_it(heading: str, keys: list[str]):
+    assert match_heading_to_section(heading) == keys
+
+
+@pytest.mark.parametrize("suffix", sorted(ALL_WRITERS))
+@pytest.mark.parametrize("heading", GERMAN_REDEMPTION_HEADINGS)
+def test_german_redemption_heading_opens_its_section(tmp_path: Path, suffix: str, heading: str):
+    write, load = ALL_WRITERS[suffix]
+    path = write(
+        tmp_path / f"quillmoor{suffix}", _german_draft(heading, GERMAN_REDEMPTION, GERMAN_ART_SUMMARY)
+    )
+
+    sections = load(path)
+    assert sorted(sections) == ["redemption", "summary", "technology"]
+    assert _words(sections["redemption"]) == GERMAN_REDEMPTION
+    finding = _findings(path, WhitepaperType.ART)["ANNEX_II.I"]
+    assert finding.rule.severity is Severity.BLOCKER
+    assert (finding.status, finding.word_count) == ("review", len(GERMAN_REDEMPTION.split()))
+
+
+@pytest.mark.parametrize("suffix", sorted(ALL_WRITERS))
+def test_german_rights_heading_that_names_the_redemption_opens_both_sections(tmp_path: Path, suffix: str):
+    # A heading names every section whose pattern it matches, so the rights section keeps its heading and
+    # the redemption check reads the same chapter.
+    heading = "Rechte und Pflichten, Rücktausch"
+    rights = (
+        "Die Inhaber können ihre Ansprüche aus den Bedingungen des QAR-Token vor den Gerichten in Luxemburg "
+        f"geltend machen. {GERMAN_REDEMPTION}"
+    )
+    write, load = ALL_WRITERS[suffix]
+    path = write(tmp_path / f"quillmoor{suffix}", _german_draft(heading, rights, GERMAN_ART_SUMMARY))
+
+    assert match_heading_to_section(heading) == ["rights_and_obligations", "redemption"]
+    sections = load(path)
+    assert sorted(sections) == ["redemption", "rights_and_obligations", "summary", "technology"]
+    assert _words(sections["rights_and_obligations"]) == _words(sections["redemption"]) == rights
+    findings = _findings(path, WhitepaperType.ART)
+    for rule_id in ("ANNEX_II.D", "ANNEX_II.I"):
+        assert findings[rule_id].rule.severity is Severity.BLOCKER
+        assert findings[rule_id].word_count == len(rights.split())
+
+
+# A risk section whose paragraphs sit under headings that each name one risk.
+GERMAN_RISK_PARTS = [
+    (
+        "Marktrisiko",
+        "Der Marktpreis des QAR-Token kann vom Wert der Referenzwerte abweichen, und Inhaber können beim "
+        "Verkauf Verluste erleiden.",
+    ),
+    (None, "Verzögert sich der Rücktausch, erhalten die Inhaber ihr Geld später als erwartet."),
+    (
+        "Liquiditätsrisiko",
+        "Bei wenigen Käufern kann die Liquidität des QAR-Token ausbleiben, sodass Inhaber nicht zu einem "
+        "fairen Preis verkaufen können.",
+    ),
+]
+
+
+@pytest.mark.parametrize("suffix", sorted(WRITERS))
+@pytest.mark.parametrize(
+    "heading",
+    [
+        "Rücktauschrisiko",
+        "Risiko der Aussetzung des Rücktauschs",
+        "Risiken im Zusammenhang mit dem Rücktausch",
+    ],
+)
+def test_german_risk_sub_heading_that_names_the_redemption_stays_in_the_risks(
+    tmp_path: Path, suffix: str, heading: str
+):
+    # The second risk heading names the redemption. Its paragraph and the one after it stay in the risks
+    # (a PDF keeps a bold label that names no section as text of its section), and the redemption section
+    # holds only the chapter under "Rücktausch".
+    write, load = WRITERS[suffix]
+    blocks = [("large", "Zusammenfassung"), ("body", GERMAN_ART_SUMMARY), ("large", "Risikofaktoren")]
+    for label, text in GERMAN_RISK_PARTS:
+        blocks += [("subheading", label or heading), ("body", text)]
+    blocks += [("large", "Rücktausch"), ("body", GERMAN_REDEMPTION)]
+    path = write(tmp_path / f"quillmoor{suffix}", blocks)
+
+    sections = load(path)
+    assert sorted(sections) == ["redemption", "risks", "summary"]
+    risks = _words(sections["risks"])
+    assert all(_words(text) in risks for _, text in GERMAN_RISK_PARTS)
+    assert _words(sections["redemption"]) == GERMAN_REDEMPTION
+    findings = _findings(path, WhitepaperType.ART)
+    assert findings["ANNEX_II.I"].rule.severity is Severity.BLOCKER
+    assert (findings["ANNEX_II.I"].status, findings["ANNEX_II.I"].word_count) == (
+        "review",
+        len(GERMAN_REDEMPTION.split()),
+    )
+
+
+def test_xhtml_german_redemption_heading_anchors_its_findings(tmp_path: Path):
+    # Finding anchors and SARIF lines read the headings as the loader does: the risk heading before the
+    # chapter names the risks only, so the redemption findings point at "Rücktausch", the third heading,
+    # on line 8.
+    blocks = [
+        ("heading", "Zusammenfassung"),
+        ("body", GERMAN_ART_SUMMARY),
+        ("heading", "Risiken im Zusammenhang mit dem Rücktausch"),
+        ("body", GERMAN_RISK_PARTS[1][1]),
+        ("heading", "Rücktausch"),
+        ("body", GERMAN_REDEMPTION),
+    ]
+    path = _write_xhtml(tmp_path / "quillmoor.xhtml", blocks)
+
+    identifiers = _xhtml_section_identifiers(path)
+    assert (identifiers["risks"], identifiers["redemption"]) == ("xhtml:heading-2", "xhtml:heading-3")
+    assert _xhtml_heading_lines(path)["redemption"] == 8
 
 
 @pytest.mark.parametrize("answer", ["N/A", "n/a", "entfällt", "nicht anwendbar", "k. A."])
