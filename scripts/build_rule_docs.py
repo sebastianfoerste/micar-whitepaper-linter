@@ -290,8 +290,8 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
                 "No LEI in a party section",
                 "review",
                 {**base, "sections": {"issuer": "Synthetic Issuer AG.", "summary": f"LEI {SYNTHETIC_LEI}."}},
-                "The issuer section carries no valid LEI. It may give another identifier required under national "
-                "law, which a reviewer checks.",
+                "The issuer section carries no valid LEI. It may give another identifier required pursuant to "
+                "applicable national law, which a reviewer checks.",
             ),
             Example(
                 "LEI outside the party sections",

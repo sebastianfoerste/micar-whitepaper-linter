@@ -12,7 +12,8 @@ from __future__ import annotations
 # The competent court ("Gericht"), but not "gerichtet", "ausgerichtet" or "eingerichtet".
 COURT_DE = r"(?P<gericht>gericht(?!et))"
 # A postal address, but not an e-mail address (as Table 2 field A.9 and Table 4 field A.10 ask the offeror or
-# issuer for), a contract or wallet address, or the verb ("addresses the risks").
+# issuer for), a contract or wallet address, or the verb before "the", "this", "risks" and similar objects
+# ("addresses the risks").
 ADDRESS_EN = (
     r"(?P<address>(?<!e-mail[ -])(?<!email[ -])(?<!contract )(?<!wallet )\baddress(?:es)?\b"
     r"(?!\s+(?:the|this|these|those|risks?|issues?)\b))"
@@ -29,32 +30,26 @@ OFFER_DE = (
     r"|zulassung\s+(?:[\w-]+\s+){0,3}zum\s+handel)"
 )
 
-# ANNEX_II.D: Art. 39 Abs. 1 MiCAR grants the right of redemption "at all times" ("jederzeit") and calls it
-# permanent ("dauerhaft"). "At all times" and "jederzeit" count only beside the redemption, within the same
-# sentence and a few words; "permanently" and "auf einem dauerhaften Datenträger" do not count.
-PERMANENT_EN = (
-    r"(?P<permanent>\bpermanent(?!ly)"
-    r"|(?:redemption|redeem\w*)(?:[^\w.;!?]+\w+){0,4}?[^\w.;!?]+at\s+all\s+times"
-    r"|at\s+all\s+times(?:[^\w.;!?]+\w+){0,4}?[^\w.;!?]+(?:redemption|redeem))"
-)
-PERMANENT_DE = (
-    r"(?P<dauerhaft>dauerhaft(?!\w*\s+datenträger)"
-    r"|jederzeit(?:[^\w.;!?]+\w+){0,5}?[^\w.;!?]+\w*rücktausch"
-    r"|rücktausch\w*(?:[^\w.;!?]+\w+){0,5}?[^\w.;!?]+jederzeit)"
-)
-# ANNEX_II.I: a fee ("Gebühr"), but not "feed", "feedback" or "gebührend"; the suspension as a noun or a verb
-# ("temporarily suspend", Art. 46 Abs. 4; "auszusetzen", "ausgesetzt"), but not "Voraussetzung".
+# ANNEX_II.D: Art. 39 Abs. 1 MiCAR and Anhang II Teil D Nr. 9 call the right of redemption permanent
+# ("dauerhaft"); "permanently" and "auf einem dauerhaften Datenträger" do not count. "At all times" and
+# "jederzeit" do not count either: they also describe the reserve, the policy or complaints.
+PERMANENT_EN = r"(?P<permanent>\bpermanent(?!ly))"
+PERMANENT_DE = r"(?P<dauerhaft>dauerhaft(?!\w*\s+datenträger))"
+# ANNEX_II.I: a fee ("Gebühr"), but not "feed", "feedback" or "gebührend"; the suspension as a noun
+# ("Aussetzung"), but not "Voraussetzung". The verbs ("ausgesetzt") also mean "exposed to" a risk.
 FEE_EN = r"(?P<fee>\bfees?\b)"
 FEE_DE = r"(?P<gebühr>gebühr(?!end))"
-SUSPENSION_EN = r"(?P<suspension>\bsuspen(?:sions?|ds?|ded|ding)\b)"
-SUSPENSION_DE = r"(?P<aussetzung>(?<!vor)(?<!vorr)aussetz|ausgesetzt|auszusetzen)"
-# ANNEX_II.G.VALUATION_AUDIT: each referenced asset in either word order and any inflection, also as German
-# MiCAR words it ("Vermögenswerte, auf die sich der Token bezieht"), but not "asset referenced token"; the
-# valuation as a noun or a verb, but not "evaluation", "devaluation" or "our valued holders".
+SUSPENSION_DE = r"(?P<aussetzung>(?<!vor)(?<!vorr)aussetzung)"
+# ANNEX_II.G.VALUATION_AUDIT: each referenced asset in either word order and any inflection, also in the
+# relative clauses of German MiCAR ("Vermögenswerte, auf die die vermögenswertereferenzierten Token Bezug
+# nehmen", Art. 39 Abs. 2; "auf die sich der vermögenswertereferenzierte Token bezieht", Art. 38 Abs. 5
+# Buchst. b), but not "asset referenced token" or the "Vermögenswertreserve"; the valuation as a noun or a
+# verb, but not "evaluation", "devaluation" or "our valued holders".
 REFERENCED_ASSET_EN = r"(?P<referenced_asset>referenced\s+assets?|assets?\s+referenced(?!\s+tokens?\b))"
 REFERENCED_ASSET_DE = (
     r"(?P<referenzierter_vermögenswert>referenziert\w*\s+vermögenswert|referenzvermögenswert"
-    r"|vermögenswert\w*,?\s+auf\s+die\s+[^.;]{0,80}?\b(?:bezieh\w*|bezug\s+nehm\w*))"
+    r"|vermögenswert(?:e|es|s|en)?\b,?\s+auf\s+d(?:ie|en)\s+[^.;]{0,80}?\b"
+    r"(?:bezieh\w*|bezug\s+(?:nehm\w*|nimmt|genommen)))"
 )
 VALUATION_EN = (
     r"(?P<valuation>(?<![a-z])(?:re)?valuation|\bvaluing\b|\b(?:is|are|was|were|be|been|being)\s+valued\b"

@@ -8,6 +8,7 @@ import pytest
 
 from micar_linter.linter import lint_whitepaper
 from micar_linter.numbered_fields import extract_numbered_fields
+from micar_linter.placeholders import is_not_applicable
 from micar_linter.whitepaper import Whitepaper, WhitepaperType, load_whitepaper
 
 PLACEHOLDERS = [
@@ -136,4 +137,53 @@ def test_a_placeholder_language_field_reports_the_placeholder(tmp_path: Path):
     # The field is there but unanswered, so the layout is not blamed.
     assert not any(
         "language check reports Missing because of the layout" in warning for warning in report.warnings
+    )
+
+
+# An answer that says the item does not apply, in English or German, as the whole content of a field.
+NOT_APPLICABLE = [
+    "N/A",
+    "not applicable",
+    "None.",
+    "-",
+    "n. a.",
+    "n.a.",
+    "entfällt",
+    "Entfällt.",
+    "entfaellt",
+    "nicht anwendbar",
+    "Nicht zutreffend.",
+    "keine",
+    "Keine Angabe",
+    "k. A.",
+    "k.A.",
+]
+
+
+@pytest.mark.parametrize("text", NOT_APPLICABLE)
+def test_an_answer_that_the_item_does_not_apply_is_not_applicable(text: str):
+    assert is_not_applicable(text)
+
+
+@pytest.mark.parametrize(
+    "text", ["Entfällt nicht", "keine Angabe zur Höhe der Gebühren", "Keine Muttergesellschaft", "Keiner"]
+)
+def test_an_answer_with_more_words_is_not_not_applicable(text: str):
+    assert not is_not_applicable(text)
+
+
+@pytest.mark.parametrize("answer", ["N/A", "entfällt", "nicht anwendbar", "k. A."])
+def test_a_part_answered_not_applicable_in_german_reads_as_not_applicable(tmp_path: Path, answer: str):
+    # The German answers count as "N/A" does: the labels stay out of the section, and the report notes
+    # that the whole part is marked not applicable.
+    path = _numbered_draft(tmp_path, answer)
+
+    fields = {field.field_id: field for field in extract_numbered_fields(path)}
+    assert not fields["I.1"].answered
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    assert whitepaper.section("risks") == "N/A\nN/A"
+    report = lint_whitepaper(whitepaper)
+    assert any(
+        warning.startswith("Part I: all 2 numbered fields are marked not applicable")
+        for warning in report.warnings
     )

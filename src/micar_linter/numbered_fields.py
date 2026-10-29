@@ -144,7 +144,7 @@ _LANGUAGE_CONTENT = re.compile(
 # Art. 54: "separate accounts", "besichert", "gesonderten Konten".
 _SAFEGUARDING_TEXT = re.compile(
     r"\bsafeguard\w*|\bsegregat\w*|\bseparate\s+(?:\w+\s+)?accounts?\b|\babsicherung\w*|\bbesichert\w*"
-    r"|\bgesondert\w*\s+\w*kont(?:o|en)\b|\bsicherung\w*.*\bgelder\w*",
+    r"|\bgesondert\w*\s+\w*kont(?:o|os|en)\b|\bsicherung\w*.*\bgelder\w*",
     re.I,
 )
 

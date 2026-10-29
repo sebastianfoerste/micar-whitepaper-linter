@@ -24,8 +24,8 @@
 <dt>Severity if open</dt><dd>BLOCKER</dd>
 <dt>Section key</dt><dd><code>redemption</code></dd>
 <dt>Minimum words</dt><dd>100</dd>
-<dt>Listed terms (English)</dt><dd><code>redemption</code>, <code>market value</code>, <code>procedure</code>, <code>timeframe</code>, <code>fee</code> (pattern <code>(?P&lt;fee&gt;\bfees?\b)</code>), <code>suspension</code> (pattern <code>(?P&lt;suspension&gt;\bsuspen(?:sions?|ds?|ded|ding)\b)</code>)</dd>
-<dt>Listed terms (German)</dt><dd lang="de"><code>rücktausch</code>, <code>marktwert</code>, <code>verfahren</code>, <code>zeitrahmen</code>, <code>gebühr</code> (pattern <code>(?P&lt;gebühr&gt;gebühr(?!end))</code>), <code>aussetzung</code> (pattern <code>(?P&lt;aussetzung&gt;(?&lt;!vor)(?&lt;!vorr)aussetz|ausgesetzt|auszusetzen)</code>)</dd>
+<dt>Listed terms (English)</dt><dd><code>redemption</code>, <code>market value</code>, <code>procedure</code>, <code>timeframe</code>, <code>suspension</code>, <code>fee</code> (pattern <code>(?P&lt;fee&gt;\bfees?\b)</code>)</dd>
+<dt>Listed terms (German)</dt><dd lang="de"><code>rücktausch</code>, <code>marktwert</code>, <code>verfahren</code>, <code>zeitrahmen</code>, <code>gebühr</code> (pattern <code>(?P&lt;gebühr&gt;gebühr(?!end))</code>), <code>aussetzung</code> (pattern <code>(?P&lt;aussetzung&gt;(?&lt;!vor)(?&lt;!vorr)aussetzung)</code>)</dd>
 <dt>Package version</dt><dd>1.2.1, built from source that may include unreleased changes</dd>
 <dt>Source</dt><dd><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/rules/annex_ii.py">rules/annex_ii.py</a></dd>
 </dl></div>
@@ -45,13 +45,13 @@
   &quot;title&quot;: &quot;Synthetic rule example&quot;,
   &quot;type&quot;: &quot;art&quot;,
   &quot;sections&quot;: {
-    &quot;redemption&quot;: &quot;redemption market value procedure timeframe fee suspension&quot;
+    &quot;redemption&quot;: &quot;redemption market value procedure timeframe suspension fee&quot;
   }
 }</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>Section that matches</strong></div><p class="small muted">This text passes and shows what the check measures: listed terms and length. It is not model disclosure wording and does not meet MiCAR.</p><pre><code>{
   &quot;title&quot;: &quot;Synthetic rule example&quot;,
   &quot;type&quot;: &quot;art&quot;,
   &quot;sections&quot;: {
-    &quot;redemption&quot;: &quot;Synthetic example naming redemption, market value, procedure, timeframe, fee, suspension. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token.&quot;
+    &quot;redemption&quot;: &quot;Synthetic example naming redemption, market value, procedure, timeframe, suspension, fee. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token.&quot;
   }
 }</code></pre></div>
 <h2>Limitations</h2>
