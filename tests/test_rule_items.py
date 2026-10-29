@@ -80,6 +80,14 @@ def test_valuation_rule_names_the_referenced_assets_in_either_word_order_and_inf
     assert _finding(
         _lint(WhitepaperType.ART, {"rights_and_obligations": german}, "de"), "ANNEX_II.G.VALUATION_AUDIT"
     ).status == "pass"
+    # The German wording of Art. 39(2) MiCAR: "Vermögenswerte, auf die die ... Token Bezug nehmen".
+    relative = (
+        "Die Vermögenswerte, auf die die vermögenswertereferenzierten Token Bezug nehmen, werden täglich "
+        "bewertet."
+    )
+    assert _finding(
+        _lint(WhitepaperType.ART, {"rights_and_obligations": relative}, "de"), "ANNEX_II.G.VALUATION_AUDIT"
+    ).status == "pass"
     # "Evaluation" is no valuation.
     evaluation = "Each referenced asset is listed below. Complaints are subject to an evaluation."
     finding = _finding(

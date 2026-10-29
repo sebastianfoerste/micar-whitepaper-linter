@@ -71,10 +71,61 @@ CASES = [
     (
         WhitepaperType.ART,
         "ANNEX_II.D",
+        "en",
+        "permanent",
+        "Redemption is possible on the last business day of each quarter only. Complaints from any holder can "
+        "be submitted at all times through the complaints form.",
+        "Holders may redeem their tokens at all times.",
+    ),
+    (
+        WhitepaperType.ART,
+        "ANNEX_II.D",
         "de",
         "dauerhaft",
         "Beschwerden können auf einem dauerhaften Datenträger eingereicht werden.",
         "Die Inhaber haben jederzeit das Recht auf Rücktausch.",
+    ),
+    (
+        WhitepaperType.ART,
+        "ANNEX_II.D",
+        "de",
+        "dauerhaft",
+        "Ein Rücktausch ist nur am letzten Geschäftstag jedes Quartals möglich. Beschwerden kann jeder Inhaber "
+        "jederzeit einreichen.",
+        "Der Rücktausch ist jederzeit möglich.",
+    ),
+    (
+        WhitepaperType.ART,
+        "ANNEX_II.I",
+        "de",
+        "aussetzung",
+        "Die Vorraussetzungen des Rücktauschs regelt die Rücktauschstrategie.",
+        "Die zuständige Behörde kann den Rücktausch vorübergehend aussetzen.",
+    ),
+    (
+        WhitepaperType.ART,
+        "ANNEX_II.G.VALUATION_AUDIT",
+        "en",
+        "valuation",
+        "Each referenced asset is listed below. Holders of our valued community bear the risk of a devaluation "
+        "of the euro.",
+        "Each referenced asset is valued daily at its market price.",
+    ),
+    (
+        WhitepaperType.ART,
+        "ANNEX_II.G.VALUATION_AUDIT",
+        "en",
+        "referenced asset",
+        "The asset referenced token gives a claim whose components are valued daily.",
+        "The assets referenced by the token are valued daily.",
+    ),
+    (
+        WhitepaperType.ART,
+        "ANNEX_II.G.VALUATION_AUDIT",
+        "de",
+        "referenzierter vermögenswert",
+        "Die Referenzwerte des vermögenswertereferenzierten Token werden täglich bewertet.",
+        "Die Vermögenswerte, auf die sich der Token bezieht, werden täglich bewertet.",
     ),
     (
         WhitepaperType.ART,
@@ -112,17 +163,25 @@ CASES = [
         WhitepaperType.OTHER,
         "ANNEX_I.I",
         "en",
-        "offer",
+        "offer or admission to trading",
         "The issuer, if different from the offeror, carries its own risks.",
         "The crypto-assets are admitted to trading; the risks of the admission to trading are set out below.",
+    ),
+    (
+        WhitepaperType.OTHER,
+        "ANNEX_I.I",
+        "en",
+        "offer or admission to trading",
+        "The token price depends on offer and demand.",
+        "The risks of the admission of the crypto-assets to trading are set out below.",
     ),
     (
         WhitepaperType.ART,
         "ANNEX_II.F",
         "de",
-        "angebot",
+        "angebot oder zulassung zum handel",
         "Der Preis hängt von Angebot und Nachfrage ab.",
-        "Die mit der Zulassung zum Handel verbundenen Risiken sind unten beschrieben.",
+        "Die mit der Zulassung der Token zum Handel verbundenen Risiken sind unten beschrieben.",
     ),
     (
         WhitepaperType.OTHER,
@@ -131,6 +190,14 @@ CASES = [
         "address",
         "Example Offeror GmbH. E-mail address: contact@offeror.example.",
         "The business address of each member of the management body is Example Street 1, Berlin.",
+    ),
+    (
+        WhitepaperType.OTHER,
+        "ANNEX_I.A",
+        "en",
+        "address",
+        "This section addresses the offeror. The smart contract address is listed in Part H.",
+        "The addresses of the members of the management body are listed below.",
     ),
     (
         WhitepaperType.EMT,
@@ -144,7 +211,7 @@ CASES = [
         WhitepaperType.OTHER,
         "COMMON.MANAGEMENT_STATEMENT",
         "de",
-        "titel ii bis iv",
+        "titel ii iii oder iv",
         "Das Leitungsorgan erklärt zum Kryptowerte-Whitepaper mit dem Titel „Example Token“, dass es "
         "redlich, eindeutig und nicht irreführend ist.",
         "Dieses Kryptowerte-Whitepaper erfüllt Titel II der Verordnung (EU) 2023/1114.",
@@ -155,13 +222,28 @@ CASES = [
 @pytest.mark.parametrize(
     ("whitepaper_type", "rule_id", "lang", "term", "look_alike", "with_term"),
     CASES,
-    ids=[f"{rule_id}-{lang}-{term}" for _, rule_id, lang, term, *_ in CASES],
+    ids=[f"{rule_id}-{lang}-{term}-{index}" for index, (_, rule_id, lang, term, *_) in enumerate(CASES)],
 )
 def test_look_alike_words_do_not_stand_in_for_the_term(
     whitepaper_type, rule_id, lang, term, look_alike, with_term
 ):
     assert term in _missing(_finding(whitepaper_type, rule_id, look_alike, lang))
     assert term not in _missing(_finding(whitepaper_type, rule_id, with_term, lang))
+
+
+@pytest.mark.parametrize(
+    ("rule_id", "lang", "text"),
+    [
+        # Art. 46(4) MiCAR: "temporarily suspend the redemption"; German "vorübergehend auszusetzen".
+        ("ANNEX_II.I", "en", "The competent authority may temporarily suspend the redemption."),
+        ("ANNEX_II.I", "en", "Redemption may be suspended only under the recovery plan."),
+        ("ANNEX_II.I", "de", "Die zuständige Behörde ist befugt, den Rücktausch vorübergehend auszusetzen."),
+        ("ANNEX_II.I", "de", "Der Rücktausch kann nach dem Sanierungsplan ausgesetzt werden."),
+    ],
+)
+def test_suspension_counts_as_a_verb(rule_id, lang, text):
+    term = "aussetzung" if lang == "de" else "suspension"
+    assert term not in _missing(_finding(WhitepaperType.ART, rule_id, text, lang))
 
 
 @pytest.mark.parametrize(

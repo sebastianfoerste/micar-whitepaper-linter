@@ -262,8 +262,8 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
                     "Party section without an LEI",
                     "review",
                     {**base, "sections": {"issuer": "Synthetic Issuer AG."}},
-                    "Point 5 of each party Part allows another identifier required under national law in place "
-                    "of the LEI, so a reviewer checks which one the draft gives.",
+                    "Point 5 of each party Part allows another identifier required pursuant to applicable "
+                    "national law in place of the LEI, so a reviewer checks which one the draft gives.",
                 ),
                 Example(
                     "Check digits do not match",
@@ -495,7 +495,7 @@ def status_logic(rule: Rule) -> str:
             "only next to an LEI label.</li>"
             "<li><strong>Review</strong>: an LEI-shaped code fails the ISO/IEC 7064 MOD 97-10 check digits; or no "
             "LEI-shaped code appears while a party section has text, since point 5 allows another identifier "
-            "required under national law in place of the LEI.</li>"
+            "required pursuant to applicable national law in place of the LEI.</li>"
             "<li><strong>Pass</strong>: every LEI-shaped code has valid check digits. No registry is asked.</li></ul>"
         )
     if rule.rule_id == "COMMON.LEI_CONSISTENCY":

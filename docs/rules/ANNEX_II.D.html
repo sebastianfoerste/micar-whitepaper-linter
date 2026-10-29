@@ -24,8 +24,8 @@
 <dt>Severity if open</dt><dd>BLOCKER</dd>
 <dt>Section key</dt><dd><code>rights_and_obligations</code></dd>
 <dt>Minimum words</dt><dd>80</dd>
-<dt>Listed terms (English)</dt><dd><code>rights</code>, <code>redemption</code>, <code>complaints</code>, <code>holder</code>, <code>permanent</code> (pattern <code>(?P&lt;permanent&gt;\bpermanent(?!ly)|at all times)</code>)</dd>
-<dt>Listed terms (German)</dt><dd lang="de"><code>rechte</code>, <code>rücktausch</code>, <code>beschwerden</code>, <code>inhaber</code>, <code>dauerhaft</code> (pattern <code>(?P&lt;dauerhaft&gt;dauerhaft(?!\w*\s+datenträger)|jederzeit)</code>)</dd>
+<dt>Listed terms (English)</dt><dd><code>rights</code>, <code>redemption</code>, <code>complaints</code>, <code>holder</code>, <code>permanent</code> (pattern <code>(?P&lt;permanent&gt;\bpermanent(?!ly)|(?:redemption|redeem\w*)(?:[^\w.;!?]+\w+){0,4}?[^\w.;!?]+at\s+all\s+times|at\s+all\s+times(?:[^\w.;!?]+\w+){0,4}?[^\w.;!?]+(?:redemption|redeem))</code>)</dd>
+<dt>Listed terms (German)</dt><dd lang="de"><code>rechte</code>, <code>rücktausch</code>, <code>beschwerden</code>, <code>inhaber</code>, <code>dauerhaft</code> (pattern <code>(?P&lt;dauerhaft&gt;dauerhaft(?!\w*\s+datenträger)|jederzeit(?:[^\w.;!?]+\w+){0,5}?[^\w.;!?]+\w*rücktausch|rücktausch\w*(?:[^\w.;!?]+\w+){0,5}?[^\w.;!?]+jederzeit)</code>)</dd>
 <dt>Package version</dt><dd>1.2.1, built from source that may include unreleased changes</dd>
 <dt>Source</dt><dd><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/rules/annex_ii.py">rules/annex_ii.py</a></dd>
 </dl></div>

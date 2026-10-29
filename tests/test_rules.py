@@ -56,7 +56,7 @@ def test_rulesets_compile_patterns():
                     assert compiled.search(name.replace("_", " ")), (rule.rule_id, pattern)
 
             # Without German patterns, a German draft would be checked against the English ones.
-            if rule.required_patterns and rule.required_terms_de:
+            if rule.required_patterns:
                 assert rule.required_patterns_de, rule.rule_id
 
             for pattern in (*rule.prohibited_patterns, *rule.prohibited_patterns_de):

@@ -24,8 +24,8 @@
 <dt>Severity if open</dt><dd>BLOCKER</dd>
 <dt>Section key</dt><dd><code>risks</code></dd>
 <dt>Minimum words</dt><dd>120</dd>
-<dt>Listed terms (English)</dt><dd><code>project</code>, <code>technology</code>, <code>offer</code> (pattern <code>(?P&lt;offer&gt;\boffer(?!or)|admission to trading)</code>)</dd>
-<dt>Listed terms (German)</dt><dd lang="de"><code>projekt</code>, <code>technologie</code>, <code>angebot</code> (pattern <code>(?P&lt;angebot&gt;\bangebot(?!\s+und\s+nachfrage)|zulassung zum handel)</code>)</dd>
+<dt>Listed terms (English)</dt><dd><code>project</code>, <code>technology</code>, <code>offer or admission to trading</code> (pattern <code>(?P&lt;offer_or_admission_to_trading&gt;\boffer(?!or)(?!\s+and\s+demand)|admission\s+(?:of\s+(?:[\w-]+\s+){1,3})?to\s+trading)</code>)</dd>
+<dt>Listed terms (German)</dt><dd lang="de"><code>projekt</code>, <code>technologie</code>, <code>angebot oder zulassung zum handel</code> (pattern <code>(?P&lt;angebot_oder_zulassung_zum_handel&gt;\bangebot(?!\s+und\s+nachfrage)|zulassung\s+(?:[\w-]+\s+){0,3}zum\s+handel)</code>)</dd>
 <dt>Package version</dt><dd>1.2.1, built from source that may include unreleased changes</dd>
 <dt>Source</dt><dd><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/rules/annex_i.py">rules/annex_i.py</a></dd>
 </dl></div>
@@ -45,13 +45,13 @@
   &quot;title&quot;: &quot;Synthetic rule example&quot;,
   &quot;type&quot;: &quot;other&quot;,
   &quot;sections&quot;: {
-    &quot;risks&quot;: &quot;project technology offer&quot;
+    &quot;risks&quot;: &quot;project technology offer or admission to trading&quot;
   }
 }</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>Section that matches</strong></div><p class="small muted">This text passes and shows what the check measures: listed terms and length. It is not model disclosure wording and does not meet MiCAR.</p><pre><code>{
   &quot;title&quot;: &quot;Synthetic rule example&quot;,
   &quot;type&quot;: &quot;other&quot;,
   &quot;sections&quot;: {
-    &quot;risks&quot;: &quot;Synthetic example naming project, technology, offer. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token.&quot;
+    &quot;risks&quot;: &quot;Synthetic example naming project, technology, offer or admission to trading. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token.&quot;
   }
 }</code></pre></div>
 <h2>Limitations</h2>

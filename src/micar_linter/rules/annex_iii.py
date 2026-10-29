@@ -2,11 +2,13 @@
 
 Reference: Anhang III VO (EU) 2023/1114 i.V.m. Art. 51 MiCAR.
 
-Only the issuer of an EMT, authorised as a credit institution or an
-electronic money institution, may offer it to the public or seek its
-admission to trading in the Union; other persons may do so with the issuer's
-written consent (Art. 48(1) MiCAR). The issuers and tokens exempted under
-Art. 48(4) and (5) still draw up and notify a white paper (Art. 48(7)).
+Only the issuer of an EMT may offer it to the public or seek its admission
+to trading in the Union, and only if it is authorised as a credit institution
+or an electronic money institution and has notified and published a white
+paper under Art. 51; other persons may do so with the issuer's written
+consent and must comply with Arts. 50 and 53 (Art. 48(1) MiCAR). The issuers
+and tokens exempted under Art. 48(4) and (5) still draw up and notify a white
+paper (Art. 48(7)).
 The white paper describes the issuer and its authorisation or exemption, the
 redemption right at par value (Art. 49(4) MiCAR) and the rights of holders,
 including in insolvency. Art. 54 MiCAR governs the investment of the funds

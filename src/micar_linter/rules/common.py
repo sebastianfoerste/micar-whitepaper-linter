@@ -94,8 +94,8 @@ COMMON_RULES: tuple[Rule, ...] = (
         severity=Severity.BLOCKER,
     ),
     # The two LEI rules read every section and check identifiers offline (micar_linter.lei).
-    # Point 5 of each party Part names the LEI or another identifier required under national law,
-    # and Art. 2 Abs. 1 Buchst. b and c VO (EU) 2024/2984 ask for the LEI where available.
+    # Point 5 of each party Part names the LEI or another identifier required pursuant to applicable
+    # national law, and Art. 2 Abs. 1 Buchst. b and c VO (EU) 2024/2984 ask for the LEI where available.
     Rule(
         rule_id="COMMON.LEI_CHECK_DIGITS",
         citation=(
