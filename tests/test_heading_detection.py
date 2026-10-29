@@ -1322,6 +1322,26 @@ def test_xhtml_german_notification_date_heading_anchors_its_findings(tmp_path: P
     assert _xhtml_heading_lines(path)["notification_date"] == 6
 
 
+@pytest.mark.parametrize("answer", ["N/A", "n/a", "entfällt", "nicht anwendbar", "k. A."])
+def test_pdf_numbered_heading_after_a_not_applicable_answer_opens_its_section(tmp_path: Path, answer: str):
+    # An answer that says the item does not apply, in English or German, continues no sentence, so the
+    # heading above it stays a heading even in lower case, and the numbered heading after it opens the
+    # technology section instead of only ending the risks.
+    blocks = [
+        ("heading", "Zusammenfassung"),
+        ("body", GERMAN_SUMMARY),
+        ("heading", "5. Risikofaktoren"),
+        ("line", answer),
+        ("heading", "6. Technologie"),
+        ("body", GERMAN_TECHNOLOGY),
+    ]
+    sections = load_from_pdf(_write_pdf(tmp_path / "quillmoor.pdf", blocks))
+
+    assert sorted(sections) == ["risks", "summary", "technology"]
+    assert sections["risks"] == answer
+    assert _words(sections["technology"]) == GERMAN_TECHNOLOGY
+
+
 # The answer to field 03 of the 2024/2984 summary, in the wording of the template.
 COMPLIANCE = (
     "This crypto-asset white paper complies with Title II of Regulation (EU) 2023/1114 and, to the best of "
