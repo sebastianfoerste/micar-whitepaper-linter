@@ -29,7 +29,7 @@ Option 3.
 
 ## Consequences
 
-- Existing `@v1` users get a job summary and up to 10 annotations on the next `v1` move. Exit codes are unchanged.
+- `@v1` users have had a job summary and up to 10 annotations by default since `v1` moved to 1.2.0. Exit codes are unchanged.
 - SARIF upload fails on fork PRs and on private repositories without Code Security; it is opt-in and documented.
 - The annotation caps (10 per level per step) are documented only in a reviewdog issue (Claimed); the summary is the complete list.
 - rdjson for reviewdog is not emitted; reviewdog can read SARIF.

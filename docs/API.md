@@ -16,11 +16,11 @@ Supported options:
 - `--citation-style en|de`: citation style in the text report, English EU style (`Art. 6(7) MiCAR`, default) or the canonical German form (`Art. 6 Abs. 7 MiCAR`). JSON output always carries both.
 - `--type other|art|emt`: regime of a single PDF, DOCX, Markdown or XHTML draft. Required for XHTML in the numbered-field layout, whose regime is never inferred. A JSON draft states its own `type`.
 - `--strict`: exit with status `1` when blocker findings are open. For a directory, also when a file could not be linted or no file was linted.
-- `--lang en|de|auto`: force rule matching language. Defaults to `auto`.
+- `--lang en|de|auto`: force rule matching language in a single-file run; a directory run, `--compare-review-table-output` and the workspace and collaboration modes detect each file's language. Defaults to `auto`.
 - `--audit-log <path>`: write a markdown compliance review log.
 - `--remediation-output <path>`: write `micar-whitepaper-linter.remediation-report.v1`.
 - `--coverage-output <path>`: write a JSON disclosure coverage matrix.
-- `--coverage`: print a coverage table to stdout instead of the report. Output files and `--strict` still apply.
+- `--coverage`: print a coverage table to stdout instead of the report in a single-file run; with `--review-bundle-dir` it is ignored and the report prints. Output files and `--strict` still apply.
 - `--review-table-output <path>`: write the review table, including playbook review data.
 - `--compare-review-table-output <path>`: compare multiple local draft review tables by rule id and source hash.
 - `--review-bundle-dir <path>`: write checklist, remediation, coverage, review table, sign-off and manifest files.

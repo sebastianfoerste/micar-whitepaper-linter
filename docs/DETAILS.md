@@ -4,7 +4,7 @@ Long-form detail moved out of the README. Everything here was in the previous RE
 
 ## Browser workbench
 
-The full linter runs client-side via Pyodide. Nothing you paste leaves the page.
+The linter's rules run client-side via Pyodide. Nothing you paste leaves the page.
 
 The browser workbench accepts JSON drafts up to 1 MB and XHTML white papers up to 8 MB, includes synthetic examples for all three regimes, and presents searchable findings with citations and section navigation. Download the current report as JSON or text, or save a copy of the draft. Editing a checked draft marks the previous results as stale and disables report export until the checks run again. Python runs in a web worker so the editor stays responsive.
 
@@ -127,7 +127,7 @@ See also [FEATURES.md](FEATURES.md), [SETUP.md](SETUP.md), [ARCHITECTURE.md](ARC
 
 ## Verified behaviour
 
-MiCAR white-paper requirements can be encoded as deterministic, cited and testable rules. Annex selection is explicit, rule IDs are stable, unmatched disclosure patterns produce cited candidate flags, severity is tested, and JSON outputs can be used by review workflows without hiding the legal basis.
+MiCAR white-paper requirements can be encoded as deterministic, cited and testable rules. Annex selection is explicit for JSON drafts and numbered-field XHTML, and for other formats is set by `--type` or else inferred from English phrases in the text; rule IDs are stable, unmatched disclosure patterns produce cited candidate flags, severity is tested, and JSON outputs can be used by review workflows without hiding the legal basis.
 
 The tool preserves legal judgment. It flags candidate disclosure gaps and produces draft review artifacts. It does not decide whether a white paper is lawful or complete.
 
