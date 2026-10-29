@@ -30,7 +30,12 @@ _FIELD_ID = re.compile(
     r"^(?:(?P<part>[A-Z]{1,2})\.(?P<number>\d{1,2})|(?P<summary>\d{2}))(?![\d.]*\d)[.:)]?(?:\s+(?P<rest>.*))?$",
     re.S,
 )
-_PART_HEADING = re.compile(r"^(?:part\s+[A-Z]\b|[A-Z]\.\s+\S)", re.I)
+# A part title of the template, whatever its length ("Part C- Information about the operator of the trading
+# platform ..." runs to 40 words), also in German ("Teil B \u2013 Informationen über den Emittenten, ...").
+_PART_TITLE = re.compile(r"^(?:part|teil)\s+[A-Z]\s*[.:)\u2013\u2014-]\s*\S", re.I)
+# A short line that opens a part without a dash ("Part B", "B. Issuer"); a longer line that starts with a
+# letter and a full stop is body text.
+_PART_HEADING = re.compile(r"^(?:(?:part|teil)\s+[A-Z]\b|[A-Z]\.\s+\S)", re.I)
 # Some authors run several fields together in one paragraph ("A.1 Name: N/A A.2 Legal form: N/A").
 # The colon requirement keeps cross-references such as "see F.14" from opening a field.
 _INLINE_FIELD = re.compile(r"(?<=\s)(?=[A-Z]\.\d{1,2}\s+(?:(?![A-Z]\.\d)[^:]){1,120}:)")
@@ -198,6 +203,11 @@ def _text_nodes(
             yield table_rows[node]
 
 
+def _is_part_heading(text: str) -> bool:
+    """A part title, or a line of under 20 words that opens a part: neither belongs to the field before it."""
+    return bool(_PART_TITLE.match(text)) or (bool(_PART_HEADING.match(text)) and len(text.split()) < 20)
+
+
 def extract_numbered_fields(source: Path | bytes) -> list[NumberedField]:
     """Read the numbered fields of a white paper, merging repeated field numbers.
 
@@ -229,7 +239,7 @@ def extract_numbered_fields(source: Path | bytes) -> list[NumberedField]:
             contents.setdefault(current, [])
             if inline.strip():
                 contents[current].append(inline.strip())
-        elif current and not (_PART_HEADING.match(node) and len(node.split()) < 20):
+        elif current and not _is_part_heading(node):
             contents[current].append(node)
 
     return [
