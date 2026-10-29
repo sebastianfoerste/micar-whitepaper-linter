@@ -1,6 +1,6 @@
 # Overview
 
-Audience, status and limits, the pilot study and related tools, moved out of the [README](../README.md) word for word. Setup and the GitHub Action are in [SETUP.md](SETUP.md); long-form usage and the full example output are in [DETAILS.md](DETAILS.md).
+Audience, status and limits, the pilot study and related tools, moved out of the [README](../README.md). Setup and the GitHub Action are in [SETUP.md](SETUP.md); long-form usage and the full example output are in [DETAILS.md](DETAILS.md).
 
 ## Who it's for
 
@@ -10,6 +10,8 @@ Audience, status and limits, the pilot study and related tools, moved out of the
 Rule sets cover all three white paper regimes under MiCAR (Regulation (EU) 2023/1114): crypto-assets other than ARTs and EMTs (Annex I), asset-referenced tokens (Annex II) and e-money tokens (Annex III). It is a screening tool, not a sign-off: whether a white paper is lawful or complete remains a lawyer's judgment. Not legal advice.
 
 ## Status and limits
+
+For each disclosure that Annex I, II or III requires, the linter checks that the section exists, meets a minimum length and contains the expected keywords, and it cites the provision. A pass means the section is there, long enough and uses the expected terms; the notification-date and language checks instead look for a calendar date and an official EU language. It does not mean the disclosure is accurate, complete or compliant. The English wording of the first-page statement required by Art. 6(3) and Art. 51(3) is matched word for word (ignoring case and line breaks), including which person it names as solely responsible. Whether that statement sits on the first page is not checked.
 
 | Area | State |
 | --- | --- |
@@ -21,7 +23,7 @@ Rule sets cover all three white paper regimes under MiCAR (Regulation (EU) 2023/
 
 ## Pilot study
 
-A reproducible study over Title II white papers in ESMA's MiCA register publishes document hashes, extraction metadata, limitations and a 150-cell human-review matrix. Flags are unreviewed machine output, not legal findings. Raw white papers are not committed. Start at [findings-summary.md](../studies/2026-07-title-ii-annex-i-whitepaper-study/findings-summary.md).
+A reproducible study over Title II white papers in ESMA's MiCA register publishes document hashes, extraction metadata, limitations and a 150-cell human-review matrix. No cell has been reviewed yet (0 of 150), so the study reports no precision, recall or prevalence figures. Flags are unreviewed machine output, not legal findings. Raw white papers are not committed. Start at [findings-summary.md](../studies/2026-07-title-ii-annex-i-whitepaper-study/findings-summary.md). Reviewers start at [REVIEWING.md](../studies/2026-07-title-ii-annex-i-whitepaper-study/REVIEWING.md).
 
 ## Part of the EU regulation as code suite
 

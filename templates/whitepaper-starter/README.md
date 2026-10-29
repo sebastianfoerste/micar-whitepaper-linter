@@ -18,7 +18,11 @@ You can also lint drafts [live in the browser](https://sebastianfoerste.github.i
 
 ## What the linter checks
 
-Deterministic rules (no LLM, same input, same findings): mandatory sections present and substantive (summary, risk warning, management-body statement, redemption, reserve of assets, …), key terms for the statements MiCAR prescribes (risk warning, management-body statement; the exact wording is not checked), and annex-specific items per token type. Findings are staged pass / review / missing.
+Deterministic rules (no LLM, same input, same findings). For each mandatory section (summary, risk warning, management-body statement, redemption, reserve of assets, …) and each annex-specific item for the token type, the linter checks that the section exists, meets a minimum length and contains the expected keywords. Once a linter release includes them (see below), the notification-date and language checks look for a calendar date and an official EU language instead. It does not compare your text with the wording MiCAR prescribes (the one exception, once a linter release includes it, is the English first-page statement for Title II and e-money token white papers under Art. 6 Abs. 3 and Art. 51 Abs. 3 MiCAR), and it does not judge whether a disclosure is accurate or adequate. Findings are staged pass / review / missing.
+
+The rules, their citations and their tests live in [micar-whitepaper-linter](https://github.com/sebastianfoerste/micar-whitepaper-linter), which is the source of truth; this README only summarises them.
+
+The workflow pins the linter's `@v1` tag, which moves to each linter release. `@v1` runs v1.2.1, which does not yet run the corrected asset-referenced token redemption and reserve checks (Art. 39 MiCAR, Anhang II Teil D und G MiCAR), check the first-page statement, or look for a date and a language in the notification-date and language sections; they reach `@v1` with the release that includes them.
 
 ## Scope and honesty
 
