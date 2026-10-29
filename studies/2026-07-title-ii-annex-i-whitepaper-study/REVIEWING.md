@@ -111,7 +111,7 @@ Exit status 0 means no row is pending and every labelled row has the fields that
 - `reviewers_recorded`, the number of distinct reviewer identifiers across labelled cells (not the number of reviews per cell), and `review_disclosure`;
 - `publication_ready_scope`, which states what `publication_ready` does not check.
 
-The committed `human-review-summary.json` is still schema v1 and lacks the last two items and the protocol-gap fields; the command above regenerates it. The precision denominator is at most 21, the number of flagged cells. The recall denominator is the number of cells labelled `missing` and is unknown until the review is complete. The protocol specifies no confidence interval. If you want one, add the method to the protocol before computing the metrics.
+The committed `human-review-summary.json` is still schema v1 and lacks the last two items and the protocol-gap fields; copying the output of the command above over it, once the command exits 0, replaces it. The precision denominator is at most 21, the number of flagged cells. The recall denominator is the number of cells labelled `missing` and is unknown until the review is complete. The protocol specifies no confidence interval. If you want one, add the method to the protocol before computing the metrics.
 
 ## 6. Report
 

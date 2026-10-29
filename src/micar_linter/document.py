@@ -35,7 +35,7 @@ SECTION_PATTERNS = {
         r"\bleitungsorgan\w*",
         r"\bmanagement\s+statement\b",
         r"\bstatement\b.*\bmanagement\b",
-        # Field 03 of the summary of the Implementing Regulation (EU) 2024/2984 template, "Compliance
+        # Field 03 of Table 2 of the Implementing Regulation (EU) 2024/2984 template, "Compliance
         # statement in accordance with Article 6(6)", holds the statement of the management body.
         r"\bcompliance\s+statement\b",
     ],
@@ -168,12 +168,22 @@ _PERSON_TO_CLAUSE = re.compile(
 )
 # The words that end the clause, "of this crypto-asset white paper" ("dieses Kryptowerte-Whitepapers"), with
 # any stop, quote or note mark attached, and however a line break or a hyphen at a line end splits them.
-_CLAUSE_WORDS = re.compile(
+_CLAUSE_END = (
     r"\s+(?:of\s+this\s+crypto-\s*asset\s+white\s+paper|dieses\s+kryptowerte-\s*whitepapers?)"
     # A letter may not follow ("papers"); a note mark stuck to the word may ("paper2", "paper\u00b2").
-    r"(?![^\W\d_\u00b9\u00b2\u00b3\u2070-\u2079])\S*",
+    r"(?![^\W\d_\u00b9\u00b2\u00b3\u2070-\u2079])"
+)
+_CLAUSE_WORDS = re.compile(_CLAUSE_END + r"\S*", re.IGNORECASE)
+# The same words with only their stop, closing quotes, brackets, emphasis and note marks, where a split
+# must not take a word that follows without a space ("paper.The management body ...").
+_CLAUSE_STOP = re.compile(
+    _CLAUSE_END + r"(?:[.!?\"'\u2018\u2019\u201c\u201d\u00ab\u00bb)\]*_\u00b9\u00b2\u00b3\u2070-\u2079]|\[\^\w+\])*"
+    r"(?:\d{1,2}(?!\w))?",
     re.IGNORECASE,
 )
+# The statutory opening sentence ends with these words: "... of the European Union.", "... der Europäischen
+# Union genehmigt."
+_OPENING_END = re.compile(r"(?:european\s+union|europäischen\s+union\s+genehmigt)\W*$", re.IGNORECASE)
 # Where the clause ends in other words, the rest of its sentence up to the stop.
 _CLAUSE_TAIL_MAX_WORDS = 8
 # A full stop may sit inside closing quotes, brackets or Markdown emphasis, or before a note mark:
@@ -200,6 +210,9 @@ _STATEMENT_START_LINES = 4
 
 def opens_statement(texts: list[str], index: int) -> bool:
     """True where texts[index] opens the statement, read with the lines its opening words wrap onto."""
+    if not re.search(r"\w", texts[index]):
+        # A separator line ("---", "* * *") or a bullet above the statement is not part of it.
+        return False
     window = "\n".join(texts[index : index + _STATEMENT_START_LINES])
     return is_statement_start(re.sub(r"-[ \t]*\n\s*", "-", window))
 
@@ -223,7 +236,7 @@ def statement_extent(lines: list[str], start: int, is_heading: Callable[[int], b
     with its opening sentence, or with the next sentence where that one is short and says
     who is responsible. It never runs past a heading, so an incomplete or reworded
     statement cannot swallow the sections that follow it. Text after the statement in its
-    last line stays in the section around it (statement_tail).
+    last line may go back to the section around it (statement_line_parts).
 
     is_heading(index) reports a heading the loader reads from the layout, such as a DOCX
     paragraph in a Heading style or a PDF line in a heading font. A statement may be set
@@ -289,7 +302,7 @@ def statement_extent(lines: list[str], start: int, is_heading: Callable[[int], b
     last = line_at(first_end) if first else None
     # A responsibility sentence with every statutory word, right after the opening one, ends the statement
     # with its last word, whatever follows it: no stop, a heading, a label, a note or a run-on, which the
-    # loaders give back to its section (statement_tail).
+    # loaders may give back to its section (statement_line_parts).
     if (
         complete
         and (last is None or own.start <= last + 1)
@@ -330,46 +343,60 @@ def paragraph_statement_extent(
     for index in range(start + 1, end):
         if _STATEMENT_SENTENCE_END.search(" ".join(paragraphs[start:index])):
             break
-        joined = re.sub(r"^\W+", "", " ".join(" ".join(paragraphs[start : index + 1]).split()).lower())
+        joined = re.sub(r"-[ \t]*\n\s*", "-", "\n".join(paragraphs[start : index + 1]))
+        joined = re.sub(r"^\W+", "", " ".join(joined.split()).lower())
         if not (NOT_APPROVED_STATEMENT_EN.startswith(joined) or joined.startswith(NOT_APPROVED_STATEMENT_EN)):
             return index
     return end
 
 
 def _statement_stop(text: str) -> int | None:
-    """Where the statement in text (its lines joined) ends, as statement_extent reads it; None without a stop."""
+    """Where the statement in text (its lines joined) certainly ends; None where that is uncertain.
+
+    It is certain after the statutory clause words of the responsibility sentence, or after a statutory
+    opening sentence that no responsibility wording follows. A reworded responsibility sentence may hold
+    an abbreviation ("Example Bank Inc.") that reads as a stop, so its line stays with the statement. A
+    bilingual first page may give the statement again in its other language in the same paragraph, and
+    that one belongs to the statement too."""
     clause = _RESPONSIBILITY_CLAUSE.search(text)
     if clause:
-        words = _CLAUSE_WORDS.match(text, clause.end())
-        if words:
-            return words.end()
-    first = _STATEMENT_SENTENCE_END.search(text)
-    if first is None:
-        return None
-    second = _STATEMENT_SENTENCE_END.search(text, first.end())
-    if second is not None:
-        sentence = text[first.end() : second.end()]
-        if len(sentence.split()) <= _SENTENCE_MAX_WORDS and _RESPONSIBILITY.search(sentence):
-            return second.end()
-    if clause and clause.start() >= first.end():
-        # A responsibility sentence without its stop belongs to the statement to the end of the line.
-        return None
-    return first.end()
+        words = _CLAUSE_STOP.match(text, clause.end())
+        stop = words.end() if words else None
+    else:
+        first = _STATEMENT_SENTENCE_END.search(text)
+        if (
+            first is None
+            or not _OPENING_END.search(text[: first.start()])
+            or _RESPONSIBILITY.search(text, first.end())
+        ):
+            return None
+        stop = first.end()
+    if stop is not None and is_statement_start(text[stop:]):
+        further = _statement_stop(text[stop:])
+        return None if further is None else stop + further
+    return stop
 
 
-def statement_tail(lines: list[str], start: int, end: int) -> int | None:
-    """Where the statement that fills lines[start:end] stops inside its last line, where text follows.
+def statement_line_parts(
+    texts: list[str], start: int, end: int, index: int, open_keys: list[str]
+) -> tuple[str, str]:
+    """The statement's part of texts[index], a line of the statement in texts[start:end], and the text after
+    the statement in that line, which goes back to the section open around it.
 
-    A line or paragraph may go on after the statement: Art. 6(6), 19(5) and 51(5) MiCAR put the
-    management body's statement right after it, and a summary may start in the same paragraph. That
-    text belongs to the section around the statement, so the loaders give it back. None where the
-    statement fills its last line."""
-    text = " ".join(lines[start:end])
-    stop = _statement_stop(text)
-    last_start = len(text) - len(lines[end - 1])
-    if stop is None or stop <= last_start or not text[stop:].strip():
-        return None
-    return stop - last_start
+    A line or paragraph may go on after the statement: Art. 6(6) and Art. 51(5) MiCAR have the management
+    body's statement inserted after it, and a summary or a risk warning may start in the same paragraph.
+    The text is split only where the statement certainly ends (_statement_stop) and a section other than
+    the statement's own is open. Under the statement's own label, or before the first section heading,
+    the whole line stays with the statement."""
+    text = texts[index]
+    if index != end - 1 or not open_keys or "not_approved_statement" in open_keys:
+        return text, ""
+    joined = " ".join(texts[start:end])
+    stop = _statement_stop(joined)
+    last_start = len(joined) - len(text)
+    if stop is None or stop <= last_start or not joined[stop:].strip():
+        return text, ""
+    return text[: stop - last_start].rstrip(), text[stop - last_start :].strip()
 
 
 def match_heading_to_section(heading: str) -> list[str]:
@@ -1045,15 +1072,11 @@ def _line_sections(lines: list[_Line], statement: bool = False) -> DocumentSecti
                 # and runs on as body text.
                 cut = not _STATEMENT_SENTENCE_END.search(" ".join(line_texts[index:statement_end]))
                 statement_role = _BREAK if cut else _BODY
-            own_text = line.text
-            stop = None
-            if index == statement_end - 1:
-                stop = statement_tail(line_texts, statement_start, statement_end)
-            if stop is not None:
-                own_text = line.text[:stop].rstrip()
-                for key in current_keys:
-                    sections.setdefault(key, []).append(line.text[stop:].strip())
+            own_text, tail = statement_line_parts(line_texts, statement_start, statement_end, index, current_keys)
             sections.setdefault("not_approved_statement", []).append(own_text)
+            if tail:
+                for key in current_keys:
+                    sections.setdefault(key, []).append(tail)
             previous, previous_role, previous_styled = line.text, statement_role, styled[index]
             continue
         if running[index]:
@@ -1257,14 +1280,11 @@ def parse_docx(path: Path) -> DocumentSections:
                         )
                     ),
                 )
-            stop = None
-            if index == statement_end - 1:
-                stop = statement_tail(paragraph_texts, statement_start, statement_end)
-            if stop is not None:
-                for k in current_keys:
-                    sections.setdefault(k, []).append(text[stop:].strip())
-                text = text[:stop].rstrip()
+            text, tail = statement_line_parts(paragraph_texts, statement_start, statement_end, index, current_keys)
             sections.setdefault("not_approved_statement", []).append(text)
+            if tail:
+                for k in current_keys:
+                    sections.setdefault(k, []).append(tail)
             continue
 
         # The Title style names the white paper, not one of its sections.
@@ -1412,14 +1432,11 @@ def load_from_markdown(path: Path) -> dict[str, str]:
         if index < statement_end or opens_statement(lines, index):
             if index >= statement_end:
                 statement_start, statement_end = index, statement_extent(lines, index)
-            stop = None
-            if index == statement_end - 1:
-                stop = statement_tail(lines, statement_start, statement_end)
-            if stop is not None:
-                for k in current_keys:
-                    sections.setdefault(k, []).append(line_clean[stop:].strip())
-                line_clean = line_clean[:stop].rstrip()
+            line_clean, tail = statement_line_parts(lines, statement_start, statement_end, index, current_keys)
             sections.setdefault("not_approved_statement", []).append(line_clean)
+            if tail:
+                for k in current_keys:
+                    sections.setdefault(k, []).append(tail)
             continue
 
         # Detect Markdown headings (e.g. # Heading 1, ## Heading 2)

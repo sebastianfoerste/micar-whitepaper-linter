@@ -17,7 +17,7 @@ from micar_linter.document import (
     match_heading_to_section,
     opens_statement,
     paragraph_statement_extent,
-    statement_tail,
+    statement_line_parts,
 )
 
 # A saved iXBRL viewer page packs the white paper into a script and writes it into the page
@@ -339,14 +339,11 @@ def load_from_xhtml(source: Path | bytes) -> dict[str, str]:
                         )
                     ),
                 )
-            stop = None
-            if index == statement_end - 1:
-                stop = statement_tail(texts, statement_start, statement_end)
-            if stop is not None:
-                for k in current_keys:
-                    sections.setdefault(k, []).append(text[stop:].strip())
-                text = text[:stop].rstrip()
+            text, tail = statement_line_parts(texts, statement_start, statement_end, index, current_keys)
             sections.setdefault("not_approved_statement", []).append(text)
+            if tail:
+                for k in current_keys:
+                    sections.setdefault(k, []).append(tail)
             continue
 
         if is_tag_heading or is_bold_heading:
