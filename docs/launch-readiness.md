@@ -4,7 +4,7 @@ This document helps a reviewer understand, run and evaluate the MiCAR Whitepaper
 
 ## What this repo proves
 
-The linter translates MiCAR white-paper review into deterministic, testable software rules. It does not replace legal judgment. It creates a first-pass quality gate that finds structural gaps, missing disclosures, thin sections and regime-specific review issues before a lawyer performs the substantive review.
+The linter turns the disclosure checklist of MiCAR white-paper review into deterministic, testable software rules. It checks keywords, section length and structure; it does not replace legal judgment. It creates a first-pass quality gate that finds structural gaps, missing disclosures, thin sections and regime-specific review issues before a lawyer performs the substantive review.
 
 The core proof is legal automation discipline: rule IDs, citations, severity levels, machine-readable output, strict mode and examples that are safe to inspect publicly.
 

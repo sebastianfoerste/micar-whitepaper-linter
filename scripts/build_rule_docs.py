@@ -20,7 +20,7 @@ from pathlib import Path
 
 from micar_linter import __version__, citations
 from micar_linter.lei import check_digits_for
-from micar_linter.linter import EU_LANGUAGES, Linter
+from micar_linter.linter import EU_LANGUAGES, NOT_APPROVED_STATEMENT_RULE_IDS, Linter
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Rule
 from micar_linter.whitepaper import _RESERVED_METADATA_KEYS, Whitepaper, WhitepaperType
@@ -149,6 +149,27 @@ LEI_VERIFICATION_NOTE = (
     "required pursuant to applicable national law, and Art. 2(1)(b) and (c) of Implementing Regulation (EU) "
     "2024/2984 ask for the LEI where available."
 )
+# The first-page statement rules were added after the other pages, with their wording checked.
+STATEMENT_VERIFICATION_NOTE = (
+    "The citation and the English wording the rule checks were read in the EUR-Lex text of Art. 6(3) and "
+    "Art. 51(3) MiCAR as mirrored in legalize-dev/legalize-eu (CELEX 32023R1114), not on EUR-Lex itself, "
+    "which was unreachable from the build environment. The German wording has not been checked."
+)
+
+
+def verification_note(rule_id: str) -> str:
+    """Which reading of the Regulation the rule's citation rests on."""
+    if rule_id in OJ_CHECKED:
+        return OJ_CHECKED[rule_id]
+    if rule_id in NOT_APPROVED_STATEMENT_RULE_IDS:
+        return STATEMENT_VERIFICATION_NOTE
+    return VERIFICATION_NOTE
+
+
+STATEMENT_APPROVAL = (
+    "This crypto-asset white paper has not been approved by any competent authority in any Member State of "
+    "the European Union."
+)
 NEVER_PASS = {"COMMON.IXBRL_TAGGING", "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW"}
 UNTESTED_REGIMES = {
     "ANNEX_II": "The Annex II rules have not yet been run against a real ART white paper.",
@@ -231,6 +252,10 @@ def _draft(rule: Rule, regime: WhitepaperType, text: str, **metadata: object) ->
     draft.update(metadata)
     draft["sections"] = {rule.section: text}
     return draft
+
+
+def _responsibility(person: str) -> str:
+    return f"The {person} of the crypto-asset is solely responsible for the content of this crypto-asset white paper."
 
 
 def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
@@ -320,6 +345,45 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
                 },
                 "Field E.31 of Table 2 asks for the LEI of the crypto-asset service provider in charge of the "
                 "placing. Its label names the role, so the code is not compared with the party sections.",
+            ),
+        ]
+    if rule.rule_id in NOT_APPROVED_STATEMENT_RULE_IDS:
+        emt = regime is WhitepaperType.EMT
+        named, other = ("issuer", "offeror") if emt else ("offeror", "issuer")
+        return [
+            Example(
+                "Statement absent",
+                "missing",
+                {"title": "Synthetic rule example", "type": regime.value, "sections": {}},
+                "The section key is missing or empty.",
+            ),
+            Example(
+                "Statement names someone else",
+                "review",
+                _draft(rule, regime, f"{STATEMENT_APPROVAL} {_responsibility(other)}"),
+                "Art. 51(3) MiCAR names the issuer, so the responsibility sentence is not found."
+                if emt
+                else "Art. 6(3) MiCAR names the offeror, the person seeking admission to trading or the operator "
+                "of the trading platform; this statement names the issuer.",
+            ),
+            Example(
+                "German draft",
+                "review",
+                _draft(
+                    rule,
+                    regime,
+                    "Synthetischer deutscher Beispieltext. Er gibt nicht den Wortlaut des Amtsblatts wieder.",
+                    language="de",
+                ),
+                "The German wording has not been checked against the German Official Journal, so a German "
+                "statement goes to review whatever it says.",
+            ),
+            Example(
+                "Statement in the checked wording",
+                "pass",
+                _draft(rule, regime, f"{STATEMENT_APPROVAL} {_responsibility(named)}"),
+                "Both sentences in the English wording the rule checks. A pass says the words matched; the check "
+                "cannot see whether the statement is on the first page.",
             ),
         ]
     if rule.rule_id in ANSWER_CHECKS:
@@ -561,6 +625,37 @@ def status_logic(rule: Rule) -> str:
             "percentage.</li><li><strong>Pass</strong>: never. Draft flags are assertions pending lawyer "
             "confirmation, not trusted facts.</li></ul>"
         )
+    missing = (
+        f"<li><strong>Missing</strong>: section <code>{_e(rule.section)}</code> is absent or empty, or holds "
+        "only placeholder text such as TBD or TBC.</li>"
+    )
+    if rule.rule_id in NOT_APPROVED_STATEMENT_RULE_IDS:
+        emt = rule.rule_id.startswith("ANNEX_III.")
+        roles = "“offeror”, “person seeking admission to trading” or “operator of the trading platform”"
+        clause = "“of the crypto-asset is solely responsible”"
+        return (
+            f'<ul class="plain">{missing}'
+            "<li><strong>Review</strong>: the draft is German, because the German wording has not been checked "
+            "against the German Official Journal; the section holds only a yes or no value; a listed English "
+            "term does not appear"
+            + (
+                ""
+                if emt
+                else f"; or {clause} appears without {roles} directly before it, as where the statement names the "
+                "issuer or puts the offeror's name in between (“The offeror, Example AG, of the crypto-asset”)"
+            )
+            + ".</li><li><strong>Pass</strong>: an English draft holds both listed terms"
+            + (
+                ""
+                if emt
+                else f", and somewhere in the section {roles} comes directly before {clause}. Another person "
+                "named elsewhere in the section is not checked"
+            )
+            + ". Matching ignores case and reads any run of spaces and line breaks as one space. A compound broken "
+            "after its hyphen at a line end keeps the hyphen, so “crypto-” and “asset” on two lines match "
+            "“crypto-asset”; a word split only for the line break (“Mem-”, “ber”) does not match and goes to "
+            "review. Placement on the first page is not checked.</li></ul>"
+        )
     groups = [variant for variant, _ in variants(rule.rule_id)]
     minimum = (
         f"{rule.min_words} words"
@@ -579,12 +674,11 @@ def status_logic(rule: Rule) -> str:
         else "a term listed for the draft's regime"
     )
     review = f"the section has fewer than {minimum}, or {terms} does not appear"
-    match = "case-insensitive substring match"
+    match = "case-insensitive substring match, with any run of spaces and line breaks read as one space"
     if any(_named(v.required_patterns) or _named(v.required_patterns_de) for v in groups):
         match += "; a term shown with a pattern counts only where the pattern matches, so that a look-alike word does not stand in for it"
     parts = [
-        f"<li><strong>Missing</strong>: section <code>{_e(rule.section)}</code> is absent or empty, or holds "
-        "only placeholder text such as TBD or TBC.</li>",
+        missing,
         f"<li><strong>Review</strong>: {review} ({match}).</li>",
     ]
     unnamed = [pattern for pattern in rule.required_patterns if not re.compile(pattern).groupindex]
@@ -631,6 +725,9 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             else "Works offline on the characters of each code. It does not confirm that an LEI is registered, "
             "current or held by the entity the draft names."
             if rule.rule_id in LEI_RULES
+            else "Matches the English wording only. It cannot see whether the statement is on the first page, and "
+            "it does not check that the person it names is the one responsible for the white paper."
+            if rule.rule_id in NOT_APPROVED_STATEMENT_RULE_IDS
             else "Looks for a calendar date only. It does not confirm that the date is the date of notification "
             "or that it is plausible, and it does not check the table of contents that the same provisions "
             "require. Since 23 December 2025 the template of Implementing Regulation (EU) 2024/2984 has the "
@@ -671,6 +768,23 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             "identisch). A role named in an earlier sentence does not carry over: in \"The custodian is Example "
             "Bank AG. Its LEI is ...\" the code is still compared with the party sections."
         )
+    if rule.rule_id in NOT_APPROVED_STATEMENT_RULE_IDS:
+        emt = rule.rule_id.startswith("ANNEX_III.")
+        field = "I.02" if emt else "02"
+        limitations.append(
+            "PDF, DOCX, Markdown and heading-based XHTML drafts fill the section from a heading such as “Statement "
+            f"in accordance with Article {'51' if emt else '6'}(3)”, the label of field {field} of Table "
+            f"{'4' if emt else '2'} of Implementing Regulation (EU) 2024/2984, where the label is set as one (a "
+            "Markdown “#” heading, an XHTML h1 to h6 or bold label, a DOCX heading or bold or capitals label, a PDF "
+            "heading or field line), or, without one, from a line or paragraph that opens with the statement's "
+            f"first words. Numbered-field XHTML fills it from field {field}. Table cells are not read in DOCX, nor "
+            "in heading-based XHTML where the text sits directly in a td or th element rather than in a p, div, li "
+            "or bold element inside it, so a statement kept only there is reported missing."
+        )
+        limitations.append(
+            "A German draft never passes: the German wording has not been checked against the German Official "
+            "Journal."
+        )
     if rule.rule_id in NEVER_PASS:
         limitations.append("This rule never reports Pass.")
     example_html = []
@@ -708,7 +822,7 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
 <h2>Legal basis</h2>
 <p>{_e(citation_en)}</p>
 <ul class="plain">{sources}</ul>
-<p class="callout">{_e(LEI_VERIFICATION_NOTE if rule.rule_id in LEI_RULES else OJ_CHECKED.get(rule.rule_id, VERIFICATION_NOTE))}</p>
+<p class="callout">{_e(LEI_VERIFICATION_NOTE if rule.rule_id in LEI_RULES else verification_note(rule.rule_id))}</p>
 <h2>Synthetic examples</h2>
 <p class="small muted">Each example is linted when this page is generated. The build fails if a result differs.</p>
 {"".join(example_html)}
@@ -735,7 +849,7 @@ def index_page(rules: list[Rule], regimes: dict[str, list[WhitepaperType]]) -> s
         )
     body = f"""<p class="eyebrow">Rule reference</p>
 <h1>Rules</h1>
-<p class="lede">{len(rules)} deterministic checks, generated from the rule set of release {_e(__version__)}. Each page
+<p class="lede">{len(rules)} deterministic checks, generated from the rule set of package version {_e(__version__)}. Each page
 states the citation, how the status is set, synthetic examples that are tested on every build, and the limits of the
 check.</p>
 <p class="callout">A pass means a check matched. It is not a compliance opinion. Not legal advice.</p>

@@ -31,11 +31,16 @@ def _points(match: re.Match[str]) -> str:
     return f", {word} {numbers}"
 
 
+def _paragraphs(match: re.Match[str]) -> str:
+    numbers = re.sub(r"(\d+[a-z]?)", r"(\1)", match.group(2)).replace(" und ", " and ")
+    return f"Art. {match.group(1)}{numbers}"
+
+
 def to_english(citation: str) -> str:
     """Render a canonical German citation in English EU drafting style."""
     text = citation
-    # Art. 6 Abs. 7 -> Art. 6(7)
-    text = re.sub(r"Art\. (\d+[a-z]?) Abs\. (\d+[a-z]?)", r"Art. \1(\2)", text)
+    # Art. 6 Abs. 7 -> Art. 6(7); Art. 36 Abs. 7, 9 und 12 -> Art. 36(7), (9) and (12)
+    text = re.sub(r"Art\. (\d+[a-z]?) Abs\. (\d+[a-z]?(?:(?:, | und )\d+[a-z]?)*)", _paragraphs, text)
     # UAbs. 1 -> , first subparagraph
     text = re.sub(
         r" UAbs\. (\d)",
