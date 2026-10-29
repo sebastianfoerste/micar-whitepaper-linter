@@ -74,7 +74,7 @@ Run the tool using the CLI command `micar-lint`. To check your own draft, pass i
 
 On the first two routes, DOCX needs the `docx` extra ([From PyPI](#from-pypi)).
 
-- A JSON draft states its regime in its `type` field, and `--type` does not change it. For any other format, the linter infers the regime from English phrases in the text ("asset-referenced", "stabilisation mechanism" or "reserve of assets" for an ART, then "e-money token", "referenced currency" or "safeguarding of funds" for an EMT, otherwise other), so a German ART or EMT draft is linted as other and a draft that calls itself "not an asset-referenced token" as an ART; `--type other|art|emt` overrides it, and the numbered-field XHTML or HTML layout requires it.
+- A JSON draft states its regime in its `type` field (a draft without one is linted as other, with no warning), and `--type` does not change it. For any other format, the linter infers the regime from English phrases (anywhere in a PDF or DOCX; in Markdown and heading-layout XHTML or HTML only in section text, not in headings) ("asset-referenced", "stabilisation mechanism" or "reserve of assets" for an ART, then "e-money token", "referenced currency" or "safeguarding of funds" for an EMT, otherwise other), so a German ART or EMT draft is linted as other and a draft that calls itself "not an asset-referenced token" as an ART; `--type other|art|emt` overrides it, and the numbered-field XHTML or HTML layout requires it.
 - `--strict` exits with status 1 while any BLOCKER finding is open. For a directory, it also exits 1 when a file could not be linted or no file was linted.
 - `--json` prints machine-readable JSON instead of text.
 
