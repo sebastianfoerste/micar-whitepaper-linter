@@ -112,7 +112,18 @@ SECTION_PATTERNS = {
         r"\bklima\w*",
     ],
     "reserve_of_assets": [r"\breserve\b.*\bassets\b", r"\breservevermögen\w*", r"\basset\s+reserve\b"],
-    "redemption": [r"\bredemption\b", r"\brücknahme\w*", r"\brücktausch\w*", r"\bredemption\s+right\b"],
+    "redemption": [
+        r"\bredemption\b",
+        r"\brücknahme\w*",
+        r"\bredemption\s+right\b",
+        # The German text of MiCAR calls redemption "Rücktausch": "Recht auf Rücktausch" (Art. 39),
+        # "Rücktauschplan" (Art. 47), "Rücktauschbarkeit" (Art. 49) and "dauerhaften Rücktauschrechte"
+        # (Anhang II Teil D Nr. 9), as do the labels of Implementing Regulation (EU) 2024/2984 ("Recht auf
+        # Rücktausch", "Form des Rücktauschs"). A heading that also names a risk ("Rücktauschrisiko",
+        # "Risiken beim Rücktausch") heads a risk and does not open this section, so no risk text reaches
+        # the redemption check. (?s) reads past a line break inside a DOCX heading.
+        r"(?s)^(?!.*risik).*?\brücktausch\w*",
+    ],
     "safeguarding": [r"\bsafeguarding\b", r"\babsicherung\w*", r"\bsicherung\w*.*\bgelder\w*"],
 }
 
