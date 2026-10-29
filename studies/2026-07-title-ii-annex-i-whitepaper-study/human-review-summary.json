@@ -3,7 +3,7 @@
   "rows_total": 150,
   "rows_completed": 0,
   "rows_pending": 150,
-  "completion_rate": 0,
+  "completion_rate": 0.0,
   "label_counts": {
     "extraction_failure": 0,
     "missing": 0,

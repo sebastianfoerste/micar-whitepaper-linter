@@ -16,6 +16,8 @@
     "micar-lint-batch",
     "micar-study-report",
     "micar-review-summary",
+    "micar-review-sheets",
+    "micar-study-verify-cache",
     "action.yml"
   ],
   "outputContract": "micar-whitepaper-linter.review-control-profile.v1",

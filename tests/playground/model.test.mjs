@@ -128,13 +128,23 @@ test("display citations never alter a pinpoint", () => {
   }
 });
 
+// Findings schema v2 renamed summary.documents_reviewed to documents_processed; read both,
+// as documents_processed() in src/micar_linter/study_report.py does.
+const documentsProcessed = summary => summary.documents_processed ?? summary.documents_reviewed;
+
+test("the processed-document count is read from findings schema v1 and v2", () => {
+  assert.equal(documentsProcessed({ documents_reviewed: 10 }), 10);
+  assert.equal(documentsProcessed({ documents_processed: 9 }), 9);
+  assert.equal(documentsProcessed({ documents_processed: 0, documents_reviewed: 10 }), 0);
+});
+
 test("the evidence note states the committed study figures", () => {
   const study = "studies/2026-07-title-ii-annex-i-whitepaper-study";
   const findings = JSON.parse(repoFile(`${study}/findings-pseudonymous.json`));
   const review = JSON.parse(repoFile(`${study}/human-review-summary.json`));
   const page = repoFile("docs/playground/index.html");
   const stated = id => Number(page.match(new RegExp(`id="basis-${id}">(\\d+)<`))[1]);
-  assert.equal(stated("documents"), findings.summary.documents_reviewed);
+  assert.equal(stated("documents"), documentsProcessed(findings.summary));
   assert.equal(stated("controls"), findings.summary.rules_checked_per_document);
   assert.equal(stated("cells"), review.rows_total);
   assert.equal(stated("reviewed"), review.rows_completed);
