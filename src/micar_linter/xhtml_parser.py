@@ -13,7 +13,15 @@ from pathlib import Path
 
 from lxml import etree
 
-from micar_linter.document import match_heading_to_section
+from micar_linter.document import (
+    _below_opener,
+    _opening_level,
+    _opening_number,
+    _outline_number,
+    _template_kind,
+    _within_rights,
+    match_heading_to_section,
+)
 
 # A saved iXBRL viewer page packs the white paper into a script and writes it into the page
 # only when a browser runs that script, so the file itself shows next to no text.
@@ -264,14 +272,24 @@ def _is_markup(document: bytes) -> bool:
 
 
 def load_from_xhtml(source: Path | bytes) -> dict[str, str]:
-    """Parse an XHTML file, or markup unpacked from one, and extract sections mapped by headings."""
+    """Parse an XHTML file, or markup unpacked from one, and extract sections mapped by headings.
+
+    A heading that names a section opens it, and a heading that names none leaves the current section
+    open. A sub-heading that names the redemption alone keeps the rights section open (see
+    _within_rights in document.py).
+    """
     try:
         tree = parse_html(source)
     except Exception as exc:
         raise ValueError(f"Failed to parse HTML/XHTML: {exc}") from exc
 
     sections: dict[str, list[str]] = {}
-    current_keys = []
+    current_keys: list[str] = []
+    # The template numbering, the outline number and the level of the heading that opened the current
+    # section: 1 to 6 for h1 to h6, and 7 for a standalone bold run, which ranks below them.
+    opener: str | None = None
+    opener_number: str | None = None
+    section_level: float | None = None
 
     # Select headings, paragraphs, list items, and leaf divs in document order
     elements = tree.xpath(
@@ -297,8 +315,19 @@ def load_from_xhtml(source: Path | bytes) -> dict[str, str]:
 
         if is_heading:
             matched_keys = match_heading_to_section(text)
-            if matched_keys:
+            level = int(elem.tag[1]) if is_tag_heading else 7
+            kind, number = _template_kind(text), _outline_number(text)
+            if _within_rights(
+                matched_keys,
+                current_keys,
+                _below_opener(kind, level, number, opener, section_level, opener_number),
+            ):
+                current_keys = [*current_keys, *(key for key in matched_keys if key not in current_keys)]
+            elif matched_keys:
+                in_section = bool(set(matched_keys) & set(current_keys))
+                section_level = _opening_level(level, section_level, in_section)
                 current_keys = matched_keys
+                opener, opener_number = kind, _opening_number(number, opener_number)
         else:
             if current_keys:
                 for k in current_keys:
