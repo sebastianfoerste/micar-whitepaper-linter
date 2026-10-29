@@ -63,7 +63,7 @@ Rank = Impact × evidence weight (Observed 3, Claimed 2, Inferred 1) ÷ effort (
 | H2 | Generated rule pages with executed examples | 5 | pass | M | Observed (ESLint, Ruff, DQC) | differentiator | 7.5 | **Built** |
 | H10 | Wilson 95% intervals in `micar-review-summary` | 2 | pass | S | Observed (CUAD, LegalBench lack them) | differentiator once labels exist | 6 | Spec, next |
 | H11 | LEI check digits and issuer identity consistency | 4 | pass | M | Observed (WhitePaperXBRL mod-97) | differentiator if fail-closed | 6 | **Built** (swapped in for H7 at the owner's request, 2026-10-21) |
-| H8 | Point-level rules | 5 | fail (this run: point citations unverifiable; see Needs owner decision) | L | Observed (WhitePaperXBRL field-level) | table stakes for filing tools | 3.75 | Parked: needs EUR-Lex verification |
+| H8 | Point-level rules | 5 | fail (this run: point citations unverifiable; see Needs owner decision) | L | Observed (WhitePaperXBRL field-level) | table stakes for filing tools | 3.75 | ID scheme chosen by the owner (2026-10-28, ADR 0005); not built |
 | H6 | Landing page | 3 | pass | S | Inferred | table stakes | 3 | **Built** (design) |
 | H7 | Dark mode with tokens, no storage | 2 | pass | M | Observed (Ruff playground theme) | table stakes | 3 | Built, then **removed** at the owner's request (2026-10-21) for H11 |
 | H3 | Inline section highlight and structural quick-fixes | 4 | pass | L | Observed (Ruff playground, Ruff fix safety) | differentiator | 3 | Spec + Proposed ADR |
@@ -128,6 +128,7 @@ Where this repo should beat everyone: **the only MiCA white-paper checker whose 
 - **Citation.** Part A of each Annex, at Part level, the citation the party rules already use; the repo's study maps the LEI to Annex I, Part A. The point-level basis is not verified (EUR-Lex unreachable) and every rule page says so. See [ADR 0007](../adr/0007-lei-rules.md).
 - **Acceptance.** Met: `tests/test_lei.py` (14 tests) covers the check-digit arithmetic, labelled and unlabelled numbers, every status of both rules, German messages, every regime and draft-free CI outputs. Generated rule pages carry tested examples. Fixture LEIs are synthetic, with computed check digits.
 - **Effect.** Each regime gains two rules (Annex I 16 → 18, Annex II 18 → 20, Annex III 14 → 16). The three full synthetic examples carry a fictional LEI (base containing `SYNTH`, computed check digits) and pass both rules; `examples/incomplete.json` has none and shows both as Missing. Existing rule IDs are unchanged.
+- **Changed since (Unreleased in `CHANGELOG.md`).** Both rules cite point 5 of Annex I Parts A, B and C and of Annex II and III Part A, checked against the Official Journal, and a draft that gives no LEI while a party section has text shows Review instead of Missing, because point 5 allows another identifier required pursuant to applicable national law. `examples/incomplete.json` therefore shows both rules as Review.
 
 ### F4. Wilson intervals in the review summary (H10), next
 
@@ -135,9 +136,9 @@ Where this repo should beat everyone: **the only MiCA white-paper checker whose 
 - **Adapt.** Add Wilson 95% bounds to `micar-review-summary` beside the existing precision/recall/F1 and `publication_ready` gate; keep the `model.test.mjs` study-figures test green. No labels entered by the agent or a model.
 - **Risk.** None to the non-negotiables; impact is nil until an owner reviews the 150 cells.
 
-### F5. Point-level rules (H8), parked
+### F5. Point-level rules (H8), ID scheme chosen
 
-New IDs under a separate namespace (proposal: `ANNEX_I.A.P<n>`, distinct from `ANNEX_II.G.*` topic IDs and the study's `ANNEX_I_PART_A_02_*` IDs), driven by the numbered fields of Implementing Regulation (EU) 2024/2984. Blocked: every point citation must be verified on EUR-Lex, which was unreachable. See [ADR 0005](../adr/0005-point-level-rule-ids.md).
+New IDs under a separate namespace (`ANNEX_I.A.P<n>`, distinct from `ANNEX_II.G.*` topic IDs and the study's `ANNEX_I_PART_A_02_*` IDs), driven by the numbered fields of Implementing Regulation (EU) 2024/2984. The owner chose this scheme on 2026-10-28: each rule cites one Annex point, checks the fields of Tables 2 to 4 that carry it and applies the template's LEI, DTI and flag conditions. Every point citation still has to be checked against the Official Journal text before it is added; the Publications Office Cellar serves that text where EUR-Lex refuses automated retrieval. See [ADR 0005](../adr/0005-point-level-rule-ids.md).
 
 ### F6. Arelle formula assertions (H9), Proposed
 
@@ -197,8 +198,8 @@ with call sites passing the finding instead of `finding.citation`, and a test (t
 3. **H10 labels**: the 150 study cells need human review before any accuracy figure; nobody else can enter them.
 4. **`setup-uv` pin**: decided 2026-10-26. The owner moved the Action to `v10.3.0` (node24), recorded in ADR 0001, with `enable-cache: 'false'`. The `action` job in CI runs it; the starter repo itself has not been run against it.
 5. **Annotations and summary on by default** under `@v1`: decided 2026-10-26. The owner kept both on by default for the 1.2.0 release, which every existing consumer sees when `v1` moves.
-6. **`uvx --no-cache`** in the Action: correctness over a few seconds per run (briefing correction 6).
-7. **H8 IDs and citations**: approve the point-level ID scheme and verify each point citation on EUR-Lex.
+6. **`uvx --no-cache`** in the Action: settled by the 1.2.0 release (2026-10-26), whose Action runs `uvx --no-cache`, trading a few seconds per run for correctness (briefing correction 6).
+7. **H8 IDs and citations**: scheme decided 2026-10-28. The owner chose point IDs (Option 2 of ADR 0005), checked against the fields of Tables 2 to 4 of Implementing Regulation (EU) 2024/2984 with the template's LEI and DTI conditions. Each point citation still needs checking against the Official Journal text before it is added.
 8. **H7 versus H11**: decided 2026-10-21. The owner swapped dark mode out for H11.
 9. **H11 legal basis**: the LEI rules cite Part A of each Annex at Part level (the citation the party rules already use). Verify the point that names the LEI against the Official Journal. Severity MAJOR for both rules was confirmed by the owner on 2026-10-22.
 10. **Doc drift** proposed in the PR body: resolved 2026-10-27 at the owner's request. `AGENTS.md` (`BaseRule`, database migrations, "compliant") was fixed in #30; `docs/FEATURES.md` and `docs/ARCHITECTURE.md` ("regulatory rejection", "compliant") and the starter README custody claim (`ANNEX_II.G.CUSTODY` can pass) in #36; the sample reports in `reports/sample-*.txt` (since #31) and the text report footer print English citations by default.

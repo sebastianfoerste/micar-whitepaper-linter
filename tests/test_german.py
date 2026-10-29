@@ -55,7 +55,8 @@ def test_german_draft_linting():
             ),
             "management_statement": (
                 "Das Leitungsorgan bestätigt hiermit ausdrücklich, dass dieser vorliegende Entwurf des "
-                "Krypto-Wertpapier-Informationsblatts vollumfänglich den gesetzlichen Vorgaben entspricht und "
+                "Krypto-Wertpapier-Informationsblatts vollumfänglich Titel II der Verordnung (EU) 2023/1114 "
+                "entspricht und "
                 "inhaltlich vollständig, redlich, eindeutig sowie nicht irreführend gestaltet ist. "
                 "Alle wesentlichen Angaben wurden nach bestem Wissen und Gewissen sorgfältig "
                 "geprüft, detailliert verifiziert und freigegeben."

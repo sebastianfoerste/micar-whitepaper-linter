@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import textwrap
 import threading
+from html import escape
 from pathlib import Path
 
 import docx
@@ -20,10 +21,13 @@ from docx.enum.style import WD_STYLE_TYPE
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
-from micar_linter.document import load_from_docx, load_from_pdf
+from micar_linter.anchors import _xhtml_section_identifiers
+from micar_linter.document import load_from_docx, load_from_markdown, load_from_pdf, match_heading_to_section
 from micar_linter.linter import lint_whitepaper
+from micar_linter.locations import _xhtml_heading_lines
 from micar_linter.rules.base import Finding, Severity
 from micar_linter.whitepaper import WhitepaperType, load_whitepaper
+from micar_linter.xhtml_parser import load_from_xhtml
 
 # An invented issuer. None of the body text below matches a section pattern except the note.
 SUMMARY = (
@@ -39,6 +43,8 @@ RISK_DETAIL = (
     "Operational failures at the service provider, such as outages or faulty software updates, can delay "
     "transfers for days. Keys held by holders can be lost or stolen, and lost keys cannot be recovered by "
     "anyone. Smart contract defects can freeze balances until a fix is deployed and accepted by the network. "
+    "Buyers in the offer bear the risk that the project is delayed or stopped, and the mitigation measures of "
+    "the operator shorten outages without preventing them. "
     "Holders should read this document in full and seek independent advice before they buy units. Past "
     "performance of similar services does not indicate future returns, and holders may lose the full amount."
 )
@@ -372,7 +378,7 @@ def test_pdf_list_and_wrapped_lines_open_no_section(tmp_path: Path, case: str):
 
 
 # Part titles of the Implementing Regulation as bold Normal paragraphs, each with up to 20 words.
-RIGHTS = "Holders have rights and obligations; each holder may enforce rights in court under the terms. " * 6
+RIGHTS = "Holders have rights and obligations; each holder may exercise rights in court under the terms. " * 6
 OFFER = (
     "The offer to the public runs from 2 March 2026 at a price of 1 EUR per token in three Member States. "
     * 4
@@ -982,7 +988,8 @@ RISK_PARTS = [
     ),
     (
         "Liquidity risk",
-        "Liquidity can disappear when few buyers are active, so holders may be unable to exit at a fair price.",
+        "Liquidity can disappear when few buyers are active after the offer, so holders may be unable to exit "
+        "at a fair price.",
     ),
     (
         "Regulatory risk",
@@ -991,12 +998,14 @@ RISK_PARTS = [
     (
         "Operational risk",
         "Operational failures at the service provider, such as outages or faulty software updates, can delay "
-        "transfers for days. Keys held by holders can be lost or stolen, and lost keys cannot be recovered.",
+        "transfers for days and set the project back. Keys held by holders can be lost or stolen, and lost keys "
+        "cannot be recovered.",
     ),
     (
         "Smart contract risk",
         "Smart contract defects can freeze balances until a fix is deployed and accepted by the network. "
-        "Technology failures at the ledger can also stop transfers for days.",
+        "Technology failures at the ledger can also stop transfers for days; the mitigation measures of the "
+        "operator shorten such outages without preventing them.",
     ),
 ]
 GERMAN_RISK_LABELS = [
@@ -1138,6 +1147,199 @@ def test_pdf_summary_table_field_that_names_no_section_ends_the_field_before_it(
     assert findings["ANNEX_I.A"].rule.severity is Severity.BLOCKER
     assert findings["ANNEX_I.A"].status != "missing"
     assert findings["ANNEX_I.I"].status == "pass"
+
+
+# German drafts head the date of notification in the words of the German texts: Art. 6 Abs. 8, Art. 19
+# Abs. 7 and Art. 51 Abs. 7 MiCAR ask for "das Datum seiner Übermittlung", and the Implementing Regulation
+# (EU) 2024/2984 template labels field 01 (I.01 for ARTs and EMTs) "Datum der Mitteilung". "Datum der
+# Notifizierung" spells out "Notifizierungsdatum", and "Übermittlungsdatum" and "Mitteilungsdatum" are the
+# terms of the two texts as compounds.
+GERMAN_NOTIFICATION_HEADINGS = [
+    "Datum der Übermittlung",
+    "Datum der Mitteilung",
+    "Datum der Notifizierung",
+    "Übermittlungsdatum",
+    "Mitteilungsdatum",
+]
+# Labels of other fields of the German template that name an "Übermittlung" or a "Datum": the type of
+# submission (F.5, B.8 and B.5), the methods of transferring value on reimbursement (E.25) and the
+# publication date (F.10, B.12 and B.9).
+GERMAN_OTHER_LABELS = [
+    "Art der Übermittlung",
+    "F.5 Die Art der Übermittlung",
+    "E.25 Methoden der Übermittlung des Werts bei einer Rückerstattung",
+    "F.10 Datum der Veröffentlichung",
+]
+GERMAN_SUMMARY = (
+    "Der Quillmoor Utility Token (QMT) gibt seinen Inhabern Zugang zu einem gemeinsamen Ledger für "
+    "Logistikunternehmen."
+)
+GERMAN_NOTIFICATION = (
+    "Das Whitepaper wurde der BaFin am 2. März 2026 übermittelt, und dieses Datum gilt als Tag der "
+    "Mitteilung."
+)
+GERMAN_TECHNOLOGY = "Übertragungen werden auf einem Ledger mit fünf validierenden Knoten abgewickelt."
+
+
+@pytest.mark.parametrize(
+    "heading",
+    [
+        *GERMAN_NOTIFICATION_HEADINGS,
+        "DATUM DER ÜBERMITTLUNG",
+        "Datum der Übermittlung des Kryptowerte-Whitepapers",
+        "01 Datum der Mitteilung",
+        "I.01 Datum der Mitteilung",
+    ],
+)
+def test_german_notification_date_heading_names_the_notification_date(heading: str):
+    assert match_heading_to_section(heading) == ["notification_date"]
+
+
+# Marketing communications ("Marketingmitteilungen", Art. 7 MiCAR) are no notification, and the word
+# boundary keeps "Mitteilungsdatum" from matching inside a longer word.
+@pytest.mark.parametrize(
+    "label", [*GERMAN_OTHER_LABELS, "Datum der Marketingmitteilung", "Marketingmitteilungsdatum"]
+)
+def test_other_german_template_label_does_not_name_the_notification_date(label: str):
+    assert "notification_date" not in match_heading_to_section(label)
+
+
+def _write_markdown(path: Path, blocks: list[tuple[str, str]]) -> Path:
+    """A Markdown draft: each heading block a level 2 heading, each other block a paragraph."""
+    markdown = "\n\n".join(f"## {text}" if kind == "heading" else text for kind, text in blocks)
+    path.write_text(f"{markdown}\n", encoding="utf-8")
+    return path
+
+
+def _write_xhtml(path: Path, blocks: list[tuple[str, str]]) -> Path:
+    """An XHTML draft with one element per line from line 4: each heading block an h2 whose id is
+    "heading-" and its number, counted from 1, each other block a paragraph."""
+    elements = []
+    headings = 0
+    for kind, text in blocks:
+        if kind == "heading":
+            headings += 1
+            elements.append(f'<h2 id="heading-{headings}">{escape(text)}</h2>')
+        else:
+            elements.append(f"<p>{escape(text)}</p>")
+    body = "\n".join(elements)
+    path.write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        f'<html xmlns="http://www.w3.org/1999/xhtml" lang="de">\n<body>\n{body}\n</body>\n</html>\n',
+        encoding="utf-8",
+    )
+    return path
+
+
+# WRITERS, and Markdown and heading-based XHTML, which share the heading patterns.
+ALL_WRITERS = {
+    **WRITERS,
+    ".md": (_write_markdown, load_from_markdown),
+    ".xhtml": (_write_xhtml, load_from_xhtml),
+}
+
+
+def _german_draft(heading: str, text: str) -> list[tuple[str, str]]:
+    """A German draft: a summary, text under heading, and a technology section that ends it."""
+    return [
+        ("heading", "Zusammenfassung"),
+        ("body", GERMAN_SUMMARY),
+        ("heading", heading),
+        ("body", text),
+        ("heading", "Technologie"),
+        ("body", GERMAN_TECHNOLOGY),
+    ]
+
+
+@pytest.mark.parametrize("suffix", sorted(ALL_WRITERS))
+@pytest.mark.parametrize("heading", GERMAN_NOTIFICATION_HEADINGS)
+def test_german_notification_date_heading_opens_its_section(tmp_path: Path, suffix: str, heading: str):
+    write, load = ALL_WRITERS[suffix]
+    path = write(tmp_path / f"quillmoor{suffix}", _german_draft(heading, GERMAN_NOTIFICATION))
+
+    sections = load(path)
+    assert sorted(sections) == ["notification_date", "summary", "technology"]
+    assert _words(sections["notification_date"]) == GERMAN_NOTIFICATION
+    assert _words(sections["summary"]) == GERMAN_SUMMARY
+    finding = _findings(path)["COMMON.NOTIFICATION_DATE"]
+    assert finding.rule.severity is Severity.MAJOR
+    assert (finding.status, finding.word_count) == ("pass", len(GERMAN_NOTIFICATION.split()))
+
+
+@pytest.mark.parametrize("suffix", sorted(ALL_WRITERS))
+def test_other_german_template_labels_open_no_notification_date_section(tmp_path: Path, suffix: str):
+    # The type of submission ("Neu" for a new white paper), the methods of transferring value and the
+    # publication date are not the date of notification, so the check still reports it missing.
+    write, load = ALL_WRITERS[suffix]
+    blocks = [
+        ("heading", "Zusammenfassung"),
+        ("body", GERMAN_SUMMARY),
+        ("heading", "Art der Übermittlung"),
+        ("body", "Neu"),
+        ("heading", "Methoden der Übermittlung des Werts bei einer Rückerstattung"),
+        ("body", "Die Rückerstattung erfolgt durch Überweisung auf das Konto des Käufers."),
+        ("heading", "Datum der Veröffentlichung"),
+        ("body", "Das Whitepaper wird am 16. März 2026 veröffentlicht."),
+        ("heading", "Technologie"),
+        ("body", GERMAN_TECHNOLOGY),
+    ]
+    path = write(tmp_path / f"quillmoor{suffix}", blocks)
+
+    assert "notification_date" not in load(path)
+    finding = _findings(path)["COMMON.NOTIFICATION_DATE"]
+    assert (finding.status, finding.word_count) == ("missing", 0)
+
+
+def test_pdf_german_summary_table_row_gives_its_answer_to_the_notification_date(tmp_path: Path):
+    # Field 01 of the German summary table as pypdf reads it, with the answer on the label line. Field 02
+    # names no section, so it ends field 01 and its statement is no answer to it.
+    blocks = [
+        ("large", "Zusammenfassung"),
+        ("line", "01 Datum der Mitteilung 2026-03-02"),
+        ("line", "02 Erklärung gemäß Artikel 6 Absatz 3 der Verordnung (EU) 2023/1114"),
+        (
+            "line",
+            "Dieses Kryptowerte-Whitepaper wurde von keiner zuständigen Behörde eines Mitgliedstaats der "
+            "Europäischen Union genehmigt.",
+        ),
+    ]
+    path = _write_pdf(tmp_path / "quillmoor.pdf", blocks)
+
+    assert load_from_pdf(path) == {"notification_date": "2026-03-02"}
+    finding = _findings(path)["COMMON.NOTIFICATION_DATE"]
+    assert finding.rule.severity is Severity.MAJOR
+    # The answer is a calendar date, which is all the field asks for.
+    assert (finding.status, finding.word_count) == ("pass", 1)
+
+
+def test_xhtml_german_notification_date_heading_anchors_its_findings(tmp_path: Path):
+    # Finding anchors and SARIF lines read the heading as the loader does: the second heading, on line 6.
+    path = _write_xhtml(
+        tmp_path / "quillmoor.xhtml", _german_draft("Datum der Mitteilung", GERMAN_NOTIFICATION)
+    )
+
+    assert _xhtml_section_identifiers(path)["notification_date"] == "xhtml:heading-2"
+    assert _xhtml_heading_lines(path)["notification_date"] == 6
+
+
+@pytest.mark.parametrize("answer", ["N/A", "n/a", "entfällt", "nicht anwendbar", "k. A."])
+def test_pdf_numbered_heading_after_a_not_applicable_answer_opens_its_section(tmp_path: Path, answer: str):
+    # An answer that says the item does not apply, in English or German, continues no sentence, so the
+    # heading above it stays a heading even in lower case, and the numbered heading after it opens the
+    # technology section instead of only ending the risks.
+    blocks = [
+        ("heading", "Zusammenfassung"),
+        ("body", GERMAN_SUMMARY),
+        ("heading", "5. Risikofaktoren"),
+        ("line", answer),
+        ("heading", "6. Technologie"),
+        ("body", GERMAN_TECHNOLOGY),
+    ]
+    sections = load_from_pdf(_write_pdf(tmp_path / "quillmoor.pdf", blocks))
+
+    assert sorted(sections) == ["risks", "summary", "technology"]
+    assert sections["risks"] == answer
+    assert _words(sections["technology"]) == GERMAN_TECHNOLOGY
 
 
 # The answer to field 03 of the 2024/2984 summary, in the wording of the template.

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Reserve composition disclosure (Annex II Part G). Annex II, Part G in conjunction with Art. 36 MiCAR.">
+<meta name="description" content="Reserve composition and value alignment mechanism (Annex II Part G Nos. 1 and 2 MiCAR). Annex II, Part G, points 1 and 2 MiCAR.">
 <title>ANNEX_II.G.COMPOSITION_DISCLOSURE: MiCAR Whitepaper Linter rule</title>
 <link rel="stylesheet" href="../assets/site.css">
 </head>
@@ -16,25 +16,25 @@
 <main id="main">
 <p class="eyebrow">Rule · BLOCKER</p>
 <h1>ANNEX_II.G.COMPOSITION_DISCLOSURE</h1>
-<p class="lede">Reserve composition disclosure (Annex II Part G)</p>
+<p class="lede">Reserve composition and value alignment mechanism (Annex II Part G Nos. 1 and 2 MiCAR)</p>
 <div class="panel"><dl class="facts">
-<dt>Citation</dt><dd>Annex II, Part G in conjunction with Art. 36 MiCAR</dd>
-<dt>Canonical form</dt><dd lang="de">Anhang II Teil G i.V.m. Art. 36 MiCAR</dd>
+<dt>Citation</dt><dd>Annex II, Part G, points 1 and 2 MiCAR</dd>
+<dt>Canonical form</dt><dd lang="de">Anhang II Teil G Nr. 1 und 2 MiCAR</dd>
 <dt>Runs for</dt><dd>Annex II · asset-referenced tokens</dd>
 <dt>Severity if open</dt><dd>BLOCKER</dd>
 <dt>Section key</dt><dd><code>reserve_of_assets</code></dd>
 <dt>Minimum words</dt><dd>60</dd>
-<dt>Listed terms (English)</dt><dd><code>reserve</code>, <code>composition</code>, <code>deposit</code>, <code>concentration</code></dd>
-<dt>Listed terms (German)</dt><dd lang="de"><code>reserve</code>, <code>zusammensetzung</code>, <code>einlagen</code>, <code>konzentration</code></dd>
+<dt>Listed terms (English)</dt><dd><code>reserve</code>, <code>composition</code>, <code>align</code></dd>
+<dt>Listed terms (German)</dt><dd lang="de"><code>reserve</code>, <code>zusammensetzung</code>, <code>angleich</code></dd>
 <dt>Package version</dt><dd>1.2.1, built from source that may include unreleased changes</dd>
 <dt>Source</dt><dd><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/rules/annex_ii.py">rules/annex_ii.py</a></dd>
 </dl></div>
 <h2>How the status is set</h2>
 <ul class="plain"><li><strong>Missing</strong>: section <code>reserve_of_assets</code> is absent or empty, or holds only placeholder text such as TBD or TBC.</li><li><strong>Review</strong>: the section has fewer than 60 words, or a listed term does not appear (case-insensitive substring match).</li><li><strong>Pass</strong>: none of the above. A pass means the check matched, nothing more.</li></ul>
 <h2>Legal basis</h2>
-<p>Annex II, Part G in conjunction with Art. 36 MiCAR</p>
+<p>Annex II, Part G, points 1 and 2 MiCAR</p>
 <ul class="plain"><li><a href="https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng">https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng</a></li></ul>
-<p class="callout">Not re-verified since these pages were introduced (2026-10-20): EUR-Lex was unreachable from the build environment. The citation is the rule&#x27;s own, unchanged.</p>
+<p class="callout">Checked on 2026-10-27 against the Official Journal text in English and German (OJ L 150, 9.6.2023) and the consolidated version of 9 January 2024, and against the templates of Implementing Regulation (EU) 2024/2984. No amendment and no English or German corrigendum changes Annex II Part G or the templates.</p>
 <h2>Synthetic examples</h2>
 <p class="small muted">Each example is linted when this page is generated. The build fails if a result differs.</p>
 <div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>Section absent</strong></div><p class="small muted">The section key is missing or empty.</p><pre><code>{
@@ -45,13 +45,13 @@
   &quot;title&quot;: &quot;Synthetic rule example&quot;,
   &quot;type&quot;: &quot;art&quot;,
   &quot;sections&quot;: {
-    &quot;reserve_of_assets&quot;: &quot;reserve composition deposit concentration&quot;
+    &quot;reserve_of_assets&quot;: &quot;reserve composition align&quot;
   }
 }</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>Section that matches</strong></div><p class="small muted">This text passes and shows what the check measures: listed terms and length. It is not model disclosure wording and does not meet MiCAR.</p><pre><code>{
   &quot;title&quot;: &quot;Synthetic rule example&quot;,
   &quot;type&quot;: &quot;art&quot;,
   &quot;sections&quot;: {
-    &quot;reserve_of_assets&quot;: &quot;Synthetic example naming reserve, composition, deposit, concentration. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token.&quot;
+    &quot;reserve_of_assets&quot;: &quot;Synthetic example naming reserve, composition, align. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token.&quot;
   }
 }</code></pre></div>
 <h2>Limitations</h2>
