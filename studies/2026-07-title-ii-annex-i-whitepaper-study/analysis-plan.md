@@ -8,7 +8,7 @@
 >
 > 1. Merge pull requests #18, #19 and #24 into `main` as unsigned DRAFT tooling. Merging them adopts nothing.
 > 2. On `main`, complete Phase 0 steps 0.1 to 0.9 (`analysis-plan.md` section 3). Step 0.10 is steps 3 to 5 below.
-> 3. Make ONE adoption commit on `main`. It contains the adopted `codebook.md`, `analysis-plan.md` with the Detector row of its section 2 filled in, and the pending review sheets, with the DRAFT line of each banner removed and the "Adopted by" line filled in. This commit is the pre-registration and precedes the commit that adds any label.
+> 3. Make ONE adoption commit on `main`. It contains the adopted `codebook.md`, `analysis-plan.md` with the Detector row of its section 2 filled in, and the pending review sheets, with the DRAFT line of each banner removed and the "Adopted by" line filled in, and `human-review-summary.json` refreshed in place with `micar-review-summary` (study README, without `--require-complete`), since the summary reads the banner and the Detector row and `tests/test_study_consistency.py` requires it to equal a fresh run. This commit is the pre-registration and precedes the commit that adds any label.
 > 4. Mark the adoption commit with an annotated tag.
 > 5. In a follow-up commit, record the adoption commit's SHA and its tag in the study README ("Current status"), never inside the signed files.
 >
@@ -37,6 +37,8 @@ This plan contains no per-cell or per-document detector outcomes. The reviewer c
 | Codebook | `codebook.md` as adopted in the pre-registration commit |
 | Detector | `micar-lint-batch` at the detector commit, with its `uv.lock` (see "Detector freeze" below); detector commit: [SHA, see step 0.4 and the detector decision below] |
 
+`micar-review-summary` reads the detector commit from the Detector row once it reads `detector commit: <SHA>`, and records it in `human-review-summary.json`; `micar-review-render` refuses until it is recorded. Any commit that changes the Detector row or the banner also refreshes `human-review-summary.json` (study README, the in-place `micar-review-summary` command), or `tests/test_study_consistency.py` fails.
+
 **Detector freeze.** The study detector is the detector commit recorded in section 2 with its `uv.lock`: every module that `micar-lint-batch` imports at that commit. On the current `main` these include `src/micar_linter/batch.py` (`STUDY_RULES` and the matching functions), `src/micar_linter/document_loader.py`, `src/micar_linter/xhtml_parser.py` and `src/micar_linter/document.py`, with `placeholders.py`, which `document.py` imports; at `8f37b7c`, `placeholders.py` does not exist and `document_loader.py` does not import `xhtml_parser.py`. Between the pre-registration commit and the computation of results, no other version of these files may enter the analysis: every study run of `micar-lint-batch` uses that commit and its `uv.lock`, whatever has changed on `main` since. `findings-pseudonymous.json` and `findings-pseudonymous.csv` are not edited.
 
 `STUDY_RULES` is unchanged in releases 1.2.0 and 1.2.1. Commits on `main` after v1.2.1 changed HTML and XHTML text extraction in `document_loader.py` and `xhtml_parser.py`, and the notification-date and language heading patterns in `document.py`, which `document_loader.py` uses, so a re-run at the current `main` can flag cells differently from the committed findings.
@@ -61,7 +63,7 @@ This plan contains no per-cell or per-document detector outcomes. The reviewer c
 | 0.7 | Confirm or reject the WP-007 exclusion rule and its stated ground (section 5), including whether it rests on eligibility criterion 4 or on the unit definition. | Reviewer | [ ] |
 | 0.8 | Decide between single review by the tool author, disclosed, and a second reviewer (section 6). For a second reviewer: recruit and name them, record their study ID, and generate their sheet with `micar-review-sheets --reviewer r2` before the pre-registration commit. | Reviewer | [ ] |
 | 0.9 | Label the calibration document (section 4), outside the committed review sheets, and finalise the codebook. | Reviewer | [ ] |
-| 0.10 | On `main`, make the one adoption commit of the signing order (banner): the adopted codebook, this plan with the Detector row filled in, and the pending sheets; tag it and record its SHA outside the signed files. | Reviewer | [ ] |
+| 0.10 | On `main`, make the one adoption commit of the signing order (banner): the adopted codebook, this plan with the Detector row filled in, the pending sheets and the refreshed `human-review-summary.json`; tag it and record its SHA outside the signed files. | Reviewer | [ ] |
 
 ## 4. Calibration document
 
@@ -139,7 +141,7 @@ All intervals are two-sided 95%.
 - **S3 and S4:** `uncertain` counted as `missing`, then as `present`, to bound the result.
 - **S5:** the stricter readings recorded in notes under `codebook.md` P4 and the [OJ check] items (for example Art. 6(6) element (iii), or the business address under Part A item 8), where the notes allow it.
 - **Inter-rater agreement, if double-reviewed:** raw agreement; Cohen's kappa on present/missing and on all labels; PABAK or Gwet's AC1. State which cells were double-reviewed.
-- Results are computed by tooling from the committed label files and rendered from its JSON output; no figure is typed by hand.
+- Results are computed by tooling from the committed label files (`micar-review-summary`, which writes `human-review-summary.json`, schema v2) and rendered from its JSON output (`micar-review-render`); no figure is typed by hand. The per-document and per-offeror count tables, and the per-rule table of S1, go only to the file named by `--internal-out`, which git ignores; the summary publishes per-rule counts for the primary set only. The published sets still imply WP-007's document-level counts (S1 minus the primary set) and the pooled counts of the documents S2(b) drops (the primary set minus S2(b)).
 
 ## 11. Reporting rules
 
@@ -151,7 +153,7 @@ All intervals are two-sided 95%.
 
 - **Name the measured component.** Every figure is about the linter's batch study detector (15 Annex I and Article 6 checks, commit [SHA]), not the 38-rule engine that the CLI and the GitHub Action run. Under detector decision (A), the wording says "pilot detector as of July 2026". Never "validated".
 
-**Wording templates** (from the study plan, section 3.4; fill only from the computed JSON):
+**Wording templates** (from the study plan, section 3.4; fill only from the computed JSON, which `micar-review-render` does):
 
 - Study summary: "Batch study detector (15 Annex I and Article 6 checks, commit [SHA]): precision X% (95% CI a to b, document-clustered) and recall Y% (c to d) on N evaluable of 150 document-rule cells (10 public white papers from ESMA's interim register × 15 rules; WP-007 excluded from the primary analysis under a rule fixed before labelling but after the detector output (post-hoc; see S1); M excluded as uncertain, not applicable or extraction failure), against [the tool author's partially blinded labels, single-reviewed | two lawyers' labels, Cohen's κ = k, adjudicated]. [In-sample] pilot on a convenience sample; not a prevalence or compliance finding."
   - The study plan's wording says "excluded ... as pre-registered". This draft replaces it, because section 5 discloses the exclusion as post-hoc and "as pre-registered" alone suggests the rule came before the detector output. [ ] adopt.

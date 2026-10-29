@@ -8,7 +8,7 @@
 >
 > 1. Merge pull requests #18, #19 and #24 into `main` as unsigned DRAFT tooling. Merging them adopts nothing.
 > 2. On `main`, complete Phase 0 steps 0.1 to 0.9 (`analysis-plan.md` section 3). Step 0.10 is steps 3 to 5 below.
-> 3. Make ONE adoption commit on `main`. It contains the adopted `codebook.md`, `analysis-plan.md` with the Detector row of its section 2 filled in, and the pending review sheets, with the DRAFT line of each banner removed and the "Adopted by" line filled in. This commit is the pre-registration and precedes the commit that adds any label.
+> 3. Make ONE adoption commit on `main`. It contains the adopted `codebook.md`, `analysis-plan.md` with the Detector row of its section 2 filled in, and the pending review sheets, with the DRAFT line of each banner removed and the "Adopted by" line filled in, and `human-review-summary.json` refreshed in place with `micar-review-summary` (study README, without `--require-complete`), since the summary reads the banner and the Detector row and `tests/test_study_consistency.py` requires it to equal a fresh run. This commit is the pre-registration and precedes the commit that adds any label.
 > 4. Mark the adoption commit with an annotated tag.
 > 5. In a follow-up commit, record the adoption commit's SHA and its tag in the study README ("Current status"), never inside the signed files.
 >
