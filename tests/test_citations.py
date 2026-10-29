@@ -35,6 +35,7 @@ def _all_citations() -> set[str]:
             "Art. 54 MiCAR i.V.m. Art. 7 EMD2 (Richtlinie 2009/110/EG)",
             "Art. 54 MiCAR in conjunction with Art. 7 EMD2 (Directive 2009/110/EC)",
         ),
+        ("Anhang II Teil D Nr. 10 Buchst. c MiCAR", "Annex II, Part D, point 10(c) MiCAR"),
     ],
 )
 def test_known_conversions(german: str, english: str) -> None:

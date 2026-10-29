@@ -51,7 +51,7 @@ def test_template_wording_cannot_satisfy_a_rule_for_unanswered_fields():
     report = lint_whitepaper(load_whitepaper(SAMPLE, WhitepaperType.OTHER))
     offeror = next(finding for finding in report.findings if finding.rule.rule_id == "ANNEX_I.A")
     assert offeror.status == "review"
-    assert any("legal form" in issue for issue in offeror.issues)
+    assert any("name" in issue for issue in offeror.issues)
     assert any(warning.startswith("Part A: all 3 numbered fields") for warning in report.warnings)
 
 
@@ -251,6 +251,21 @@ def test_emt_safeguarding_reads_the_fields_that_describe_it(tmp_path: Path):
     finding = next(f for f in report.findings if f.rule.rule_id == "ANNEX_III.SAFEGUARDING")
     assert finding.status != "missing"
     assert any(warning.endswith("mention it: D.3.") for warning in report.warnings)
+
+
+@pytest.mark.parametrize(
+    "funds",
+    [
+        "At least 30 % of the funds received is always deposited in separate accounts in credit institutions.",
+        "Die Geldbeträge sind gemäß Artikel 7 Absatz 1 der Richtlinie 2009/110/EG besichert.",
+        "Mindestens 30 % der Geldbeträge sind stets auf gesonderten Konten bei Kreditinstituten hinterlegt.",
+        "Mindestens 30 % der Geldbeträge liegen stets auf einem gesonderten Konto bei einem Kreditinstitut.",
+        "At least 30 % of the funds received is always held in separate bank accounts.",
+    ],
+)
+def test_emt_safeguarding_reads_fields_in_the_words_of_article_54(tmp_path: Path, funds: str):
+    path = _table(tmp_path, [*_EMT_BASE, ("D.3", "Rights of holders", funds)])
+    assert funds in load_whitepaper(path, WhitepaperType.EMT).section("safeguarding")
 
 
 def test_emt_safeguarding_stays_missing_when_no_field_describes_it(tmp_path: Path):
