@@ -3,7 +3,7 @@
   "type": "art",
   "sections": {
     "summary": "REPLACE: Plain-language summary (Art. 19 Abs. 6 MiCAR): the warnings of field I.04, the token's characteristics, the statement that holders have a right of redemption at any time with the conditions for redemption, and the key information about the offer to the public or the intended admission to trading (Anhang Tabelle 3 Felder I.04 bis I.07 VO (EU) 2024/2984). The linter expects at least 80 words.",
-    "risk_warning": "REPLACE: The statement of Art. 19 Abs. 4 MiCAR in the predefined wording of field I.02 (Anhang Tabelle 3 VO (EU) 2024/2984): loss of value in part or in full, transferability, liquidity, investor compensation schemes, deposit guarantee schemes.",
+    "risk_warning": "REPLACE: The statement of Art. 19 Abs. 4 MiCAR in the predefined wording of field I.02 (Anhang Tabelle 3 VO (EU) 2024/2984): loss of value in part or in full, transferability, liquidity, no cover by the compensation schemes for investors or the guarantee schemes for deposits.",
     "management_statement": "REPLACE: The statement of the management body under Art. 19 Abs. 5 MiCAR in the predefined wording of field I.03 (Anhang Tabelle 3 VO (EU) 2024/2984): compliance with Title III and, to the best of the management body's knowledge, information that is fair, clear and not misleading and no omission likely to affect its import. The linter checks key terms only.",
     "notification_date": "REPLACE: Date of notification of the white paper (Art. 19 Abs. 7 MiCAR).",
     "language": "REPLACE: State the language of the white paper and why it satisfies Art. 19 Abs. 8 MiCAR (official language of the home Member State or a language customary in international finance).",

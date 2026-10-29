@@ -794,8 +794,7 @@ def test_placeholder_statement_in_a_german_draft_is_missing(wp_type, rule_id, te
 
 
 # A statement set apart from the text around it, in bold, capitals or a larger font, carries the
-# marks of a heading. Its own lines must not end it, and the sentence after it stays body text of
-# its section, from the statement's last line on.
+# marks of a heading. Its own lines must not end it, and the sentence after it stays body text.
 def _section_findings(whitepaper):
     return {f.rule.rule_id: f for f in lint_whitepaper(whitepaper).findings}
 
@@ -823,8 +822,7 @@ def test_pdf_sentence_after_a_complete_statement_runs_on_as_body_text(mock_reade
     findings = _section_findings(whitepaper)
     assert findings[TITLE_II].status == "pass", findings[TITLE_II].issues
     assert findings["COMMON.SUMMARY"].status == "pass", findings["COMMON.SUMMARY"].issues
-    assert whitepaper.section("summary").startswith("This summary should be read as an introduction to the")
-    assert whitepaper.section("not_approved_statement").endswith("content of this crypto-asset white paper.")
+    assert whitepaper.section("summary").startswith("Crypto-Asset White Paper and any decision")
 
 
 def test_pdf_with_fonts_sentence_after_a_complete_statement_runs_on_as_body_text(tmp_path: Path):
@@ -832,8 +830,7 @@ def test_pdf_with_fonts_sentence_after_a_complete_statement_runs_on_as_body_text
     path = _write_pdf(tmp_path / "draft.pdf", [*blocks, ("large", "Risk Warning"), ("body", RISK_BODY)])
     whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
     assert _section_findings(whitepaper)["COMMON.SUMMARY"].status == "pass"
-    assert whitepaper.section("summary").startswith("This summary should be read as an introduction to the")
-    assert whitepaper.section("not_approved_statement").endswith("content of this crypto-asset white paper.")
+    assert whitepaper.section("summary").startswith("Crypto-Asset White Paper and any decision")
 
 
 @pytest.mark.parametrize("width", [68, 70])
@@ -1451,9 +1448,9 @@ def test_docx_responsibility_sentence_a_paragraph_per_line_ends_with_its_last_li
     assert whitepaper.section("summary").startswith("The summary gives key information")
 
 
-# Text after the statement in its last line or paragraph belongs to the section around it. Art. 6(6) and
-# Art. 51(5) MiCAR have the management body's statement inserted after the statement, so a draft may run the
-# two together in one paragraph, and a summary or a risk warning may start there too.
+# The statement takes whole lines or paragraphs. Text after it in its last line or paragraph, such as the
+# management body's statement that Art. 6(6) and Art. 51(5) MiCAR have inserted after it, stays with it,
+# so the check on that text fails closed (rule pages, Limitations).
 MANAGEMENT_BODY_STATEMENT = (
     "The management body of Example Ledger AG confirms that this crypto-asset white paper complies with "
     "Title II of Regulation (EU) 2023/1114 and that, to the best of its knowledge, the information presented "
@@ -1492,34 +1489,17 @@ def _draft(tmp_path: Path, fmt: str, blocks: list[tuple[str, str]]) -> Path:
     return _write_pdf(tmp_path / "draft.pdf", [*pdf_blocks, ("large", "Language"), ("body", "English.")])
 
 
-@pytest.mark.parametrize("fmt", FORMATS)
+@pytest.mark.parametrize("fmt", ["md", "docx", "xhtml"])
 @pytest.mark.parametrize(("heading", "text", "rule_id"), RUN_ON_CASES, ids=["management", "risk", "summary"])
-def test_text_after_the_statement_in_its_paragraph_stays_in_its_section(
+def test_text_after_the_statement_in_its_paragraph_stays_with_it_and_fails_closed(
     tmp_path: Path, fmt, heading, text, rule_id
 ):
     path = _draft(tmp_path, fmt, [("heading", heading), ("plain", f"{STATUTORY} {text}")])
     whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
     findings = _section_findings(whitepaper)
-    assert findings[rule_id].status == "pass", findings[rule_id].issues
     assert findings[TITLE_II].status == "pass", findings[TITLE_II].issues
-    assert " ".join(whitepaper.section("not_approved_statement").split()) == STATUTORY
-
-
-@pytest.mark.parametrize("fmt", FORMATS)
-def test_art_draft_keeps_the_text_after_the_statement(tmp_path: Path, fmt):
-    # An ART draft keeps no statement section, so text moved into it was lost.
-    path = _draft(tmp_path, fmt, [("heading", "Risk warning"), ("plain", f"{STATUTORY} {RISK_WARNING_STATEMENTS}")])
-    findings = _section_findings(load_whitepaper(path, WhitepaperType.ART))
-    assert findings["COMMON.RISK_WARNING"].status == "pass", findings["COMMON.RISK_WARNING"].issues
-
-
-@pytest.mark.parametrize("fmt", FORMATS)
-def test_text_after_an_incomplete_statement_in_its_paragraph_stays_in_its_section(tmp_path: Path, fmt):
-    path = _draft(tmp_path, fmt, [("heading", "Summary"), ("plain", f"{APPROVAL} {SUMMARY_BODY}")])
-    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
-    findings = _section_findings(whitepaper)
-    assert findings["COMMON.SUMMARY"].status == "pass", findings["COMMON.SUMMARY"].issues
-    assert " ".join(whitepaper.section("not_approved_statement").split()) == APPROVAL
+    assert text in whitepaper.section("not_approved_statement")
+    assert findings[rule_id].status == "missing"
 
 
 @pytest.mark.parametrize("fmt", FORMATS)
@@ -1654,14 +1634,6 @@ def test_reworded_responsibility_sentence_with_an_abbreviation_stays_with_the_st
     whitepaper = load_whitepaper(_draft(tmp_path, fmt, blocks), WhitepaperType.EMT)
     assert _section_findings(whitepaper)["COMMON.RISK_WARNING"].status != "pass"
     assert "Example Bank Inc." in whitepaper.section("not_approved_statement")
-
-
-@pytest.mark.parametrize("fmt", ["md", "docx", "xhtml"])
-def test_text_after_the_statement_without_a_space_after_its_stop_starts_with_its_first_word(tmp_path: Path, fmt):
-    blocks = [("heading", "Statement of the management body"), ("plain", f"{STATUTORY}{MANAGEMENT_BODY_STATEMENT}")]
-    whitepaper = load_whitepaper(_draft(tmp_path, fmt, blocks), WhitepaperType.OTHER)
-    assert whitepaper.section("management_statement").startswith("The management body of Example Ledger AG")
-    assert " ".join(whitepaper.section("not_approved_statement").split()) == STATUTORY
 
 
 @pytest.mark.parametrize("fmt", FORMATS)

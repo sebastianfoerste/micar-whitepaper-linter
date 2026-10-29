@@ -168,22 +168,12 @@ _PERSON_TO_CLAUSE = re.compile(
 )
 # The words that end the clause, "of this crypto-asset white paper" ("dieses Kryptowerte-Whitepapers"), with
 # any stop, quote or note mark attached, and however a line break or a hyphen at a line end splits them.
-_CLAUSE_END = (
+_CLAUSE_WORDS = re.compile(
     r"\s+(?:of\s+this\s+crypto-\s*asset\s+white\s+paper|dieses\s+kryptowerte-\s*whitepapers?)"
     # A letter may not follow ("papers"); a note mark stuck to the word may ("paper2", "paper\u00b2").
-    r"(?![^\W\d_\u00b9\u00b2\u00b3\u2070-\u2079])"
-)
-_CLAUSE_WORDS = re.compile(_CLAUSE_END + r"\S*", re.IGNORECASE)
-# The same words with only their stop, closing quotes, brackets, emphasis and note marks, where a split
-# must not take a word that follows without a space ("paper.The management body ...").
-_CLAUSE_STOP = re.compile(
-    _CLAUSE_END + r"(?:[.!?\"'\u2018\u2019\u201c\u201d\u00ab\u00bb)\]*_\u00b9\u00b2\u00b3\u2070-\u2079]|\[\^\w+\])*"
-    r"(?:\d{1,2}(?!\w))?",
+    r"(?![^\W\d_\u00b9\u00b2\u00b3\u2070-\u2079])\S*",
     re.IGNORECASE,
 )
-# The statutory opening sentence ends with these words: "... of the European Union.", "... der Europäischen
-# Union genehmigt."
-_OPENING_END = re.compile(r"(?:european\s+union|europäischen\s+union\s+genehmigt)\W*$", re.IGNORECASE)
 # Where the clause ends in other words, the rest of its sentence up to the stop.
 _CLAUSE_TAIL_MAX_WORDS = 8
 # A full stop may sit inside closing quotes, brackets or Markdown emphasis, or before a note mark:
@@ -235,8 +225,8 @@ def statement_extent(lines: list[str], start: int, is_heading: Callable[[int], b
     heading heuristics would otherwise read as new section headings. The statement ends
     with its opening sentence, or with the next sentence where that one is short and says
     who is responsible. It never runs past a heading, so an incomplete or reworded
-    statement cannot swallow the sections that follow it. Text after the statement in its
-    last line may go back to the section around it (statement_line_parts).
+    statement cannot swallow the sections that follow it. It takes whole lines: text after
+    the statement in its last line stays with it.
 
     is_heading(index) reports a heading the loader reads from the layout, such as a DOCX
     paragraph in a Heading style or a PDF line in a heading font. A statement may be set
@@ -301,8 +291,8 @@ def statement_extent(lines: list[str], start: int, is_heading: Callable[[int], b
             return start + i
     last = line_at(first_end) if first else None
     # A responsibility sentence with every statutory word, right after the opening one, ends the statement
-    # with its last word, whatever follows it: no stop, a heading, a label, a note or a run-on, which the
-    # loaders may give back to its section (statement_line_parts).
+    # with the line of its last word, whatever follows it there or after it: no stop, a heading, a label, a
+    # note or a run-on.
     if (
         complete
         and (last is None or own.start <= last + 1)
@@ -348,55 +338,6 @@ def paragraph_statement_extent(
         if not (NOT_APPROVED_STATEMENT_EN.startswith(joined) or joined.startswith(NOT_APPROVED_STATEMENT_EN)):
             return index
     return end
-
-
-def _statement_stop(text: str) -> int | None:
-    """Where the statement in text (its lines joined) certainly ends; None where that is uncertain.
-
-    It is certain after the statutory clause words of the responsibility sentence, or after a statutory
-    opening sentence that no responsibility wording follows. A reworded responsibility sentence may hold
-    an abbreviation ("Example Bank Inc.") that reads as a stop, so its line stays with the statement. A
-    bilingual first page may give the statement again in its other language in the same paragraph, and
-    that one belongs to the statement too."""
-    clause = _RESPONSIBILITY_CLAUSE.search(text)
-    if clause:
-        words = _CLAUSE_STOP.match(text, clause.end())
-        stop = words.end() if words else None
-    else:
-        first = _STATEMENT_SENTENCE_END.search(text)
-        if (
-            first is None
-            or not _OPENING_END.search(text[: first.start()])
-            or _RESPONSIBILITY.search(text, first.end())
-        ):
-            return None
-        stop = first.end()
-    if stop is not None and is_statement_start(text[stop:]):
-        further = _statement_stop(text[stop:])
-        return None if further is None else stop + further
-    return stop
-
-
-def statement_line_parts(
-    texts: list[str], start: int, end: int, index: int, open_keys: list[str]
-) -> tuple[str, str]:
-    """The statement's part of texts[index], a line of the statement in texts[start:end], and the text after
-    the statement in that line, which goes back to the section open around it.
-
-    A line or paragraph may go on after the statement: Art. 6(6) and Art. 51(5) MiCAR have the management
-    body's statement inserted after it, and a summary or a risk warning may start in the same paragraph.
-    The text is split only where the statement certainly ends (_statement_stop) and a section other than
-    the statement's own is open. Under the statement's own label, or before the first section heading,
-    the whole line stays with the statement."""
-    text = texts[index]
-    if index != end - 1 or not open_keys or "not_approved_statement" in open_keys:
-        return text, ""
-    joined = " ".join(texts[start:end])
-    stop = _statement_stop(joined)
-    last_start = len(joined) - len(text)
-    if stop is None or stop <= last_start or not joined[stop:].strip():
-        return text, ""
-    return text[: stop - last_start].rstrip(), text[stop - last_start :].strip()
 
 
 def match_heading_to_section(heading: str) -> list[str]:
@@ -1015,7 +956,7 @@ def _line_sections(lines: list[_Line], statement: bool = False) -> DocumentSecti
     previous_role: str | None = None
     previous_styled = False
     line_texts = [line.text for line in lines]
-    statement_start = statement_end = 0
+    statement_end = 0
     statement_role = _BODY
     # The first and last two lines of each page, where a page header or footer sits (see _running).
     page_lines: dict[int, list[int]] = {}
@@ -1062,21 +1003,15 @@ def _line_sections(lines: list[_Line], statement: bool = False) -> DocumentSecti
             index < statement_end or index in statement_starts or opens_statement(line_texts, index)
         ):
             if index >= statement_end:
-                statement_start = index
                 statement_end = statement_extent(
                     line_texts, index, partial(statement_heading, statement_line=line)
                 )
                 # A statement cut off before its first full stop ends at a line read as a heading, which
                 # does not continue its sentence ("approved by the"). A statement that ends with a full
-                # sentence may share its last line with the next sentence, which goes back to its section
-                # and runs on as body text.
+                # sentence may share its last line with the next sentence, which runs on as body text.
                 cut = not _STATEMENT_SENTENCE_END.search(" ".join(line_texts[index:statement_end]))
                 statement_role = _BREAK if cut else _BODY
-            own_text, tail = statement_line_parts(line_texts, statement_start, statement_end, index, current_keys)
-            sections.setdefault("not_approved_statement", []).append(own_text)
-            if tail:
-                for key in current_keys:
-                    sections.setdefault(key, []).append(tail)
+            sections.setdefault("not_approved_statement", []).append(line.text)
             previous, previous_role, previous_styled = line.text, statement_role, styled[index]
             continue
         if running[index]:
@@ -1258,13 +1193,12 @@ def parse_docx(path: Path) -> DocumentSections:
     section_level: float | None = None
     paragraphs = [(para, para.text.strip()) for para in doc.paragraphs if para.text.strip()]
     paragraph_texts = [text for _, text in paragraphs]
-    statement_start = statement_end = 0
+    statement_end = 0
 
     for index, (para, text) in enumerate(paragraphs):
         texts.append(text)
         if index < statement_end or opens_statement(paragraph_texts, index):
             if index >= statement_end:
-                statement_start = index
                 # A heading as parse_docx reads one below: a Heading style, an outline level, or a label
                 # that is entirely bold or in capitals. A label marked as the statement's first paragraph
                 # is one of its lines, as a statement may be set in bold or capitals a paragraph per line.
@@ -1280,11 +1214,7 @@ def parse_docx(path: Path) -> DocumentSections:
                         )
                     ),
                 )
-            text, tail = statement_line_parts(paragraph_texts, statement_start, statement_end, index, current_keys)
             sections.setdefault("not_approved_statement", []).append(text)
-            if tail:
-                for k in current_keys:
-                    sections.setdefault(k, []).append(tail)
             continue
 
         # The Title style names the white paper, not one of its sections.
@@ -1426,17 +1356,13 @@ def load_from_markdown(path: Path) -> dict[str, str]:
     sections: dict[str, list[str]] = {}
     current_keys = []
     lines = [line.strip() for line in content.splitlines() if line.strip()]
-    statement_start = statement_end = 0
+    statement_end = 0
 
     for index, line_clean in enumerate(lines):
         if index < statement_end or opens_statement(lines, index):
             if index >= statement_end:
-                statement_start, statement_end = index, statement_extent(lines, index)
-            line_clean, tail = statement_line_parts(lines, statement_start, statement_end, index, current_keys)
+                statement_end = statement_extent(lines, index)
             sections.setdefault("not_approved_statement", []).append(line_clean)
-            if tail:
-                for k in current_keys:
-                    sections.setdefault(k, []).append(tail)
             continue
 
         # Detect Markdown headings (e.g. # Heading 1, ## Heading 2)

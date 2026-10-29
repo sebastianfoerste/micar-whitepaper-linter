@@ -757,9 +757,8 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             "Markdown “#” heading, an XHTML h1 to h6 or bold label, a DOCX heading or bold or capitals label, a PDF "
             "heading or field line), or, without one, from a line or paragraph that opens with the statement's "
             "first words, also where they wrap onto the next lines. Text after the statement in its last line "
-            "or paragraph goes to the section open there where the statement ends with the statutory clause "
-            "words; under the statement's own label or before the first section heading it stays in this "
-            f"section. Numbered-field XHTML fills it from field {field}. Table cells are not read in DOCX, nor "
+            "or paragraph, such as the management body's statement written in the same paragraph, stays in this "
+            f"section and is missing from its own. Numbered-field XHTML fills it from field {field}. Table cells are not read in DOCX, nor "
             "in heading-based XHTML where the text sits directly in a td or th element rather than in a p, div, li "
             "or bold element inside it, so a statement kept only there is reported missing."
         )

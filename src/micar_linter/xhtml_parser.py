@@ -13,12 +13,7 @@ from pathlib import Path
 
 from lxml import etree
 
-from micar_linter.document import (
-    match_heading_to_section,
-    opens_statement,
-    paragraph_statement_extent,
-    statement_line_parts,
-)
+from micar_linter.document import match_heading_to_section, opens_statement, paragraph_statement_extent
 
 # A saved iXBRL viewer page packs the white paper into a script and writes it into the page
 # only when a browser runs that script, so the file itself shows next to no text.
@@ -317,7 +312,7 @@ def load_from_xhtml(source: Path | bytes) -> dict[str, str]:
             is_tag_heading = elem.tag in ("h1", "h2", "h3", "h4", "h5", "h6")
             blocks.append((text, is_tag_heading, _is_fully_bold(elem, text)))
     texts = [text for text, _, _ in blocks]
-    statement_start = statement_end = 0
+    statement_end = 0
 
     for index, (text, is_tag_heading, is_bold) in enumerate(blocks):
         is_bold_heading = len(text) < 120 and is_bold
@@ -326,7 +321,6 @@ def load_from_xhtml(source: Path | bytes) -> dict[str, str]:
             # in separate blocks. After a bold first block, a bold label is a heading only where it names
             # a section, as a statement may be set in bold a sentence per paragraph.
             if index >= statement_end:
-                statement_start = index
                 statement_end = paragraph_statement_extent(
                     texts,
                     index,
@@ -339,11 +333,7 @@ def load_from_xhtml(source: Path | bytes) -> dict[str, str]:
                         )
                     ),
                 )
-            text, tail = statement_line_parts(texts, statement_start, statement_end, index, current_keys)
             sections.setdefault("not_approved_statement", []).append(text)
-            if tail:
-                for k in current_keys:
-                    sections.setdefault(k, []).append(tail)
             continue
 
         if is_tag_heading or is_bold_heading:
