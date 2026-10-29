@@ -135,9 +135,12 @@ _LANGUAGE_CONTENT = re.compile(
     re.I,
 )
 # Table 4 has no field for the safeguarding of funds received (Art. 54 MiCAR), so for an EMT the
-# safeguarding section collects the answered lettered fields that describe it.
+# safeguarding section collects the answered lettered fields that describe it, also in the words of
+# Art. 54: "separate accounts", "besichert", "gesonderten Konten".
 _SAFEGUARDING_TEXT = re.compile(
-    r"\bsafeguard\w*|\bsegregat\w*|\babsicherung\w*|\bsicherung\w*.*\bgelder\w*", re.I
+    r"\bsafeguard\w*|\bsegregat\w*|\bseparate\s+(?:\w+\s+)?accounts?\b|\babsicherung\w*|\bbesichert\w*"
+    r"|\bgesondert\w*\s+\w*kont(?:o|os|en)\b|\bsicherung\w*.*\bgelder\w*",
+    re.I,
 )
 
 

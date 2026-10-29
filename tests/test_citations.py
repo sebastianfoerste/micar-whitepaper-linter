@@ -45,6 +45,7 @@ def _all_citations() -> set[str]:
             "Art. 54 MiCAR i.V.m. Art. 7 EMD2 (Richtlinie 2009/110/EG)",
             "Art. 54 MiCAR in conjunction with Art. 7 EMD2 (Directive 2009/110/EC)",
         ),
+        ("Anhang II Teil D Nr. 10 Buchst. c MiCAR", "Annex II, Part D, point 10(c) MiCAR"),
     ],
 )
 def test_known_conversions(german: str, english: str) -> None:
@@ -66,14 +67,11 @@ def _rule_citation(rule_id: str) -> str:
     [
         ("ANNEX_I.NOT_APPROVED_STATEMENT", "Art. 6(3) MiCAR"),
         ("ANNEX_III.NOT_APPROVED_STATEMENT", "Art. 51(3) MiCAR"),
-        (
-            "ANNEX_II.G.VALUATION_AUDIT",
-            "Annex II, Part G in conjunction with Art. 36(7), (9), (11) and (12) MiCAR",
-        ),
+        ("ANNEX_II.G.VALUATION_AUDIT", "Annex II, Part D, point 10 MiCAR"),
         (
             "ANNEX_II.I",
-            "Annex II, Part C, point 8, Part D, points 9, 14, 15 and 16, Part G, point 3 "
-            "in conjunction with Art. 39(2) and (3), Art. 46 MiCAR",
+            "Annex II, Part D, points 9, 14, 15 and 16, Part G, point 3 in conjunction with Art. 39, "
+            "Art. 46(1), third subparagraph, point (c) and Art. 46(4) MiCAR",
         ),
     ],
 )

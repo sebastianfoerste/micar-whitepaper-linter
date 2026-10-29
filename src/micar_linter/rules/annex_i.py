@@ -16,6 +16,7 @@ subparagraph, point (j) MiCAR, which the template in Implementing Regulation
 from __future__ import annotations
 
 from micar_linter.rules.base import Rule, Severity
+from micar_linter.rules.terms import ADDRESS_DE, ADDRESS_EN, COURT_DE, OFFER_DE, OFFER_EN
 
 # Art. 6(3) MiCAR prescribes this first-page statement word for word. "Offeror" is
 # replaced by "person seeking admission to trading" or "operator of the trading
@@ -48,13 +49,20 @@ ANNEX_I_RULES: tuple[Rule, ...] = (
         min_words=0,
         severity=Severity.BLOCKER,
     ),
+    # A white paper that gives an LEI need not state the legal form or the registered address
+    # (recital 2 and Anhang Tabelle 2 Teil A to C VO (EU) 2024/2984), so the party rules do not
+    # ask for them. Every party Part asks for the business addresses of the management body; the
+    # address term leaves out an e-mail address, such as the one Teil A Nr. 6 asks the offeror for
+    # (rules/terms.py).
     Rule(
         rule_id="ANNEX_I.A",
         citation="Anhang I Teil A MiCAR",
         section="offeror",
         label="Information about the offeror or person seeking admission to trading",
-        required_terms=("name", "legal form", "registered", "address"),
-        required_terms_de=("name", "rechtsform", "eingetragen", "anschrift"),
+        required_terms=("name",),
+        required_terms_de=("name",),
+        required_patterns=(ADDRESS_EN,),
+        required_patterns_de=(ADDRESS_DE,),
         min_words=50,
         severity=Severity.BLOCKER,
     ),
@@ -63,8 +71,10 @@ ANNEX_I_RULES: tuple[Rule, ...] = (
         citation="Anhang I Teil B MiCAR",
         section="issuer",
         label="Information about the issuer, if different from the offeror or person seeking admission",
-        required_terms=("issuer", "registered", "address"),
-        required_terms_de=("emittent", "eingetragen", "anschrift"),
+        required_terms=("issuer",),
+        required_terms_de=("emittent",),
+        required_patterns=(ADDRESS_EN,),
+        required_patterns_de=(ADDRESS_DE,),
         min_words=40,
     ),
     Rule(
@@ -77,63 +87,82 @@ ANNEX_I_RULES: tuple[Rule, ...] = (
         min_words=20,
         severity=Severity.MINOR,
     ),
+    # Anhang I Teil D Nr. 5 asks for the past and future milestones of the project ("Projekt-Etappen").
     Rule(
         rule_id="ANNEX_I.D",
         citation="Anhang I Teil D MiCAR",
         section="project",
         label="Information about the crypto-asset project",
-        required_terms=("project", "purpose", "business model", "team"),
-        required_terms_de=("projekt", "zweck", "geschäftsmodell", "team"),
+        required_terms=("project", "milestones"),
+        required_terms_de=("projekt", "etappen"),
         min_words=80,
         severity=Severity.BLOCKER,
     ),
+    # Anhang I Teil E Nr. 19: the law applicable to the offer and the competent court ("Gericht", not
+    # "gerichtet").
     Rule(
         rule_id="ANNEX_I.E",
         citation="Anhang I Teil E MiCAR",
         section="offer_or_admission",
         label="Information about the offer to the public or admission to trading",
-        required_terms=("offer", "price", "subscription", "target", "jurisdictions"),
-        required_terms_de=("angebot", "preis", "zeichnung", "ziel", "jurisdiktionen"),
+        required_terms=("offer", "price", "subscription", "target", "court"),
+        required_terms_de=("angebot", "preis", "zeichnung", "ziel"),
+        required_patterns_de=(COURT_DE,),
         min_words=60,
         severity=Severity.BLOCKER,
     ),
+    # Anhang I Teil F Nr. 2: the characteristics and functionality ("Merkmale ... und Funktionen").
+    # Supply protocols and transfer restrictions are items of Teil G (Nr. 7 and 8).
     Rule(
         rule_id="ANNEX_I.F",
         citation="Anhang I Teil F MiCAR",
         section="crypto_asset",
         label="Information about the crypto-asset (type, characteristics, functionality)",
-        required_terms=("crypto-asset", "supply", "transfer", "functionality"),
-        required_terms_de=("kryptowertpapier", "angebot", "übertragung", "funktionsweise"),
+        required_terms=("characteristics", "functionality"),
+        required_terms_de=("merkmale", "funktion"),
         min_words=60,
         severity=Severity.BLOCKER,
     ),
+    # Anhang I Teil G Nr. 1: the procedure and conditions for the exercise of the rights ("Ausübung");
+    # Nr. 10: the applicable law and the competent court.
     Rule(
         rule_id="ANNEX_I.G",
         citation="Anhang I Teil G MiCAR",
         section="rights_and_obligations",
         label="Rights and obligations attached to the crypto-asset",
-        required_terms=("rights", "obligations", "holder", "enforce"),
-        required_terms_de=("rechte", "pflichten", "inhaber", "durchsetzen"),
+        required_terms=("rights", "obligations", "exercise", "court"),
+        required_terms_de=("rechte", "pflichten", "ausübung"),
+        required_patterns_de=(COURT_DE,),
         min_words=60,
         severity=Severity.BLOCKER,
     ),
+    # Anhang I Teil H Nr. 1 names the distributed ledger technology, protocols and technical standards; a
+    # token can run without smart contracts.
     Rule(
         rule_id="ANNEX_I.H",
         citation="Anhang I Teil H MiCAR",
         section="technology",
         label="Information on the underlying technology",
-        required_terms=("protocol", "consensus", "smart contract", "audit"),
-        required_terms_de=("protokoll", "konsens", "smart contract", "prüfung"),
+        required_terms=("protocol", "consensus", "ledger", "audit"),
+        required_terms_de=("protokoll", "konsens", "ledger", "prüfung"),
         min_words=60,
         severity=Severity.BLOCKER,
     ),
+    # Anhang I Teil I groups the risks by source: the offer to the public or the admission to trading,
+    # the issuer, the crypto-assets, project implementation ("Projektdurchführung") and the technology.
+    # It asks for mitigation measures only "if any" ("gegebenenfalls"), so the rule does not ask for them.
     Rule(
         rule_id="ANNEX_I.I",
         citation="Anhang I Teil I MiCAR",
         section="risks",
-        label="Risk factors (market, project, technology, mitigation measures)",
-        required_terms=("market", "technology", "regulatory", "liquidity", "operational"),
-        required_terms_de=("markt", "technologie", "regulatorisch", "liquidität", "operativ"),
+        label=(
+            "Risk factors (offer or admission to trading, issuer, crypto-assets, project implementation, "
+            "technology and any mitigation measures)"
+        ),
+        required_terms=("project", "technology"),
+        required_terms_de=("projekt", "technologie"),
+        required_patterns=(OFFER_EN,),
+        required_patterns_de=(OFFER_DE,),
         min_words=120,
         severity=Severity.BLOCKER,
     ),
@@ -145,7 +174,7 @@ ANNEX_I_RULES: tuple[Rule, ...] = (
         ),
         section="environmental_impact",
         label="Principal adverse environmental and climate-related impact of the consensus mechanism",
-        required_terms=("consensus", "energy", "climate", "environmental"),
+        required_terms=("consensus", "energy", "climate", "environment"),
         required_terms_de=("konsens", "energie", "klima", "umwelt"),
         min_words=80,
         severity=Severity.MAJOR,

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from micar_linter.linter import lint_whitepaper
+from micar_linter.linter import Linter, lint_whitepaper
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Finding, Rule
 from micar_linter.whitepaper import Whitepaper, WhitepaperType
@@ -45,13 +45,21 @@ def test_rulesets_compile_patterns():
             assert rule.citation
             assert rule.section
 
-            for pattern in rule.required_patterns:
+            for pattern in (*rule.required_patterns, *rule.required_patterns_de):
                 try:
-                    re.compile(pattern)
+                    compiled = re.compile(pattern, re.IGNORECASE)
                 except re.error as exc:
                     pytest.fail(f"Invalid required_pattern '{pattern}' in rule {rule.rule_id}: {exc}")
+                # A named group stands for a listed term: the rule pages build their passing example
+                # from the name, so the pattern must match it (rules/terms.py).
+                for name in compiled.groupindex:
+                    assert compiled.search(name.replace("_", " ")), (rule.rule_id, pattern)
 
-            for pattern in rule.prohibited_patterns:
+            # Without German patterns, a German draft would be checked against the English ones.
+            if rule.required_patterns:
+                assert rule.required_patterns_de, rule.rule_id
+
+            for pattern in (*rule.prohibited_patterns, *rule.prohibited_patterns_de):
                 try:
                     re.compile(pattern)
                 except re.error as exc:
@@ -96,6 +104,59 @@ def test_other_regimes_ask_for_more_than_the_emt_warnings():
         finding = _risk_warning(whitepaper_type, EMT_WARNING)
         assert finding.status == "review"
         assert any(issue.startswith("Missing review terms") for issue in finding.issues)
+
+
+def _art_issues(rule_id: str, text: str, **metadata: str) -> tuple[str, ...]:
+    rule = next(rule for rule in RULESETS[WhitepaperType.ART] if rule.rule_id == rule_id)
+    whitepaper = Whitepaper(
+        title="Synthetic draft", type=WhitepaperType.ART, sections={rule.section: text}, metadata=metadata
+    )
+    return Linter((rule,)).lint(whitepaper)[0].issues
+
+
+def test_art_redemption_rules_ask_for_the_content_of_article_39():
+    # Art. 39 MiCAR and Annex II Part D: a permanent right of redemption, in funds other than electronic
+    # money at the market value of the referenced assets, without a fee; Art. 46: suspension under the
+    # recovery plan.
+    texts = {
+        ("ANNEX_II.D", "en"): (
+            "The holder has a permanent right of redemption against the issuer and further rights under "
+            "the terms, and may file complaints under the issuer's complaints-handling procedure."
+        ),
+        ("ANNEX_II.I", "en"): (
+            "The issuer redeems in funds at the market value of the referenced assets. The procedure and "
+            "the timeframe follow the redemption policy. Redemption is not subject to a fee, and a "
+            "suspension is possible only under Art. 46 MiCAR."
+        ),
+        ("ANNEX_II.D", "de"): (
+            "Der Inhaber hat dauerhafte Rücktauschrechte gegenüber dem Emittenten und weitere Rechte; "
+            "Beschwerden richtet er an das Beschwerdeverfahren des Emittenten."
+        ),
+        ("ANNEX_II.I", "de"): (
+            "Der Rücktausch erfolgt zum Marktwert der Vermögenswerte. Verfahren und Zeitrahmen regelt die "
+            "Rücktauschstrategie. Der Rücktausch ist nicht gebührenpflichtig; eine Aussetzung ist nur "
+            "nach Artikel 46 möglich."
+        ),
+    }
+    for (rule_id, language), text in texts.items():
+        issues = _art_issues(rule_id, text, language=language)
+        assert not any(issue.startswith(("Missing review terms", "Fehlende Begriffe")) for issue in issues)
+    # Redemption at par value is the e-money token rule of Art. 49(4); it does not stand in for an ART.
+    issues = _art_issues("ANNEX_II.D", "The holder has rights of redemption at par and may file complaints.")
+    assert "Missing review terms: permanent." in issues
+    issues = _art_issues(
+        "ANNEX_II.I",
+        "The issuer redeems at par. The procedure and the timeframe follow the redemption policy. Redemption "
+        "is not subject to a fee, and a suspension is possible only under Art. 46 MiCAR.",
+    )
+    assert "Missing review terms: market value." in issues
+    issues = _art_issues(
+        "ANNEX_II.I",
+        "Der Rücktausch erfolgt zu par. Verfahren und Zeitrahmen regelt die Rücktauschstrategie. Der "
+        "Rücktausch ist gebührenfrei; eine Aussetzung ist nur nach Artikel 46 möglich.",
+        language="de",
+    )
+    assert "Fehlende Begriffe: marktwert." in issues
 
 
 def test_project_metadata_points_to_current_repository():

@@ -22,7 +22,7 @@ Deterministic rules (no LLM, same input, same findings). For each mandatory sect
 
 The rules, their citations and their tests live in [micar-whitepaper-linter](https://github.com/sebastianfoerste/micar-whitepaper-linter), which is the source of truth; this README only summarises them.
 
-The workflow pins the linter's `@v1` tag, which moves to each linter release. `@v1` runs v1.2.1, which does not yet correct the asset-referenced token redemption checks (Art. 39 Abs. 2 MiCAR) and the reserve citations (Art. 36 MiCAR), check the first-page statement, or look for a date and a language in the notification-date and language sections; they reach `@v1` with the release that includes them.
+The workflow pins the linter's `@v1` tag, which moves to each linter release. `@v1` runs v1.2.1, which does not yet run the corrected asset-referenced token redemption and reserve checks (Art. 39 MiCAR, Anhang II Teil D und G MiCAR), check the first-page statement, or look for a date and a language in the notification-date and language sections; they reach `@v1` with the release that includes them.
 
 ## Scope and honesty
 

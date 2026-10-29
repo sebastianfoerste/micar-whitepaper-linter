@@ -128,6 +128,7 @@ Where this repo should beat everyone: **the only MiCA white-paper checker whose 
 - **Citation.** Part A of each Annex, at Part level, the citation the party rules already use; the repo's study maps the LEI to Annex I, Part A. The point-level basis is not verified (EUR-Lex unreachable) and every rule page says so. See [ADR 0007](../adr/0007-lei-rules.md).
 - **Acceptance.** Met: `tests/test_lei.py` (14 tests) covers the check-digit arithmetic, labelled and unlabelled numbers, every status of both rules, German messages, every regime and draft-free CI outputs. Generated rule pages carry tested examples. Fixture LEIs are synthetic, with computed check digits.
 - **Effect.** Each regime gains two rules (Annex I 16 → 18, Annex II 18 → 20, Annex III 14 → 16). The three full synthetic examples carry a fictional LEI (base containing `SYNTH`, computed check digits) and pass both rules; `examples/incomplete.json` has none and shows both as Missing. Existing rule IDs are unchanged.
+- **Changed since (Unreleased in `CHANGELOG.md`).** Both rules cite point 5 of Annex I Parts A, B and C and of Annex II and III Part A, checked against the Official Journal, and a draft that gives no LEI while a party section has text shows Review instead of Missing, because point 5 allows another identifier required pursuant to applicable national law. `examples/incomplete.json` therefore shows both rules as Review.
 
 ### F4. Wilson intervals in the review summary (H10), next
 
@@ -197,7 +198,7 @@ with call sites passing the finding instead of `finding.citation`, and a test (t
 3. **H10 labels**: the 150 study cells need human review before any accuracy figure; nobody else can enter them.
 4. **`setup-uv` pin**: decided 2026-10-26. The owner moved the Action to `v10.3.0` (node24), recorded in ADR 0001, with `enable-cache: 'false'`. The `action` job in CI runs it; the starter repo itself has not been run against it.
 5. **Annotations and summary on by default** under `@v1`: decided 2026-10-26. The owner kept both on by default for the 1.2.0 release, which every existing consumer sees when `v1` moves.
-6. **`uvx --no-cache`** in the Action: correctness over a few seconds per run (briefing correction 6).
+6. **`uvx --no-cache`** in the Action: settled by the 1.2.0 release (2026-10-26), whose Action runs `uvx --no-cache`, trading a few seconds per run for correctness (briefing correction 6).
 7. **H8 IDs and citations**: scheme decided 2026-10-28. The owner chose point IDs (Option 2 of ADR 0005), checked against the fields of Tables 2 to 4 of Implementing Regulation (EU) 2024/2984 with the template's LEI and DTI conditions. Each point citation still needs checking against the Official Journal text before it is added.
 8. **H7 versus H11**: decided 2026-10-21. The owner swapped dark mode out for H11.
 9. **H11 legal basis**: the LEI rules cite Part A of each Annex at Part level (the citation the party rules already use). Verify the point that names the LEI against the Official Journal. Severity MAJOR for both rules was confirmed by the owner on 2026-10-22.

@@ -16,20 +16,20 @@ This markdown table is a local review artifact. It does not approve filing, publ
 | COMMON.NOTIFICATION_DATE | Art. 6 Abs. 8, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | COMMON.LANGUAGE | Art. 6 Abs. 9, Art. 19 Abs. 8, Art. 51 Abs. 8 MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | COMMON.IXBRL_TAGGING | Art. 2 VO (EU) 2024/2984 | missing | yes | remediation_required | yes |
-| COMMON.LEI_CHECK_DIGITS | Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR | pass | no | pending_lawyer_confirmation | yes |
-| COMMON.LEI_CONSISTENCY | Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR | pass | no | pending_lawyer_confirmation | yes |
+| COMMON.LEI_CHECK_DIGITS | Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, Anhang III Teil A Nr. 5 MiCAR | pass | no | pending_lawyer_confirmation | yes |
+| COMMON.LEI_CONSISTENCY | Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, Anhang III Teil A Nr. 5 MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | ANNEX_II.A | Anhang II Teil A MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | ANNEX_II.B | Anhang II Teil B MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | ANNEX_II.C | Anhang II Teil C MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | ANNEX_II.D | Anhang II Teil D i.V.m. Art. 39 MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | ANNEX_II.E | Anhang II Teil E MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | ANNEX_II.F | Anhang II Teil F MiCAR | pass | no | pending_lawyer_confirmation | yes |
-| ANNEX_II.G.COMPOSITION_DISCLOSURE | Anhang II Teil G i.V.m. Art. 36 MiCAR | review | yes | remediation_required | yes |
+| ANNEX_II.G.COMPOSITION_DISCLOSURE | Anhang II Teil G Nr. 1 und 2 MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | ANNEX_II.G.DEPOSIT_FLOOR_REVIEW | Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d, Art. 45 Abs. 3 und Art. 45 Abs. 7 Buchst. b MiCAR | review | yes | remediation_required | yes |
 | ANNEX_II.G.CUSTODY | Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR | review | yes | remediation_required | yes |
-| ANNEX_II.G.VALUATION_AUDIT | Anhang II Teil G i.V.m. Art. 36 Abs. 7, 9, 11 und 12 MiCAR | pass | no | pending_lawyer_confirmation | yes |
+| ANNEX_II.G.VALUATION_AUDIT | Anhang II Teil D Nr. 10 MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | ANNEX_II.H | Art. 19 Abs. 1 UAbs. 1 Buchst. h MiCAR i.V.m. Art. 4 VO (EU) 2025/422; Anhang Tabelle 3 Teil H VO (EU) 2024/2984 | pass | no | pending_lawyer_confirmation | yes |
-| ANNEX_II.I | Anhang II Teil C Nr. 8, Teil D Nr. 9, 14, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39 Abs. 2 und 3, Art. 46 MiCAR | pass | no | pending_lawyer_confirmation | yes |
+| ANNEX_II.I | Anhang II Teil D Nr. 9, 14, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39, Art. 46 Abs. 1 UAbs. 3 Buchst. c und Art. 46 Abs. 4 MiCAR | pass | no | pending_lawyer_confirmation | yes |
 
 ## Review Gate
 
