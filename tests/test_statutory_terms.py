@@ -1,13 +1,14 @@
 """Sections written in the wording of MiCAR, its Annexes and the templates meet the listed terms.
 
-Each text below follows the Official Journal wording or the template of Implementing Regulation (EU)
-2024/2984 for the item a rule checks. The issuers are fictional.
+Each text below states the item a rule checks, in the Official Journal wording of MiCAR or of the template
+of Implementing Regulation (EU) 2024/2984 where one exists. The issuers and their LEIs are fictional.
 """
 
 from __future__ import annotations
 
 import pytest
 
+from micar_linter.lei import check_digits_for
 from micar_linter.linter import lint_whitepaper
 from micar_linter.rules.base import Finding
 from micar_linter.whitepaper import Whitepaper, WhitepaperType
@@ -28,17 +29,18 @@ def _finding(
     return next(f for f in lint_whitepaper(whitepaper).findings if f.rule.rule_id == rule_id)
 
 
-# Party sections that give an LEI and, as recital 2 of Implementing Regulation 2024/2984 allows, leave
-# out the legal form and the registered address.
+# Party sections that give an LEI and leave out the legal form and the registered address: the templates of
+# Implementing Regulation 2024/2984 ask for those fields only where no LEI is provided (see its recital 2).
+SYNTHETIC_LEI = "9999SYNTH0000ZZQ01" + check_digits_for("9999SYNTH0000ZZQ01")
 PARTY_EN = (
-    "Example Issuer AG, the issuer and offeror named in this white paper, is identified by its legal "
-    "entity identifier. The members of its management body, with their business address and functions, "
-    "are listed in the table below."
+    f"The name of the issuer and offeror is Example Issuer AG; its legal entity identifier is {SYNTHETIC_LEI}. "
+    "The members of its management body, with their business address and functions, are listed in the "
+    "table below."
 )
 PARTY_DE = (
-    "Die Example Issuer AG ist Emittent und Anbieter; ihr Name und ihre Unternehmenskennung stehen in "
-    "diesem Whitepaper. Die Mitglieder des Leitungsorgans sind mit Geschäftsanschrift und Funktion in "
-    "der Tabelle unten aufgeführt."
+    f"Name des Emittenten und Anbieters ist Example Issuer AG; seine Rechtsträgerkennung lautet {SYNTHETIC_LEI}. "
+    "Die Mitglieder des Leitungsorgans sind mit Geschäftsanschrift und Funktion in der Tabelle unten "
+    "aufgeführt."
 )
 
 
@@ -65,20 +67,25 @@ def test_emt_issuer_section_need_not_name_both_institution_types():
 
 
 # The predefined German compliance statement of the templates (Table 2 field 03, Tables 3 and 4 field I.03).
+# Table 2 ends "dass das Kryptowerte-Whitepaper", Tables 3 and 4 "dass dieses Kryptowerte-Whitepaper".
 TEMPLATE_STATEMENT_DE = (
     "Dieses Kryptowerte-Whitepaper erfüllt Titel {} der Verordnung (EU) 2023/1114 des Europäischen "
     "Parlaments und des Rates und es wird bestätigt, dass die in ihm enthaltenen Informationen nach "
-    "bestem Wissen des Leitungsorgans redlich, eindeutig und nicht irreführend sind und dass das "
+    "bestem Wissen des Leitungsorgans redlich, eindeutig und nicht irreführend sind und dass {} "
     "Kryptowerte-Whitepaper keine Auslassungen aufweist, die seine Aussagekraft beeinträchtigen könnten."
 )
 
 
 @pytest.mark.parametrize(
-    ("whitepaper_type", "title"),
-    [(WhitepaperType.OTHER, "II"), (WhitepaperType.ART, "III"), (WhitepaperType.EMT, "IV")],
+    ("whitepaper_type", "title", "article"),
+    [
+        (WhitepaperType.OTHER, "II", "das"),
+        (WhitepaperType.ART, "III", "dieses"),
+        (WhitepaperType.EMT, "IV", "dieses"),
+    ],
 )
-def test_german_template_statement_meets_the_management_statement_terms(whitepaper_type, title):
-    text = TEMPLATE_STATEMENT_DE.format(title)
+def test_german_template_statement_meets_the_management_statement_terms(whitepaper_type, title, article):
+    text = TEMPLATE_STATEMENT_DE.format(title, article)
     finding = _finding(whitepaper_type, "COMMON.MANAGEMENT_STATEMENT", "management_statement", text, "de")
     assert finding.status == "pass"
 

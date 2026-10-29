@@ -57,14 +57,35 @@ def test_valuation_rule_asks_for_the_referenced_assets():
     finding = _finding(report, "ANNEX_II.G.VALUATION_AUDIT")
     assert finding.status == "review"
     assert "Missing review terms: referenced asset." in finding.issues
+    # The valuation may be described with the verb ("bewertet"); "Referenzwerte" is no referenced asset.
     german = _lint(
         WhitepaperType.ART,
-        {"rights_and_obligations": "Die Bestandteile der Forderung werden täglich redlich bewertet."},
+        {
+            "rights_and_obligations": "Die Bestandteile der Forderung und die Referenzwerte werden täglich "
+            "redlich bewertet."
+        },
         "de",
     )
-    assert "Fehlende Begriffe: referenzierten vermögenswert, bewertung." in _finding(
-        german, "ANNEX_II.G.VALUATION_AUDIT"
-    ).issues
+    assert _finding(german, "ANNEX_II.G.VALUATION_AUDIT").issues == (
+        "Fehlende Begriffe: referenzierter vermögenswert.",
+    )
+
+
+def test_valuation_rule_names_the_referenced_assets_in_either_word_order_and_inflection():
+    english = "Each of the assets referenced by the token is valued daily at its market price."
+    assert _finding(
+        _lint(WhitepaperType.ART, {"rights_and_obligations": english}), "ANNEX_II.G.VALUATION_AUDIT"
+    ).status == "pass"
+    german = "Der referenzierte Vermögenswert ist Gold; seine Bewertung erfolgt täglich."
+    assert _finding(
+        _lint(WhitepaperType.ART, {"rights_and_obligations": german}, "de"), "ANNEX_II.G.VALUATION_AUDIT"
+    ).status == "pass"
+    # "Evaluation" is no valuation.
+    evaluation = "Each referenced asset is listed below. Complaints are subject to an evaluation."
+    finding = _finding(
+        _lint(WhitepaperType.ART, {"rights_and_obligations": evaluation}), "ANNEX_II.G.VALUATION_AUDIT"
+    )
+    assert finding.issues == ("Missing review terms: valuation.",)
 
 
 def test_valuation_rule_no_longer_reads_the_reserve_section_or_asks_for_an_audit():
@@ -73,6 +94,11 @@ def test_valuation_rule_no_longer_reads_the_reserve_section_or_asks_for_an_audit
     reserve = "The reserve is valued daily and audited every six months by an independent auditor."
     report = _lint(WhitepaperType.ART, {"reserve_of_assets": reserve})
     assert _finding(report, "ANNEX_II.G.VALUATION_AUDIT").status == "missing"
+    # A rights section that describes the claim and its valuation passes without any audit.
+    rights = "The referenced asset is gold. A fair and transparent valuation of the claim is undertaken daily."
+    assert "audit" not in rights
+    report = _lint(WhitepaperType.ART, {"rights_and_obligations": rights})
+    assert _finding(report, "ANNEX_II.G.VALUATION_AUDIT").status == "pass"
 
 
 # Art. 54 MiCAR and Annex III Part D No. 3, in English and German.

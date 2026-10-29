@@ -24,13 +24,13 @@
 <dt>Severity if open</dt><dd>BLOCKER</dd>
 <dt>Section key</dt><dd><code>redemption</code></dd>
 <dt>Minimum words</dt><dd>100</dd>
-<dt>Listed terms (English)</dt><dd><code>redemption</code>, <code>market value</code>, <code>procedure</code>, <code>timeframe</code>, <code>fee</code>, <code>suspension</code></dd>
-<dt>Listed terms (German)</dt><dd lang="de"><code>rücktausch</code>, <code>marktwert</code>, <code>verfahren</code>, <code>zeitrahmen</code>, <code>gebühr</code>, <code>aussetzung</code></dd>
+<dt>Listed terms (English)</dt><dd><code>redemption</code>, <code>market value</code>, <code>procedure</code>, <code>timeframe</code>, <code>suspension</code>, <code>fee</code> (pattern <code>(?P&lt;fee&gt;\bfees?\b)</code>)</dd>
+<dt>Listed terms (German)</dt><dd lang="de"><code>rücktausch</code>, <code>marktwert</code>, <code>verfahren</code>, <code>zeitrahmen</code>, <code>gebühr</code> (pattern <code>(?P&lt;gebühr&gt;gebühr(?!end))</code>), <code>aussetzung</code> (pattern <code>(?P&lt;aussetzung&gt;(?&lt;!vor)aussetz)</code>)</dd>
 <dt>Package version</dt><dd>1.2.1, built from source that may include unreleased changes</dd>
 <dt>Source</dt><dd><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/rules/annex_ii.py">rules/annex_ii.py</a></dd>
 </dl></div>
 <h2>How the status is set</h2>
-<ul class="plain"><li><strong>Missing</strong>: section <code>redemption</code> is absent or empty, or holds only placeholder text such as TBD or TBC.</li><li><strong>Review</strong>: the section has fewer than 100 words, or a listed term does not appear (case-insensitive substring match).</li><li><strong>Pass</strong>: none of the above. A pass means the check matched, nothing more.</li></ul>
+<ul class="plain"><li><strong>Missing</strong>: section <code>redemption</code> is absent or empty, or holds only placeholder text such as TBD or TBC.</li><li><strong>Review</strong>: the section has fewer than 100 words, or a listed term does not appear (case-insensitive substring match; a term shown with a pattern counts only where the pattern matches, so that a look-alike word does not stand in for it).</li><li><strong>Pass</strong>: none of the above. A pass means the check matched, nothing more.</li></ul>
 <h2>Legal basis</h2>
 <p>Annex II, Part D, points 9, 14, 15 and 16, Part G, point 3 in conjunction with Art. 39, Art. 46(1), third subparagraph, point (c) and Art. 46(4) MiCAR</p>
 <ul class="plain"><li><a href="https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng">https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng</a></li></ul>
@@ -45,13 +45,13 @@
   &quot;title&quot;: &quot;Synthetic rule example&quot;,
   &quot;type&quot;: &quot;art&quot;,
   &quot;sections&quot;: {
-    &quot;redemption&quot;: &quot;redemption market value procedure timeframe fee suspension&quot;
+    &quot;redemption&quot;: &quot;redemption market value procedure timeframe suspension fee&quot;
   }
 }</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>Section that matches</strong></div><p class="small muted">This text passes and shows what the check measures: listed terms and length. It is not model disclosure wording and does not meet MiCAR.</p><pre><code>{
   &quot;title&quot;: &quot;Synthetic rule example&quot;,
   &quot;type&quot;: &quot;art&quot;,
   &quot;sections&quot;: {
-    &quot;redemption&quot;: &quot;Synthetic example naming redemption, market value, procedure, timeframe, fee, suspension. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token.&quot;
+    &quot;redemption&quot;: &quot;Synthetic example naming redemption, market value, procedure, timeframe, suspension, fee. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token. This synthetic sentence only adds length and states no fact about any issuer or token.&quot;
   }
 }</code></pre></div>
 <h2>Limitations</h2>

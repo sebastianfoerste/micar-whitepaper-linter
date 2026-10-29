@@ -24,13 +24,13 @@
 <dt>Severity if open</dt><dd>BLOCKER</dd>
 <dt>Section key</dt><dd><code>rights_and_obligations</code></dd>
 <dt>Minimum words</dt><dd>50</dd>
-<dt>Listed terms (English)</dt><dd><code>referenced asset</code>, <code>valuation</code></dd>
-<dt>Listed terms (German)</dt><dd lang="de"><code>referenzierten vermögenswert</code>, <code>bewertung</code></dd>
+<dt>Listed terms (English)</dt><dd><code>referenced asset</code> (pattern <code>(?P&lt;referenced_asset&gt;referenced assets?|assets? referenced)</code>), <code>valuation</code> (pattern <code>(?P&lt;valuation&gt;(?&lt;!\be)valuation|\bvalu(?:ed|ing)\b)</code>)</dd>
+<dt>Listed terms (German)</dt><dd lang="de"><code>referenzierter vermögenswert</code> (pattern <code>(?P&lt;referenzierter_vermögenswert&gt;referenziert\w*\s+vermögenswert)</code>), <code>bewertung</code> (pattern <code>(?P&lt;bewertung&gt;bewert)</code>)</dd>
 <dt>Package version</dt><dd>1.2.1, built from source that may include unreleased changes</dd>
 <dt>Source</dt><dd><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/rules/annex_ii.py">rules/annex_ii.py</a></dd>
 </dl></div>
 <h2>How the status is set</h2>
-<ul class="plain"><li><strong>Missing</strong>: section <code>rights_and_obligations</code> is absent or empty, or holds only placeholder text such as TBD or TBC.</li><li><strong>Review</strong>: the section has fewer than 50 words, or a listed term does not appear (case-insensitive substring match).</li><li><strong>Pass</strong>: none of the above. A pass means the check matched, nothing more.</li></ul>
+<ul class="plain"><li><strong>Missing</strong>: section <code>rights_and_obligations</code> is absent or empty, or holds only placeholder text such as TBD or TBC.</li><li><strong>Review</strong>: the section has fewer than 50 words, or a listed term does not appear (case-insensitive substring match; a term shown with a pattern counts only where the pattern matches, so that a look-alike word does not stand in for it).</li><li><strong>Pass</strong>: none of the above. A pass means the check matched, nothing more.</li></ul>
 <h2>Legal basis</h2>
 <p>Annex II, Part D, point 10 MiCAR</p>
 <ul class="plain"><li><a href="https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng">https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng</a></li></ul>

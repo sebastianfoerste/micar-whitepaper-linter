@@ -54,12 +54,12 @@ Pass: 1  |  Review: 13  |  Missing: 6  |  Blockers: 15
            -  No valid LEI was found in the issuer, offeror or trading_platform_operator sections, so consistency cannot be checked.
            -  Point 5 of Annex I Parts A to C and of Annex II and III Part A allows another identifier required pursuant to applicable national law in place of the LEI. Whether the draft gives one of them for each party needs checking by hand.
 
-[REVIEW] [BLOCKER] ANNEX_II.A  Information about the issuer of the ART (legal form, governance, prudential profile)
+[REVIEW] [BLOCKER] ANNEX_II.A  Information about the issuer of the ART (identity, management body, governance arrangements)
            Cite:  Annex II, Part A MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'issuer'  (6 words)
            -  Section is thin: 6 words, expected at least 80.
-           -  Missing review terms: address, management body.
+           -  Missing review terms: management body, address.
 
 [REVIEW] [BLOCKER] ANNEX_II.B  Information about the asset-referenced token (characteristics, plans and milestones)
            Cite:  Annex II, Part B MiCAR
@@ -79,7 +79,7 @@ Pass: 1  |  Review: 13  |  Missing: 6  |  Blockers: 15
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'rights_and_obligations'  (3 words)
            -  Section is thin: 3 words, expected at least 80.
-           -  Missing review terms: redemption, permanent, complaints.
+           -  Missing review terms: redemption, complaints, permanent.
 
 [REVIEW] [BLOCKER] ANNEX_II.E  Information on the underlying technology (DLT, protocols, consensus mechanism, audit outcome)
            Cite:  Annex II, Part E MiCAR
@@ -88,12 +88,12 @@ Pass: 1  |  Review: 13  |  Missing: 6  |  Blockers: 15
            -  Section is thin: 4 words, expected at least 70.
            -  Missing review terms: ledger, protocol, consensus, audit.
 
-[REVIEW] [BLOCKER] ANNEX_II.F  Risk factors specific to ARTs (reserve of assets, issuer, offer, token, operationalisation, technology, mitigation measures)
+[REVIEW] [BLOCKER] ANNEX_II.F  Risk factors specific to ARTs (reserve of assets, issuer, offer or admission to trading, token, operationalisation, technology and any mitigation measures)
            Cite:  Annex II, Part F MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'risks'  (3 words)
            -  Section is thin: 3 words, expected at least 150.
-           -  Missing review terms: reserve, issuer, offer, technology, mitigation.
+           -  Missing review terms: reserve, issuer, technology, offer.
 
 [REVIEW] [BLOCKER] ANNEX_II.G.COMPOSITION_DISCLOSURE  Reserve composition and value alignment mechanism (Annex II Part G Nos. 1 and 2 MiCAR)
            Cite:  Annex II, Part G, points 1 and 2 MiCAR
@@ -108,7 +108,7 @@ Pass: 1  |  Review: 13  |  Missing: 6  |  Blockers: 15
            Section: 'reserve_of_assets'  (3 words)
            -  Draft characterisation assertion missing or invalid (references_official_currency, art_significant); the applicable minimum share cannot be determined. The assertion remains pending lawyer confirmation.
 
-[REVIEW] [BLOCKER] ANNEX_II.G.CUSTODY  Custody policy and custodian selection (Art. 36(2), Art. 37 MiCAR)
+[REVIEW] [BLOCKER] ANNEX_II.G.CUSTODY  Custody of the reserve assets (Art. 37 MiCAR) and their legal segregation (Art. 36(2) MiCAR)
            Cite:  Annex II, Part G in conjunction with Art. 36(2), Art. 37 MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'reserve_of_assets'  (3 words)

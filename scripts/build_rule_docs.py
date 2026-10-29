@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import html
 import json
+import re
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -204,10 +205,21 @@ def _annexes(regimes: list[WhitepaperType]) -> str:
     return ", ".join(REGIME_NAMES[regime].split(" · ")[0] for regime in regimes)
 
 
+def _named(patterns: tuple[str, ...]) -> list[tuple[str, str]]:
+    """The listed terms written as patterns (rules/terms.py): each named group's name and its pattern."""
+    return [
+        (name.replace("_", " "), pattern) for pattern in patterns for name in re.compile(pattern).groupindex
+    ]
+
+
+def _listed(rule: Rule) -> list[str]:
+    """The English terms a passing example names; each pattern matches its own name (tests/test_rules.py)."""
+    return [*rule.required_terms, *(name for name, _ in _named(rule.required_patterns))]
+
+
 def _passing_text(rule: Rule) -> str:
-    sentence = (
-        "Synthetic example naming " + ", ".join(rule.required_terms) + "." if rule.required_terms else ""
-    )
+    listed = _listed(rule)
+    sentence = "Synthetic example naming " + ", ".join(listed) + "." if listed else ""
     words = sentence.split()
     while len(words) < rule.min_words:
         words += FILLER.split()
@@ -386,7 +398,7 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
             "The section key is missing or empty.",
         ),
     ]
-    thin = " ".join(rule.required_terms) or "Short."
+    thin = " ".join(_listed(rule)) or "Short."
     if len(thin.split()) < rule.min_words:
         result.append(
             Example(
@@ -459,8 +471,10 @@ def _status_badge(status: str) -> str:
     return f'<span class="badge {status}">{_e(status.capitalize())}</span>'
 
 
-def _terms(terms: tuple[str, ...]) -> str:
-    return ", ".join(f"<code>{_e(t)}</code>" for t in terms) if terms else "none"
+def _terms(terms: tuple[str, ...], patterns: tuple[str, ...] = ()) -> str:
+    shown = [f"<code>{_e(t)}</code>" for t in terms]
+    shown += [f"<code>{_e(name)}</code> (pattern <code>{_e(pattern)}</code>)" for name, pattern in _named(patterns)]
+    return ", ".join(shown) if shown else "none"
 
 
 def status_logic(rule: Rule) -> str:
@@ -489,7 +503,8 @@ def status_logic(rule: Rule) -> str:
             '<ul class="plain"><li><strong>Missing</strong>: no section <code>issuer</code>, <code>offeror</code> or '
             "<code>trading_platform_operator</code> has text other than a placeholder.</li>"
             "<li><strong>Review</strong>: a party section has text but no party section carries an LEI with valid "
-            "check digits, since point 5 allows another identifier in place of the LEI; a valid LEI in another "
+            "check digits, since point 5 allows another identifier required pursuant to applicable national law "
+            "in place of the LEI; a valid LEI in another "
             "section appears in no party section; or the <code>issuer</code> section names more than one valid "
             "LEI.</li>"
             "<li><strong>Pass</strong>: none of the above. Codes with invalid check digits are reported by "
@@ -537,16 +552,26 @@ def status_logic(rule: Rule) -> str:
     )
     terms = (
         "a listed term"
-        if len({(variant.required_terms, variant.required_terms_de) for variant in groups}) == 1
+        if len(
+            {
+                (v.required_terms, v.required_terms_de, v.required_patterns, v.required_patterns_de)
+                for v in groups
+            }
+        )
+        == 1
         else "a term listed for the draft's regime"
     )
     review = f"the section has fewer than {minimum}, or {terms} does not appear"
+    match = "case-insensitive substring match"
+    if any(_named(v.required_patterns) or _named(v.required_patterns_de) for v in groups):
+        match += "; a term shown with a pattern counts only where the pattern matches, so that a look-alike word does not stand in for it"
     parts = [
         f"<li><strong>Missing</strong>: section <code>{_e(rule.section)}</code> is absent or empty, or holds "
         "only placeholder text such as TBD or TBC.</li>",
-        f"<li><strong>Review</strong>: {review} (case-insensitive substring match).</li>",
+        f"<li><strong>Review</strong>: {review} ({match}).</li>",
     ]
-    if rule.required_patterns or rule.prohibited_patterns:
+    unnamed = [pattern for pattern in rule.required_patterns if not re.compile(pattern).groupindex]
+    if unnamed or rule.prohibited_patterns:
         parts.append(
             "<li>Review also follows when a required pattern is absent or a prohibited pattern matches.</li>"
         )
@@ -610,10 +635,17 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
     ]
     if family in UNTESTED_REGIMES:
         limitations.append(UNTESTED_REGIMES[family])
-    if rule.rule_id in LEI_RULES:
+    if rule.rule_id == "COMMON.LEI_CHECK_DIGITS":
         limitations.append(
-            "Does not recognise the other identifiers that point 5 allows in place of the LEI, so a party "
-            "section without an LEI goes to review."
+            "Does not recognise the other identifiers that point 5 allows in place of the LEI, so a draft "
+            "without any LEI goes to review once a party section has text. Once the draft gives one LEI, a "
+            "party section without an LEI of its own does not change the result."
+        )
+    if rule.rule_id == "COMMON.LEI_CONSISTENCY":
+        limitations.append(
+            "Does not recognise the other identifiers that point 5 allows in place of the LEI, so a draft "
+            "whose party sections carry no valid LEI goes to review. Once one party section carries a valid "
+            "LEI, another party section without an LEI does not change the result."
         )
     if rule.rule_id in NEVER_PASS:
         limitations.append("This rule never reports Pass.")
@@ -642,8 +674,8 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
 <dt>Severity if open</dt><dd>{_e(rule.severity.label)}</dd>
 <dt>Section key</dt><dd>{"none: checks the file format" if rule.rule_id in FORMAT_GATE else "all sections; anchored to <code>issuer</code>" if rule.rule_id in LEI_RULES else f"<code>{_e(rule.section)}</code>"}</dd>
 <dt>Minimum words</dt><dd>{f"none: checks for {ANSWER_CHECKS[rule.rule_id]}" if rule.rule_id in ANSWER_CHECKS else by_regime(lambda r: str(r.min_words))}</dd>
-<dt>Listed terms (English)</dt><dd>{by_regime(lambda r: _terms(r.required_terms))}</dd>
-<dt>Listed terms (German)</dt><dd lang="de">{by_regime(lambda r: _terms(r.required_terms_de))}</dd>
+<dt>Listed terms (English)</dt><dd>{by_regime(lambda r: _terms(r.required_terms, r.required_patterns))}</dd>
+<dt>Listed terms (German)</dt><dd lang="de">{by_regime(lambda r: _terms(r.required_terms_de, r.required_patterns_de))}</dd>
 <dt>Package version</dt><dd>{_e(__version__)}, built from source that may include unreleased changes</dd>
 <dt>Source</dt><dd><a href="{REPO}/blob/main/src/micar_linter/rules/{SOURCE_MODULES[family]}">rules/{SOURCE_MODULES[family]}</a></dd>
 </dl></div>

@@ -98,14 +98,14 @@ class Linter:
         # Bilingual required terms
         req_terms = rule.required_terms_de if (is_de and rule.required_terms_de) else rule.required_terms
         missing_terms = [term for term in req_terms if term.lower() not in normalized]
-        if missing_terms:
-            prefix = "Fehlende Begriffe: " if is_de else "Missing review terms: "
-            issues.append(prefix + ", ".join(missing_terms) + ".")
 
-        # Bilingual required regex patterns
+        # Bilingual required regex patterns. A pattern with a named group stands for a listed term
+        # that a plain substring would find inside other words ("fee" in "feedback"): when it does not
+        # match, the group's name, with underscores read as spaces, is reported with the missing terms.
         req_patterns = (
             rule.required_patterns_de if (is_de and rule.required_patterns_de) else rule.required_patterns
         )
+        pattern_issues: list[str] = []
         for pattern in req_patterns:
             try:
                 compiled = re.compile(pattern, re.IGNORECASE)
@@ -115,15 +115,24 @@ class Linter:
                     if is_de
                     else f"Invalid required pattern regex '{pattern}': {exc}"
                 )
-                issues.append(msg)
+                pattern_issues.append(msg)
                 continue
             if not compiled.search(text):
+                names = [name.replace("_", " ") for name in compiled.groupindex]
+                if names:
+                    missing_terms.extend(names)
+                    continue
                 msg = (
                     f"Fehlendes gefordertes Muster: '{pattern}'."
                     if is_de
                     else f"Missing required pattern: '{pattern}'."
                 )
-                issues.append(msg)
+                pattern_issues.append(msg)
+
+        if missing_terms:
+            prefix = "Fehlende Begriffe: " if is_de else "Missing review terms: "
+            issues.append(prefix + ", ".join(missing_terms) + ".")
+        issues.extend(pattern_issues)
 
         # Bilingual prohibited regex patterns
         proh_patterns = (
@@ -379,9 +388,9 @@ def _other_identifier_note(is_de: bool) -> str:
 def _no_lei_finding(rule: Rule, whitepaper: Whitepaper, msg: str) -> Finding:
     """Fails closed without an LEI: Missing when no party section has text, Review when one has.
 
-    Point 5 of each party Part allows another identifier under national law in place of the LEI,
-    and VO (EU) 2024/2984 asks for the LEI "where available", so a party section without one
-    goes to a reviewer instead of counting as absent.
+    Point 5 of each party Part allows another identifier required pursuant to applicable national law
+    in place of the LEI, and VO (EU) 2024/2984 asks for the LEI "where available", so a party section
+    without one goes to a reviewer instead of counting as absent.
     """
     texts = ((whitepaper.sections.get(section) or "").strip() for section in PARTY_SECTIONS)
     if not any(text and not is_placeholder(text) for text in texts):

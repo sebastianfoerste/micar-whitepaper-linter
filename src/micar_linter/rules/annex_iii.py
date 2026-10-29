@@ -2,9 +2,11 @@
 
 Reference: Anhang III VO (EU) 2023/1114 i.V.m. Art. 51 MiCAR.
 
-EMT issuance is reserved for credit institutions and electronic money
-institutions (Art. 48(1) MiCAR), save for the issuers and tokens exempted
-under Art. 48(4) and (5), which still draw up a white paper (Art. 48(7)).
+Only the issuer of an EMT, authorised as a credit institution or an
+electronic money institution, may offer it to the public or seek its
+admission to trading in the Union; other persons may do so with the issuer's
+written consent (Art. 48(1) MiCAR). The issuers and tokens exempted under
+Art. 48(4) and (5) still draw up and notify a white paper (Art. 48(7)).
 The white paper describes the issuer and its authorisation or exemption, the
 redemption right at par value (Art. 49(4) MiCAR) and the rights of holders,
 including in insolvency. Art. 54 MiCAR governs the investment of the funds
@@ -18,19 +20,23 @@ Point-level extensions are the practitioner's contribution.
 from __future__ import annotations
 
 from micar_linter.rules.base import Rule, Severity
+from micar_linter.rules.terms import ADDRESS_DE, ADDRESS_EN, COURT_DE
 
 ANNEX_III_RULES: tuple[Rule, ...] = (
     # An issuer is a credit institution or an electronic money institution, or exempt under
     # Art. 48 Abs. 4 or 5 MiCAR, so the rule names no institution type. A white paper that gives an
     # LEI need not state the legal form or the registered address (recital 2 and Anhang Tabelle 4
-    # Teil A VO (EU) 2024/2984).
+    # Teil A VO (EU) 2024/2984). The address term looks for the business addresses of the management
+    # body, not the e-mail address.
     Rule(
         rule_id="ANNEX_III.A",
         citation="Anhang III Teil A MiCAR",
         section="issuer",
         label="Information about the issuer of the EMT (authorisation or exemption, management body)",
-        required_terms=("issuer", "address", "management body"),
-        required_terms_de=("emittent", "anschrift", "leitungsorgan"),
+        required_terms=("issuer", "management body"),
+        required_terms_de=("emittent", "leitungsorgan"),
+        required_patterns=(ADDRESS_EN,),
+        required_patterns_de=(ADDRESS_DE,),
         min_words=80,
         severity=Severity.BLOCKER,
     ),
@@ -48,14 +54,15 @@ ANNEX_III_RULES: tuple[Rule, ...] = (
         severity=Severity.BLOCKER,
     ),
     # Anhang III Teil C has four items: offer or admission to trading, number of units, trading
-    # platforms, and the applicable law and competent court.
+    # platforms, and the applicable law and competent court ("Gericht", not "gerichtet").
     Rule(
         rule_id="ANNEX_III.C",
         citation="Anhang III Teil C MiCAR",
         section="offer_or_admission",
         label="Information about the offer to the public of the EMT or its admission to trading",
         required_terms=("offer", "court"),
-        required_terms_de=("angebot", "gericht"),
+        required_terms_de=("angebot",),
+        required_patterns_de=(COURT_DE,),
         min_words=60,
         severity=Severity.BLOCKER,
     ),
@@ -86,14 +93,15 @@ ANNEX_III_RULES: tuple[Rule, ...] = (
         severity=Severity.BLOCKER,
     ),
     # Anhang III Teil F has three items: the risks of the issuer, of the e-money token, and of the
-    # technology with mitigation measures ("Risikominderung").
+    # technology. It asks for mitigation measures only "if any" ("gegebenenfalls"), so the rule does not
+    # ask for them.
     Rule(
         rule_id="ANNEX_III.F",
         citation="Anhang III Teil F MiCAR",
         section="risks",
-        label="Risk factors (issuer, e-money token, technology, mitigation measures)",
-        required_terms=("issuer", "technology", "mitigation"),
-        required_terms_de=("emittent", "technologie", "minderung"),
+        label="Risk factors (issuer, e-money token, technology and any mitigation measures)",
+        required_terms=("issuer", "technology"),
+        required_terms_de=("emittent", "technologie"),
         min_words=120,
         severity=Severity.BLOCKER,
     ),
@@ -119,7 +127,10 @@ ANNEX_III_RULES: tuple[Rule, ...] = (
         rule_id="ANNEX_III.SAFEGUARDING",
         citation="Art. 54 MiCAR i.V.m. Art. 7 EMD2 (Richtlinie 2009/110/EG); Anhang III Teil D Nr. 3 MiCAR",
         section="safeguarding",
-        label="Safeguarding of funds received against EMT issuance (review prompt; no Annex III item)",
+        label=(
+            "Safeguarding of funds received against EMT issuance "
+            "(review prompt; no Annex III item asks for safeguarding)"
+        ),
         required_terms=("safeguard", "separate", "credit institution", "insolvency"),
         required_terms_de=("sicher", "gesondert", "kreditinstitut", "insolvenz"),
         min_words=60,

@@ -13,6 +13,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 from micar_linter.rules.base import Rule, Severity
+from micar_linter.rules.terms import TITLE_DE
 
 COMMON_RULES: tuple[Rule, ...] = (
     Rule(
@@ -54,8 +55,10 @@ COMMON_RULES: tuple[Rule, ...] = (
         label="Statement by the management body on completeness, fairness, and clarity",
         required_terms=("management body", "complies", "fair", "clear", "not misleading"),
         # The German paragraphs use three verbs ("Rechnung trägt", "entspricht", "erfüllt"), and the
-        # predefined statement of the templates in VO (EU) 2024/2984 says "erfüllt"; all name the "Titel".
-        required_terms_de=("leitungsorgan", "titel", "redlich", "eindeutig", "nicht irreführend"),
+        # predefined statement of the templates in VO (EU) 2024/2984 says "erfüllt"; all name the Title
+        # ("diesem Titel", "Titel II"), which the pattern tells apart from the white paper's own title.
+        required_terms_de=("leitungsorgan", "redlich", "eindeutig", "nicht irreführend"),
+        required_patterns_de=(TITLE_DE,),
         min_words=40,
         severity=Severity.BLOCKER,
     ),

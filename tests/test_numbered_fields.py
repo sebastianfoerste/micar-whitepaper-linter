@@ -253,6 +253,19 @@ def test_emt_safeguarding_reads_the_fields_that_describe_it(tmp_path: Path):
     assert any(warning.endswith("mention it: D.3.") for warning in report.warnings)
 
 
+@pytest.mark.parametrize(
+    "funds",
+    [
+        "At least 30 % of the funds received is always deposited in separate accounts in credit institutions.",
+        "Die Geldbeträge sind gemäß Artikel 7 Absatz 1 der Richtlinie 2009/110/EG besichert.",
+        "Mindestens 30 % der Geldbeträge sind stets auf gesonderten Konten bei Kreditinstituten hinterlegt.",
+    ],
+)
+def test_emt_safeguarding_reads_fields_in_the_words_of_article_54(tmp_path: Path, funds: str):
+    path = _table(tmp_path, [*_EMT_BASE, ("D.3", "Rights of holders", funds)])
+    assert funds in load_whitepaper(path, WhitepaperType.EMT).section("safeguarding")
+
+
 def test_emt_safeguarding_stays_missing_when_no_field_describes_it(tmp_path: Path):
     whitepaper = load_whitepaper(_table(tmp_path, _EMT_BASE), WhitepaperType.EMT)
     assert "safeguarding" not in whitepaper.sections

@@ -52,8 +52,9 @@ def test_find_leis_needs_a_label_for_purely_numeric_codes_and_ignores_longer_cod
 
 
 def test_check_digits_rule_fails_closed_without_an_lei():
-    # Point 5 of each party Part allows another identifier under national law in place of the LEI, so
-    # a party section without one goes to review; a draft with no party text stays missing.
+    # Point 5 of each party Part allows another identifier required pursuant to applicable national law
+    # in place of the LEI, so a party section without one goes to review; a draft with no party text
+    # stays missing.
     finding = _finding("COMMON.LEI_CHECK_DIGITS", {"issuer": "Synthetic Issuer AG."})
     assert finding.status == "review"
     assert "another identifier" in finding.issues[1]

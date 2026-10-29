@@ -63,7 +63,7 @@
   }
 }</code></pre></div>
 <h2>Limitations</h2>
-<ul class="plain"><li>Reads every section of the draft; findings are anchored to the <code>issuer</code> section.</li><li>Works offline on the characters of each code. It does not confirm that an LEI is registered, current or held by the entity the draft names.</li><li>Status and severity are fixed by the rule. A draft cannot waive or downgrade them.</li><li>Does not recognise the other identifiers that point 5 allows in place of the LEI, so a party section without an LEI goes to review.</li></ul>
+<ul class="plain"><li>Reads every section of the draft; findings are anchored to the <code>issuer</code> section.</li><li>Works offline on the characters of each code. It does not confirm that an LEI is registered, current or held by the entity the draft names.</li><li>Status and severity are fixed by the rule. A draft cannot waive or downgrade them.</li><li>Does not recognise the other identifiers that point 5 allows in place of the LEI, so a draft without any LEI goes to review once a party section has text. Once the draft gives one LEI, a party section without an LEI of its own does not change the result.</li></ul>
 <p class="small muted">Disagree with this rule, or missing one? <a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/issues/new?template=rule-proposal.yml">Propose a rule change</a>.</p>
 
 </main>

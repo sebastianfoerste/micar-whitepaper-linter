@@ -6,7 +6,7 @@ Pass: 17  |  Review: 2  |  Missing: 1  |  Blockers: 3
 [PASS  ] [BLOCKER] COMMON.SUMMARY  Plain-language summary
            Cite:  Art. 6(7), Art. 19(6), Art. 51(6) MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'summary'  (85 words)
+           Section: 'summary'  (103 words)
 
 [PASS  ] [BLOCKER] COMMON.RISK_WARNING  Mandatory risk warning statement
            Cite:  Art. 6(5), Art. 19(4), Art. 51(4) MiCAR
@@ -44,7 +44,7 @@ Pass: 17  |  Review: 2  |  Missing: 1  |  Blockers: 3
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'issuer'  (0 words)
 
-[PASS  ] [BLOCKER] ANNEX_II.A  Information about the issuer of the ART (legal form, governance, prudential profile)
+[PASS  ] [BLOCKER] ANNEX_II.A  Information about the issuer of the ART (identity, management body, governance arrangements)
            Cite:  Annex II, Part A MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'issuer'  (106 words)
@@ -62,14 +62,14 @@ Pass: 17  |  Review: 2  |  Missing: 1  |  Blockers: 3
 [PASS  ] [BLOCKER] ANNEX_II.D  Rights and obligations of holders (permanent right of redemption, complaints handling)
            Cite:  Annex II, Part D in conjunction with Art. 39 MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'rights_and_obligations'  (141 words)
+           Section: 'rights_and_obligations'  (175 words)
 
 [PASS  ] [BLOCKER] ANNEX_II.E  Information on the underlying technology (DLT, protocols, consensus mechanism, audit outcome)
            Cite:  Annex II, Part E MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'technology'  (87 words)
 
-[PASS  ] [BLOCKER] ANNEX_II.F  Risk factors specific to ARTs (reserve of assets, issuer, offer, token, operationalisation, technology, mitigation measures)
+[PASS  ] [BLOCKER] ANNEX_II.F  Risk factors specific to ARTs (reserve of assets, issuer, offer or admission to trading, token, operationalisation, technology and any mitigation measures)
            Cite:  Annex II, Part F MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'risks'  (183 words)
@@ -85,7 +85,7 @@ Pass: 17  |  Review: 2  |  Missing: 1  |  Blockers: 3
            Section: 'reserve_of_assets'  (222 words)
            -  Draft percentage candidate(s) detected: 30%. The draft characterisation indicates a 30% candidate floor (Art. 36(4)(d) MiCAR). A lawyer must confirm applicability, statement context, and compliance.
 
-[REVIEW] [BLOCKER] ANNEX_II.G.CUSTODY  Custody policy and custodian selection (Art. 36(2), Art. 37 MiCAR)
+[REVIEW] [BLOCKER] ANNEX_II.G.CUSTODY  Custody of the reserve assets (Art. 37 MiCAR) and their legal segregation (Art. 36(2) MiCAR)
            Cite:  Annex II, Part G in conjunction with Art. 36(2), Art. 37 MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'reserve_of_assets'  (222 words)
@@ -94,7 +94,7 @@ Pass: 17  |  Review: 2  |  Missing: 1  |  Blockers: 3
 [PASS  ] [BLOCKER] ANNEX_II.G.VALUATION_AUDIT  Referenced assets and valuation of the components of the claim (Annex II Part D No. 10 MiCAR)
            Cite:  Annex II, Part D, point 10 MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'rights_and_obligations'  (141 words)
+           Section: 'rights_and_obligations'  (175 words)
 
 [PASS  ] [MAJOR  ] ANNEX_II.H  Principal adverse environmental and climate-related impact of the consensus mechanism
            Cite:  Art. 19(1), first subparagraph, point (h) MiCAR in conjunction with Art. 4 Regulation (EU) 2025/422; Annex, Table 3, Part H Regulation (EU) 2024/2984
