@@ -115,7 +115,7 @@ This route keeps the human-review boundary visible while showing the determinist
 
 ## Features
 
-- Deterministic first-pass checks for the disclosures required by MiCAR Annex I, II and III (keywords, minimum length and structure, not legal review).
+- Deterministic first-pass checks of MiCAR Annex I, II and III, one or more for each Part (keywords, minimum length and structure, not legal review).
 - JSON, XHTML or HTML, DOCX, PDF and Markdown parsing.
 - Rules-as-code severity engine.
 - JSON reports for automated checks.
@@ -128,7 +128,7 @@ See also [FEATURES.md](FEATURES.md), [SETUP.md](SETUP.md), [ARCHITECTURE.md](ARC
 
 ## What the checks establish
 
-A pass means that the section exists, meets the minimum length and contains the rule's keywords; for the notification date and the language, that the section names a calendar date or an official EU language. It does not mean that the disclosure is correct, complete or compliant. Annex selection is explicit, rule IDs are stable, unmatched keywords produce cited candidate flags, severity is tested, and JSON outputs can be used by review workflows without hiding the legal basis.
+A pass means that the section exists, meets the minimum length and contains the rule's keywords; for the notification date and the language, that the section names a calendar date or an official EU language; for the two LEI checks, that the LEIs have valid check digits and the party sections carry them. It does not mean that the disclosure is correct, complete or compliant. Annex selection is explicit, rule IDs are stable, unmatched keywords produce cited candidate flags, severity is tested, and JSON outputs can be used by review workflows without hiding the legal basis.
 
 The tool preserves legal judgment. It flags candidate disclosure gaps and produces draft review artifacts. It does not decide whether a white paper is lawful or complete.
 

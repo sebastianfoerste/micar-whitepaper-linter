@@ -13,7 +13,12 @@ from pathlib import Path
 
 from lxml import etree
 
-from micar_linter.document import is_statement_start, match_heading_to_section, paragraph_statement_extent
+from micar_linter.document import (
+    match_heading_to_section,
+    opens_statement,
+    paragraph_statement_extent,
+    statement_tail,
+)
 
 # A saved iXBRL viewer page packs the white paper into a script and writes it into the page
 # only when a browser runs that script, so the file itself shows next to no text.
@@ -312,15 +317,16 @@ def load_from_xhtml(source: Path | bytes) -> dict[str, str]:
             is_tag_heading = elem.tag in ("h1", "h2", "h3", "h4", "h5", "h6")
             blocks.append((text, is_tag_heading, _is_fully_bold(elem, text)))
     texts = [text for text, _, _ in blocks]
-    statement_end = 0
+    statement_start = statement_end = 0
 
     for index, (text, is_tag_heading, is_bold) in enumerate(blocks):
         is_bold_heading = len(text) < 120 and is_bold
-        if index < statement_end or is_statement_start(text):
+        if index < statement_end or opens_statement(texts, index):
             # The Art. 6(3) / 51(3) statement carries no heading of its own, and its sentences may sit
             # in separate blocks. After a bold first block, a bold label is a heading only where it names
             # a section, as a statement may be set in bold a sentence per paragraph.
             if index >= statement_end:
+                statement_start = index
                 statement_end = paragraph_statement_extent(
                     texts,
                     index,
@@ -333,6 +339,13 @@ def load_from_xhtml(source: Path | bytes) -> dict[str, str]:
                         )
                     ),
                 )
+            stop = None
+            if index == statement_end - 1:
+                stop = statement_tail(texts, statement_start, statement_end)
+            if stop is not None:
+                for k in current_keys:
+                    sections.setdefault(k, []).append(text[stop:].strip())
+                text = text[:stop].rstrip()
             sections.setdefault("not_approved_statement", []).append(text)
             continue
 

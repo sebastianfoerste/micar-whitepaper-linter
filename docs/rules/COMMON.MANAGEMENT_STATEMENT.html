@@ -30,7 +30,7 @@
 <dt>Source</dt><dd><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/rules/common.py">rules/common.py</a></dd>
 </dl></div>
 <h2>How the status is set</h2>
-<ul class="plain"><li><strong>Missing</strong>: section <code>management_statement</code> is absent or empty, or holds only placeholder text such as TBD or TBC.</li><li><strong>Review</strong>: the section has fewer than 40 words, or a listed term does not appear (case-insensitive substring match, with any run of spaces and line breaks read as one space; a term shown with a pattern counts only where the pattern matches, so that a look-alike word does not stand in for it).</li><li><strong>Pass</strong>: none of the above. A pass means the check matched, nothing more.</li></ul>
+<ul class="plain"><li><strong>Missing</strong>: section <code>management_statement</code> is absent or empty, or holds only placeholder text such as TBD or TBC.</li><li><strong>Review</strong>: the section has fewer than 40 words, or a listed term does not appear (case-insensitive substring match, with any run of spaces and line breaks read as one space and a word broken after its hyphen at a line end joined; a term shown with a pattern counts only where the pattern matches, so that a look-alike word does not stand in for it).</li><li><strong>Pass</strong>: none of the above. A pass means the check matched, nothing more.</li></ul>
 <h2>Legal basis</h2>
 <p>Art. 6(6), Art. 19(5), Art. 51(5) MiCAR</p>
 <ul class="plain"><li><a href="https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng">https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng</a></li></ul>

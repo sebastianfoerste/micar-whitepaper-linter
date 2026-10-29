@@ -267,9 +267,9 @@ def _rule_specific_issues(rule: Rule, normalized: str, is_de: bool) -> list[str]
         names_clause = _TITLE_II_RESPONSIBILITY_CLAUSE in normalized
         if names_clause and not _TITLE_II_RESPONSIBLE_PERSON.search(normalized):
             return [
-                "Art. 6(3) MiCAR names the offeror, the person seeking admission to trading or the "
-                "operator of the trading platform as solely responsible; the statement names "
-                "someone else."
+                "Art. 6(3) MiCAR puts the offeror, the person seeking admission to trading or the "
+                "operator of the trading platform directly before \"of the crypto-asset is solely "
+                "responsible\"; in this statement other words stand there, such as another person or a name."
             ]
     return []
 

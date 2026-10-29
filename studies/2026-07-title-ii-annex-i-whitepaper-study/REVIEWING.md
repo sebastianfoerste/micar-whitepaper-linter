@@ -96,12 +96,14 @@ After the merge the matrix shows the detector status, so a label changed after t
 ```bash
 uv run micar-review-summary \
   --matrix studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-matrix.csv \
-  --out studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-summary.json \
+  --out /tmp/micar-study/human-review-summary.json \
   --findings studies/2026-07-title-ii-annex-i-whitepaper-study/findings-pseudonymous.json \
   --require-complete
 ```
 
-Exit status 0 means no row is pending and every labelled row has the fields that publication gate item 2 and "First review" steps 6 and 7 require, with a review date in the form `YYYY-MM-DD` that is no later than today. A `missing` cell with a note but no pinpoint passes (step 3). `--findings` adds two checks: the matrix must hold exactly the 150 cells of `findings-pseudonymous.json` with their detector status, or the command exits 1 and writes nothing; and no review date may precede the detector run (the date of `generated_at`, 2026-07-06). The command in `review-protocol.md` has no `--findings`, so it makes neither check. Exit status 0 covers publication gate items 1, 2 and 4. No script checks item 3 (adjudication), item 5 (limitations in the report), item 6 (legal review of statements about a named issuer) or the ESMA reconciliation that `methodology.md` requires. Exit status 0 is therefore necessary for publication, not sufficient. Exit status 2 prints what is missing. `human-review-summary.json` then holds:
+The command writes its output before it checks completeness, as `review-protocol.md` says, so it writes to `/tmp`. Copy the output over the committed `human-review-summary.json` only once it exits 0.
+
+Exit status 0 means no row is pending and every labelled row has the fields that publication gate item 2 and "First review" steps 6 and 7 require, with a review date in the form `YYYY-MM-DD` that is no later than today. A `missing` cell with a note but no pinpoint passes (step 3). `--findings` adds two checks: the matrix must hold exactly the 150 cells of `findings-pseudonymous.json` with their detector status, or the command exits 1 and writes nothing; and no review date may precede the detector run (the date of `generated_at`, 2026-07-06). The command in `review-protocol.md` has no `--findings`, so it makes neither check. Exit status 0 covers publication gate items 1, 2 and 4. No script checks item 3 (adjudication), item 5 (limitations in the report), item 6 (legal review of statements about a named issuer) or the ESMA reconciliation that `methodology.md` requires. Exit status 0 is therefore necessary for publication, not sufficient. Exit status 2 prints what is missing. The summary then holds:
 
 - the confusion matrix (`tp` flagged and missing, `fp` flagged and present, `fn` not flagged and missing, `tn` not flagged and present);
 - precision `tp / (tp + fp)`, recall `tp / (tp + fn)` and F1 `2tp / (2tp + fp + fn)`. The protocol does not define F1; `metric_note` records the formula;
