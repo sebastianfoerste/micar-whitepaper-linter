@@ -408,10 +408,16 @@ def _line_role(
     if line.endswith(":"):
         return _BREAK if title_like else _BODY
     # Running text stays in the current section: the line a lead-in introduces, and a line that a
-    # sentence runs on into or out of. A list item in lower case ("a) Market risk") may follow a heading.
+    # sentence runs on into or out of. A list item in lower case ("a) Market risk") may follow a heading,
+    # and so may an answer that the item does not apply ("n/a", "entfällt").
     if previous is not None and previous.endswith(":"):
         return _BODY
-    continued = following is not None and following[:1].islower() and not _LIST_MARKER.match(following)
+    continued = (
+        following is not None
+        and following[:1].islower()
+        and not _LIST_MARKER.match(following)
+        and not is_not_applicable(following)
+    )
     if (previous_role == _BODY and _runs_on(previous)) or continued:
         return _BODY
     # A line that runs on into the next one is no heading, but it may be the first line of a wrapped
