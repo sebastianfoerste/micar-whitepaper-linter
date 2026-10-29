@@ -15,6 +15,11 @@ from pathlib import Path
 from micar_linter.placeholders import is_not_applicable, is_placeholder
 from micar_linter.rules.annex_i import NOT_APPROVED_STATEMENT_EN
 
+# The start of a redemption pattern: a heading that names a risk, in English or German ("Redemption risk",
+# "Rücknahmerisiko", "Risiken beim Rücktausch"), heads a risk and does not open the redemption section, so
+# no risk text reaches the redemption check. (?s) reads past a line break inside a DOCX heading.
+_NOT_A_RISK = r"(?s)^(?!.*(?:\brisk|risik)).*?"
+
 # Common patterns (in English and German) matching whitepaper section headings.
 # Word boundaries are used to avoid false positives.
 SECTION_PATTERNS = {
@@ -113,16 +118,14 @@ SECTION_PATTERNS = {
     ],
     "reserve_of_assets": [r"\breserve\b.*\bassets\b", r"\breservevermögen\w*", r"\basset\s+reserve\b"],
     "redemption": [
-        r"\bredemption\b",
-        r"\brücknahme\w*",
-        r"\bredemption\s+right\b",
+        rf"{_NOT_A_RISK}\bredemption\b",
+        rf"{_NOT_A_RISK}\brücknahme\w*",
+        rf"{_NOT_A_RISK}\bredemption\s+right\b",
         # The German text of MiCAR calls redemption "Rücktausch": "Recht auf Rücktausch" (Art. 39),
         # "Rücktauschplan" (Art. 47), "Rücktauschbarkeit" (Art. 49) and "dauerhaften Rücktauschrechte"
         # (Anhang II Teil D Nr. 9), as do the labels of Implementing Regulation (EU) 2024/2984 ("Recht auf
-        # Rücktausch", "Form des Rücktauschs"). A heading that also names a risk ("Rücktauschrisiko",
-        # "Risiken beim Rücktausch") heads a risk and does not open this section, so no risk text reaches
-        # the redemption check. (?s) reads past a line break inside a DOCX heading.
-        r"(?s)^(?!.*risik).*?\brücktausch\w*",
+        # Rücktausch", "Form des Rücktauschs").
+        rf"{_NOT_A_RISK}\brücktausch\w*",
     ],
     "safeguarding": [r"\bsafeguarding\b", r"\babsicherung\w*", r"\bsicherung\w*.*\bgelder\w*"],
 }
@@ -562,6 +565,34 @@ def _opening_number(number: str | None, opener_number: str | None) -> str | None
     """The outline number of the section a heading opens or ends: a heading numbered below the heading
     that opened the current section ("12.2 Technology risks" under "12.") keeps that heading's number."""
     return opener_number if _numbered_below(number, opener_number) else number
+
+
+def _below_opener(
+    kind: str | None,
+    level: float | None,
+    number: str | None,
+    opener: str | None,
+    section_level: float | None,
+    opener_number: str | None,
+) -> bool:
+    """Whether a heading ranks below the heading that opened the current section: a field of the template
+    in a section that a part or another field opened, a number that extends the opener's ("12.1" under
+    "12."), or a lower level (a smaller heading font, a deeper outline level). The arguments are those of
+    _ends_section, with the outline numbers of the heading and of the opener."""
+    return (
+        (kind == "field" and opener in ("part", "field"))
+        or _numbered_below(number, opener_number)
+        or (level is not None and section_level is not None and level > section_level)
+    )
+
+
+def _within_rights(keys: list[str], current_keys: list[str], below: bool) -> bool:
+    """Whether a heading that names the redemption alone sits within the open rights section, below the
+    heading that opened it (see _below_opener). The rights section then stays open with its level and
+    opener, and its text from that heading on counts for the redemption too, as Part D of an ART white
+    paper does in the numbered-field layout: Annex II Part D No. 9 and Annex III Part D No. 1 list the
+    right of redemption among the rights of the holders."""
+    return below and keys == ["redemption"] and "rights_and_obligations" in current_keys
 
 
 def _field_answer(text: str, keys: list[str]) -> str:
@@ -1059,16 +1090,20 @@ def _line_sections(lines: list[_Line], statement: bool = False) -> DocumentSecti
                 sections.setdefault(key, []).append(line.text)
         else:
             headings.append(line.text)
-            if role == _HEADING:
+            below = _below_opener(kind, level, number, opener, section_level, opener_number)
+            if role == _HEADING and _within_rights(keys, current_keys, below):
+                current_keys = [*current_keys, *(key for key in keys if key not in current_keys)]
+            elif role == _HEADING:
                 section_level = _opening_level(level, section_level, bool(set(keys) & set(current_keys)))
                 current_keys = keys
-                answer = _field_answer(line.text, keys)
-                for key in keys if answer else ():
-                    sections.setdefault(key, []).append(answer)
+                opener, opener_number = kind, _opening_number(number, opener_number)
             else:
                 section_level = level
                 current_keys = []
-            opener, opener_number = kind, _opening_number(number, opener_number)
+                opener, opener_number = kind, _opening_number(number, opener_number)
+            answer = _field_answer(line.text, keys) if role == _HEADING else ""
+            for key in current_keys if answer else ():
+                sections.setdefault(key, []).append(answer)
         previous, previous_role, previous_styled = line.text, role, styled[index]
     return DocumentSections({k: "\n".join(v) for k, v in sections.items()}, tuple(headings), text)
 
@@ -1172,7 +1207,8 @@ def parse_docx(path: Path) -> DocumentSections:
 
     A heading has a Heading style or an outline level, or is a short label that is entirely bold
     or in capitals. Heading text is not section body. A heading that names no section ends the
-    current section unless it is a sub-heading of the heading that opened it (see _ends_section).
+    current section unless it is a sub-heading of the heading that opened it (see _ends_section),
+    and a sub-heading that names the redemption alone keeps the rights section open (see _within_rights).
     """
     try:
         import docx
@@ -1233,7 +1269,11 @@ def parse_docx(path: Path) -> DocumentSections:
         keys = match_heading_to_section(text)
         kind = _template_kind(text)
         number = _outline_number(text)
-        if keys:
+        if _within_rights(
+            keys, current_keys, _below_opener(kind, level, number, opener, section_level, opener_number)
+        ):
+            current_keys = [*current_keys, *(key for key in keys if key not in current_keys)]
+        elif keys:
             section_level = _opening_level(level, section_level, bool(set(keys) & set(current_keys)))
             current_keys, opener = keys, kind
             opener_number = _opening_number(number, opener_number)
@@ -1329,8 +1369,9 @@ def parse_pdf(path: Path) -> DocumentSections:
     shaped like a heading (see _line_role); where the draft sets its headings in a heading font, a line
     in the body font is a heading only if numbered as in the template. A short line that names a section
     but is not accepted as a heading ends the current section, and so does a heading that names no
-    section unless it is a sub-heading (see _ends_section). A running page header or footer is body
-    text. Heading text is not section body.
+    section unless it is a sub-heading (see _ends_section). A sub-heading that names the redemption alone
+    keeps the rights section open (see _within_rights). A running page header or footer is body text.
+    Heading text is not section body.
     """
     try:
         import pypdf
