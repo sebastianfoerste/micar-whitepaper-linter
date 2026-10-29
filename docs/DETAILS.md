@@ -48,7 +48,7 @@ A saved iXBRL viewer page packs the white paper into a script and shows it only 
 
 ## Coverage caveats
 
-The Table 2 mapping (crypto-assets other than ARTs and EMTs) has been run against public register documents. The Table 3 and Table 4 mappings follow the Official Journal text and have not yet been run against a real ART or EMT white paper. The iXBRL check tests well-formedness, the Inline XBRL 1.1 namespace and the ESMA MiCA taxonomy namespace. It does not evaluate the taxonomy's existence and value assertions, so it never reports Pass. For a saved iXBRL viewer page it does not run at all and reports Missing.
+The Table 2 mapping (crypto-assets other than ARTs and EMTs) has been run against public register documents. The Table 3 and Table 4 mappings follow the Official Journal text and have not yet been run against a real ART or EMT white paper. Where a white paper runs its field labels into the answers, as a conversion from PDF can, the loader recognises the English field names of the template's three tables, also in slightly other words, and splits them off; a label in another language, or worded further from the template, stays in the answer, and the report warns about those fields. The iXBRL check tests well-formedness, the Inline XBRL 1.1 namespace and the ESMA MiCA taxonomy namespace. It does not evaluate the taxonomy's existence and value assertions, so it never reports Pass. For a saved iXBRL viewer page it does not run at all and reports Missing.
 
 ## GitHub Action
 
@@ -79,9 +79,9 @@ Output: `sarif-file`, the path of the SARIF log, for other uploaders such as rev
 
 Versions: `@v1` follows the latest 1.x release. From v1.2.0, one tag such as `v1.2.0` marks both the Action and the PyPI package of the same version. The tags `v0.1.0` to `v0.2.1` mark package releases from before that; they are not Action versions, so do not use them in a workflow.
 
-The job fails while BLOCKER-severity findings are open. The iXBRL format check (`COMMON.IXBRL_TAGGING`) is a BLOCKER that never passes for a loaded draft: a JSON, DOCX, PDF or Markdown draft cannot meet it, and an XHTML or HTML draft stays at review because tag completeness is not checked. A strict job therefore fails on every draft; `strict: 'false'` (report mode) lists the findings without failing. A failing job means open blockers to review, or a draft that could not be loaded, not a legal conclusion. The summary, annotations and SARIF log carry rule IDs, statuses, citations and line numbers, never draft text or the draft title, and they change no status or exit code. The job log still prints the full text report, which includes the draft title and quoted figures such as reserve percentages; treat the log as being as sensitive as the draft. The `summary`, `annotations` and `upload-sarif` inputs and the `sarif-file` output need v1.2.0 or later. The iXBRL format check never passes, so it is listed in its own summary section and not annotated.
+The job fails while BLOCKER-severity findings are open. The iXBRL format check (`COMMON.IXBRL_TAGGING`) is a BLOCKER that never passes for a loaded draft: a JSON, DOCX, PDF or Markdown draft cannot meet it, and an XHTML or HTML draft gets Review at best because tag completeness is not checked. A strict job therefore fails on every draft; `strict: 'false'` (report mode) lists the findings without failing. A failing job means open blockers to review, or a draft that could not be loaded, not a legal conclusion. The summary, annotations and SARIF log carry rule IDs, statuses, citations and line numbers, never draft text or the draft title, and they change no status or exit code. The job log still prints the full text report, which includes the draft title and quoted figures such as reserve percentages; treat the log as being as sensitive as the draft. The `summary`, `annotations` and `upload-sarif` inputs and the `sarif-file` output need v1.2.0 or later. The iXBRL format check never passes, so it is listed in its own summary section and not annotated.
 
-Line numbers point at the section key in a JSON draft or the first `h1` to `h6` heading that maps to the section in an XHTML or HTML draft, other than a heading the loader reads as part of the first-page statement; numbered-field XHTML, saved iXBRL viewer pages, DOCX, PDF, Markdown and sections with no such heading (one opened by a bold label, or the first-page statement found by its wording) point at line 1.
+Line numbers point at the section key in a JSON draft or the first `h1` to `h6` heading that maps to the section in an XHTML or HTML draft, other than a heading the loader reads as part of the first-page statement; numbered-field XHTML, saved iXBRL viewer pages, DOCX, PDF, Markdown, sections absent from a JSON draft and sections with no matching `h1` to `h6` heading (one opened by a bold label, or the first-page statement found by its wording) point at line 1.
 
 Code scanning needs extra permissions and works on public repositories, or private ones with GitHub Code Security. Uploads from fork pull requests fail with the default read-only token:
 
@@ -128,7 +128,7 @@ See also [FEATURES.md](FEATURES.md), [SETUP.md](SETUP.md), [ARCHITECTURE.md](ARC
 
 ## What the checks establish
 
-A pass means that the section exists, meets the minimum length and contains the rule's keywords. It does not mean that the disclosure is correct, complete or compliant. Annex selection is explicit, rule IDs are stable, unmatched keywords produce cited candidate flags, severity is tested, and JSON outputs can be used by review workflows without hiding the legal basis.
+A pass means that the section exists, meets the minimum length and contains the rule's keywords; for the notification date and the language, that the section names a calendar date or an official EU language. It does not mean that the disclosure is correct, complete or compliant. Annex selection is explicit, rule IDs are stable, unmatched keywords produce cited candidate flags, severity is tested, and JSON outputs can be used by review workflows without hiding the legal basis.
 
 The tool preserves legal judgment. It flags candidate disclosure gaps and produces draft review artifacts. It does not decide whether a white paper is lawful or complete.
 
@@ -159,7 +159,7 @@ Real output of `uv run micar-lint examples/incomplete.json` (a synthetic, delibe
 MiCAR Whitepaper Linter - Incomplete Synthetic EuroStable ART Draft
 Whitepaper type: ART
 ==============================================================================
-Pass: 0  |  Review: 12  |  Missing: 8  |  Blockers: 15
+Pass: 1  |  Review: 11  |  Missing: 8  |  Blockers: 15
 
 [REVIEW] [BLOCKER] COMMON.SUMMARY  Plain-language summary
            Cite:  Art. 6(7), Art. 19(6), Art. 51(6) MiCAR

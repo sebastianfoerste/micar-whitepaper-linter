@@ -43,8 +43,16 @@ SECTION_PATTERNS = {
         r"\bdate\s+of\s+notification\b",
         r"\bnotifizierungsdatum\w*",
         r"\bnotification\s+date\b",
+        # The German texts: Art. 6 Abs. 8, Art. 19 Abs. 7 and Art. 51 Abs. 7 MiCAR ask for "das Datum seiner
+        # Übermittlung", and field 01 (I.01) of the Implementing Regulation (EU) 2024/2984 template is
+        # "Datum der Mitteilung". The compounds "Übermittlungsdatum" and "Mitteilungsdatum" name the same
+        # date. Other fields of the template, such as "Art der Übermittlung" and "Methoden der Übermittlung
+        # des Werts", do not open this section.
+        r"\bdatum\s+der\s+(?:übermittlung|mitteilung|notifizierung)\b",
+        r"\b(?:übermittlungs|mitteilungs)datum\w*",
     ],
-    "language": [r"\blanguage\b", r"\bsprache\w*"],
+    # "Plain-language summary" heads the summary; it would otherwise feed the summary to the language check.
+    "language": [r"(?<!plain[- ])\blanguage\b", r"\bsprache\w*"],
     "offeror": [r"\bofferor\b", r"\banbieter\w*"],
     "issuer": [r"\bissuer\b", r"\bemittent\w*"],
     "trading_platform_operator": [
@@ -596,10 +604,16 @@ def _line_role(
     if line.endswith(":"):
         return _BREAK if title_like else _BODY
     # Running text stays in the current section: the line a lead-in introduces, and a line that a
-    # sentence runs on into or out of. A list item in lower case ("a) Market risk") may follow a heading.
+    # sentence runs on into or out of. A list item in lower case ("a) Market risk") may follow a heading,
+    # and so may an answer that the item does not apply ("n/a", "entfällt").
     if previous is not None and previous.endswith(":"):
         return _BODY
-    continued = following is not None and following[:1].islower() and not _LIST_MARKER.match(following)
+    continued = (
+        following is not None
+        and following[:1].islower()
+        and not _LIST_MARKER.match(following)
+        and not is_not_applicable(following)
+    )
     if (previous_role == _BODY and _runs_on(previous)) or continued:
         return _BODY
     # A line that runs on into the next one is no heading, but it may be the first line of a wrapped

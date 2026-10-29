@@ -10,7 +10,7 @@
     "issuer": "REPLACE: Legal form, registered seat, register number, governance, and management-body experience of the issuer (Anhang II Teil A MiCAR for ARTs).",
     "art": "REPLACE: Description of the asset-referenced token, the reference assets, and the stabilisation mechanism.",
     "offer_or_admission": "REPLACE: Terms of the offer to the public or admission to trading: addressees, price, subscription mechanics, target market.",
-    "rights_and_obligations": "REPLACE: Rights and obligations of the holder (Anhang II Teil D MiCAR), including the permanent right of redemption under Art. 39 Abs. 1 MiCAR and its treatment in insolvency, complaint procedures, and any transfer restrictions.",
+    "rights_and_obligations": "REPLACE: Rights and obligations of the holder (Anhang II Teil D MiCAR), including the right of redemption at all times under Art. 39 Abs. 1 MiCAR and its treatment in insolvency, complaint procedures, and any transfer restrictions.",
     "technology": "REPLACE: Description of the underlying technology: consensus mechanism, smart contract governance, custody of keys, audits.",
     "risks": "REPLACE: Principal risks: market, credit, liquidity, de-peg, operational, and regulatory risk, plus the reserve-impairment cure procedure.",
     "reserve_of_assets": "REPLACE: Composition, custody, segregation, valuation, and audit of the reserve of assets (Anhang II Teil G, Art. 36 and 37 MiCAR).",

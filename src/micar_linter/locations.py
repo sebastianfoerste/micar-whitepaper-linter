@@ -2,12 +2,12 @@
 
 A finding concerns a section, not a span of words, so the line is where the
 section starts: the key inside the JSON ``sections`` object, or the first
-XHTML heading that maps to the section. Other formats, numbered-field XHTML,
-saved iXBRL viewer pages (whose white paper sits packed in a script), an XHTML
-section without an h1 to h6 heading of its own (one opened by a bold label, or
-the first-page statement found by its wording) and sections a draft does not
-contain fall back to line 1. Only line numbers
-are derived from the draft; no draft text is returned.
+XHTML h1 to h6 heading that maps to the section. Other formats, numbered-field
+XHTML, saved iXBRL viewer pages (whose white paper sits packed in a script),
+sections a JSON draft does not contain and XHTML sections without such a
+heading, including those the XHTML loader found only under a bold-text heading
+and a first-page statement it found by its wording, fall back to line 1. Only
+line numbers are derived from the draft; no draft text is returned.
 """
 
 from __future__ import annotations

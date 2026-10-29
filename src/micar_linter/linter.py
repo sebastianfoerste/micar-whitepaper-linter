@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import date
 
 from micar_linter.anchors import SourceAnchor, build_source_anchors
 from micar_linter.lei import PARTY_SECTIONS, has_valid_check_digits, leis_by_section
@@ -72,20 +74,18 @@ class Linter:
         if rule.rule_id == "COMMON.LEI_CONSISTENCY":
             return _lei_consistency_finding(rule, whitepaper)
 
+        if rule.rule_id == "COMMON.NOTIFICATION_DATE":
+            return _notification_date_finding(rule, whitepaper)
+
+        if rule.rule_id == "COMMON.LANGUAGE":
+            return _language_finding(rule, whitepaper)
+
         is_de = whitepaper.language == "de"
 
         text = whitepaper.section(rule.section)
         word_count = _count_words(text)
 
-        absent = None
-        if not text.strip():
-            absent = "Abschnitt ist leer oder fehlt." if is_de else "Section is empty or absent."
-        elif is_placeholder(text):
-            absent = (
-                "Abschnitt enthält nur Platzhalter wie TBD oder TBC."
-                if is_de
-                else "Section holds only placeholder text such as TBD or TBC."
-            )
+        absent = _absent(text, is_de)
         if absent:
             return Finding(rule=rule, status="missing", word_count=0, issues=(absent,))
 
@@ -280,6 +280,19 @@ def _rule_specific_issues(rule: Rule, normalized: str, is_de: bool) -> list[str]
                 "(Art. 39(2) MiCAR). Check which basis the policy states."
             ]
     return []
+
+
+def _absent(text: str, is_de: bool) -> str | None:
+    """The issue that makes a section Missing (empty, or placeholders such as TBD only), else None."""
+    if not text.strip():
+        return "Abschnitt ist leer oder fehlt." if is_de else "Section is empty or absent."
+    if is_placeholder(text):
+        return (
+            "Abschnitt enthält nur Platzhalter wie TBD oder TBC."
+            if is_de
+            else "Section holds only placeholder text such as TBD or TBC."
+        )
+    return None
 
 
 _PERCENTAGE_PATTERN = re.compile(r"(?<![\d.,])(\d{1,3}(?:[.,]\d+)?)\s*%(?!\d)")
@@ -519,3 +532,157 @@ def _lei_consistency_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
                     "(issuer, offeror, trading_platform_operator)."
                 )
     return Finding(rule=rule, status="review" if issues else "pass", word_count=0, issues=tuple(issues))
+
+
+# Since 23 December 2025, Implementing Regulation (EU) 2024/2984 has white papers report the date of
+# notification as YYYY-MM-DD (field 01 of Table 2, I.01 of Tables 3 and 4). Drafts also write 02.03.2026,
+# 2 March 2026 or 2. März 2026.
+_MONTH_NAMES: dict[int, tuple[str, ...]] = {
+    1: ("january", "januar", "jänner", "jan", "jän"),
+    2: ("february", "februar", "feber", "feb"),
+    3: ("march", "märz", "maerz", "mar", "mär", "mrz"),
+    4: ("april", "apr"),
+    5: ("may", "mai"),
+    6: ("june", "juni", "jun"),
+    7: ("july", "juli", "jul"),
+    8: ("august", "aug"),
+    9: ("september", "sept", "sep"),
+    10: ("october", "oktober", "oct", "okt"),
+    11: ("november", "nov"),
+    12: ("december", "dezember", "dec", "dez"),
+}
+_MONTHS = {name: number for number, names in _MONTH_NAMES.items() for name in names}
+_MONTH = "(?P<name>" + "|".join(sorted(_MONTHS, key=len, reverse=True)) + r")\.?"
+_YEAR = r"(?P<year>(?:19|20)\d{2})(?!\d)"
+_ISO_DATE = re.compile(
+    r"(?<![\w.])(?P<year>(?:19|20)\d{2})(?P<sep>[-/])(?P<month>\d{1,2})(?P=sep)(?P<day>\d{1,2})(?!\d)"
+)
+_NUMERIC_DATE = re.compile(r"(?<![\w./-])(?P<day>\d{1,2})(?P<sep>[./-])(?P<month>\d{1,2})(?P=sep)" + _YEAR)
+_WRITTEN_DATES = (
+    # 2 March 2026, 2nd of March 2026, 2. März 2026, 2 Mar. 2026
+    re.compile(
+        r"(?<![\w.])(?P<day>\d{1,2})(?:st|nd|rd|th)?\.?\s*(?:of\s+)?" + _MONTH + r",?\s+" + _YEAR, re.I
+    ),
+    # March 2, 2026
+    re.compile(r"\b" + _MONTH + r"\s+(?P<day>\d{1,2})(?:st|nd|rd|th)?,?\s+" + _YEAR, re.I),
+)
+
+
+def has_calendar_date(text: str) -> bool:
+    """True if the text names a day, month and year that exist: 2026-03-02, 02.03.2026 or 2 March 2026.
+
+    A numeric date reads day first, and month first where only that order exists (03/31/2026). A month
+    without a day ("March 2026") or a two-digit year ("02.03.26") is no calendar date.
+    """
+    candidates = [(int(m["year"]), int(m["month"]), int(m["day"])) for m in _ISO_DATE.finditer(text)]
+    for m in _NUMERIC_DATE.finditer(text):
+        day, month, year = int(m["day"]), int(m["month"]), int(m["year"])
+        candidates += [(year, month, day), (year, day, month)]
+    for pattern in _WRITTEN_DATES:
+        candidates += [
+            (int(m["year"]), _MONTHS[m["name"].lower()], int(m["day"])) for m in pattern.finditer(text)
+        ]
+    return any(_exists(*candidate) for candidate in candidates)
+
+
+def _exists(year: int, month: int, day: int) -> bool:
+    try:
+        date(year, month, day)
+    except ValueError:
+        return False
+    return True
+
+
+# The official languages of the Union, by English and German name, as Art. 1 of Council Regulation No 1
+# lists them. The template of Implementing Regulation (EU) 2024/2984 has each language of the white paper
+# reported from a closed list of EU languages, which it does not spell out.
+EU_LANGUAGES: tuple[tuple[str, str], ...] = (
+    ("Bulgarian", "Bulgarisch"),
+    ("Croatian", "Kroatisch"),
+    ("Czech", "Tschechisch"),
+    ("Danish", "Dänisch"),
+    ("Dutch", "Niederländisch"),
+    ("English", "Englisch"),
+    ("Estonian", "Estnisch"),
+    ("Finnish", "Finnisch"),
+    ("French", "Französisch"),
+    ("German", "Deutsch"),
+    ("Greek", "Griechisch"),
+    ("Hungarian", "Ungarisch"),
+    ("Irish", "Irisch"),
+    ("Italian", "Italienisch"),
+    ("Latvian", "Lettisch"),
+    ("Lithuanian", "Litauisch"),
+    ("Maltese", "Maltesisch"),
+    ("Polish", "Polnisch"),
+    ("Portuguese", "Portugiesisch"),
+    ("Romanian", "Rumänisch"),
+    ("Slovak", "Slowakisch"),
+    ("Slovenian", "Slowenisch"),
+    ("Spanish", "Spanisch"),
+    ("Swedish", "Schwedisch"),
+)
+# An English name counts as written or in capitals, so the verb "polish" is no language; "Slovene" is the
+# other English name of Slovenian. A German name counts in any case, inflected or with "-sprachig"
+# ("in deutscher Sprache", "englischsprachig") and with ae or oe for ä or ö ("Franzoesisch").
+_ENGLISH_NAMES = [name for english, _ in EU_LANGUAGES for name in (english, english.upper())] + [
+    "Slovene",
+    "SLOVENE",
+]
+_GERMAN_NAMES = sorted(
+    {
+        spelling
+        for _, german in EU_LANGUAGES
+        for spelling in (german.lower(), german.lower().replace("ä", "ae").replace("ö", "oe"))
+    }
+)
+_EU_LANGUAGE = re.compile(
+    r"\b(?:" + "|".join(_ENGLISH_NAMES) + r")\b"
+    r"|(?i:\b(?:" + "|".join(_GERMAN_NAMES) + r")(?:e|em|en|er|es|sprachig\w*)?\b)"
+)
+
+
+def names_eu_language(text: str) -> bool:
+    """True if the text names an official language of the Union in English or German: "English", "Deutsch"."""
+    return bool(_EU_LANGUAGE.search(text))
+
+
+def _notification_date_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """Passes on a calendar date, however short the section: "Date of notification: 2026-03-02"."""
+    return _answer_finding(
+        rule,
+        whitepaper,
+        has_calendar_date,
+        english="No calendar date with day, month and year was found, "
+        "for example 2026-03-02 or 2 March 2026.",
+        german="Kein Kalenderdatum mit Tag, Monat und Jahr gefunden, etwa 2026-03-02 oder 2. März 2026.",
+    )
+
+
+def _language_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """Passes when an official EU language is named: "Language or languages of the white paper: English"."""
+    return _answer_finding(
+        rule,
+        whitepaper,
+        names_eu_language,
+        english="No official EU language was found, for example English or German.",
+        german="Keine Amtssprache der EU gefunden, etwa Englisch oder Deutsch.",
+    )
+
+
+def _answer_finding(
+    rule: Rule, whitepaper: Whitepaper, answers: Callable[[str], bool], *, english: str, german: str
+) -> Finding:
+    """A field answered by a value, such as a date or a language, passes on that value at any length.
+
+    Empty and placeholder-only sections are Missing, as on the generic checks. A minimum length would hold
+    a correct one-word answer at Review, and listed terms would match the template's own label.
+    """
+    is_de = whitepaper.language == "de"
+    text = whitepaper.section(rule.section)
+    absent = _absent(text, is_de)
+    if absent:
+        return Finding(rule=rule, status="missing", word_count=0, issues=(absent,))
+    status = "pass" if answers(text) else "review"
+    issues = () if status == "pass" else (german if is_de else english,)
+    return Finding(rule=rule, status=status, word_count=_count_words(text), issues=issues)
