@@ -28,6 +28,7 @@ from micar_linter.rules.terms import (
     REFERENCED_ASSET_DE,
     REFERENCED_ASSET_EN,
     SUSPENSION_DE,
+    SUSPENSION_EN,
     VALUATION_DE,
     VALUATION_EN,
 )
@@ -199,7 +200,8 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
     # of the referenced assets, or by delivering them, under a policy that sets the periods and timeframes.
     # Art. 39 Abs. 3: no fee, without prejudice to Art. 46, whose recovery plan must include liquidity fees
     # on redemptions and suspension of redemptions among its options (Abs. 1 UAbs. 3 Buchst. a and c); in
-    # the circumstances of Abs. 3 the competent authority may temporarily suspend redemption (Abs. 4).
+    # the circumstances of Abs. 3 the competent authority may temporarily suspend redemption where the
+    # suspension is justified having regard to the interests of the holders and financial stability (Abs. 4).
     # Anhang II Teil D Nr. 14 covers the holders' rights under the recovery plan.
     Rule(
         rule_id="ANNEX_II.I",
@@ -209,9 +211,9 @@ ANNEX_II_RULES: tuple[Rule, ...] = (
         ),
         section="redemption",
         label="Redemption rights and procedure (timing, fees, suspension conditions)",
-        required_terms=("redemption", "market value", "procedure", "timeframe", "suspension"),
+        required_terms=("redemption", "market value", "procedure", "timeframe"),
         required_terms_de=("rücktausch", "marktwert", "verfahren", "zeitrahmen"),
-        required_patterns=(FEE_EN,),
+        required_patterns=(FEE_EN, SUSPENSION_EN),
         required_patterns_de=(FEE_DE, SUSPENSION_DE),
         min_words=100,
         severity=Severity.BLOCKER,

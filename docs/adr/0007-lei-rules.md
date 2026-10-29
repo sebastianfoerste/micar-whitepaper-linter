@@ -18,14 +18,14 @@ Option 2, offline.
 
 - **`COMMON.LEI_CHECK_DIGITS`** (MAJOR) reads every section for 20-character codes: 18 upper-case letters or digits, then two digits. A purely numeric run counts only right after an LEI label, with at most two short words between them. Statuses:
   - Missing: no code is found anywhere and no party section has text other than a placeholder (fail closed).
-  - Review: any code fails ISO/IEC 7064 MOD 97-10, or no code is found while a party section has text. Point 5 of each party Part allows another identifier required under national law in place of the LEI, and the rule cannot recognise one.
+  - Review: any code fails ISO/IEC 7064 MOD 97-10, or no code is found while a party section has text. Point 5 of each party Part allows another identifier required pursuant to applicable national law in place of the LEI, and the rule cannot recognise one.
   - Pass: every code is well formed.
 - **`COMMON.LEI_CONSISTENCY`** (MAJOR) looks only at codes with valid check digits, so a single typo is reported once. Statuses:
   - Missing: no party section (`issuer`, `offeror`, `trading_platform_operator`) has text other than a placeholder.
   - Review: a party section has text but none has a valid LEI; a valid LEI outside the party sections appears in none of them; or `issuer` names more than one LEI.
   - Neither of the last two counts an LEI that the draft gives for a person other than the parties, which the template of Implementing Regulation (EU) 2024/2984 asks for: the crypto-asset service provider in charge of the placing (Table 2 field E.31, Table 3 C.22), a custodian of the reserve assets (Table 3 G.8), and a person other than the issuer who offers the token, seeks its admission to trading or draws up the white paper (Table 3 AA.1 and AA.3, Table 4 A.27). The field label or the sentence that holds the code must name the role before it (`lei.other_person_leis`).
   - Pass: otherwise.
-- **Citation.** `Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, Anhang III Teil A Nr. 5 MiCAR`, checked against the Official Journal on 2026-10-27. Point 5 of each party Part names the LEI or another identifier required under national law, and Art. 2(1)(b) and (c) of Implementing Regulation (EU) 2024/2984 ask for the LEI where available. Before that date the rules cited Part A of each Annex without a point, although Annex I Part A covers the offeror.
+- **Citation.** `Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, Anhang III Teil A Nr. 5 MiCAR`, checked against the Official Journal on 2026-10-27. Point 5 of each party Part names the LEI or another identifier required pursuant to applicable national law, and Art. 2(1)(b) and (c) of Implementing Regulation (EU) 2024/2984 ask for the LEI where available. Before that date the rules cited Part A of each Annex without a point, although Annex I Part A covers the offeror.
 - **Anchoring.** Both rules anchor to the `issuer` section for line mapping and the review table.
 - **CI outputs.** Issue text quotes the LEI, so both rules are in `DRAFT_ECHO_RULES` and the summary, annotations and SARIF use the fixed sentence instead.
 - **Network.** No registry lookup: a pass means the characters are consistent, not that the LEI exists or belongs to the named entity.

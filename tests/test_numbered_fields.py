@@ -259,6 +259,8 @@ def test_emt_safeguarding_reads_the_fields_that_describe_it(tmp_path: Path):
         "At least 30 % of the funds received is always deposited in separate accounts in credit institutions.",
         "Die Geldbeträge sind gemäß Artikel 7 Absatz 1 der Richtlinie 2009/110/EG besichert.",
         "Mindestens 30 % der Geldbeträge sind stets auf gesonderten Konten bei Kreditinstituten hinterlegt.",
+        "Mindestens 30 % der Geldbeträge liegen stets auf einem gesonderten Konto bei einem Kreditinstitut.",
+        "At least 30 % of the funds received is always held in separate bank accounts.",
     ],
 )
 def test_emt_safeguarding_reads_fields_in_the_words_of_article_54(tmp_path: Path, funds: str):

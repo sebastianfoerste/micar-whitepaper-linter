@@ -22,7 +22,8 @@ ANNEX_I_RULES: tuple[Rule, ...] = (
     # A white paper that gives an LEI need not state the legal form or the registered address
     # (recital 2 and Anhang Tabelle 2 Teil A to C VO (EU) 2024/2984), so the party rules do not
     # ask for them. Every party Part asks for the business addresses of the management body; the
-    # address term leaves out the e-mail address that every party section gives (rules/terms.py).
+    # address term leaves out an e-mail address, such as the one Teil A Nr. 6 asks the offeror for
+    # (rules/terms.py).
     Rule(
         rule_id="ANNEX_I.A",
         citation="Anhang I Teil A MiCAR",

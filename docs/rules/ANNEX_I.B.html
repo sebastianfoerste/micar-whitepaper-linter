@@ -24,8 +24,8 @@
 <dt>Severity if open</dt><dd>MAJOR</dd>
 <dt>Section key</dt><dd><code>issuer</code></dd>
 <dt>Minimum words</dt><dd>40</dd>
-<dt>Listed terms (English)</dt><dd><code>issuer</code>, <code>address</code> (pattern <code>(?P&lt;address&gt;(?&lt;!e-mail )(?&lt;!email )address)</code>)</dd>
-<dt>Listed terms (German)</dt><dd lang="de"><code>emittent</code>, <code>anschrift</code> (pattern <code>(?P&lt;anschrift&gt;(?&lt;!e-mail-)anschrift)</code>)</dd>
+<dt>Listed terms (English)</dt><dd><code>issuer</code>, <code>address</code> (pattern <code>(?P&lt;address&gt;(?&lt;!e-mail[ -])(?&lt;!email[ -])(?&lt;!contract )(?&lt;!wallet )\baddress(?:es)?\b(?!\s+(?:the|this|these|those|risks?|issues?)\b))</code>)</dd>
+<dt>Listed terms (German)</dt><dd lang="de"><code>emittent</code>, <code>anschrift</code> (pattern <code>(?P&lt;anschrift&gt;(?&lt;!e-mail-)(?&lt;!e-mail )anschrift)</code>)</dd>
 <dt>Package version</dt><dd>1.2.1, built from source that may include unreleased changes</dd>
 <dt>Source</dt><dd><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/rules/annex_i.py">rules/annex_i.py</a></dd>
 </dl></div>

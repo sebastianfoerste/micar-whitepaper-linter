@@ -143,8 +143,8 @@ _LANGUAGE_CONTENT = re.compile(
 # safeguarding section collects the answered lettered fields that describe it, also in the words of
 # Art. 54: "separate accounts", "besichert", "gesonderten Konten".
 _SAFEGUARDING_TEXT = re.compile(
-    r"\bsafeguard\w*|\bsegregat\w*|\bseparate\s+accounts?\b|\babsicherung\w*|\bbesichert\w*"
-    r"|\bgesondert\w*\s+konten?\b|\bsicherung\w*.*\bgelder\w*",
+    r"\bsafeguard\w*|\bsegregat\w*|\bseparate\s+(?:\w+\s+)?accounts?\b|\babsicherung\w*|\bbesichert\w*"
+    r"|\bgesondert\w*\s+\w*kont(?:o|en)\b|\bsicherung\w*.*\bgelder\w*",
     re.I,
 )
 
