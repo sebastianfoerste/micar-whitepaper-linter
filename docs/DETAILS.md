@@ -6,7 +6,7 @@ Long-form detail moved out of the README. Everything here was in the previous RE
 
 The full linter runs client-side via Pyodide. Nothing you paste leaves the page.
 
-The browser workbench accepts JSON drafts up to 1 MB and XHTML white papers up to 4 MB, includes synthetic examples for all three regimes, and presents searchable findings with citations and section navigation. Download the current report as JSON or text, or save a copy of the draft. Editing a checked draft marks the previous results as stale and disables report export until the checks run again. Python runs in a web worker so the editor stays responsive.
+The browser workbench accepts JSON drafts up to 1 MB and XHTML white papers up to 8 MB, includes synthetic examples for all three regimes, and presents searchable findings with citations and section navigation. Download the current report as JSON or text, or save a copy of the draft. Editing a checked draft marks the previous results as stale and disables report export until the checks run again. Python runs in a web worker so the editor stays responsive.
 
 For local preview, run `python3 -m http.server 8765 --bind 127.0.0.1 --directory docs` and open `http://127.0.0.1:8765/playground/`. The first runtime load needs an internet connection. The app does not persist drafts in browser storage.
 
@@ -43,9 +43,11 @@ Check an XHTML white paper in the numbered-field layout of Implementing Regulati
 uv run micar-lint examples/numbered-other-draft.xhtml --type other
 ```
 
+A saved iXBRL viewer page packs the white paper into a script and shows it only when a browser runs that script. The linter unpacks it in memory (gzip, zlib, raw deflate or uncompressed, up to 8 MB) and checks the white paper it carries; a page in the numbered-field layout still needs `--type`. Its `COMMON.IXBRL_TAGGING` result stays Missing, because the viewer's rendering is not the XHTML document itself, and its findings point at line 1. A page that cannot be unpacked, unpacks to more than 8 MB, or packs more than one document stops with exit 1 and a message.
+
 ## Coverage caveats
 
-The Table 2 mapping (crypto-assets other than ARTs and EMTs) has been run against public register documents. The Table 3 and Table 4 mappings follow the Official Journal text and have not yet been run against a real ART or EMT white paper. The iXBRL check tests well-formedness, the Inline XBRL 1.1 namespace and the ESMA MiCA taxonomy namespace. It does not evaluate the taxonomy's existence and value assertions, so it never reports Pass.
+The Table 2 mapping (crypto-assets other than ARTs and EMTs) has been run against public register documents. The Table 3 and Table 4 mappings follow the Official Journal text and have not yet been run against a real ART or EMT white paper. Where a white paper runs its field labels into the answers, as a conversion from PDF can, the loader recognises the English field names of the template's three tables, also in slightly other words, and splits them off; a label in another language, or worded further from the template, stays in the answer, and the report warns about those fields. The iXBRL check tests well-formedness, the Inline XBRL 1.1 namespace and the ESMA MiCA taxonomy namespace. It does not evaluate the taxonomy's existence and value assertions, so it never reports Pass. For a saved iXBRL viewer page it does not run at all and reports Missing.
 
 ## GitHub Action
 
@@ -65,18 +67,20 @@ Inputs:
 
 | Input | Default | Effect |
 |---|---|---|
-| `whitepaper` | required | Path to a JSON or XHTML draft, or a DOCX draft from the next `v1` release |
+| `whitepaper` | required | Path to a JSON, XHTML or HTML, DOCX, PDF or Markdown draft (DOCX from v1.2.0) |
 | `strict` | `true` | Fail the job while BLOCKER findings are open |
-| `extra-args` | `''` | More CLI arguments, e.g. `--json`, `--lang de` |
+| `extra-args` | `''` | More CLI arguments, e.g. `--json`, `--lang de`, or `--type art` for a draft that is not JSON |
 | `summary` | `true` | Append a table of open findings to the job summary: rule, status, severity, citation, `file:line`, rule page |
 | `annotations` | `true` | Annotate up to 10 open findings on the draft file (open blockers first) |
 | `upload-sarif` | `false` | Upload a SARIF log to GitHub code scanning |
 
 Output: `sarif-file`, the path of the SARIF log, for other uploaders such as reviewdog.
 
-The job fails while BLOCKER-severity findings are open. A failing job means open blockers to review, not a legal conclusion. The summary, annotations and SARIF log carry rule IDs, statuses, citations and line numbers, never draft text or the draft title, and they change no status or exit code. The job log still prints the full text report, which includes the draft title and quoted figures such as reserve percentages; treat the log as being as sensitive as the draft. The `summary`, `annotations` and `upload-sarif` inputs and the `sarif-file` output ship with the next `v1` release. The iXBRL format check (`COMMON.IXBRL_TAGGING`) never passes, so it is listed in its own summary section and not annotated.
+Versions: `@v1` follows the latest 1.x release. From v1.2.0, one tag such as `v1.2.0` marks both the Action and the PyPI package of the same version. The tags `v0.1.0` to `v0.2.1` mark package releases from before that; they are not Action versions, so do not use them in a workflow.
 
-Line numbers point at the section key in a JSON draft or the matching heading in an XHTML draft; numbered-field XHTML, DOCX and absent sections point at line 1.
+The job fails while BLOCKER-severity findings are open. The iXBRL format check (`COMMON.IXBRL_TAGGING`) is a BLOCKER that never passes for a loaded draft: a JSON, DOCX, PDF or Markdown draft cannot meet it, and an XHTML or HTML draft gets Review at best because tag completeness is not checked. A strict job therefore fails on every draft; `strict: 'false'` (report mode) lists the findings without failing. A failing job means open blockers to review, or a draft that could not be loaded, not a legal conclusion. The summary, annotations and SARIF log carry rule IDs, statuses, citations and line numbers, never draft text or the draft title, and they change no status or exit code. The job log still prints the full text report, which includes the draft title and quoted figures such as reserve percentages; treat the log as being as sensitive as the draft. The `summary`, `annotations` and `upload-sarif` inputs and the `sarif-file` output need v1.2.0 or later. The iXBRL format check never passes, so it is listed in its own summary section and not annotated.
+
+Line numbers point at the section key in a JSON draft or the first `h1` to `h6` heading that maps to the section in an XHTML or HTML draft; numbered-field XHTML, saved iXBRL viewer pages, DOCX, PDF, Markdown, sections absent from a JSON draft and sections with no matching `h1` to `h6` heading point at line 1.
 
 Code scanning needs extra permissions and works on public repositories, or private ones with GitHub Code Security. Uploads from fork pull requests fail with the default read-only token:
 
@@ -92,7 +96,7 @@ steps:
       upload-sarif: 'true'
 ```
 
-Fastest start: the [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template) repo ships this workflow preconfigured — click **Use this template**.
+Fastest start: the [micar-whitepaper-template](https://github.com/sebastianfoerste/micar-whitepaper-template) repo ships a preconfigured workflow in report mode (`strict: 'false'`). Click **Use this template**.
 
 The canonical template source lives at `templates/whitepaper-starter` in this repository. The public template repository remains the release surface. Run `make template-check` to validate its JSON and workflow contract, then `make template-export` to prepare a local path-export branch for human review. The export command never pushes.
 
@@ -110,8 +114,8 @@ This route keeps the human-review boundary visible while showing the determinist
 
 ## Features
 
-- Deterministic regulatory audits for MiCAR Annex I, II and III.
-- JSON, XHTML and DOCX parsing.
+- Deterministic first-pass checks for MiCAR Annex I, II and III.
+- JSON, XHTML or HTML, DOCX, PDF and Markdown parsing.
 - Rules-as-code severity engine.
 - JSON reports for automated checks.
 - Local artifact manifests and remediation reports.
@@ -154,7 +158,7 @@ Real output of `uv run micar-lint examples/incomplete.json` (a synthetic, delibe
 MiCAR Whitepaper Linter - Incomplete Synthetic EuroStable ART Draft
 Whitepaper type: ART
 ==============================================================================
-Pass: 0  |  Review: 12  |  Missing: 8  |  Blockers: 15
+Pass: 1  |  Review: 11  |  Missing: 8  |  Blockers: 15
 
 [REVIEW] [BLOCKER] COMMON.SUMMARY  Plain-language summary
            Cite:  Art. 6(7), Art. 19(6), Art. 51(6) MiCAR

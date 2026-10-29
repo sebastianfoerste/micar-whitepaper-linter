@@ -23,42 +23,48 @@
 <dt>Runs for</dt><dd>Annex I · other crypto-assets; Annex II · asset-referenced tokens; Annex III · e-money tokens</dd>
 <dt>Severity if open</dt><dd>MAJOR</dd>
 <dt>Section key</dt><dd><code>language</code></dd>
-<dt>Minimum words</dt><dd>10</dd>
-<dt>Listed terms (English)</dt><dd><code>language</code></dd>
-<dt>Listed terms (German)</dt><dd lang="de"><code>sprache</code></dd>
-<dt>Package version</dt><dd>0.2.1, built from source that may include unreleased changes</dd>
+<dt>Minimum words</dt><dd>none: checks for an official EU language</dd>
+<dt>Listed terms (English)</dt><dd>none</dd>
+<dt>Listed terms (German)</dt><dd lang="de">none</dd>
+<dt>Package version</dt><dd>1.2.1, built from source that may include unreleased changes</dd>
 <dt>Source</dt><dd><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/rules/common.py">rules/common.py</a></dd>
 </dl></div>
 <h2>How the status is set</h2>
-<ul class="plain"><li><strong>Missing</strong>: section <code>language</code> is absent or empty, or holds only placeholder text such as TBD or TBC.</li><li><strong>Review</strong>: the section has fewer than 10 words, or a listed term does not appear (case-insensitive substring match).</li><li><strong>Pass</strong>: none of the above. A pass means the check matched, nothing more.</li></ul>
+<ul class="plain"><li><strong>Missing</strong>: section <code>language</code> is absent or empty, or holds only placeholder text such as TBD or TBC.</li><li><strong>Review</strong>: the section names none of the 24 official languages of the EU.</li><li><strong>Pass</strong>: the section names at least one of them by its English or German name, however short the section: Bulgarian (Bulgarisch), Croatian (Kroatisch), Czech (Tschechisch), Danish (Dänisch), Dutch (Niederländisch), English (Englisch), Estonian (Estnisch), Finnish (Finnisch), French (Französisch), German (Deutsch), Greek (Griechisch), Hungarian (Ungarisch), Irish (Irisch), Italian (Italienisch), Latvian (Lettisch), Lithuanian (Litauisch), Maltese (Maltesisch), Polish (Polnisch), Portuguese (Portugiesisch), Romanian (Rumänisch), Slovak (Slowakisch), Slovenian (Slowenisch), Spanish (Spanisch), Swedish (Schwedisch). Slovene counts as well. English names count as written or in capitals. German names count in any case, also inflected or with <code>-sprachig</code>: <code>in deutscher Sprache</code>, <code>englischsprachig</code>. A pass means a language name was found, nothing more.</li></ul>
 <h2>Legal basis</h2>
 <p>Art. 6(9), Art. 19(8), Art. 51(8) MiCAR</p>
 <ul class="plain"><li><a href="https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng">https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng</a></li></ul>
-<p class="callout">Not re-verified since these pages were introduced (2026-10-20): EUR-Lex was unreachable from the build environment. The citation is the rule&#x27;s own, unchanged.</p>
+<p class="callout">Checked on 2026-10-27 against the Official Journal text in English and German (OJ L 150, 9.6.2023) and the consolidated version of 9 January 2024. No amendment and no English or German corrigendum changes Art. 6(9), Art. 19(8) or Art. 51(8). The list of languages is Art. 1 of Council Regulation No 1 in its consolidated version of 1 July 2013.</p>
 <h2>Synthetic examples</h2>
 <p class="small muted">Each example is linted when this page is generated. The build fails if a result differs.</p>
 <div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>Section absent</strong></div><p class="small muted">The section key is missing or empty.</p><pre><code>{
   &quot;title&quot;: &quot;Synthetic rule example&quot;,
   &quot;type&quot;: &quot;other&quot;,
   &quot;sections&quot;: {}
-}</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>Thin section</strong></div><p class="small muted">Every listed term appears, but the section is shorter than 10 words.</p><pre><code>{
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>Placeholder</strong></div><p class="small muted">A placeholder alone is no answer, so the section counts as missing.</p><pre><code>{
   &quot;title&quot;: &quot;Synthetic rule example&quot;,
   &quot;type&quot;: &quot;other&quot;,
   &quot;sections&quot;: {
-    &quot;language&quot;: &quot;language&quot;
+    &quot;language&quot;: &quot;TBD&quot;
   }
-}</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>Section that matches</strong></div><p class="small muted">This text passes and shows what the check measures: listed terms and length. It is not model disclosure wording and does not meet MiCAR.</p><pre><code>{
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>No language named</strong></div><p class="small muted">The sentence repeats the wording of the requirement and names no language.</p><pre><code>{
   &quot;title&quot;: &quot;Synthetic rule example&quot;,
   &quot;type&quot;: &quot;other&quot;,
   &quot;sections&quot;: {
-    &quot;language&quot;: &quot;Synthetic example naming language. This synthetic sentence only adds length and states no fact about any issuer or token.&quot;
+    &quot;language&quot;: &quot;This white paper is drawn up in a language customary in the sphere of international finance.&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>Answer to the template field</strong></div><p class="small muted">Since 23 December 2025 the template of Implementing Regulation (EU) 2024/2984 asks for the language or languages of the white paper, from a closed list of EU languages. The check does not decide whether the language meets the home or host Member State requirement.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;sections&quot;: {
+    &quot;language&quot;: &quot;Language or languages of the crypto-asset white paper: English&quot;
   }
 }</code></pre></div>
 <h2>Limitations</h2>
-<ul class="plain"><li>Reads one section key, <code>language</code>. Text elsewhere in the draft is not considered.</li><li>Matches words and counts length. It does not test accuracy, consistency with other sections or the point-level items of the cited Part.</li><li>Status and severity are fixed by the rule. A draft cannot waive or downgrade them.</li></ul>
+<ul class="plain"><li>Reads one section key, <code>language</code>. Text elsewhere in the draft is not considered.</li><li>Looks for a language name only. The cited paragraphs require the white paper to be drawn up in an official language of the home Member State or in a language customary in the sphere of international finance, and likewise for a host Member State where the crypto-asset is also offered. They do not require the white paper to name its language; since 23 December 2025 the template of Implementing Regulation (EU) 2024/2984 asks for it (field F.12 of Table 2, B.14 of Table 3, B.11 of Table 4). The check cannot tell which language the white paper is drawn up in, or whether that language meets the requirement. Language codes such as EN and names in other languages, such as français, do not count.</li><li>Status and severity are fixed by the rule. A draft cannot waive or downgrade them.</li></ul>
 <p class="small muted">Disagree with this rule, or missing one? <a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/issues/new?template=rule-proposal.yml">Propose a rule change</a>.</p>
 
 </main>
-<footer><span>MiCAR Whitepaper Linter 0.2.1 · MIT licence · First-pass screening, not legal advice.</span><span>Generated from the rule set by <code>scripts/build_rule_docs.py</code>.</span></footer>
+<footer><span>MiCAR Whitepaper Linter 1.2.1 · MIT licence · First-pass screening, not legal advice.</span><span>Generated from the rule set by <code>scripts/build_rule_docs.py</code>.</span></footer>
 </body>
 </html>

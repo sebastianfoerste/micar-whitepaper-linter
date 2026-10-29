@@ -30,12 +30,12 @@ States captured at 1440×900 and 390×844 (git-ignored, `research/_captures/base
 
 ### Briefing corrections
 
-1. `SOURCE_DATE_EPOCH` is read by `review_table.py` and `collaboration_workspace.py`; `workspace.py` has no timestamp code of its own.
-2. The text report's closing paragraph cites Art. 8, 16, 17, 18 and 51 in the German form (`Art. 8 Abs. 1 …`) whatever `--citation-style` says (`report.py`, `render_text`). Same class of drift as the German citations in `reports/sample-*.txt`.
+1. `SOURCE_DATE_EPOCH` is read by `review_table.py` and `collaboration_workspace.py`; `workspace.py` stamps the vault's `generated_at` with the current time.
+2. The text report's closing paragraph cites Art. 8, 16, 17, 18 and 51 in the German form (`Art. 8 Abs. 1 …`) whatever `--citation-style` says (`report.py`, `render_text`). Same class of drift as the German citations in `reports/sample-*.txt`. (Fixed on `main` since: the paragraph and the sample reports follow `--citation-style`, English by default.)
 3. `.github/ISSUE_TEMPLATE/rule-proposal.yml` already exists; the rule pages link to it rather than adding a second template.
-4. `examples/incomplete.json` is an ART draft, so `make demo` shows the 18 ART rules.
+4. `examples/incomplete.json` is an ART draft, so `make demo` shows the 18 ART rules. (20 since the two LEI rules were added.)
 5. Pyodide 0.28.2's distribution has no `python-docx` (checked against the release tarball), so H5 needs a vendored wheel, as the hypothesis assumed.
-6. The Action's `uvx --from "${GITHUB_ACTION_PATH}"` build is cached by uv on `pyproject.toml`, not on `src/`. Locally, uvx reused a stale build of the same version until `--no-cache` was passed. A moved `v1` tag without a version bump could hit this on a runner with a restored uv cache.
+6. The Action's `uvx --from "${GITHUB_ACTION_PATH}"` build is cached by uv on `pyproject.toml`, not on `src/`. Locally, uvx reused a stale build of the same version until `--no-cache` was passed. A moved `v1` tag without a version bump could hit this on a runner with a restored uv cache. (The Action has run `uvx --no-cache` since 1.2.0.)
 7. The baseline playground already carried one serious axe violation (above).
 
 Everything else in the briefing matched the code: 16/18/14 rules, the two never-pass rules, eight CLI flags missing from `docs/API.md`, `displayCitation` as `TODO(human)`, unpinned `setup-uv@v5` in `action.yml`, no `docs/index.html`, no `docs/adr/`.
@@ -63,7 +63,7 @@ Rank = Impact × evidence weight (Observed 3, Claimed 2, Inferred 1) ÷ effort (
 | H2 | Generated rule pages with executed examples | 5 | pass | M | Observed (ESLint, Ruff, DQC) | differentiator | 7.5 | **Built** |
 | H10 | Wilson 95% intervals in `micar-review-summary` | 2 | pass | S | Observed (CUAD, LegalBench lack them) | differentiator once labels exist | 6 | Spec, next |
 | H11 | LEI check digits and issuer identity consistency | 4 | pass | M | Observed (WhitePaperXBRL mod-97) | differentiator if fail-closed | 6 | **Built** (swapped in for H7 at the owner's request, 2026-10-21) |
-| H8 | Point-level rules | 5 | fail (this run: point citations unverifiable; see Needs owner decision) | L | Observed (WhitePaperXBRL field-level) | table stakes for filing tools | 3.75 | Parked: needs EUR-Lex verification |
+| H8 | Point-level rules | 5 | fail (this run: point citations unverifiable; see Needs owner decision) | L | Observed (WhitePaperXBRL field-level) | table stakes for filing tools | 3.75 | ID scheme chosen by the owner (2026-10-28, ADR 0005); not built |
 | H6 | Landing page | 3 | pass | S | Inferred | table stakes | 3 | **Built** (design) |
 | H7 | Dark mode with tokens, no storage | 2 | pass | M | Observed (Ruff playground theme) | table stakes | 3 | Built, then **removed** at the owner's request (2026-10-21) for H11 |
 | H3 | Inline section highlight and structural quick-fixes | 4 | pass | L | Observed (Ruff playground, Ruff fix safety) | differentiator | 3 | Spec + Proposed ADR |
@@ -135,9 +135,9 @@ Where this repo should beat everyone: **the only MiCA white-paper checker whose 
 - **Adapt.** Add Wilson 95% bounds to `micar-review-summary` beside the existing precision/recall/F1 and `publication_ready` gate; keep the `model.test.mjs` study-figures test green. No labels entered by the agent or a model.
 - **Risk.** None to the non-negotiables; impact is nil until an owner reviews the 150 cells.
 
-### F5. Point-level rules (H8), parked
+### F5. Point-level rules (H8), ID scheme chosen
 
-New IDs under a separate namespace (proposal: `ANNEX_I.A.P<n>`, distinct from `ANNEX_II.G.*` topic IDs and the study's `ANNEX_I_PART_A_02_*` IDs), driven by the numbered fields of Implementing Regulation (EU) 2024/2984. Blocked: every point citation must be verified on EUR-Lex, which was unreachable. See [ADR 0005](../adr/0005-point-level-rule-ids.md).
+New IDs under a separate namespace (`ANNEX_I.A.P<n>`, distinct from `ANNEX_II.G.*` topic IDs and the study's `ANNEX_I_PART_A_02_*` IDs), driven by the numbered fields of Implementing Regulation (EU) 2024/2984. The owner chose this scheme on 2026-10-28: each rule cites one Annex point, checks the fields of Tables 2 to 4 that carry it and applies the template's LEI, DTI and flag conditions. Every point citation still has to be checked against the Official Journal text before it is added; the Publications Office Cellar serves that text where EUR-Lex refuses automated retrieval. See [ADR 0005](../adr/0005-point-level-rule-ids.md).
 
 ### F6. Arelle formula assertions (H9), Proposed
 
@@ -195,10 +195,10 @@ with call sites passing the finding instead of `finding.citation`, and a test (t
 1. **H4**: accept the `displayCitation` diff above, or keep German citations in the browser.
 2. **H9 never-pass**: if Arelle assertions are added, confirm `COMMON.IXBRL_TAGGING` stays never-pass and assertion failures add issues rather than new statuses.
 3. **H10 labels**: the 150 study cells need human review before any accuracy figure; nobody else can enter them.
-4. **`setup-uv` pin**: the Action now pins `v5.4.2` (newest v5.x, node20). CI uses `v10.3.0` (node24). Moving the Action to v10 needs an ADR and a test run on the starter repo.
-5. **Annotations and summary on by default** under `@v1`: additive output with no exit-code change, but visible to every existing consumer on the next `v1` move.
+4. **`setup-uv` pin**: decided 2026-10-26. The owner moved the Action to `v10.3.0` (node24), recorded in ADR 0001, with `enable-cache: 'false'`. The `action` job in CI runs it; the starter repo itself has not been run against it.
+5. **Annotations and summary on by default** under `@v1`: decided 2026-10-26. The owner kept both on by default for the 1.2.0 release, which every existing consumer sees when `v1` moves.
 6. **`uvx --no-cache`** in the Action: correctness over a few seconds per run (briefing correction 6).
-7. **H8 IDs and citations**: approve the point-level ID scheme and verify each point citation on EUR-Lex.
+7. **H8 IDs and citations**: scheme decided 2026-10-28. The owner chose point IDs (Option 2 of ADR 0005), checked against the fields of Tables 2 to 4 of Implementing Regulation (EU) 2024/2984 with the template's LEI and DTI conditions. Each point citation still needs checking against the Official Journal text before it is added.
 8. **H7 versus H11**: decided 2026-10-21. The owner swapped dark mode out for H11.
 9. **H11 legal basis**: the LEI rules cite Part A of each Annex at Part level (the citation the party rules already use). Verify the point that names the LEI against the Official Journal. Severity MAJOR for both rules was confirmed by the owner on 2026-10-22.
-10. **Doc drift** proposed in the PR body: `AGENTS.md` (`BaseRule`, database migrations, "compliant"), `docs/FEATURES.md` and `docs/ARCHITECTURE.md` ("regulatory rejection", "compliant"), starter README custody claim (`ANNEX_II.G.CUSTODY` can pass), German citations in `reports/sample-*.txt` and in the text report footer.
+10. **Doc drift** proposed in the PR body: resolved 2026-10-27 at the owner's request. `AGENTS.md` (`BaseRule`, database migrations, "compliant") was fixed in #30; `docs/FEATURES.md` and `docs/ARCHITECTURE.md` ("regulatory rejection", "compliant") and the starter README custody claim (`ANNEX_II.G.CUSTODY` can pass) in #36; the sample reports in `reports/sample-*.txt` (since #31) and the text report footer print English citations by default.

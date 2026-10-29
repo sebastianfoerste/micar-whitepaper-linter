@@ -2,8 +2,11 @@
 
 A finding concerns a section, not a span of words, so the line is where the
 section starts: the key inside the JSON ``sections`` object, or the first
-XHTML heading that maps to the section. Other formats, numbered-field XHTML
-and sections a draft does not contain fall back to line 1. Only line numbers
+XHTML h1 to h6 heading that maps to the section. Other formats, numbered-field
+XHTML, saved iXBRL viewer pages (whose white paper sits packed in a script),
+sections a JSON draft does not contain and XHTML sections without such a
+heading, including those the XHTML loader found only under a bold-text heading,
+fall back to line 1. Only line numbers
 are derived from the draft; no draft text is returned.
 """
 
@@ -130,17 +133,16 @@ def _xhtml_heading_lines(path: Path) -> dict[str, int]:
     Numbered-field layouts have no section headings, so their findings stay on line 1.
     """
     try:
-        from lxml import etree
-
         from micar_linter.document import match_heading_to_section
+        from micar_linter.xhtml_parser import element_text, parse_html
 
-        tree = etree.parse(str(path), etree.HTMLParser(encoding="utf-8"))
+        tree = parse_html(path)
         headings = tree.xpath("//h1 | //h2 | //h3 | //h4 | //h5 | //h6")
     except Exception:
         return {}
     lines: dict[str, int] = {}
     for heading in headings:
-        text = " ".join("".join(heading.itertext()).split())
+        text = element_text(heading)
         if not text or not heading.sourceline:
             continue
         for section_key in match_heading_to_section(text):

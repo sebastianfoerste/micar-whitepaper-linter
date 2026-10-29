@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from micar_linter.anchors import _xhtml_section_identifiers
+from micar_linter.locations import _xhtml_heading_lines
 from micar_linter.whitepaper import WhitepaperType, load_whitepaper
 from micar_linter.xhtml_parser import load_from_xhtml
 
@@ -84,3 +86,43 @@ def test_bold_headings_are_detected(tmp_path: Path):
     assert "Risk Factors" not in joined
     assert "bold word that is not a heading" in joined
     assert len(sections) >= 3
+
+
+def test_block_boundaries_separate_words_and_inline_spacers_do_not(tmp_path: Path):
+    path = tmp_path / "blocks.html"
+    path.write_text(
+        "<html><body>\n"
+        '<h2 id="issuer-info">Information about the<br/>issuer</h2>\n'
+        "<p>The issuer is EuroStable AG.<br/>Its seat is in Frankfurt.</p>\n"
+        "<p><b>Risk</b><br/><b>Factors</b></p>\n"
+        "<ul><li><p>Market risk.</p><p>Liquidity risk.</p></li></ul>\n"
+        '<p>Holders can lose the val<span class="_ _0"></span>ue of the token.</p>\n'
+        "</body></html>",
+        encoding="utf-8",
+    )
+    sections = load_from_xhtml(path)
+    assert sections["issuer"] == "The issuer is EuroStable AG. Its seat is in Frankfurt."
+    assert "Market risk.\nLiquidity risk." in sections["risks"]
+    assert "lose the value of the token" in sections["risks"]
+    # Finding anchors and SARIF lines read the heading as the loader does.
+    assert _xhtml_section_identifiers(path)["issuer"] == "xhtml:issuer-info"
+    assert _xhtml_heading_lines(path)["issuer"] == 2
+
+
+def test_nested_blocks_are_read_once(tmp_path: Path):
+    path = tmp_path / "nested.html"
+    path.write_text(
+        "<html><body><h2>Risk Factors</h2>"
+        "<ul><li><p>Market risk.</p><p>Liquidity risk.</p></li>"
+        "<li>Custody risk.<ul><li>Loss of keys.</li></ul></li></ul>"
+        "<div><ul><li>Loss of value.</li></ul></div>"
+        "</body></html>",
+        encoding="utf-8",
+    )
+    assert load_from_xhtml(path)["risks"].split("\n") == [
+        "Market risk.",
+        "Liquidity risk.",
+        "Custody risk.",
+        "Loss of keys.",
+        "Loss of value.",
+    ]
