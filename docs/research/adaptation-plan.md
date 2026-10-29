@@ -198,7 +198,7 @@ with call sites passing the finding instead of `finding.citation`, and a test (t
 3. **H10 labels**: the 150 study cells need human review before any accuracy figure; nobody else can enter them.
 4. **`setup-uv` pin**: decided 2026-10-26. The owner moved the Action to `v10.3.0` (node24), recorded in ADR 0001, with `enable-cache: 'false'`. The `action` job in CI runs it; the starter repo itself has not been run against it.
 5. **Annotations and summary on by default** under `@v1`: decided 2026-10-26. The owner kept both on by default for the 1.2.0 release, which every existing consumer sees when `v1` moves.
-6. **`uvx --no-cache`** in the Action: correctness over a few seconds per run (briefing correction 6).
+6. **`uvx --no-cache`** in the Action: settled by the 1.2.0 release (2026-10-26), whose Action runs `uvx --no-cache`, trading a few seconds per run for correctness (briefing correction 6).
 7. **H8 IDs and citations**: scheme decided 2026-10-28. The owner chose point IDs (Option 2 of ADR 0005), checked against the fields of Tables 2 to 4 of Implementing Regulation (EU) 2024/2984 with the template's LEI and DTI conditions. Each point citation still needs checking against the Official Journal text before it is added.
 8. **H7 versus H11**: decided 2026-10-21. The owner swapped dark mode out for H11.
 9. **H11 legal basis**: the LEI rules cite Part A of each Annex at Part level (the citation the party rules already use). Verify the point that names the LEI against the Official Journal. Severity MAJOR for both rules was confirmed by the owner on 2026-10-22.
