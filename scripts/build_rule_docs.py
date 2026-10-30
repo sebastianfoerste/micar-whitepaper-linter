@@ -999,7 +999,7 @@ def index_page(rules: list[Rule], regimes: dict[str, list[WhitepaperType]]) -> s
         )
     body = f"""<p class="eyebrow">Rule reference</p>
 <h1>Rules</h1>
-<p class="lede">{len(rules)} deterministic checks, generated from the rule set of package version {_e(__version__)}. Each page
+<p class="lede">{len(rules)} deterministic checks, generated from the rule set of package version {_e(__version__)}, built from source that may include unreleased changes. Each page
 states the citation, how the status is set, synthetic examples that are tested on every build, and the limits of the
 check.</p>
 <p class="callout">A pass means a check matched. It is not a compliance opinion. Not legal advice.</p>
