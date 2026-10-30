@@ -6,6 +6,7 @@ uses the term itself. The issuers are fictional.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -253,10 +254,15 @@ def test_look_alike_words_do_not_stand_in_for_the_term(
     assert term not in _missing(_finding(whitepaper_type, rule_id, with_term, lang))
 
 
-def test_untouched_starter_template_passes_no_rule():
+@pytest.mark.parametrize("whitepaper_type", ["art", "emt", "other"])
+def test_untouched_starter_template_passes_no_rule(tmp_path: Path, whitepaper_type: str):
     # The linter does not treat "REPLACE:" text as a placeholder, so each placeholder stays below its
-    # rule's minimum length or leaves out one of its terms (templates/whitepaper-starter/README.md).
-    report = lint_whitepaper(load_whitepaper(Path("templates/whitepaper-starter/whitepaper.json")))
+    # rule's minimum length or leaves out one of its terms (templates/whitepaper-starter/README.md), whichever
+    # "type" the user sets: an e-money token's risk warning needs only the two scheme terms.
+    template = json.loads(Path("templates/whitepaper-starter/whitepaper.json").read_text(encoding="utf-8"))
+    path = tmp_path / "whitepaper.json"
+    path.write_text(json.dumps({**template, "type": whitepaper_type}), encoding="utf-8")
+    report = lint_whitepaper(load_whitepaper(path))
     assert [finding.rule.rule_id for finding in report.findings if finding.status == "pass"] == []
 
 

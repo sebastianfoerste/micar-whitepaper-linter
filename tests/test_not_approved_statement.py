@@ -5,7 +5,7 @@ and as Table 2 field 02 and Table 4 field I.02 of the Annex to Implementing Regu
 (EU) 2024/2984 print it ("Predefined alphanumerical text"). Source read: the EUR-Lex
 texts CELEX 32023R1114 and 32024R2984 as mirrored in legalize-dev/legalize-eu. Art. 19 MiCAR
 prescribes no such statement for an ART white paper (Table 3 field I.02 of 2024/2984
-holds the Art. 19(4) warning instead), so the ART ruleset carries no such rule. That is
+holds the Art. 19(4) statement instead), so the ART ruleset carries no such rule. That is
 not because every ART white paper is approved: that of an authorised issuer is deemed
 approved (Art. 21(1)) and that of a credit institution is approved (Art. 17(1)(a)), but an
 issuer exempt under Art. 16(2) only notifies it.
@@ -15,6 +15,7 @@ drafts are therefore referred to review and never pass; the German sentence belo
 a routing fixture, not a statement of the statutory wording.
 """
 
+import re
 import textwrap
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -24,6 +25,7 @@ import pytest
 import test_heading_detection
 from test_heading_detection import _write_docx, _write_pdf
 
+from micar_linter.lei import check_digits_for
 from micar_linter.linter import Linter, lint_whitepaper
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Severity
@@ -1444,3 +1446,207 @@ def test_docx_responsibility_sentence_a_paragraph_per_line_ends_with_its_last_li
     assert statement.status == "pass", statement.issues
     assert whitepaper.section("not_approved_statement").splitlines()[-1] == lines[-1]
     assert whitepaper.section("summary").startswith("The summary gives key information")
+
+
+# The statement takes whole lines or paragraphs. Text after it in its last line or paragraph, such as the
+# management body's statement that Art. 6(6) and Art. 51(5) MiCAR have inserted after it, stays with it,
+# so the check on that text fails closed (rule pages, Limitations).
+MANAGEMENT_BODY_STATEMENT = (
+    "The management body of Example Ledger AG confirms that this crypto-asset white paper complies with "
+    "Title II of Regulation (EU) 2023/1114 and that, to the best of its knowledge, the information presented "
+    "in it is fair, clear and not misleading and the white paper makes no omission likely to affect its import."
+)
+RISK_WARNING_STATEMENTS = (
+    "The crypto-asset may lose its value in part or in full, may not always be transferable and may not be "
+    "liquid. It is not covered by the investor compensation schemes under Directive 97/9/EC or the deposit "
+    "guarantee schemes under Directive 2014/49/EU."
+)
+RUN_ON_CASES = [
+    ("Statement of the management body", MANAGEMENT_BODY_STATEMENT, "COMMON.MANAGEMENT_STATEMENT"),
+    ("Risk warning", RISK_WARNING_STATEMENTS, "COMMON.RISK_WARNING"),
+    ("Summary", SUMMARY_BODY, "COMMON.SUMMARY"),
+]
+FORMATS = ["md", "docx", "xhtml", "pdf"]
+
+
+def _draft(tmp_path: Path, fmt: str, blocks: list[tuple[str, str]]) -> Path:
+    """A draft in the given format from ("heading", "bold" or "plain", text) blocks, a paragraph or line each."""
+    if fmt == "md":
+        markup = {"heading": "## {}", "bold": "**{}**", "plain": "{}"}
+        path = tmp_path / "draft.md"
+        path.write_text("\n\n".join(markup[kind].format(text) for kind, text in blocks) + "\n", encoding="utf-8")
+        return path
+    if fmt == "docx":
+        return _write_docx(tmp_path / "draft.docx", blocks)
+    if fmt == "xhtml":
+        markup = {"heading": "<h2>{}</h2>", "bold": "<p><b>{}</b></p>", "plain": "<p>{}</p>"}
+        body = "".join(markup[kind].format(text) for kind, text in blocks)
+        path = tmp_path / "draft.xhtml"
+        path.write_text(f'<html xmlns="http://www.w3.org/1999/xhtml"><body>{body}</body></html>', encoding="utf-8")
+        return path
+    # A PDF sets its headings in a larger font, and a draft has at least two of them.
+    pdf_blocks = [("large", text.title()) if kind == "heading" else ("body", text) for kind, text in blocks]
+    return _write_pdf(tmp_path / "draft.pdf", [*pdf_blocks, ("large", "Language"), ("body", "English.")])
+
+
+@pytest.mark.parametrize("fmt", ["md", "docx", "xhtml"])
+@pytest.mark.parametrize(("heading", "text", "rule_id"), RUN_ON_CASES, ids=["management", "risk", "summary"])
+def test_text_after_the_statement_in_its_paragraph_stays_with_it_and_fails_closed(
+    tmp_path: Path, fmt, heading, text, rule_id
+):
+    path = _draft(tmp_path, fmt, [("heading", heading), ("plain", f"{STATUTORY} {text}")])
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    findings = _section_findings(whitepaper)
+    assert findings[TITLE_II].status == "pass", findings[TITLE_II].issues
+    assert text in whitepaper.section("not_approved_statement")
+    assert findings[rule_id].status == "missing"
+
+
+@pytest.mark.parametrize("fmt", FORMATS)
+@pytest.mark.parametrize("width", [40, 45, 50])
+@pytest.mark.parametrize(
+    ("wp_type", "rule_id", "subject"),
+    [(WhitepaperType.OTHER, TITLE_II, "The offeror"), (WhitepaperType.EMT, EMT, "The issuer")],
+    ids=["title-ii", "emt"],
+)
+def test_statement_whose_opening_wraps_before_approved_is_found(tmp_path: Path, fmt, width, wp_type, rule_id, subject):
+    # A narrow column, a box or a statement set a line per paragraph breaks "This crypto-asset white paper
+    # has not been approved" before its last word.
+    statement = _statement(subject)
+    lines = textwrap.wrap(statement, width)
+    assert "approved" not in lines[0]
+    blocks = [("plain", line) for line in lines] + [("heading", "Summary"), ("plain", SUMMARY_BODY)]
+    whitepaper = load_whitepaper(_draft(tmp_path, fmt, blocks), wp_type)
+    findings = _section_findings(whitepaper)
+    assert findings[rule_id].status == "pass", findings[rule_id].issues
+    # Read as the checks read it: a word broken after its hyphen at a line end is joined.
+    joined = re.sub(r"-[ \t]*\n\s*", "-", whitepaper.section("not_approved_statement"))
+    assert " ".join(joined.split()) == statement
+    assert findings["COMMON.SUMMARY"].status == "pass", findings["COMMON.SUMMARY"].issues
+
+
+# Table 2 field 02 and Table 4 field I.02 of Implementing Regulation (EU) 2024/2984 word the German
+# responsibility sentence for each person. Set apart in bold a line per paragraph, every line stays in the
+# statement, which German drafts send to review.
+GERMAN_OPENING = (
+    "Dieses Kryptowerte-Whitepaper wurde von keiner zuständigen Behörde eines Mitgliedstaats der "
+    "Europäischen Union genehmigt."
+)
+GERMAN_CLAUSE = "trägt die alleinige Verantwortung für den Inhalt dieses Kryptowerte-Whitepapers."
+GERMAN_RESPONSIBILITY = {
+    "anbieter": (WhitepaperType.OTHER, f"Der Anbieter des Kryptowerts {GERMAN_CLAUSE}"),
+    "person": (
+        WhitepaperType.OTHER,
+        f"Die Person, die die Zulassung des Kryptowerts zum Handel beantragt, {GERMAN_CLAUSE}",
+    ),
+    "betreiber": (WhitepaperType.OTHER, f"Der Betreiber der Handelsplattform des Kryptowerts {GERMAN_CLAUSE}"),
+    "emittent": (WhitepaperType.EMT, f"Der Emittent des Kryptowerts {GERMAN_CLAUSE}"),
+}
+
+
+@pytest.mark.parametrize("fmt", ["docx", "xhtml"])
+@pytest.mark.parametrize("person", sorted(GERMAN_RESPONSIBILITY))
+def test_german_responsibility_sentence_set_in_bold_a_line_per_paragraph_stays_in_the_statement(
+    tmp_path: Path, fmt, person
+):
+    wp_type, sentence = GERMAN_RESPONSIBILITY[person]
+    blocks = [
+        ("plain", GERMAN_OPENING),
+        *[("bold", line) for line in textwrap.wrap(sentence, 40)],
+        ("heading", "Zusammenfassung"),
+        ("plain", SUMMARY_BODY),
+    ]
+    whitepaper = load_whitepaper(_draft(tmp_path, fmt, blocks), wp_type)
+    joined = re.sub(r"-[ \t]*\n\s*", "-", whitepaper.section("not_approved_statement"))
+    assert " ".join(joined.split()) == f"{GERMAN_OPENING} {sentence}"
+    assert set(whitepaper.sections) == {"not_approved_statement", "summary"}
+    assert whitepaper.section("summary") == SUMMARY_BODY
+
+
+# Under the statement's own label (Table 2 field 02, Table 4 field I.02) the text after the statement stays
+# with it, in order, so a statement wrapped over several lines keeps its statutory wording.
+LABELS = {
+    WhitepaperType.OTHER: (TITLE_II, "The offeror", "Statement in accordance with Article 6(3) of Regulation (EU) 2023/1114"),
+    WhitepaperType.EMT: (EMT, "The issuer", "Statement in accordance with Article 51(3) of Regulation (EU) 2023/1114"),
+}
+
+
+@pytest.mark.parametrize("fmt", FORMATS)
+@pytest.mark.parametrize("wp_type", [WhitepaperType.OTHER, WhitepaperType.EMT], ids=["title-ii", "emt"])
+def test_text_after_a_labelled_statement_stays_after_it(tmp_path: Path, fmt, wp_type):
+    rule_id, subject, label = LABELS[wp_type]
+    statement = _statement(subject)
+    lines = textwrap.wrap(statement, 60)
+    lines[-1] += " See also Part I."
+    blocks = [("heading", label), *[("plain", line) for line in lines], ("heading", "Summary"), ("plain", SUMMARY_BODY)]
+    whitepaper = load_whitepaper(_draft(tmp_path, fmt, blocks), wp_type)
+    finding = _section_findings(whitepaper)[rule_id]
+    assert finding.status == "pass", finding.issues
+    assert " ".join(whitepaper.section("not_approved_statement").split()) == f"{statement} See also Part I."
+
+
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_text_after_a_statement_above_the_first_heading_stays_with_it(tmp_path: Path, fmt):
+    # Before the first section heading no section is open, so the text after the statement in its last line
+    # stays with it, where the LEI checks still read it.
+    base = "9999SYNTH0000ZZQ01"
+    valid = base + check_digits_for(base)
+    broken = base + f"{(int(valid[-2:]) + 1) % 100:02d}"
+    blocks = [
+        ("plain", f"{STATUTORY} LEI {broken}."),
+        ("heading", "Information about the offeror"),
+        ("plain", f"Example Ledger AG, LEI {valid}, is the offeror of the crypto-asset."),
+    ]
+    whitepaper = load_whitepaper(_draft(tmp_path, fmt, blocks), WhitepaperType.OTHER)
+    assert broken in whitepaper.section("not_approved_statement")
+    assert _section_findings(whitepaper)["COMMON.LEI_CHECK_DIGITS"].status == "review"
+
+
+@pytest.mark.parametrize("fmt", ["md", "docx", "xhtml"])
+@pytest.mark.parametrize("heading", [[], [("heading", "Summary")]], ids=["no-heading", "summary"])
+@pytest.mark.parametrize(
+    ("wp_type", "rule_id", "subject", "person"),
+    [(WhitepaperType.OTHER, TITLE_II, "The offeror", "Anbieter"), (WhitepaperType.EMT, EMT, "The issuer", "Emittent")],
+    ids=["title-ii", "emt"],
+)
+def test_bilingual_statement_in_one_paragraph_stays_whole(tmp_path: Path, fmt, heading, wp_type, rule_id, subject, person):
+    # A bilingual first page may give the statement in German and then in English in one paragraph.
+    german = f"{GERMAN_OPENING} Der {person} des Kryptowerts {GERMAN_CLAUSE}"
+    english = _statement(subject)
+    blocks = [*heading, ("plain", f"{german} {english} {SUMMARY_BODY}"), ("heading", "Language"), ("plain", "English.")]
+    whitepaper = load_whitepaper(_draft(tmp_path, fmt, blocks), wp_type)
+    finding = _section_findings(whitepaper)[rule_id]
+    assert finding.status == "pass", finding.issues
+    statement = " ".join(whitepaper.section("not_approved_statement").split())
+    assert statement.startswith(f"{german} {english}")
+    assert english not in whitepaper.section("summary")
+
+
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_reworded_responsibility_sentence_with_an_abbreviation_stays_with_the_statement(tmp_path: Path, fmt):
+    # "Inc." reads as a stop, so where the clause words are missing the statement's end is uncertain and its
+    # line stays with it; its words must not lift the risk warning over its minimum length.
+    paragraph = (
+        f"{APPROVAL} Example Bank Inc. bears sole responsibility for its content. The token is not covered "
+        "by investor compensation or deposit guarantee schemes."
+    )
+    blocks = [("heading", "Risk warning"), ("plain", paragraph), ("heading", "Language"), ("plain", "English.")]
+    whitepaper = load_whitepaper(_draft(tmp_path, fmt, blocks), WhitepaperType.EMT)
+    assert _section_findings(whitepaper)["COMMON.RISK_WARNING"].status != "pass"
+    assert "Example Bank Inc." in whitepaper.section("not_approved_statement")
+
+
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_opening_broken_after_its_hyphen_is_read_whole(tmp_path: Path, fmt):
+    lines = ["This crypto-", *textwrap.wrap(STATUTORY.removeprefix("This crypto-"), 60)]
+    blocks = [*[("plain", line) for line in lines], ("heading", "Summary"), ("plain", SUMMARY_BODY)]
+    whitepaper = load_whitepaper(_draft(tmp_path, fmt, blocks), WhitepaperType.OTHER)
+    finding = _section_findings(whitepaper)[TITLE_II]
+    assert finding.status == "pass", finding.issues
+
+
+@pytest.mark.parametrize("fmt", ["md", "docx", "xhtml"])
+def test_separator_line_above_the_statement_is_not_part_of_it(tmp_path: Path, fmt):
+    blocks = [("plain", "* * *"), ("plain", STATUTORY), ("heading", "Summary"), ("plain", SUMMARY_BODY)]
+    whitepaper = load_whitepaper(_draft(tmp_path, fmt, blocks), WhitepaperType.OTHER)
+    assert " ".join(whitepaper.section("not_approved_statement").split()) == STATUTORY

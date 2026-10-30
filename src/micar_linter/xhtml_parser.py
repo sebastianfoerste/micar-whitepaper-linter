@@ -20,8 +20,8 @@ from micar_linter.document import (
     _outline_number,
     _template_kind,
     _within_rights,
-    is_statement_start,
     match_heading_to_section,
+    opens_statement,
     paragraph_statement_extent,
 )
 
@@ -338,7 +338,7 @@ def load_from_xhtml(source: Path | bytes) -> dict[str, str]:
 
     for index, (text, is_tag_heading, is_bold, level) in enumerate(blocks):
         is_bold_heading = len(text) < 120 and is_bold
-        if index < statement_end or is_statement_start(text):
+        if index < statement_end or opens_statement(texts, index):
             # The Art. 6(3) / 51(3) statement carries no heading of its own, and its sentences may sit
             # in separate blocks. After a bold first block, a bold label is a heading only where it names
             # a section, as a statement may be set in bold a sentence per paragraph.

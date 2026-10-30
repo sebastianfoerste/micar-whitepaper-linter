@@ -40,7 +40,7 @@ SECTION_PATTERNS = {
         r"\bleitungsorgan\w*",
         r"\bmanagement\s+statement\b",
         r"\bstatement\b.*\bmanagement\b",
-        # Field 03 of the summary of the Implementing Regulation (EU) 2024/2984 template, "Compliance
+        # Field 03 of Table 2 of the Implementing Regulation (EU) 2024/2984 template, "Compliance
         # statement in accordance with Article 6(6)", holds the statement of the management body.
         r"\bcompliance\s+statement\b",
     ],
@@ -154,14 +154,19 @@ _RESPONSIBLE_PERSON = re.compile(
     re.IGNORECASE,
 )
 # The words the statutory sentence puts between the person and the clause: "of the crypto-asset is",
-# "seeking admission to trading of the crypto-asset is", "of the e-money token is", "des Kryptowerts
-# trägt die". A person named elsewhere, as in a part title above a sentence with a subject of its own
-# ("Example AG is solely responsible ..."), is not the one the clause makes responsible.
+# "seeking admission to trading of the crypto-asset is", "of the trading platform of the crypto-asset is",
+# "des Kryptowerts trägt die", ", die die Zulassung des Kryptowerts zum Handel beantragt, trägt die" and
+# "der Handelsplattform des Kryptowerts trägt die" (Table 2 field 02 and Table 4 field I.02 of Implementing
+# Regulation (EU) 2024/2984), with MiCAR's own ", die die Zulassung zum Handel beantragt," (Art. 6 Abs. 3
+# UAbs. 2). Drafting variants such as "of the e-money token is" count too. A person named elsewhere, as in
+# a part title above a sentence with a subject of its own ("Example AG is solely responsible ..."), is not
+# the one the clause makes responsible.
 _PERSON_TO_CLAUSE = re.compile(
     r"(?:\s+(?:seeking\s+admission\s+to\s+trading|of\s+the\s+trading\s+platform))?"
     r"(?:\s+of\s+the\s+[\w-]+(?:(?<=-)\s+[\w-]+)?(?:\s+tokens?)?)?\s+is\s+"
-    r"|(?:\s+(?:des|der)\s+[\w-]+(?:(?<=-)\s+[\w-]+)?)?"
-    r"(?:,\s+die\s+die\s+zulassung\s+zum\s+handel\s+beantragt,)?\s+trägt\s+die\s+",
+    r"|(?:\s+(?:des|der)\s+[\w-]+(?:(?<=-)\s+[\w-]+)?){0,2}"
+    r"(?:,\s+die\s+die\s+zulassung(?:\s+des\s+[\w-]+)?\s+zum\s+handel\s+beantragt,)?"
+    r"(?:\s+des\s+[\w-]+)?\s+trägt\s+die\s+",
     re.IGNORECASE,
 )
 # The words that end the clause, "of this crypto-asset white paper" ("dieses Kryptowerte-Whitepapers"), with
@@ -191,6 +196,20 @@ def is_statement_start(text: str) -> bool:
     return bool(_STATEMENT_START.match(text))
 
 
+# A narrow column, a box or a statement set a line per paragraph can wrap its opening words
+# ("This crypto-asset white paper has not been" / "approved by ...") over the next lines.
+_STATEMENT_START_LINES = 4
+
+
+def opens_statement(texts: list[str], index: int) -> bool:
+    """True where texts[index] opens the statement, read with the lines its opening words wrap onto."""
+    if not re.search(r"\w", texts[index]):
+        # A separator line ("---", "* * *") or a bullet above the statement is not part of it.
+        return False
+    window = "\n".join(texts[index : index + _STATEMENT_START_LINES])
+    return is_statement_start(re.sub(r"-[ \t]*\n\s*", "-", window))
+
+
 def looks_like_heading(text: str) -> bool:
     """True for a Markdown heading, or a short line without closing punctuation that names a section."""
     stripped = text.strip()
@@ -209,7 +228,8 @@ def statement_extent(lines: list[str], start: int, is_heading: Callable[[int], b
     heading heuristics would otherwise read as new section headings. The statement ends
     with its opening sentence, or with the next sentence where that one is short and says
     who is responsible. It never runs past a heading, so an incomplete or reworded
-    statement cannot swallow the sections that follow it.
+    statement cannot swallow the sections that follow it. It takes whole lines: text after
+    the statement in its last line stays with it.
 
     is_heading(index) reports a heading the loader reads from the layout, such as a DOCX
     paragraph in a Heading style or a PDF line in a heading font. A statement may be set
@@ -274,7 +294,8 @@ def statement_extent(lines: list[str], start: int, is_heading: Callable[[int], b
             return start + i
     last = line_at(first_end) if first else None
     # A responsibility sentence with every statutory word, right after the opening one, ends the statement
-    # with its last word, whatever follows it: no stop, a heading, a label, a note or a run-on.
+    # with the line of its last word, whatever follows it there or after it: no stop, a heading, a label, a
+    # note or a run-on.
     if (
         complete
         and (last is None or own.start <= last + 1)
@@ -315,7 +336,8 @@ def paragraph_statement_extent(
     for index in range(start + 1, end):
         if _STATEMENT_SENTENCE_END.search(" ".join(paragraphs[start:index])):
             break
-        joined = re.sub(r"^\W+", "", " ".join(" ".join(paragraphs[start : index + 1]).split()).lower())
+        joined = re.sub(r"-[ \t]*\n\s*", "-", "\n".join(paragraphs[start : index + 1]))
+        joined = re.sub(r"^\W+", "", " ".join(joined.split()).lower())
         if not (NOT_APPROVED_STATEMENT_EN.startswith(joined) or joined.startswith(NOT_APPROVED_STATEMENT_EN)):
             return index
     return end
@@ -1009,7 +1031,7 @@ def _line_sections(lines: list[_Line], statement: bool = False) -> DocumentSecti
 
     for index, line in enumerate(lines):
         if statement and (
-            index < statement_end or index in statement_starts or is_statement_start(line.text)
+            index < statement_end or index in statement_starts or opens_statement(line_texts, index)
         ):
             if index >= statement_end:
                 statement_end = statement_extent(
@@ -1211,7 +1233,7 @@ def parse_docx(path: Path) -> DocumentSections:
 
     for index, (para, text) in enumerate(paragraphs):
         texts.append(text)
-        if index < statement_end or is_statement_start(text):
+        if index < statement_end or opens_statement(paragraph_texts, index):
             if index >= statement_end:
                 # A heading as parse_docx reads one below: a Heading style, an outline level, or a label
                 # that is entirely bold or in capitals. A label marked as the statement's first paragraph
@@ -1378,7 +1400,7 @@ def load_from_markdown(path: Path) -> dict[str, str]:
     statement_end = 0
 
     for index, line_clean in enumerate(lines):
-        if index < statement_end or is_statement_start(line_clean):
+        if index < statement_end or opens_statement(lines, index):
             if index >= statement_end:
                 statement_end = statement_extent(lines, index)
             sections.setdefault("not_approved_statement", []).append(line_clean)

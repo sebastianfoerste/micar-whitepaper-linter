@@ -774,7 +774,10 @@ def status_logic(rule: Rule) -> str:
         else "a term listed for the draft's regime"
     )
     review = f"the section has fewer than {minimum}, or {terms} does not appear"
-    match = "case-insensitive substring match, with any run of spaces and line breaks read as one space"
+    match = (
+        "case-insensitive substring match, with any run of spaces and line breaks read as one space and a "
+        "word broken after its hyphen at a line end joined"
+    )
     if any(_named(v.required_patterns) or _named(v.required_patterns_de) for v in groups):
         match += "; a term shown with a pattern counts only where the pattern matches, so that a look-alike word does not stand in for it"
     parts = [
@@ -965,7 +968,9 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             f"{'4' if emt else '2'} of Implementing Regulation (EU) 2024/2984, where the label is set as one (a "
             "Markdown “#” heading, an XHTML h1 to h6 or bold label, a DOCX heading or bold or capitals label, a PDF "
             "heading or field line), or, without one, from a line or paragraph that opens with the statement's "
-            f"first words. Numbered-field XHTML fills it from field {field}. Table cells are not read in DOCX, nor "
+            "first words, also where they wrap onto the next lines. Text after the statement in its last line "
+            "or paragraph, such as the management body's statement written in the same paragraph, stays in this "
+            f"section and is missing from its own. Numbered-field XHTML fills it from field {field}. Table cells are not read in DOCX, nor "
             "in heading-based XHTML where the text sits directly in a td or th element rather than in a p, div, li "
             "or bold element inside it, so a statement kept only there is reported missing."
         )
