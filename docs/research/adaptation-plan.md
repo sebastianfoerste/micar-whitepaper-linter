@@ -63,7 +63,7 @@ Rank = Impact × evidence weight (Observed 3, Claimed 2, Inferred 1) ÷ effort (
 | H2 | Generated rule pages with executed examples | 5 | pass | M | Observed (ESLint, Ruff, DQC) | differentiator | 7.5 | **Built** |
 | H10 | Wilson 95% intervals in `micar-review-summary` | 2 | pass | S | Observed (CUAD, LegalBench lack them) | differentiator once labels exist | 6 | Spec, next |
 | H11 | LEI check digits and issuer identity consistency | 4 | pass | M | Observed (WhitePaperXBRL mod-97) | differentiator if fail-closed | 6 | **Built** (swapped in for H7 at the owner's request, 2026-10-21) |
-| H8 | Point-level rules | 5 | fail (this run: point citations unverifiable; see Needs owner decision) | L | Observed (WhitePaperXBRL field-level) | table stakes for filing tools | 3.75 | ID scheme chosen by the owner (2026-10-28, ADR 0005); not built |
+| H8 | Point-level rules | 5 | fail (this run: point citations unverifiable; see Needs owner decision) | L | Observed (WhitePaperXBRL field-level) | table stakes for filing tools | 3.75 | ID scheme chosen by the owner (2026-10-28, ADR 0005); first rules built 2026-10-30 (`ANNEX_I.A.P6`, `ANNEX_III.A.P6`) |
 | H6 | Landing page | 3 | pass | S | Inferred | table stakes | 3 | **Built** (design) |
 | H7 | Dark mode with tokens, no storage | 2 | pass | M | Observed (Ruff playground theme) | table stakes | 3 | Built, then **removed** at the owner's request (2026-10-21) for H11 |
 | H3 | Inline section highlight and structural quick-fixes | 4 | pass | L | Observed (Ruff playground, Ruff fix safety) | differentiator | 3 | Spec + Proposed ADR |
@@ -136,9 +136,9 @@ Where this repo should beat everyone: **the only MiCA white-paper checker whose 
 - **Adapt.** Add Wilson 95% bounds to `micar-review-summary` beside the existing precision/recall/F1 and `publication_ready` gate; keep the `model.test.mjs` study-figures test green. No labels entered by the agent or a model.
 - **Risk.** None to the non-negotiables; impact is nil until an owner reviews the 150 cells.
 
-### F5. Point-level rules (H8), ID scheme chosen
+### F5. Point-level rules (H8), first rules built 2026-10-30
 
-New IDs under a separate namespace (`ANNEX_I.A.P<n>`, distinct from `ANNEX_II.G.*` topic IDs and the study's `ANNEX_I_PART_A_02_*` IDs), driven by the numbered fields of Implementing Regulation (EU) 2024/2984. The owner chose this scheme on 2026-10-28: each rule cites one Annex point, checks the fields of Tables 2 to 4 that carry it and applies the template's LEI, DTI and flag conditions. Every point citation still has to be checked against the Official Journal text before it is added; the Publications Office Cellar serves that text where EUR-Lex refuses automated retrieval. See [ADR 0005](../adr/0005-point-level-rule-ids.md).
+New IDs under a separate namespace (`ANNEX_I.A.P<n>`, distinct from `ANNEX_II.G.*` topic IDs and the study's `ANNEX_I_PART_A_02_*` IDs), driven by the numbered fields of Implementing Regulation (EU) 2024/2984. The owner chose this scheme on 2026-10-28: each rule cites one Annex point, checks the fields of Tables 2 to 4 that carry it and applies the template's LEI, DTI and flag conditions. Every point citation still has to be checked against the Official Journal text before it is added; the Publications Office Cellar serves that text where EUR-Lex refuses automated retrieval. See [ADR 0005](../adr/0005-point-level-rule-ids.md). The first two, `ANNEX_I.A.P6` and `ANNEX_III.A.P6` for the contact details of Part A point 6 (#68), were built on 2026-10-30, after the point and the template fields were read against the Official Journal that day.
 
 ### F6. Arelle formula assertions (H9), Proposed
 

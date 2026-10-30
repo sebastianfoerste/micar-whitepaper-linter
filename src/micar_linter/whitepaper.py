@@ -78,6 +78,10 @@ _RESERVED_METADATA_KEYS = (
     "extraction_notes",
     # Set by the XHTML loader for a saved iXBRL viewer page; the iXBRL message reads it.
     "script_packed_source",
+    # Set by the XHTML loader for a numbered-field draft: the fields of each section that hold only a
+    # placeholder, which the shared checks name, and the answer of every field, which the point rules read.
+    "placeholder_fields",
+    "numbered_fields",
     "reserve_characterisation_reviewed_by",
     "reserve_characterisation_reviewed_on",
 )
@@ -175,6 +179,8 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
     ixbrl_validated = False
     script_packed = False
     extraction_notes: tuple[str, ...] = ()
+    placeholder_fields: dict[str, tuple[str, ...]] = {}
+    numbered_fields: dict[str, str] | None = None
     extracted = ""
     try:
         if suffix == ".pdf":
@@ -195,6 +201,7 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
             from micar_linter.ixbrl import validate_ixbrl
             from micar_linter.numbered_fields import (
                 extract_numbered_fields,
+                field_answers,
                 is_numbered_layout,
                 sections_from_numbered_fields,
             )
@@ -212,7 +219,10 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
                         f"{subject} uses the numbered fields of Implementing Regulation (EU) 2024/2984. "
                         "State the regime explicitly: other, art or emt."
                     )
-                sections, extraction_notes = sections_from_numbered_fields(fields, whitepaper_type)
+                sections, extraction_notes, placeholder_fields = sections_from_numbered_fields(
+                    fields, whitepaper_type
+                )
+                numbered_fields = field_answers(fields, whitepaper_type)
             else:
                 sections = load_from_xhtml(source)
             if script_packed:
@@ -262,7 +272,11 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
         "ixbrl_issues": tuple(ixbrl_issues),
         "extraction_notes": extraction_notes,
         "script_packed_source": script_packed,
+        "placeholder_fields": placeholder_fields,
     }
+    # Only a numbered-field draft carries the key, so a point rule can tell which layout it reads.
+    if numbered_fields is not None:
+        metadata["numbered_fields"] = numbered_fields
 
     return Whitepaper(
         title=title,
