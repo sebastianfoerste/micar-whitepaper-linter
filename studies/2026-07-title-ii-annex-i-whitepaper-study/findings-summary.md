@@ -8,7 +8,7 @@ The output is a research artifact. It does not provide legal advice and does not
 
 ## Sample
 
-- Documents processed: 10
+- Documents reviewed: 10
 - Target sample size: 10
 - Documents excluded before or during batch processing: 2
 - Scope: Title II crypto-assets other than asset-referenced tokens and e-money tokens.
@@ -65,7 +65,7 @@ The study checks 15 deterministic controls: 12 high-signal Annex I disclosure fi
 
 ## Human validation gate
 
-Reviewers label the 150 document-rule cells in blinded per-reviewer sheets (for example `human-review-r1.csv`) that omit detector outcomes. `human-review-matrix.csv` already holds the detector outcomes, so reviewers do not open it while labelling; the final labels are merged into it only after the independent labels are recorded. No precision, recall, false-positive, or false-negative claim is made until qualified reviewers label every cell under `review-protocol.md` and `micar-review-summary --require-complete` exits successfully.
+Reviewers label the 150 document-rule cells in `human-review-blinded.csv`, which omits the detector outcomes, following `REVIEWING.md`. `human-review-matrix.csv` already holds the detector outcomes, so reviewers do not open it while labelling; `scripts/build_review_matrix.py --merge-blinded` copies the labels into it once every blinded cell is labelled. No precision, recall, false-positive, or false-negative claim is made until qualified reviewers label every cell under `review-protocol.md` and `micar-review-summary --require-complete` exits successfully.
 
 Document byte hashes and extraction metadata are recorded in `document-provenance.json`.
 

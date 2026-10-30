@@ -32,10 +32,16 @@ _FIELD_ID = re.compile(
 )
 # A part title of the template, whatever its length ("Part C- Information about the operator of the trading
 # platform ..." runs to 40 words), also in German ("Teil B \u2013 Informationen über den Emittenten, ...").
-_PART_TITLE = re.compile(r"^(?:part|teil)\s+[A-Z]\s*[.:)\u2013\u2014-]\s*\S", re.I)
-# A short line that opens a part without a dash ("Part B", "B. Issuer"); a longer line that starts with a
-# letter and a full stop is body text.
-_PART_HEADING = re.compile(r"^(?:(?:part|teil)\s+[A-Z]\b|[A-Z]\.\s+\S)", re.I)
+# Table 3 prints Part AA without "Part" ("AA- information on other persons ...", "AA \u2013 Gemäß Artikel 19
+# ..."), so that form needs the first word of the title: "AA-rated bonds" is body text.
+_PART_TITLE = re.compile(
+    r"^(?:(?:part|teil)\s+(?:[A-Z]|(?-i:AA))\s*[.:)\u2013\u2014-]\s*\S"
+    r"|(?-i:AA)\s*[.:)\u2013\u2014-]\s*(?:information|gemäß))",
+    re.I,
+)
+# A short line that opens a part without a dash ("Part B", "Part AA", "B. Issuer"); a longer line that starts
+# with a letter and a full stop is body text.
+_PART_HEADING = re.compile(r"^(?:(?:part|teil)\s+(?:[A-Z]|(?-i:AA))\b|[A-Z]\.\s+\S)", re.I)
 # Some authors run several fields together in one paragraph ("A.1 Name: N/A A.2 Legal form: N/A").
 # The colon requirement keeps cross-references such as "see F.14" from opening a field.
 _INLINE_FIELD = re.compile(r"(?<=\s)(?=[A-Z]\.\d{1,2}\s+(?:(?![A-Z]\.\d)[^:]){1,120}:)")
@@ -62,6 +68,9 @@ _PART_SECTIONS: dict[WhitepaperType, dict[str, tuple[str, ...]]] = {
     },
     WhitepaperType.ART: {
         "A": ("issuer",),
+        # Part AA names the persons other than the issuer who offer the token, seek its admission to trading
+        # or draw up the white paper (Art. 19(1), second subparagraph, MiCAR), as the offeror section does.
+        "AA": ("offeror",),
         "B": ("art",),
         "C": ("offer_or_admission",),
         # ANNEX_II.I reads the redemption items of Part D and Part G.
@@ -85,10 +94,13 @@ _PART_SECTIONS: dict[WhitepaperType, dict[str, tuple[str, ...]]] = {
 }
 
 # Leading fields -> section key. Table 2 numbers them 00 to 10; Tables 3 and 4 print
-# I.00 to I.07 and I.00 to I.08, which _field_id reduces to the two digits.
+# I.00 to I.07 and I.00 to I.08, which _field_id reduces to the two digits. Field 02 of
+# Table 2 and I.02 of Table 4 hold the Art. 6(3) and Art. 51(3) statement; I.02 of
+# Table 3 is the Art. 19(4) warning, because Art. 19 MiCAR prescribes no such statement.
 _SUMMARY_SECTIONS: dict[WhitepaperType, dict[str, tuple[str, ...]]] = {
     WhitepaperType.OTHER: {
         "01": ("notification_date",),
+        "02": ("not_approved_statement",),
         "03": ("management_statement",),
         "04": ("risk_warning",),
         "05": ("risk_warning",),
@@ -109,6 +121,7 @@ _SUMMARY_SECTIONS: dict[WhitepaperType, dict[str, tuple[str, ...]]] = {
     },
     WhitepaperType.EMT: {
         "01": ("notification_date",),
+        "02": ("not_approved_statement",),
         "03": ("management_statement",),
         "04": ("risk_warning",),
         "05": ("summary",),
@@ -131,9 +144,12 @@ _LANGUAGE_CONTENT = re.compile(
     re.I,
 )
 # Table 4 has no field for the safeguarding of funds received (Art. 54 MiCAR), so for an EMT the
-# safeguarding section collects the answered lettered fields that describe it.
+# safeguarding section collects the answered lettered fields that describe it, also in the words of
+# Art. 54: "separate accounts", "besichert", "gesonderten Konten".
 _SAFEGUARDING_TEXT = re.compile(
-    r"\bsafeguard\w*|\bsegregat\w*|\babsicherung\w*|\bsicherung\w*.*\bgelder\w*", re.I
+    r"\bsafeguard\w*|\bsegregat\w*|\bseparate\s+(?:\w+\s+)?accounts?\b|\babsicherung\w*|\bbesichert\w*"
+    r"|\bgesondert\w*\s+\w*kont(?:o|os|en)\b|\bsicherung\w*.*\bgelder\w*",
+    re.I,
 )
 
 
@@ -411,8 +427,8 @@ def is_numbered_layout(fields: list[NumberedField]) -> bool:
 
 def sections_from_numbered_fields(
     fields: list[NumberedField], whitepaper_type: WhitepaperType
-) -> tuple[dict[str, str], tuple[str, ...]]:
-    """Map numbered fields to section texts and extraction notes.
+) -> tuple[dict[str, str], tuple[str, ...], dict[str, tuple[str, ...]]]:
+    """Map numbered fields to section texts, extraction notes and placeholder fields.
 
     An answered field contributes "label: answer". A field answered "N/A" contributes
     "N/A" and a placeholder field ("TBD", "[●]") its placeholder, both without the label,
@@ -421,7 +437,9 @@ def sections_from_numbered_fields(
     when another field holds a placeholder, so a part of placeholders and "N/A" reads as
     placeholders only and is reported missing. A field whose text starts with the template's
     field name has that name split off as its label first, so the safeguards also hold
-    where a layout runs labels into answers.
+    where a layout runs labels into answers. The third value lists, per section, the fields
+    that hold only a placeholder, as the table prints their numbers ("A.10", "08", "I.05"),
+    so a section with answered fields beside them is not read as complete.
     """
     parts = _PART_SECTIONS[whitepaper_type]
     summary = _SUMMARY_SECTIONS[whitepaper_type]
@@ -434,6 +452,7 @@ def sections_from_numbered_fields(
     placeholder_parts = {field.part for field in lettered if field.placeholder} - answered_parts
 
     sections: dict[str, list[str]] = {}
+    placeholders: dict[str, list[str]] = {}
     safeguarding_fields: list[str] = []
     for field in fields:
         keys = parts.get(field.part) or summary.get(field.field_id, ())
@@ -454,6 +473,8 @@ def sections_from_numbered_fields(
             line = field.content
         for key in keys:
             sections.setdefault(key, []).append(line)
+            if field.placeholder:
+                placeholders.setdefault(key, []).append(_printed_number(field.field_id, whitepaper_type))
         if (
             whitepaper_type is WhitepaperType.EMT
             and field.part in parts
@@ -498,4 +519,28 @@ def sections_from_numbered_fields(
                 f"Part {part}: all {len(in_part)} numbered fields are marked not applicable. "
                 "Confirm that the part does not apply."
             )
-    return {key: "\n".join(lines) for key, lines in sections.items()}, tuple(notes)
+    return (
+        {key: "\n".join(lines) for key, lines in sections.items()},
+        tuple(notes),
+        {key: tuple(dict.fromkeys(numbers)) for key, numbers in placeholders.items()},
+    )
+
+
+def field_answers(fields: list[NumberedField], whitepaper_type: WhitepaperType) -> dict[str, str]:
+    """The answer of each field by its number as the table prints it, with the template's name split off.
+
+    The point rules read the fields that carry their Annex point here (ADR 0005). A field that occurs
+    more than once gives its answers one per line; an empty field gives an empty answer.
+    """
+    answers: dict[str, list[str]] = {}
+    for field in map(_with_template_label, fields):
+        content = field.content.strip()
+        lines = answers.setdefault(_printed_number(field.field_id, whitepaper_type), [])
+        if content:
+            lines.append(content)
+    return {number: "\n".join(lines) for number, lines in answers.items()}
+
+
+def _printed_number(field_id: str, whitepaper_type: WhitepaperType) -> str:
+    """The field number as its table prints it: Tables 3 and 4 number the leading fields I.00 to I.08."""
+    return f"I.{field_id}" if whitepaper_type is not WhitepaperType.OTHER and field_id.isdigit() else field_id

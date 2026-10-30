@@ -20,6 +20,7 @@ FLOOR = "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW"
 
 RESERVE_TEXT = (
     "The reserve of assets is segregated and its composition is described in full. "
+    "A daily reconciliation aligns the value of the reserve with the claim each token represents. "
     "The reserve is held as deposits with credit institutions, with concentration "
     "limits applied per counterparty. At least 30% of the reserve is held as "
     "deposits. Valuation is performed daily and audited semi-annually. "

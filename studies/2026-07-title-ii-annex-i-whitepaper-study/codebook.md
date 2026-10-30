@@ -7,15 +7,16 @@
 > **Signing order.**
 >
 > 1. Merge pull requests #18, #19 and #24 into `main` as unsigned DRAFT tooling. Merging them adopts nothing.
-> 2. On `main`, complete Phase 0 steps 0.1 to 0.9 (`analysis-plan.md` section 3). Step 0.10 is steps 3 to 5 below.
-> 3. Make ONE adoption commit on `main`. It contains the adopted `codebook.md`, `analysis-plan.md` with the Detector row of its section 2 filled in, and the pending review sheets, with the DRAFT line of each banner removed and the "Adopted by" line filled in, and `human-review-summary.json` refreshed in place with `micar-review-summary` (study README, without `--require-complete`), since the summary reads the banner and the Detector row and `tests/test_study_consistency.py` requires it to equal a fresh run. This commit is the pre-registration and precedes the commit that adds any label.
+> 2. On `main`, complete Phase 0 steps 0.1 to 0.10 (`analysis-plan.md` section 3). Step 0.11 is steps 3 to 5 below.
+> 3. Make ONE adoption commit on `main`. It contains the adopted `codebook.md`, `analysis-plan.md` with the Detector row of its section 2 filled in, and the pending review sheets `human-review-blinded.csv` and `human-review-matrix.csv`, with the DRAFT line of each banner removed and the "Adopted by" line filled in. This commit is the pre-registration and precedes the commit that adds any label.
 > 4. Mark the adoption commit with an annotated tag.
 > 5. In a follow-up commit, record the adoption commit's SHA and its tag in the study README ("Current status"), never inside the signed files.
 >
-> Later changes on `main` to the detector's files do not enter the study: every study run uses the detector commit recorded in `analysis-plan.md` section 2, with its `uv.lock`. Make the adoption commit once the pull requests that change the inputs that `analysis-plan.md` section 2 freezes (the findings files, `document-provenance.json`, the review sheets and `codebook.md`) or `analysis-plan.md` are merged or closed: #18, #19 and #24, and any other, such as #17. A later change to those inputs is a deviation (`analysis-plan.md` section 12).
+> Later changes on `main` to the detector's files do not enter the study: every study run uses the detector commit recorded in `analysis-plan.md` section 2, with its `uv.lock`. Make the adoption commit once the pull requests that change the inputs that `analysis-plan.md` section 2 freezes (the findings files, `document-provenance.json`, the review sheets and `codebook.md`) or `analysis-plan.md` are merged or closed: #18, #19 and #24, and any other. A later change to those inputs is a deviation (`analysis-plan.md` section 12).
 >
 > - Adopted by: [reviewer name], on [YYYY-MM-DD]
 > - Pre-registration commit: not recorded in this file (signing order, step 5)
+> - Reference standard recorded in `review-protocol.md` (`REVIEWING.md` step 2): [ ] recorded
 > - Policy decisions recorded in section 6: [ ] all decided
 > - LEI decision in section 5 (documents that give a valid LEI, cards 5.1 and 5.2): [ ] decided
 
@@ -27,21 +28,22 @@ The requirement descriptions below follow MiCAR (Regulation (EU) 2023/1114) Arti
 - the Article 6 citations in `src/micar_linter/rules/common.py`;
 - the Article 6(3), 6(5), 6(6) and 6(7) statement fields of the synthetic template example `examples/numbered-other-draft.xhtml`.
 
-They were **not checked against the Official Journal text** while drafting, because EUR-Lex and ESMA could not be reached. Two markers flag what the reviewer must settle before adoption:
+This codebook's own readings were drafted without the Official Journal text, because EUR-Lex and ESMA could not be reached. The table in `REVIEWING.md` step 3 (lines 64 to 80), which compares each rule's missing element with the text of its provision, was checked against the Official Journal text at the ELI of Regulation (EU) 2023/1114, not against a consolidated version (`REVIEWING.md` line 62). Where that table answers a reading, the card cites the table's line under **Checked**. Two markers flag what the reviewer must still settle before adoption:
 
-- **[OJ check]**: the draft gives a reading of the legal text that is not encoded in the repository. Verify it against the Official Journal text of Regulation (EU) 2023/1114 and correct the codebook (and, if needed, `REVIEW_REQUIREMENTS` in `src/micar_linter/review_sheets.py`, then regenerate the sheets).
+- **[OJ check]**: the draft gives a reading of the legal text that neither the repository nor the `REVIEWING.md` table states. Verify it against the Official Journal text of Regulation (EU) 2023/1114 and correct the codebook.
 - **[Legal judgment]**: the cell cannot be labelled consistently without a policy choice. Section 6 lists the options and a recommended default.
 
-The `requirement` column of the review sheets repeats the element description for each rule. This codebook governs where the two differ.
+The review sheets carry no rule label and no requirement text. `REVIEWING.md` step 3 gives each rule's label and missing element and how its provision differs from that element. `review-protocol.md` governs, then `REVIEWING.md` (its line 3), then this codebook.
 
 ## 2. What the reviewer decides
 
 One cell is one question: **do the exact source bytes with the recorded SHA-256 contain the disclosure element that the rule names?**
 
-- The unit is the cached document whose hash matches `document-provenance.json`. Run `micar-study-verify-cache` first; do not label a document whose bytes do not verify.
+- The unit is the cached document whose hash matches `document-provenance.json`. Run `micar-study-verify-cache` or the check in `REVIEWING.md` step 1 first; do not label a document whose bytes do not verify.
 - The question is **presence** of a responsive disclosure, not its legal sufficiency or accuracy (policy P3).
+- What must be present is set by the reference standard that the owner records in `review-protocol.md` before labelling (`REVIEWING.md` step 2): the rule's missing element (the missing-element standard) or the provision as a whole (the provision standard). That choice is separate from P3, and the cards below follow the recorded standard. Where the other standard would give a different label, say so in `review_note` (`REVIEWING.md` line 82).
 - The reviewer reads the source document itself (rendered XHTML or HTML, or the PDF), not the text the detector extracted.
-- The reviewer answers without seeing the detector's result. During labelling, work only in your own sheet (`human-review-r1.csv`, or the workbook generated from it by `micar-review-workbook` and imported with `micar-review-merge import`) with this codebook, `review-protocol.md` and the source document. Do not open `human-review-matrix.csv`, `findings-pseudonymous.json`, `findings-pseudonymous.csv`, `findings-summary.md` or any playground output for these documents.
+- The reviewer answers without seeing the detector's result. During labelling, work only in your own sheet, `human-review-blinded.csv` or, for a second reviewer, `human-review-second.csv` (`REVIEWING.md` step 3a), with this codebook, `review-protocol.md`, `REVIEWING.md` and the source document. Do not open `human-review-matrix.csv`, `findings-pseudonymous.json`, `findings-pseudonymous.csv`, `findings-summary.md` or any playground output for these documents; a second reviewer does not open `human-review-blinded.csv` either.
 - This codebook contains no detector patterns and no detector outcomes. The reviewer wrote the detector, so blinding is partial; the analysis plan discloses this.
 
 ## 3. Labels
@@ -51,7 +53,7 @@ Use exactly one label per cell. The definitions refine `review-protocol.md` (Lab
 | Label | Use when | Required fields |
 | --- | --- | --- |
 | `present` | The source bytes contain a disclosure that responds to the element, for the person the rule names. | `source_pinpoint`; `review_note` when a policy from section 6 decided the label. |
-| `missing` | The reviewer inspected the parts of the source where the element belongs, and searched the whole document, and did not find it. Also used when only part of a multi-part element is given (the note names the missing part). | `source_pinpoint` stating where the element was expected and what was searched; `review_note` for partial disclosures. |
+| `missing` | The reviewer inspected the parts of the source where the element belongs, and searched the whole document, and did not find it. Also used when only part of a multi-part element is given (the note names the missing part). | `source_pinpoint` stating where the element was expected and what was searched (`review-protocol.md`, "First review" step 5); `review_note` for partial disclosures. The merge and `micar-review-summary` also accept a `missing` cell with a note and no pinpoint (`REVIEWING.md` line 60), so they do not catch a missing pinpoint; record one wherever you can. |
 | `not_applicable` | The reviewer concludes that the rule does not apply to this document at all. Rare; a sub-statement that does not apply (such as Art. 6(5)(d) outside utility tokens) does not make the whole cell `not_applicable`. | `review_note` with the reason. |
 | `uncertain` | The legal requirement or the source wording is genuinely ambiguous, so that two reasonable readings lead to different labels. Not a substitute for finishing the search. | `review_note` stating both readings. |
 | `extraction_failure` | The bytes cannot support a reliable decision for this element: the file does not render, pages or sections are unreadable, or the capture is evidently not the complete white paper and the element is not in the capture (policy P8). | `review_note` describing the defect. |
@@ -80,11 +82,11 @@ Only `present` and `missing` enter precision and recall. The other labels are co
 
 ## 4. Which person the Part A items refer to
 
-The Part A items concern **the offeror or the person seeking admission to trading**. Some white papers are drawn up by the operator of a trading platform, whose details then appear in Part C (`src/micar_linter/rules/annex_i.py`, rules ANNEX_I.A to ANNEX_I.C). Whether the operator's details answer the Part A items is policy P2 **[Legal judgment]**. Information about a different issuer (Part B) does not answer a Part A item.
+The Part A items concern **the offeror or the person seeking admission to trading**. Some white papers are drawn up by the operator of a trading platform, whose details then appear in Part C (`src/micar_linter/rules/annex_i.py`, rules ANNEX_I.A, ANNEX_I.B and ANNEX_I.C at lines 60, 87 and 98; the comment at lines 54 to 58 says why they do not ask for the legal form or the registered address: a white paper that gives an LEI need not state them; see the box after 5.2). Whether the operator's details answer the Part A items is policy P2 **[Legal judgment]**. Information about a different issuer (Part B) does not answer a Part A item.
 
 ## 5. Rule cards
 
-Each card gives the element, what counts as `present` and `missing`, and the policies that may decide the cell. The order follows `STUDY_RULES`; the review sheet shuffles it.
+Each card gives the element, what counts as `present` and `missing`, and the policies that may decide the cell. The order follows `STUDY_RULES`, as do each document's rows in `human-review-blinded.csv`.
 
 ### 5.1 `ANNEX_I_PART_A_02_LEGAL_FORM`: Legal form (Annex I, Part A, item 2)
 
@@ -98,26 +100,31 @@ Each card gives the element, what counts as `present` and `missing`, and the pol
 - **Element:** the registered address (registered office or seat) of that person.
 - **present:** an address that identifies the registered office: street and number (or equivalent), postcode, city and country.
 - **missing:** no address. A city or country alone: P11.
-- **[OJ check]:** the drafting reading is that item 3 asks for the registered address and, where different, the head office. Recommended: label on the registered address; if the document indicates a different head office without giving it, say so in the note.
+- **Checked (`REVIEWING.md` line 67):** item 3 reads "Registered address and head office, where different", so it asks for both where they differ. Under the missing-element standard, label on the registered address or head office; under the provision standard, the table's last column applies. If the document indicates a different head office without giving it, say so in the note.
 - **Policies:** P1, P2, P11.
 
-> **Documents that give a valid LEI (5.1 and 5.2).** Open draft pull request #51 reads recital 2 of Implementing Regulation (EU) 2024/2984 as allowing a white paper that gives a valid LEI to omit the legal form, registered address, head office and parent company, because they can be retrieved from the LEI. This codebook has no policy for that case. The legal merits of that reading are unverified here: EUR-Lex could not be reached while drafting.
+> **Documents that give a valid LEI (5.1 and 5.2).** The repository holds three readings, and this codebook has no policy for the case:
 >
-> [Decide: present, missing or not_applicable when a valid LEI is given; align with the CLI if #51 is adopted.]
+> - The CLI's party rules: since #51 (merged through #62), the comment at `src/micar_linter/rules/annex_i.py` lines 54 to 58 reads recital 2 of Implementing Regulation (EU) 2024/2984 as letting a white paper that gives an LEI leave out the legal form and the registered address, so ANNEX_I.A and ANNEX_I.B no longer ask for them.
+> - The CLI's LEI rules: `_no_lei_finding` in `src/micar_linter/linter.py` (lines 576 to 587) sends a party section that has text but no LEI to Review, because point 5 of each party Part allows another identifier required pursuant to applicable national law.
+> - The study: the `REVIEWING.md` table finds "No difference" between the legal-form rule and Annex I, Part A, item 2 of MiCAR (line 66), and `STUDY_RULES` in `src/micar_linter/batch.py` still checks the legal form.
+>
+> [Decide: present, missing or not_applicable for 5.1 and 5.2 when a valid LEI is given, and whether the study follows the CLI's reading.]
 
 ### 5.3 `ANNEX_I_PART_A_04_REGISTRATION_DATE`: Registration date (Annex I, Part A, item 4)
 
 - **Element:** the date of registration (incorporation or establishment) of that person.
-- **present:** a stated date of registration or incorporation. A year alone: P12.
+- **present:** a stated date of registration, incorporation or establishment. A year alone: P12.
 - **missing:** no date; a date that refers to something else (the white paper, the token launch, a licence) does not count.
+- **Checked (`REVIEWING.md` line 68):** item 4 names only the "Date of the registration", while the rule's missing element also accepts a date of incorporation or establishment. Under the missing-element standard, any of the three dates counts; under the provision standard, the table's last column applies. Record in the note which date the document gives.
 - **Policies:** P1, P2, P7, P12.
 
 ### 5.4 `ANNEX_I_PART_A_05_LEI_OR_IDENTIFIER`: LEI or other identifier (Annex I, Part A, item 5)
 
 - **Element:** the legal entity identifier (LEI) of that person, or another identifier of that person.
-- **present:** a 20-character LEI (ISO 17442) attributed to that person, or another identifier of the legal person such as a company-register number.
+- **present:** a 20-character LEI (ISO 17442) attributed to that person, or another identifier of the legal person, such as a company-register number, that the recorded standard accepts (see **Checked** and P13).
 - **missing:** no identifier of the person. An identifier of the **token** (DTI, ISIN, contract address) does not count (P5).
-- **[OJ check]:** the drafting reading is "legal entity identifier or another identifier required pursuant to applicable national law". If so, P13 decides whether any company-register number qualifies or only one required by national law.
+- **Checked (`REVIEWING.md` line 69):** the other identifier must be one "required pursuant to applicable national law". Under the missing-element standard, another identifier of the person counts, and P13 decides which; under the provision standard, the table's last column applies: only an identifier that the person's applicable national law requires counts, which the reviewer establishes per document, and P13 does not apply.
 - **Policies:** P1, P2, P5, P13.
 
 ### 5.5 `ANNEX_I_PART_A_06_CONTACT_PHONE_EMAIL`: Contact telephone number and email (Annex I, Part A, item 6)
@@ -139,16 +146,16 @@ Each card gives the element, what counts as `present` and `missing`, and the pol
 - **Element:** the identity and functions of the members of the management body of that person.
 - **present:** the members are named and each member's function is stated.
 - **missing:** no members named; or names without functions, or functions without names (partial: `missing` with a note).
-- **[OJ check]:** the drafting reading is that item 8 also asks for the members' business address. Recommended: business address is not required for `present`; record its absence in the note so that a stricter reading can be applied in a sensitivity analysis.
+- **Checked (`REVIEWING.md` line 72):** item 8 also asks for the "business addresses" of the members of the management body. Under the missing-element standard, business addresses are not required for `present`; under the provision standard, the table's last column applies. Record their absence in the note either way, so that the other standard can be applied in a sensitivity analysis.
 - **Policies:** P1, P2.
 
 ### 5.8 `ANNEX_I_PART_E_18_CONFLICTS_OF_INTEREST`: Conflicts of interest (Annex I, Part E, item 18)
 
 - **Element:** disclosure of conflicts of interest relating to the offer to the public or the admission to trading.
-- **present:** the document addresses potential conflicts of interest of the persons involved in the offer or admission: it describes them, or explains how they are managed. An explicit statement that no conflicts have been identified: P15.
+- **present:** the document addresses potential conflicts of interest in relation to this offer or admission: it describes them, or explains how they are managed. An explicit statement that no conflicts have been identified: P15.
 - **missing:** the document does not address conflicts of interest for this offer or admission.
 - **Generic reference only:** a reference to a conflicts policy that is not tied to this offer or admission: P15.
-- **[OJ check]:** the Part letter and item number come from `STUDY_RULES` (Part E, item 18); the earlier review sheets wrongly said Part A. Confirm the item number and wording.
+- **Checked (`REVIEWING.md` line 73):** Annex I, Part E, item 18 asks for "Potential conflicts of interest of the persons involved in the offer to the public or admission to trading, arising in relation to the offer or admission to trading". Under the missing-element standard, a conflicts-of-interest disclosure for this offer or admission decides the label; under the provision standard, the table's last column applies, and the conflicts must be those of the persons involved in the offer or admission. Record in the note whose conflicts the disclosure covers. The review sheets name Part E, item 18, as `STUDY_RULES` does.
 - **Policies:** P1, P3, P15.
 
 ### 5.9 `ANNEX_I_PART_A_10_FINANCIAL_CONDITION`: Financial condition (Annex I, Part A, item 10)
@@ -156,7 +163,7 @@ Each card gives the element, what counts as `present` and `missing`, and the pol
 - **Element:** the financial condition of that person.
 - **present:** the document describes that person's financial condition in its own text: figures from financial statements, or a narrative on financial position, results or solvency.
 - **missing:** nothing on financial condition, or a bare "N/A" (P1). Only a reference to accounts published elsewhere: P16.
-- **[OJ check]:** the drafting reading is "over the past three years or, where the person has not been established for three years, since the date of its registration". Record in the note which period the disclosure covers.
+- **Checked (`REVIEWING.md` line 74):** the item covers the past three years or, where the person has not been established for the past three years, the period since the date of registration, assessed on a fair review of the development and performance of the business and of its position, which is to be "a balanced and comprehensive analysis". Under the missing-element standard, a description of the financial condition decides the label; under the provision standard, the table's last column applies. Record in the note which period the disclosure covers.
 - **Policies:** P1, P2, P7, P16.
 
 ### 5.10 `ANNEX_I_PART_D_01_ASSET_NAME_ABBREVIATION`: Crypto-asset name and abbreviation (Annex I, Part D, item 1)
@@ -164,7 +171,7 @@ Each card gives the element, what counts as `present` and `missing`, and the pol
 - **Element:** the name of the crypto-asset and its abbreviation or ticker.
 - **present:** both the name and an abbreviation or ticker.
 - **missing:** either is absent (the note names which).
-- **[OJ check]:** the drafting reading of item 1 also covers the name of the crypto-asset project. Recommended: label on the crypto-asset name and abbreviation only.
+- **Checked (`REVIEWING.md` line 75):** item 1 also covers the name of the crypto-asset project, adds "if different from the name of the offeror or person seeking admission to trading" and reads "abbreviation or ticker handler". Under the missing-element standard, label on the crypto-asset name and abbreviation; under the provision standard, the table's last column applies.
 - **Policies:** P1.
 
 ### 5.11 `ANNEX_I_PART_D_03_IMPLEMENTATION_PERSONS`: Persons involved in implementation (Annex I, Part D, item 3)
@@ -172,7 +179,7 @@ Each card gives the element, what counts as `present` and `missing`, and the pol
 - **Element:** the natural or legal persons involved in the implementation of the crypto-asset project.
 - **present:** at least one identified person (name, or name and role) involved in implementing the project, such as the developing entity or team.
 - **missing:** no identified person. A statement such as "developed by an open community" with no identified person: P17.
-- **[OJ check]:** the drafting reading lists advisors, development team and crypto-asset service providers as examples, and asks for business addresses or domicile. Recommended: neither the full list nor addresses are required for `present`; record gaps in the note.
+- **Checked (`REVIEWING.md` line 76):** item 3 asks for "Details of all" such persons, "including business addresses or domicile of the company", such as advisors, the development team and crypto-asset service providers. Under the missing-element standard, neither the full list nor addresses are required for `present`; under the provision standard, the table's last column applies. Record gaps in the note.
 - **Policies:** P1, P6, P17.
 
 ### 5.12 `ANNEX_I_PART_F_02_CHARACTERISTICS_FUNCTIONALITY`: Characteristics and functionality (Annex I, Part F, item 2)
@@ -180,7 +187,7 @@ Each card gives the element, what counts as `present` and `missing`, and the pol
 - **Element:** a description of the characteristics and functionality of the crypto-asset.
 - **present:** the document describes what the crypto-asset is and what holders can do with it (for example transferability, supply, use in a network or service).
 - **missing:** no description beyond the name or type.
-- **[OJ check]:** the drafting reading also mentions data needed to classify the white paper in the ESMA register and when functionalities will apply. Recommended: not required for `present`.
+- **Checked (`REVIEWING.md` line 77):** item 2 asks for the characteristics and functionality, including the data necessary for classifying the white paper in the register under Article 109 and when the functionalities are planned to apply. Under the missing-element standard, neither the register data nor when the functionalities apply is required for `present`; under the provision standard, the table's last column applies.
 - **Policies:** P1, P3.
 
 ### 5.13 `ARTICLE_6_05_MANDATORY_WARNINGS`: Mandatory warning statements (Article 6(5))
@@ -189,26 +196,28 @@ Each card gives the element, what counts as `present` and `missing`, and the pol
   - (a) the crypto-asset may lose its value in part or in full;
   - (b) it may not always be transferable;
   - (c) it may not be liquid;
-  - (d) a statement about utility tokens, where the offer concerns a utility token **[OJ check]**: the drafting reading is that the utility token may not be exchangeable against the good or service promised, especially if the project fails or is discontinued;
-  - (e) it is not covered by the investor compensation schemes under Directive 97/9/EC **[OJ check]**: the drafting reading adds "as applicable";
+  - (d) where the offer concerns a utility token, it may not be exchangeable against the promised good or service (`REVIEWING.md` line 78). **[OJ check]**: the drafting reading adds "especially if the project fails or is discontinued", which the table does not state;
+  - (e) it is not covered by the investor compensation schemes under Directive 97/9/EC (`REVIEWING.md` line 78). **[OJ check]**: the drafting reading adds "as applicable", which the table does not state;
   - (f) it is not covered by the deposit guarantee schemes under Directive 2014/49/EU.
-- **present:** every applicable statement appears, in the same substance (paraphrase is fine).
-- **missing:** at least one applicable statement is absent; the note names which.
-- (d) is decided per document: if the crypto-asset is not a utility token, (d) is not required, and the cell is still labelled on (a) to (c), (e) and (f).
+- **present:** under the missing-element standard, the loss-of-value statement (a) and the protection or compensation statements ((e) and (f)) appear, in the same substance (paraphrase is fine), as in the synthetic example of `REVIEWING.md` line 39; record in the note which of (b) to (d) are absent. Under the provision standard, every applicable statement appears.
+- **missing:** a statement that the recorded standard requires is absent; the note names which.
+- Under the provision standard, (d) is decided per document: if the crypto-asset is not a utility token, (d) is not required, and the cell is still labelled on (a) to (c), (e) and (f).
+- **Checked (`REVIEWING.md` line 78):** Article 6(5) asks for one clear and unambiguous statement covering these points, while the rule's missing element names only the loss-of-value and protection or compensation statements. Under the missing-element standard, label on those; under the provision standard, the table's last column applies.
 - **Policies:** P4.
 
 ### 5.14 `ARTICLE_6_06_MANAGEMENT_BODY_STATEMENT`: Management body statement (Article 6(6))
 
 - **Element:** a statement of the management body confirming that (i) the white paper complies with Title II of MiCAR and (ii) to the best of the management body's knowledge, the information presented is fair, clear and not misleading, and (iii) the white paper makes no omission likely to affect its import (wording as in `examples/numbered-other-draft.xhtml`, field 03).
-- **present / missing:** depends on P4 (recommended: `present` if (i) and (ii) appear in a statement attributed to the management body; record whether (iii) appears).
-- **[OJ check]:** whose management body (offeror, person seeking admission to trading, or trading-platform operator) and where the statement must sit in the document.
+- **present / missing:** depends on P4 (under the missing-element standard, recommended: `present` if (i) and (ii) appear in a statement attributed to the management body; record whether (iii) appears).
+- **Checked (`REVIEWING.md` line 79):** the statement confirms compliance "with this Title" and that the white paper "makes no omission likely to affect its import", and it follows the Article 6(3) statement. Under the provision standard, the table's last column applies.
+- **[OJ check]:** whose management body (offeror, person seeking admission to trading, or trading-platform operator) gives the statement; the table does not say.
 - **Policies:** P2, P4.
 
 ### 5.15 `ARTICLE_6_07_SUMMARY`: Summary (Article 6(7))
 
 - **Element:** a summary that gives key information about the offer to the public or the admission to trading in brief, non-technical language.
-- **present / missing:** depends on P4 (recommended: `present` if the document contains a section identified as a summary that gives such key information; record in the note whether the summary warning appears).
-- **Summary warning:** the repository's template example (field 07, "Warning in accordance with Article 6(7), second subparagraph") states that the summary should be read as an introduction, that a purchase decision should rest on the white paper as a whole, and that the offer or admission is not an offer or solicitation to purchase financial instruments. **[OJ check]**: confirm the full list of required warning elements.
+- **present / missing:** depends on P4 (under the missing-element standard, recommended: `present` if the document contains a section identified as a summary that gives such key information; record in the note whether the summary warning appears).
+- **Summary warning:** the repository's template example (field 07, "Warning in accordance with Article 6(7), second subparagraph") states that the summary should be read as an introduction, that a purchase decision should rest on the white paper as a whole, and that the offer or admission is not an offer or solicitation to purchase financial instruments. **Checked (`REVIEWING.md` line 80):** the summary is placed after the Article 6(6) statement, in "brief and non-technical language", with a warning covering points (a) to (d) of the second subparagraph of Article 6(7); under the provision standard, the table's last column applies. **[OJ check]**: the table does not list points (a) to (d); compare them with the template example's statements.
 - **Policies:** P4.
 
 ## 6. Open codebook policies
@@ -219,8 +228,8 @@ Each policy needs a decision before adoption. Tick one option per row and keep t
 | --- | --- | --- | --- | --- |
 | P1 | A template field is present but reads "N/A", "not applicable", "none", or is empty. | (a) `missing`, unless the element appears elsewhere for the right person; (b) `not_applicable` whenever the paper marks the field N/A; (c) `present` because the field was addressed. | (a). A heading or field label without a value never makes a cell `present`. Use `not_applicable` only under step 3 of section 3, with the reviewer's own reasons. **[Legal judgment]** | [ ] |
 | P2 | The white paper is drawn up by the operator of a trading platform, and its details appear in Part C while Part A reads "N/A". | (a) the operator's details in Part C answer the Part A items (`present`, pinpoint to Part C, note `P2`); (b) Part A must be completed for an offeror or person seeking admission to trading; operator details do not count (`missing`); (c) `not_applicable` where no person other than the operator seeks admission. | (a) for the presence measurement, with the note recording that the details are the operator's. Whether the operator is "the person seeking admission to trading" in these cases is a legal question. **[Legal judgment]** | [ ] |
-| P3 | Presence versus adequacy. | (a) label presence of a responsive disclosure; (b) label legal sufficiency. | (a). The detector claims no more than presence; (b) would turn the study into a compliance assessment, which `limitations.md` rules out. | [ ] |
-| P4 | Completeness thresholds for Art. 6(5), 6(6) and 6(7). | 6(5): (a) all applicable statements, or (b) the loss-of-value statement suffices. 6(6): (a) (i) and (ii), or (b) (i), (ii) and (iii). 6(7): (a) a recognisable summary, or (b) a summary plus the complete warning. | 6(5) (a); 6(6) (a), noting (iii); 6(7) (a), noting the warning. The notes allow the stricter readings to be run as a sensitivity analysis. **[Legal judgment]** | [ ] |
+| P3 | Presence versus adequacy. | (a) label presence of a responsive disclosure; (b) label legal sufficiency. | (a). The detector claims no more than presence; (b) would turn the study into a compliance assessment, which `limitations.md` rules out. P3 does not choose between the rule's missing element and the provision as a whole: that is the reference standard recorded in `review-protocol.md` (`REVIEWING.md` step 2), and presence is measured against it. | [ ] |
+| P4 | Completeness thresholds for Art. 6(5), 6(6) and 6(7). | 6(5): (a) all applicable statements; (b) the loss-of-value statement and the protection or compensation statements that the rule's missing element names (`REVIEWING.md` line 39); or (c) the loss-of-value statement alone. 6(6): (a) (i) and (ii), or (b) (i), (ii) and (iii). 6(7): (a) a recognisable summary, or (b) a summary plus the complete warning. | Under the missing-element standard: 6(5) (b), noting the absent statements; 6(6) (a), noting (iii); 6(7) (a), noting the warning. Under the provision standard, the last column of the `REVIEWING.md` table applies (lines 78 to 80): 6(5) (a), 6(6) (b) and 6(7) (b). The notes allow the stricter readings to be run as a sensitivity analysis. P4 applies within the reference standard recorded in `review-protocol.md` (`REVIEWING.md` step 2); where the two conflict, the recorded standard governs. **[Legal judgment]** | [ ] |
 | P5 | A Digital Token Identifier (DTI) or other token identifier is given, but no identifier of the legal person. | (a) does not satisfy Part A item 5; (b) satisfies it. | (a). A DTI identifies the token, not the offeror or person seeking admission to trading. **[Legal judgment]** | [ ] |
 | P6 | WP-001 concerns a crypto-asset (named in `source-manifest.json`) for which it is arguable whether there is an identifiable issuer. | (a) label WP-001 like any other document, on presence; (b) mark its cells `not_applicable`. | (a). The paper was notified and registered, and the study measures disclosure presence in registered documents. Marking cells `not_applicable` would be a policy choice, not a legal consequence: ESMA Q&A 2552 is reported by secondary sources to address crypto-assets without an identifiable issuer, but its text was not opened for this draft. **[Legal judgment]** | [ ] |
 | P7 | Financial condition and registration date for recently established persons. | (a) `present` if the document states the financial condition for the period since registration, or states that no financial history exists because the person was recently established; (b) only full three-year information counts. | (a), with the note recording the period covered. A bare "N/A" without explanation is `missing` (P1). **[Legal judgment]** | [ ] |
@@ -229,7 +238,7 @@ Each policy needs a decision before adoption. Tick one option per row and keep t
 | P10 | A legal-form designation appears only within the registered name (for example "Example GmbH"). | (a) `present`; (b) `missing` unless the legal form is stated separately. | (a), if the designation unambiguously denotes a legal form, with the pinpoint to where the name appears. **[Legal judgment]** | [ ] |
 | P11 | Address precision (5.2): only a city, or only a country, is given for the registered address. | (a) `missing`, with a note quoting what is given; (b) `present`; (c) `uncertain`. | (a). A city or country alone does not identify the registered office. **[Legal judgment]** | [ ] |
 | P12 | Date precision (5.3): only a year, or a month and year, of registration is given. | (a) `present`, with the note recording the precision given; (b) `missing` unless a full date is given. | (a). A year is a responsive, if imprecise, disclosure; the note keeps the stricter reading available for a sensitivity analysis. **[Legal judgment]** | [ ] |
-| P13 | Which identifier counts (5.4) when no LEI is given. | (a) any official register number of the person, such as a company-register number; (b) only an identifier required by the person's national law, which the reviewer establishes per document. | (a), with the note naming the register. Linked to the [OJ check] in 5.4. **[Legal judgment]** | [ ] |
+| P13 | Which identifier counts (5.4) when no LEI is given, under the missing-element standard. | (a) any official register number of the person, such as a company-register number; (b) only an identifier required by the person's national law, which the reviewer establishes per document. | (a), with the note naming the register. Under the provision standard P13 does not apply: only an identifier "required pursuant to applicable national law" counts (see the Checked note in 5.4, `REVIEWING.md` line 69). **[Legal judgment]** | [ ] |
 | P14 | Vague response period (5.6): "promptly", "as soon as possible" or similar, with no number of days. | (a) `missing`, with a note quoting the wording; (b) `uncertain`; (c) `present`. | (a). The element is a period of days. **[Legal judgment]** | [ ] |
 | P15 | Conflicts of interest (5.8): (i) an explicit statement that no conflicts have been identified; (ii) only a generic reference to a conflicts policy, not tied to this offer or admission. | (i): (a) `present`; (b) `missing`. (ii): (a) `uncertain`; (b) `missing`; (c) `present`. | (i) (a): the statement addresses the element for this offer or admission. (ii) (a), with a note quoting the reference. **[Legal judgment]** | [ ] |
 | P16 | Financial condition by reference only (5.9): the document refers to financial statements published elsewhere and gives no figures or narrative of its own. | (a) `missing`, with a note; (b) `uncertain`; (c) `present`. | (a). Only the hashed bytes count (P8), and they contain no description of the financial condition. **[Legal judgment]** | [ ] |
@@ -246,3 +255,6 @@ Before adopting this codebook, the reviewer labels one calibration document unde
 | 2026-10-14 | First draft. | Phase 0 of the study plan. | Before |
 | 2026-10-14 | Rule-card judgments moved into section 6 as P11 to P17; `STUDY_RULES` cited by symbol; section 4 cross-reference corrected; WP-001's crypto-asset no longer named here. | Draft review. | Before |
 | 2026-10-28 | Signing order in the banner (adoption on `main` after the tooling is merged); open LEI decision for 5.1 and 5.2, with its own banner checkbox. | Main merged into the draft; open pull request #51. | Before |
+| 2026-10-30 | Rebuilt on the review workflow of #17: reviewers label `human-review-blinded.csv`, rows keep the `STUDY_RULES` order, the reference standard follows the record of `REVIEWING.md` step 2 in `review-protocol.md`, the [OJ check] items that the `REVIEWING.md` table answers cite it, the LEI box cites the three readings in the repository, and the tools' acceptance of a `missing` cell with a note is stated. | Owner's decision to keep `human-review-blinded.csv`, `REVIEWING.md` and `scripts/build_review_matrix.py` as the labelling path. | Before |
+| 2026-10-30 | Cards 5.3, 5.4, 5.8 and 5.13 and policies P4 and P13 give the label under each reference standard; card 5.3 cites `REVIEWING.md` line 68; the repository line citations follow `main` at `d662f25`. | Review of the rebuild: some cards still settled the reference standard themselves. | Before |
+| 2026-10-30 | Section 2 names `human-review-second.csv` as the second reviewer's sheet. | Second review added to `scripts/build_review_matrix.py` (`REVIEWING.md` step 3a). | Before |
