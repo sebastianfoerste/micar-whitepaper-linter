@@ -4,7 +4,7 @@ Long-form detail moved out of the README. Everything here was in the previous RE
 
 ## Browser workbench
 
-The full linter runs client-side via Pyodide. Nothing you paste leaves the page.
+The linter's rules run client-side via Pyodide. Nothing you paste leaves the page.
 
 The browser workbench accepts JSON drafts up to 1 MB and XHTML white papers up to 8 MB, includes synthetic examples for all three regimes, and presents searchable findings with citations and section navigation. Download the current report as JSON or text, or save a copy of the draft. Editing a checked draft marks the previous results as stale and disables report export until the checks run again. Python runs in a web worker so the editor stays responsive.
 
@@ -128,7 +128,7 @@ See also [FEATURES.md](FEATURES.md), [SETUP.md](SETUP.md), [ARCHITECTURE.md](ARC
 
 ## What the checks establish
 
-A pass means that the section exists, meets the minimum length and contains the rule's keywords; for the notification date and the language, that the section names a calendar date or an official EU language. It does not mean that the disclosure is correct, complete or compliant. Annex selection is explicit, rule IDs are stable, unmatched keywords produce cited candidate flags, severity is tested, and JSON outputs can be used by review workflows without hiding the legal basis.
+A pass means that the section exists, meets the minimum length and contains the rule's keywords; for the LEI checks, that the LEIs found have valid check digits and the parties' LEIs agree across sections; for the notification date and the language, that the section names a calendar date or an official EU language in a form the rule page lists (from the next release; release 1.2.1, on PyPI and `@v1`, still checks those two by listed terms and length). It does not mean that the disclosure is correct, complete or compliant. Annex selection follows the `type` field of a JSON draft (a CLI run lints a draft without one as other, with no warning) and the regime stated for numbered-field XHTML; for other formats it is set by `--type` (in the playground, by the regime chosen for an XHTML file) or else inferred from English phrases in the text (in Markdown and heading-layout XHTML or HTML, from the section text only, not the headings); rule IDs are stable, unmatched keywords produce cited candidate flags, severity is tested, and JSON outputs can be used by review workflows without hiding the legal basis.
 
 The tool preserves legal judgment. It flags candidate disclosure gaps and produces draft review artifacts. It does not decide whether a white paper is lawful or complete.
 

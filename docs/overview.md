@@ -11,7 +11,7 @@ Rule sets cover all three white paper regimes under MiCAR (Regulation (EU) 2023/
 
 ## Status and limits
 
-For each disclosure that Annex I, II or III requires, the linter checks that the section exists, meets a minimum length and contains the expected keywords, and it cites the provision. A pass means the section is there, long enough and uses the expected terms; the notification-date and language checks instead look for a calendar date and an official EU language. It does not mean the disclosure is accurate, complete or compliant. The English wording of the first-page statement required by Art. 6(3) and Art. 51(3) is matched word for word (ignoring case and line breaks), including which person it names as solely responsible. Whether that statement sits on the first page is not checked.
+For each disclosure that Annex I, II or III requires, the linter checks that the section exists, meets a minimum length and contains the expected keywords, and it cites the provision. A pass means the section is there, long enough and uses the expected terms; the LEI checks instead pass on LEIs with valid check digits, and, from the next release, the notification-date and language checks on a calendar date and an official EU language. It does not mean the disclosure is accurate, complete or compliant. The English wording of the first-page statement required by Art. 6(3) and Art. 51(3) is matched word for word (ignoring case and line breaks), including which person it names as solely responsible. Whether that statement sits on the first page is not checked.
 
 | Area | State |
 | --- | --- |

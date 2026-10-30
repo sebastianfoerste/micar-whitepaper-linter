@@ -5,7 +5,7 @@ The linter repository is the canonical working repository for both the determini
 ## Release gate
 
 1. Run `make check` from the repository root.
-2. Confirm the linter command line interface and GitHub Action inputs are unchanged.
+2. Confirm the linter command line interface and GitHub Action inputs are unchanged. Then run the untouched `whitepaper.json` with the release `v1` points to (for example from `git archive v1`) and with HEAD. Confirm that the template README, the workflow comments and the placeholders describe what each reports, because template users run `@v1`, not HEAD.
 3. Run `make template-export`.
 4. Review `release/micar-whitepaper-template` against the public release branch.
 5. Push only after human review.
