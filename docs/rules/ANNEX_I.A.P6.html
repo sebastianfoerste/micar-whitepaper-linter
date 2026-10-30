@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Contact telephone number, e-mail address and response time in days of the offeror or person seeking admission to trading. Annex I, Part A, point 6 MiCAR.">
+<title>ANNEX_I.A.P6: MiCAR Whitepaper Linter rule</title>
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <a class="brand" href="../"><span class="brand-mark" aria-hidden="true">M</span><span>MiCAR <strong>Whitepaper Linter</strong></span></a>
+  <nav aria-label="Site"><a href="../">Overview</a><a href="../rules/">Rules</a><a href="../playground/">Playground</a><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter">Source</a></nav>
+</header>
+<main id="main">
+<p class="eyebrow">Rule · BLOCKER</p>
+<h1>ANNEX_I.A.P6</h1>
+<p class="lede">Contact telephone number, e-mail address and response time in days of the offeror or person seeking admission to trading</p>
+<div class="panel"><dl class="facts">
+<dt>Citation</dt><dd>Annex I, Part A, point 6 MiCAR</dd>
+<dt>Canonical form</dt><dd lang="de">Anhang I Teil A Nr. 6 MiCAR</dd>
+<dt>Runs for</dt><dd>Annex I · other crypto-assets</dd>
+<dt>Severity if open</dt><dd>BLOCKER</dd>
+<dt>Section key</dt><dd><code>offeror</code></dd>
+<dt>Minimum words</dt><dd>none: checks for a telephone number, an e-mail address and a period in days</dd>
+<dt>Listed terms (English)</dt><dd>none</dd>
+<dt>Listed terms (German)</dt><dd lang="de">none</dd>
+<dt>Package version</dt><dd>1.2.1, built from source that may include unreleased changes</dd>
+<dt>Source</dt><dd><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/rules/annex_i.py">rules/annex_i.py</a></dd>
+</dl></div>
+<h2>How the status is set</h2>
+<ul class="plain"><li><strong>Missing</strong>: in a numbered-field XHTML draft, fields A.8, A.9 and A.10 of Table 2 are each empty, absent or hold only placeholder text such as TBD; in any other draft, section <code>offeror</code> is absent or empty, or holds only placeholder text.</li><li><strong>Review</strong>: in a numbered-field XHTML draft, one of those fields is empty or absent, holds only a placeholder, is marked not applicable, which the template does not provide for, or gives no telephone number (A.8), no e-mail address (A.9) or no number of days (A.10). In any other draft, section <code>offeror</code> gives no telephone number, no e-mail address or no period in days. The finding names each missing item, and in a numbered-field draft each field by its number and, in English, the template's name.</li><li>A telephone number counts with its country code (<code>+49 ...</code>, <code>0049 ...</code>), with its area code and its digits in groups (<code>069 1234 5678</code>, <code>(069) 1234-5678</code>), or with at least six digits after a label such as Tel., Phone or Telefon; field A.8 is such a label. A fax number and a date do not count. An e-mail address counts as name, @ and domain. A period counts as a number of days, in digits or as an English or German word up to thirty (<code>5 business days</code>, <code>fünf Werktage</code>), or as a number after the template's label (<code>Response time (Days): 5</code>, <code>Reaktionszeit (Tage): 5</code>). In field A.10 a number counts alone, unless the field names hours, weeks, months or years.</li><li><strong>Pass</strong>: all three items are found. A pass means the three shapes were found, nothing more.</li></ul>
+<h2>Legal basis</h2>
+<p>Annex I, Part A, point 6 MiCAR</p>
+<ul class="plain"><li><a href="https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng">https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng</a></li></ul>
+<p class="callout">Checked on 2026-10-30 against the Official Journal text in English and German (OJ L 150, 9.6.2023), the consolidated version of 9 January 2024 and Table 2 of Implementing Regulation (EU) 2024/2984, whose fields A.8 to A.10 carry the point without a condition, as the Publications Office served them that day. No amendment and no English or German corrigendum changes Annex I Part A point 6 or the template.</p>
+<h2>Synthetic examples</h2>
+<p class="small muted">Each example is linted when this page is generated. The build fails if a result differs.</p>
+<div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>Section absent</strong></div><p class="small muted">The section key is missing or empty.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;sections&quot;: {}
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>Placeholder</strong></div><p class="small muted">A placeholder alone is no answer, so the section counts as missing.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;sections&quot;: {
+    &quot;offeror&quot;: &quot;TBD&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>No contact details</strong></div><p class="small muted">The section names the offeror and its management body and gives no telephone number, e-mail address or response time.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;sections&quot;: {
+    &quot;offeror&quot;: &quot;Synthetic Offeror GmbH, a fictional company. The members of its management body are two fictional managing directors.&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>No response time</strong></div><p class="small muted">The period of days within which an investor will receive an answer is missing.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;sections&quot;: {
+    &quot;offeror&quot;: &quot;Synthetic Offeror GmbH, a fictional company. Telephone: +49 30 0000 0000. E-mail: contact@offeror.example.&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>Answers under the template&#x27;s field names</strong></div><p class="small muted">Each item has the shape the check looks for. A pass does not show that the number or the address works or belongs to the offeror.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;sections&quot;: {
+    &quot;offeror&quot;: &quot;Contact telephone number: +49 30 0000 0000. E-mail address: contact@offeror.example. Response time (Days): 5&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>German draft</strong></div><p class="small muted">The period counts in German words too, here five working days written out.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;language&quot;: &quot;de&quot;,
+  &quot;sections&quot;: {
+    &quot;offeror&quot;: &quot;Telefonnummer zur Kontaktaufnahme: +49 30 0000 0000. E-Mail-Adresse: kontakt@anbieter.example. Anleger erhalten innerhalb von fünf Werktagen eine Antwort.&quot;
+  }
+}</code></pre></div>
+<h2>Limitations</h2>
+<ul class="plain"><li>Reads one section key, <code>offeror</code>, and in a numbered-field XHTML draft only fields A.8, A.9 and A.10 of Table 2. Text elsewhere in the draft is not considered.</li><li>Recognises the shape of each item. It cannot tell whose number or address it is or whether it works, so in a draft without field numbers any telephone number, e-mail address and period in days in the section count, a management body member's too, and the period need not be the response time. A number without its country code, a grouped area code or a label, an e-mail address written with (at) and a period in hours or weeks do not count.</li><li>Status and severity are fixed by the rule. A draft cannot waive or downgrade them.</li><li>A numbered-field XHTML draft is read by the template's field numbers. Contact details in another field do not count, and a draft that numbers these fields otherwise goes to review.</li></ul>
+<p class="small muted">Disagree with this rule, or missing one? <a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/issues/new?template=rule-proposal.yml">Propose a rule change</a>.</p>
+
+</main>
+<footer><span>MiCAR Whitepaper Linter 1.2.1 · MIT licence · First-pass screening, not legal advice.</span><span>Generated from the rule set by <code>scripts/build_rule_docs.py</code>.</span></footer>
+</body>
+</html>

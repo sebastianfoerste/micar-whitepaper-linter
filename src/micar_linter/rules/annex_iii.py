@@ -16,7 +16,9 @@ received; no Annex III item asks the white paper to describe their
 safeguarding.
 
 Scaffold note: rules below cover each Part of Annex III at the Part level.
-Point-level extensions are the practitioner's contribution.
+ANNEX_III.A.P6 is the one point rule (ADR 0005), for the contact details of
+Part A point 6. Other point-level extensions are the practitioner's
+contribution.
 """
 
 from __future__ import annotations
@@ -60,6 +62,17 @@ ANNEX_III_RULES: tuple[Rule, ...] = (
         required_patterns=(ADDRESS_EN,),
         required_patterns_de=(ADDRESS_DE,),
         min_words=80,
+        severity=Severity.BLOCKER,
+    ),
+    # Teil A Nr. 6 asks the issuer for a contact telephone number, an e-mail address and the period of days
+    # within which an investor will receive an answer; Table 4 of VO (EU) 2024/2984 carries them in fields A.9
+    # to A.11 without a condition (OJ text read on 2026-10-30). See ANNEX_I.A.P6.
+    Rule(
+        rule_id="ANNEX_III.A.P6",
+        citation="Anhang III Teil A Nr. 6 MiCAR",
+        section="issuer",
+        label="Contact telephone number, e-mail address and response time in days of the issuer of the EMT",
+        min_words=0,
         severity=Severity.BLOCKER,
     ),
     # Anhang III Teil B asks for the name, the characteristics ("Merkmale") and the persons involved.
