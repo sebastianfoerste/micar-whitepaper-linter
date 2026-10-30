@@ -17,7 +17,7 @@ The Action printed findings to the job log only. GitHub offers three surfaces: w
 Option 3.
 
 - **Mapping.** One SARIF `rule` per rule run, with `helpUri` to `docs/rules/<RULE_ID>.html` on the Pages site, both citation forms in `properties`, and tags. One `result` per open finding (`missing` or `review`); passes are counted in `run.properties.summary`, not listed. Level: BLOCKER → `error`, MAJOR → `warning`, MINOR → `note` (annotations: `error`, `warning`, `notice`).
-- **Location.** The input path as given. `startLine` is the line of the section key inside the JSON `sections` object (last duplicate wins, as in Python and the playground), or the first XHTML `h1` to `h6` heading that maps to the section. Numbered-field XHTML, saved iXBRL viewer pages, DOCX, PDF, Markdown, sections absent from a JSON draft and XHTML or HTML sections without such a heading (including those found only under a bold-text heading) use line 1.
+- **Location.** The input path as given. `startLine` is the line of the section key inside the JSON `sections` object (last duplicate wins, as in Python and the playground), or the first XHTML `h1` to `h6` heading that maps to the section. Numbered-field XHTML, saved iXBRL viewer pages, DOCX, PDF, Markdown, sections absent from a JSON draft and XHTML or HTML sections without such a heading (including those found only under a bold-text heading, and a first-page statement found by its wording) use line 1.
 - **Category.** `automationDetails.id` is `micar-lint/<first 12 hex of SHA-256 of the normalised path and the regime>/`, so the same file linted under two regimes also gets two categories. codeql-action takes the category from it when present, and accepts one run per category per job, so two drafts in one job need distinct ids. The Action therefore passes no `category` input.
 - **Output directory.** The Action writes to a fresh `mktemp -d` directory under `RUNNER_TEMP` per run, so a second use in one job cannot re-report the first run's files.
 - **Fingerprint.** `partialFingerprints["micarRuleSection/v1"]` = SHA-256 of path, rule ID and section key, so it carries no text. GitHub documents only `primaryLocationLineHash`, which it computes itself.
@@ -29,7 +29,7 @@ Option 3.
 
 ## Consequences
 
-- Existing `@v1` users get a job summary and up to 10 annotations on the next `v1` move. Exit codes are unchanged.
+- `@v1` users have had a job summary and up to 10 annotations by default since `v1` moved to 1.2.0. Exit codes are unchanged.
 - SARIF upload fails on fork PRs and on private repositories without Code Security; it is opt-in and documented.
 - The annotation caps (10 per level per step) are documented only in a reviewdog issue (Claimed); the summary is the complete list.
 - rdjson for reviewdog is not emitted; reviewdog can read SARIF.

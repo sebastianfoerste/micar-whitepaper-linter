@@ -38,8 +38,8 @@ def build_parser() -> argparse.ArgumentParser:
         prog="micar-lint",
         description=(
             "Deterministic first-pass linter for MiCAR crypto-asset white paper drafts. "
-            "Reads a JSON draft, applies the rule set keyed to the whitepaper type "
-            "(other / ART / EMT), and prints a structured review report with pinpoint "
+            "Reads a draft (JSON, XHTML or HTML, DOCX, PDF or Markdown), applies the rule set keyed to "
+            "the whitepaper type (other / ART / EMT), and prints a structured review report with "
             "citations to MiCAR articles and annexes. Not legal advice."
         ),
     )

@@ -76,9 +76,8 @@ def test_study_batch_outputs_pseudonymous_pending_review_findings(tmp_path: Path
     )
     rendered = render_study_findings_json(payload)
 
-    assert payload["schema"] == "micar-whitepaper-linter.title-ii-annex-i-study-findings.v2"
-    assert payload["summary"]["documents_processed"] == 1
-    assert "documents_reviewed" not in payload["summary"]
+    assert payload["schema"] == "micar-whitepaper-linter.title-ii-annex-i-study-findings.v1"
+    assert payload["summary"]["documents_reviewed"] == 1
     assert payload["source_manifest"]["register_source_sha256"] == "d" * 64
     assert payload["results"][0]["study_doc_id"] == "WP-001"
     assert payload["results"][0]["human_review_status"] == "pending_review"
@@ -170,9 +169,8 @@ def test_study_report_contains_required_sections_and_pending_review(tmp_path: Pa
         assert heading in report
     assert "Human review status: pending_review" in report
     assert "Source manifest input SHA-256" in report
-    assert "- Documents processed: 1" in report
-    assert "Documents reviewed" not in report
-    assert "human-review-r1.csv" in report
+    assert "Reviewers label the 15 document-rule cells in `human-review-blinded.csv`" in report
+    assert "--merge-blinded" in report
     # The reproduction commands must not overwrite the committed study files.
     reproducibility = report.split("## Reproducibility", 1)[1].split("\n## ", 1)[0]
     assert "--out /tmp/micar-study/" in reproducibility
@@ -188,8 +186,8 @@ def test_study_report_reads_v1_findings_and_lists_every_flagged_rule():
     table = report.split("## Most frequent detector flags", 1)[1].split("## Excluded documents", 1)[0]
     rows = [line for line in table.splitlines() if line.startswith("| `")]
 
-    assert "- Documents processed: 10" in report
-    assert "Documents reviewed" not in report
+    assert "- Documents reviewed: 10" in report
+    assert "Reviewers label the 150 document-rule cells in `human-review-blinded.csv`" in report
     assert len(rows) == len(payload["summary"]["most_frequent_potential_gaps"]) == 13
     for rule_id in (
         "ARTICLE_6_05_MANDATORY_WARNINGS",

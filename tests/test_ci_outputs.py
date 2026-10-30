@@ -164,6 +164,25 @@ def test_xhtml_findings_point_at_their_heading_lines():
     assert "Summary" in source[lines["COMMON.SUMMARY"] - 1]
 
 
+def test_xhtml_statement_heading_is_no_section_anchor(tmp_path: Path):
+    # The loader reads a statement set in a heading element as the statement, so the offeror and
+    # crypto-asset words in it anchor no finding.
+    statement = (
+        "This crypto-asset white paper has not been approved by any competent authority in any Member State "
+        "of the European Union. The offeror of the crypto-asset is solely responsible for the content of this "
+        "crypto-asset white paper."
+    )
+    path = tmp_path / "draft.xhtml"
+    path.write_text(
+        f"<html><body>\n<h1>{statement}</h1>\n<p><b>Information about the offeror</b></p>\n<p>Example AG.</p>\n"
+        "<h2>Information about the crypto-asset</h2>\n<p>A utility token.</p>\n</body></html>\n",
+        encoding="utf-8",
+    )
+    lines = finding_lines(_report(path, WhitepaperType.OTHER), path)
+    assert lines["ANNEX_I.A"] == 1
+    assert lines["ANNEX_I.F"] == 5
+
+
 def test_action_pins_every_dependency_by_sha():
     action = (ROOT / "action.yml").read_text(encoding="utf-8")
     uses = re.findall(r"uses:\s*(\S+)", action)

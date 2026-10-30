@@ -4,9 +4,9 @@
   "whitepaper_type": "art",
   "status": "BLOCKED",
   "summary": {
-    "open_items": 4,
-    "blockers": 4,
-    "review_items": 3,
+    "open_items": 3,
+    "blockers": 3,
+    "review_items": 2,
     "missing_sections": 1
   },
   "items": [
@@ -31,26 +31,6 @@
       }
     },
     {
-      "rule_id": "ANNEX_II.G.COMPOSITION_DISCLOSURE",
-      "citation": "Anhang II Teil G i.V.m. Art. 36 MiCAR",
-      "section": "reserve_of_assets",
-      "label": "Reserve composition disclosure (Annex II Part G)",
-      "severity": "BLOCKER",
-      "status": "review",
-      "owner_role": "Responsible lawyer",
-      "missing_evidence": false,
-      "issues": [
-        "Missing review terms: concentration."
-      ],
-      "next_action": "Cure the blocker before any notification workflow continues.",
-      "source_anchor": {
-        "section_key": "reserve_of_assets",
-        "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:1debbb0bbd6ebf3b",
-        "section_length": 1231
-      }
-    },
-    {
       "rule_id": "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
       "citation": "Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d, Art. 45 Abs. 3 und Art. 45 Abs. 7 Buchst. b MiCAR",
       "section": "reserve_of_assets",
@@ -66,15 +46,15 @@
       "source_anchor": {
         "section_key": "reserve_of_assets",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:bf883585b0801dab",
-        "section_length": 1231
+        "stable_anchor_id": "json:reserve_of_assets:52961ac174a8adea",
+        "section_length": 1411
       }
     },
     {
       "rule_id": "ANNEX_II.G.CUSTODY",
       "citation": "Anhang II Teil G i.V.m. Art. 36 Abs. 2, Art. 37 MiCAR",
       "section": "reserve_of_assets",
-      "label": "Custody policy and custodian selection (Art. 36(2) MiCAR)",
+      "label": "Custody of the reserve assets (Art. 37 MiCAR) and their legal segregation (Art. 36(2) MiCAR)",
       "severity": "BLOCKER",
       "status": "review",
       "owner_role": "Responsible lawyer",
@@ -86,8 +66,8 @@
       "source_anchor": {
         "section_key": "reserve_of_assets",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:reserve_of_assets:547764610b35b011",
-        "section_length": 1231
+        "stable_anchor_id": "json:reserve_of_assets:201e6345d45fb626",
+        "section_length": 1411
       }
     }
   ],

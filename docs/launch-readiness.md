@@ -4,7 +4,7 @@ This document helps a reviewer understand, run and evaluate the MiCAR Whitepaper
 
 ## What this repo proves
 
-The linter translates MiCAR white-paper review into deterministic, testable software rules. It does not replace legal judgment. It creates a first-pass quality gate that finds structural gaps, missing disclosures, thin sections and regime-specific review issues before a lawyer performs the substantive review.
+The linter turns the disclosure checklist of MiCAR white-paper review into deterministic, testable software rules. It checks keywords, section length and structure; it does not replace legal judgment. It creates a first-pass quality gate that finds structural gaps, missing disclosures, thin sections and regime-specific review issues before a lawyer performs the substantive review.
 
 The core proof is legal automation discipline: rule IDs, citations, severity levels, machine-readable output, strict mode and examples that are safe to inspect publicly.
 
@@ -54,7 +54,7 @@ pip install -e ".[docx]"
 
 ## Demo path
 
-1. Run the full ART example (`examples/art-stablecoin.json`). Its sections are drafted, but four BLOCKERs stay open, among them the iXBRL format check, which a JSON draft never passes.
+1. Run the full ART example (`examples/art-stablecoin.json`). Its sections are drafted, but run from source (`uv run`) three BLOCKERs stay open: the iXBRL format check, which a JSON draft never passes, the deposit-floor review, which never passes, and the custody of the reserve assets. Release 1.2.1 on PyPI predates the example's current wording and leaves more open.
 2. Run the incomplete example in strict mode.
 3. Show that blocker findings create a non-zero exit code.
 4. Run JSON output and inspect machine-readable findings.

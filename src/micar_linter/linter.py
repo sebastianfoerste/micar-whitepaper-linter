@@ -6,12 +6,15 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
+from functools import partial
 
 from micar_linter.anchors import SourceAnchor, build_source_anchors
-from micar_linter.lei import PARTY_SECTIONS, has_valid_check_digits, leis_by_section
-from micar_linter.placeholders import is_placeholder
+from micar_linter.contact import CONTACT_FIELDS, has_email_address, has_period_in_days, has_telephone_number
+from micar_linter.lei import PARTY_SECTIONS, has_valid_check_digits, leis_by_section, other_person_leis
+from micar_linter.placeholders import is_not_applicable, is_placeholder
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Finding, Rule, Severity
+from micar_linter.template_fields import FIELD_NAMES
 from micar_linter.whitepaper import Whitepaper, WhitepaperType
 
 
@@ -63,6 +66,11 @@ class Linter:
         if rule.rule_id == "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW":
             return _deposit_floor_finding(rule, whitepaper)
 
+        if rule.rule_id in NOT_APPROVED_STATEMENT_RULE_IDS:
+            statement = _not_approved_statement_finding(rule, whitepaper)
+            if statement is not None:
+                return statement
+
         if rule.rule_id == "COMMON.LEI_CHECK_DIGITS":
             return _lei_check_digits_finding(rule, whitepaper)
 
@@ -75,37 +83,49 @@ class Linter:
         if rule.rule_id == "COMMON.LANGUAGE":
             return _language_finding(rule, whitepaper)
 
+        if rule.rule_id in CONTACT_POINT_RULE_IDS:
+            return _contact_point_finding(rule, whitepaper)
+
         is_de = whitepaper.language == "de"
 
         text = whitepaper.section(rule.section)
         word_count = _count_words(text)
+        # The predefined warning of the summary does not count toward its minimum length (#70).
+        counted = _summary_words(text, whitepaper) if rule.rule_id == "COMMON.SUMMARY" else word_count
 
         absent = _absent(text, is_de)
         if absent:
             return Finding(rule=rule, status="missing", word_count=0, issues=(absent,))
 
         issues: list[str] = []
+        # PDF, Markdown and DOCX loaders keep line breaks, so a statutory sentence that wraps
+        # across lines must still match a single-line term.
+        text = _collapse_whitespace(text)
         normalized = text.lower()
 
-        if word_count < rule.min_words:
+        if counted < rule.min_words:
             if is_de:
+                besides = " ohne den vorgegebenen Warnhinweis" if counted < word_count else ""
                 issues.append(
-                    f"Abschnitt ist zu kurz: {word_count} Wörter, mindestens {rule.min_words} erwartet."
+                    f"Abschnitt ist zu kurz: {counted} Wörter{besides}, mindestens {rule.min_words} erwartet."
                 )
             else:
-                issues.append(f"Section is thin: {word_count} words, expected at least {rule.min_words}.")
+                besides = " besides the predefined warning" if counted < word_count else ""
+                issues.append(
+                    f"Section is thin: {counted} words{besides}, expected at least {rule.min_words}."
+                )
 
         # Bilingual required terms
         req_terms = rule.required_terms_de if (is_de and rule.required_terms_de) else rule.required_terms
         missing_terms = [term for term in req_terms if term.lower() not in normalized]
-        if missing_terms:
-            prefix = "Fehlende Begriffe: " if is_de else "Missing review terms: "
-            issues.append(prefix + ", ".join(missing_terms) + ".")
 
-        # Bilingual required regex patterns
+        # Bilingual required regex patterns. A pattern with a named group stands for a listed term
+        # that a plain substring would find inside other words ("fee" in "feedback"): when it does not
+        # match, the group's name, with underscores read as spaces, is reported with the missing terms.
         req_patterns = (
             rule.required_patterns_de if (is_de and rule.required_patterns_de) else rule.required_patterns
         )
+        pattern_issues: list[str] = []
         for pattern in req_patterns:
             try:
                 compiled = re.compile(pattern, re.IGNORECASE)
@@ -115,17 +135,28 @@ class Linter:
                     if is_de
                     else f"Invalid required pattern regex '{pattern}': {exc}"
                 )
-                issues.append(msg)
+                pattern_issues.append(msg)
                 continue
             if not compiled.search(text):
+                names = [name.replace("_", " ") for name in compiled.groupindex]
+                if names:
+                    missing_terms.extend(names)
+                    continue
                 msg = (
                     f"Fehlendes gefordertes Muster: '{pattern}'."
                     if is_de
                     else f"Missing required pattern: '{pattern}'."
                 )
-                issues.append(msg)
+                pattern_issues.append(msg)
 
-        # Bilingual prohibited regex patterns
+        if missing_terms:
+            prefix = "Fehlende Begriffe: " if is_de else "Missing review terms: "
+            issues.append(prefix + ", ".join(missing_terms) + ".")
+        issues.extend(pattern_issues)
+
+        # Bilingual prohibited regex patterns. A pattern with a named group stands for wording that turns a
+        # required statement around; the finding reports the group's name, with underscores read as spaces,
+        # and never the matched draft text.
         proh_patterns = (
             rule.prohibited_patterns_de
             if (is_de and rule.prohibited_patterns_de)
@@ -142,13 +173,27 @@ class Linter:
                 )
                 issues.append(msg)
                 continue
-            if compiled.search(text):
-                msg = (
-                    f"Unzulässiger Inhalt gefunden: '{pattern}'."
-                    if is_de
-                    else f"Prohibited content matched: '{pattern}'."
-                )
+            found = compiled.search(text)
+            if found:
+                names = [
+                    name.replace("_", " ") for name, value in found.groupdict().items() if value is not None
+                ]
+                if names:
+                    msg = (
+                        f"Unzulässige Formulierung gefunden: {', '.join(names)}."
+                        if is_de
+                        else f"Prohibited wording found: {', '.join(names)}."
+                    )
+                else:
+                    msg = (
+                        f"Unzulässiger Inhalt gefunden: '{pattern}'."
+                        if is_de
+                        else f"Prohibited content matched: '{pattern}'."
+                    )
                 issues.append(msg)
+
+        issues.extend(_rule_specific_issues(rule, whitepaper.section(rule.section), normalized, is_de))
+        issues.extend(_placeholder_field_issues(rule, whitepaper, is_de))
 
         status = "review" if issues else "pass"
         return Finding(rule=rule, status=status, word_count=word_count, issues=tuple(issues))
@@ -159,8 +204,9 @@ def lint_whitepaper(whitepaper: Whitepaper) -> Report:
     rules = RULESETS[whitepaper.type]
     findings = Linter(rules).lint(whitepaper)
 
-    # Check for unrecognized/misspelled sections
-    valid_sections = {rule.section for rule in rules}
+    # Check for unrecognized/misspelled sections. The LEI rules read every party section in every regime: an
+    # ART white paper names the persons other than the issuer who offer the token in its offeror section.
+    valid_sections = {rule.section for rule in rules} | set(PARTY_SECTIONS)
     warnings: list[str] = list(whitepaper.metadata.get("extraction_notes", ()))
     for section_name in whitepaper.sections:
         if section_name not in valid_sections:
@@ -180,6 +226,157 @@ def lint_whitepaper(whitepaper: Whitepaper) -> Report:
 
 def _count_words(text: str) -> int:
     return sum(1 for word in text.split() if word.strip())
+
+
+_LINE_END_HYPHEN = re.compile(r"-[ \t]*(?:\r\n|\r|\n)\s*")
+_WHITESPACE_RUN = re.compile(r"\s+")
+
+
+def _collapse_whitespace(text: str) -> str:
+    """Join a hyphenated compound broken at a line end, then collapse every whitespace run."""
+    return _WHITESPACE_RUN.sub(" ", _LINE_END_HYPHEN.sub("-", text)).strip()
+
+
+# Art. 6(3) and Art. 51(3) MiCAR prescribe the first-page statement word for word. The
+# English wording was checked against the EUR-Lex text of Art. 6(3) and 51(3) MiCAR as
+# mirrored in legalize-dev/legalize-eu (CELEX 32023R1114). The German wording has not been
+# checked against the German Official Journal text, so a German draft is referred to review
+# and never passes.
+NOT_APPROVED_STATEMENT_RULE_IDS = frozenset(
+    {"ANNEX_I.NOT_APPROVED_STATEMENT", "ANNEX_III.NOT_APPROVED_STATEMENT"}
+)
+_BOOLEAN_FIELD_VALUES = frozenset({"true", "false", "yes", "no", "ja", "nein"})
+
+
+def _not_approved_statement_finding(rule: Rule, whitepaper: Whitepaper) -> Finding | None:
+    """Return the finding where the generic term check would mislead, otherwise None."""
+    is_de = whitepaper.language == "de"
+    text = whitepaper.section(rule.section)
+    # Empty and placeholder-only text go to the shared checks, which report them missing.
+    if not text.strip() or is_placeholder(text):
+        return None
+    words = _count_words(text)
+    emt = rule.rule_id.startswith("ANNEX_III.")
+    article_de = "Art. 51 Abs. 3" if emt else "Art. 6 Abs. 3"
+    article_en = "Art. 51(3)" if emt else "Art. 6(3)"
+    if _collapse_whitespace(text).lower().strip(" .'\"") in _BOOLEAN_FIELD_VALUES:
+        msg = (
+            f"Das Feld enthält nur einen Ja/Nein-Wert, nicht den Wortlaut nach {article_de} MiCAR. "
+            "Wortlaut und Platzierung auf der ersten Seite manuell prüfen."
+            if is_de
+            else f"The field holds only a yes/no value, not the {article_en} MiCAR wording. "
+            "Check the wording and its first-page placement manually."
+        )
+        return Finding(rule=rule, status="review", word_count=words, issues=(msg,))
+    if is_de:
+        msg = (
+            f"Der deutsche Wortlaut der Erklärung nach {article_de} MiCAR ist in diesem Linter "
+            "noch nicht gegen die deutsche Fassung im Amtsblatt geprüft. Wortlaut und "
+            "Platzierung auf der ersten Seite manuell mit dem Amtsblatt abgleichen."
+        )
+        return Finding(rule=rule, status="review", word_count=words, issues=(msg,))
+    return None
+
+
+# Art. 6(3), second subparagraph, MiCAR: the statement names the offeror, the person seeking
+# admission to trading or the operator of the trading platform (Table 2 field 02 of
+# Implementing Regulation (EU) 2024/2984 prints all three sentences).
+_TITLE_II_RESPONSIBILITY_CLAUSE = "of the crypto-asset is solely responsible"
+_TITLE_II_RESPONSIBLE_PERSON = re.compile(
+    r"\b(?:offeror|person seeking admission to trading|operator of the trading platform) "
+    + _TITLE_II_RESPONSIBILITY_CLAUSE
+)
+
+# Art. 49(4) MiCAR has an e-money token redeemed "at par value" ("zum Nennwert"); an ART issuer redeems
+# by paying funds, other than electronic money, equivalent to the market value of the referenced assets,
+# or by delivering those assets (Art. 39(2) MiCAR). Par value anywhere in an ART redemption section
+# therefore goes to review, also where it describes the reserve of assets or issuance, or where the
+# section denies it: what the words refer to is left to the reviewer. Only uses that never mean par
+# value do not count: "par" for a paragraph next to an article number, "on (a) par", "par for the
+# course", "par excellence", "sub-par", "pari passu", "rank at par" and "at par with each other".
+_PAR_VALUE = re.compile(
+    r"(?<!\bon )(?<!\bon a )(?<!\brank at )(?<!\branks at )(?<!\branked at )(?<!\branking at )(?<!\bsub-)"
+    r"\bpar\b(?! (?:for the course|excellence|with each other|with one another)\b)"
+    r"|\bpari(?:wert|kurs|rücktausch)?\b(?![ -]passu\b)"
+    r"|\bface[ -]value|\bnominal[ -](?:value|amount|price)|\bat nominal\b(?![ -](?:costs?|fees?|charges?)\b)"
+    r"|nenn-?(?:wert|betr[aä]g)|nominal-?(?:wert|betr[aä]g)|\bnomin(?:al|ell)e[mnrs]? wert|\bzum nominale\b"
+)
+# "Art. 39 par. 2", "Article 39, par 2", "par. 2 of Art. 39" and "the first par. of Art. 39(2)".
+_PARAGRAPH_AFTER_ARTICLE = re.compile(r"(\b(?:art(?:icle)?s?\.?|§§?) ?\d+[a-z]?,? )par\b")
+_PARAGRAPH_BEFORE_ARTICLE = re.compile(r"\bpar\b(?=\.? ?(?:\(?\d+\)?,? (?:of )?|of )(?:art(?:icle)?s?\b|§))")
+# A soft hyphen marks where a word may break, and a converter can leave a line break after it;
+# zero-width characters can sit inside a word too.
+_SOFT_BREAK = re.compile(r"\u00ad\s*|[\u200b\u200c\u200d\u2060\ufeff]")
+_UNICODE_HYPHENS = str.maketrans({"\u2010": "-", "\u2011": "-"})
+
+
+def _mentions_par_value(text: str) -> bool:
+    """Whether the section text names par value other than in the uses above."""
+    text = _SOFT_BREAK.sub("", text).translate(_UNICODE_HYPHENS)
+    # A hyphen at a line end joins a compound ("Nenn-" "wert") or breaks a word ("Nennbe-" "trag",
+    # "nom-" "inal"), so the text is read with the hyphen kept and without it.
+    for variant in (text, _LINE_END_HYPHEN.sub("", text)):
+        # Markdown emphasis ("_par value_") would hide the word.
+        lowered = _collapse_whitespace(variant).lower().replace("_", " ")
+        lowered = _PARAGRAPH_AFTER_ARTICLE.sub(r"\1paragraph", lowered)
+        if _PAR_VALUE.search(_PARAGRAPH_BEFORE_ARTICLE.sub("paragraph", lowered)):
+            return True
+    return False
+
+
+def _rule_specific_issues(rule: Rule, text: str, normalized: str, is_de: bool) -> list[str]:
+    """Issues a rule needs beyond its terms and patterns, from the section text as loaded and collapsed."""
+    if rule.rule_id == "ANNEX_II.I" and _mentions_par_value(text):
+        return [
+            "Der Abschnitt erwähnt den Nennwert. Den Rücktausch zum Nennwert schreibt Art. 49 Abs. 4 MiCAR "
+            "für E-Geld-Token vor; der Emittent eines vermögenswertereferenzierten Token nimmt den "
+            "Rücktausch durch Zahlung eines dem Marktwert der Vermögenswerte, auf die der Token Bezug nimmt, "
+            "entsprechenden Geldbetrags, wobei es sich nicht um elektronisches Geld handelt, oder durch "
+            "Bereitstellung dieser Vermögenswerte vor (Art. 39 Abs. 2 MiCAR). Prüfen, ob der Abschnitt den "
+            "Rücktausch des Token an den Nennwert knüpft; der Hinweis erscheint auch, wenn sich der "
+            "Nennwert auf die Vermögenswertreserve oder die Ausgabe bezieht."
+            if is_de
+            else "The section mentions par value. Redemption at par value is the e-money token rule of "
+            "Art. 49(4) MiCAR; an ART issuer redeems by paying funds, other than electronic money, "
+            "equivalent to the market value of the referenced assets, or by delivering those assets "
+            "(Art. 39(2) MiCAR). Check whether the section ties the token's redemption to par value; the "
+            "note also appears where par value refers to the reserve of assets or to issuance."
+        ]
+    if rule.rule_id == "ANNEX_I.NOT_APPROVED_STATEMENT" and not is_de:
+        names_clause = _TITLE_II_RESPONSIBILITY_CLAUSE in normalized
+        if names_clause and not _TITLE_II_RESPONSIBLE_PERSON.search(normalized):
+            return [
+                "Art. 6(3) MiCAR names the offeror, the person seeking admission to trading or the "
+                "operator of the trading platform as solely responsible; the statement names "
+                "someone else."
+            ]
+    return []
+
+
+def _placeholder_field_issues(rule: Rule, whitepaper: Whitepaper, is_de: bool) -> list[str]:
+    """Name the numbered fields of the rule's section that hold only a placeholder.
+
+    The loader adds such a field's placeholder without its label, so the section's other fields
+    could otherwise satisfy the rule on their own. The issue names each field by its number and,
+    in English, the template's name for it, never by text from the draft.
+    """
+    numbers = whitepaper.metadata.get("placeholder_fields", {}).get(rule.section, ())
+    if not numbers:
+        return []
+    if is_de:
+        if len(numbers) == 1:
+            return [f"Feld {numbers[0]} enthält nur einen Platzhalter wie TBD."]
+        return [f"Felder {_listed(numbers, 'und')} enthalten nur Platzhalter wie TBD."]
+    names = FIELD_NAMES[whitepaper.type]
+    fields = [f"{number} ({names[number]})" if number in names else number for number in numbers]
+    if len(fields) == 1:
+        return [f"Field {fields[0]} holds only a placeholder such as TBD."]
+    return [f"Fields {_listed(fields, 'and')} hold only placeholders such as TBD."]
+
+
+def _listed(items: list[str] | tuple[str, ...], conjunction: str) -> str:
+    """'A', 'A and B', 'A, B and C'."""
+    return items[0] if len(items) == 1 else f"{', '.join(items[:-1])} {conjunction} {items[-1]}"
 
 
 def _absent(text: str, is_de: bool) -> str | None:
@@ -364,6 +561,32 @@ def _deposit_floor_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     return Finding(rule=rule, status="missing", word_count=words, issues=(msg,))
 
 
+def _other_identifier_note(is_de: bool) -> str:
+    return (
+        "Nr. 5 der Teile A bis C von Anhang I und von Teil A der Anhänge II und III lässt statt der LEI eine "
+        "andere nach geltendem nationalem Recht erforderliche Kennung zu. Ob der Entwurf für jeden "
+        "Beteiligten eine dieser Kennungen angibt, ist von Hand zu prüfen."
+        if is_de
+        else "Point 5 of Annex I Parts A to C and of Annex II and III Part A allows another identifier "
+        "required pursuant to applicable national law in place of the LEI. Whether the draft gives one of "
+        "them for each party needs checking by hand."
+    )
+
+
+def _no_lei_finding(rule: Rule, whitepaper: Whitepaper, msg: str) -> Finding:
+    """Fails closed without an LEI: Missing when no party section has text, Review when one has.
+
+    Point 5 of each party Part allows another identifier required pursuant to applicable national law
+    in place of the LEI, and VO (EU) 2024/2984 asks for the LEI "where available", so a party section
+    without one goes to a reviewer instead of counting as absent.
+    """
+    texts = ((whitepaper.sections.get(section) or "").strip() for section in PARTY_SECTIONS)
+    if not any(text and not is_placeholder(text) for text in texts):
+        return Finding(rule=rule, status="missing", word_count=0, issues=(msg,))
+    note = _other_identifier_note(whitepaper.language == "de")
+    return Finding(rule=rule, status="review", word_count=0, issues=(msg, note))
+
+
 def _lei_check_digits_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     """Fails closed: a draft without any LEI cannot show valid check digits."""
     is_de = whitepaper.language == "de"
@@ -376,7 +599,7 @@ def _lei_check_digits_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
             else "No Legal Entity Identifier (20 characters, ISO 17442) was found in the draft, "
             "so its check digits could not be checked."
         )
-        return Finding(rule=rule, status="missing", word_count=0, issues=(msg,))
+        return _no_lei_finding(rule, whitepaper, msg)
     issues = []
     for section, codes in found.items():
         for code in codes:
@@ -393,8 +616,11 @@ def _lei_check_digits_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
 def _lei_consistency_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     """Every valid LEI in the draft must belong to a party section; the issuer states one LEI.
 
-    Fails closed when no party section carries a valid LEI. Invalid codes are left to
-    COMMON.LEI_CHECK_DIGITS so that one typo is not reported twice.
+    An LEI that the draft gives for a person other than the parties (other_person_leis: the provider in
+    charge of the placing, a custodian, a person other than the issuer) is neither compared with the party
+    sections nor counted as an issuer LEI. Fails closed when no party section carries a valid LEI (see
+    _no_lei_finding). Invalid codes are left to COMMON.LEI_CHECK_DIGITS so that one typo is not reported
+    twice.
     """
     is_de = whitepaper.language == "de"
     valid = {
@@ -411,9 +637,10 @@ def _lei_consistency_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
             else "No valid LEI was found in the issuer, offeror or trading_platform_operator sections, "
             "so consistency cannot be checked."
         )
-        return Finding(rule=rule, status="missing", word_count=0, issues=(msg,))
+        return _no_lei_finding(rule, whitepaper, msg)
+    others = {code for text in whitepaper.sections.values() for code in other_person_leis(str(text))}
     issues = []
-    issuer_codes = valid.get("issuer", ())
+    issuer_codes = [code for code in valid.get("issuer", ()) if code not in others]
     if len(issuer_codes) > 1:
         issues.append(
             f"Der Abschnitt 'issuer' nennt {len(issuer_codes)} verschiedene LEIs; ein Emittent hat eine LEI."
@@ -424,7 +651,7 @@ def _lei_consistency_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
         if section in PARTY_SECTIONS:
             continue
         for code in codes:
-            if code not in party_codes:
+            if code not in party_codes and code not in others:
                 issues.append(
                     f"LEI '{code}' im Abschnitt '{section}' erscheint in keinem Abschnitt zu den Beteiligten."
                     if is_de
@@ -586,3 +813,153 @@ def _answer_finding(
     status = "pass" if answers(text) else "review"
     issues = () if status == "pass" else (german if is_de else english,)
     return Finding(rule=rule, status=status, word_count=_count_words(text), issues=issues)
+
+
+CONTACT_POINT_RULE_IDS = frozenset({"ANNEX_I.A.P6", "ANNEX_III.A.P6"})
+
+# The three items of point 6 in the order of their template fields: the English and German names in a
+# finding, the search of a section and the check of the field that carries the item alone.
+_CONTACT_ITEMS: tuple[tuple[str, str, Callable[[str], bool], Callable[[str], bool]], ...] = (
+    ("telephone number", "Telefonnummer", has_telephone_number, partial(has_telephone_number, labelled=True)),
+    ("e-mail address", "E-Mail-Adresse", has_email_address, has_email_address),
+    ("number of days", "Anzahl der Tage", has_period_in_days, partial(has_period_in_days, labelled=True)),
+)
+_CONTACT_NOT_FOUND = (
+    (
+        "No telephone number was found. A number counts with its country code (+49 ...) or its area code "
+        "(069 ...), or after a label such as Tel. or Phone.",
+        "Keine Telefonnummer gefunden. Eine Nummer zählt mit Ländervorwahl (+49 ...) oder Ortsvorwahl "
+        "(069 ...) oder nach einer Angabe wie Tel. oder Telefon.",
+    ),
+    ("No e-mail address was found.", "Keine E-Mail-Adresse gefunden."),
+    (
+        "No period in days was found, for example 5 business days.",
+        "Keine Frist in Tagen gefunden, etwa 5 Werktage.",
+    ),
+)
+
+
+def _contact_point_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """Annex I and III Part A point 6: a telephone number, an e-mail address and a response time in days.
+
+    A numbered-field draft is checked in the template fields that carry the point, each for its own item
+    (contact.py). Any other draft has no field numbers, so the rule's section is searched for all three.
+    """
+    is_de = whitepaper.language == "de"
+    answers = whitepaper.metadata.get("numbered_fields")
+    numbers = CONTACT_FIELDS.get(whitepaper.type)
+    if isinstance(answers, dict) and numbers is not None:
+        return _contact_fields_finding(rule, whitepaper, answers, numbers, is_de)
+    text = whitepaper.section(rule.section)
+    absent = _absent(text, is_de)
+    if absent:
+        return Finding(rule=rule, status="missing", word_count=0, issues=(absent,))
+    text = _collapse_whitespace(text)
+    issues = tuple(
+        german if is_de else english
+        for (_, _, search, _), (english, german) in zip(_CONTACT_ITEMS, _CONTACT_NOT_FOUND, strict=True)
+        if not search(text)
+    )
+    status = "review" if issues else "pass"
+    return Finding(rule=rule, status=status, word_count=_count_words(text), issues=issues)
+
+
+def _contact_fields_finding(
+    rule: Rule, whitepaper: Whitepaper, answers: dict[str, str], numbers: tuple[str, ...], is_de: bool
+) -> Finding:
+    """Check each field for its item. Missing when no field holds an answer, counting "N/A" as one.
+
+    The template sets no condition on these fields, so "N/A" answers none of them; it goes to review
+    rather than counting as absent, as on the other checks. English findings give the template's name of
+    each field, German findings its number.
+    """
+    names = FIELD_NAMES[whitepaper.type]
+    issues: list[str] = []
+    empty = 0
+    for number, (english, german, _, check) in zip(numbers, _CONTACT_ITEMS, strict=True):
+        answer = str(answers.get(number, "")).strip()
+        name = number if is_de else f"{number} ({names[number]})"
+        if not answer or is_placeholder(answer):
+            empty += 1
+        if not answer:
+            issue = (f"Feld {name} ist leer oder fehlt.", f"Field {name} is empty or not in the draft.")
+        elif is_placeholder(answer):
+            issue = (
+                f"Feld {name} enthält nur einen Platzhalter wie TBD.",
+                f"Field {name} holds only a placeholder such as TBD.",
+            )
+        elif is_not_applicable(answer):
+            issue = (
+                f"Feld {name} ist als nicht anwendbar markiert; Nr. 6 verlangt die {german} ohne Bedingung.",
+                f"Field {name} is marked not applicable; point 6 asks for the {english} without a condition.",
+            )
+        elif not check(answer):
+            issue = (f"Feld {name} enthält keine {german}.", f"Field {name} gives no {english}.")
+        else:
+            continue
+        issues.append(issue[0] if is_de else issue[1])
+    status = "missing" if empty == len(numbers) else "review" if issues else "pass"
+    words = sum(_count_words(str(answers.get(number, ""))) for number in numbers)
+    return Finding(rule=rule, status=status, word_count=words, issues=tuple(issues))
+
+
+# The predefined warning of the summary (Art. 6(7), 19(6) and 51(6) MiCAR, second subparagraph), as
+# field 07 of Table 2, I.04 of Table 3 and I.05 of Table 4 of Implementing Regulation (EU) 2024/2984
+# print it in English and German (OJ text read on 2026-10-30). It does not count toward the summary's
+# minimum length (#70).
+_SUMMARY_WARNING_FIELDS = {WhitepaperType.OTHER: "07", WhitepaperType.ART: "I.04", WhitepaperType.EMT: "I.05"}
+_WHITE_PAPER_EN = r"crypto[\s\u2013-]*asset white paper"
+_TOKEN_EN = r"(?:crypto[\s\u2013-]*assets?|asset-referenced tokens?|e-money tokens?)"
+_TOKEN_DE = r"(?:kryptowerts?|vermögenswertereferenzierten token|e-geld-token)"
+_SUMMARY_WARNING = re.compile(
+    "|".join(
+        (
+            r"(?:\bwarning\b[:.]?\s*)?\bthis summary should be read as an introduction to the "
+            rf"{_WHITE_PAPER_EN}\.?",
+            rf"\bthe prospective holders? should base any decision to purchase (?:this|the|an?) {_TOKEN_EN} "
+            rf"on the content of the {_WHITE_PAPER_EN} as a whole and not on the summary alone\.?",
+            rf"\bthe offer to the public of (?:this|the) {_TOKEN_EN} does not constitute an offer or "
+            r"solicitation to purchase financial instruments and (?:that )?any such offer or solicitation "
+            r"can be made only by means of a prospectus or other offer documents pursuant to the applicable "
+            r"national law\.?",
+            rf"\bthis {_WHITE_PAPER_EN} does not constitute a prospectus as referred to in regulation "
+            r"\(eu\) 2017/1129(?: of the european parliament and of the council)? or any other offer "
+            r"document pursuant to union or national law\.?",
+            r"(?:\bwarnhinweis\b[:.]?\s*)?\bdiese zusammenfassung ist als einführung in das "
+            r"kryptowerte-whitepaper zu lesen\.?",
+            r"(?:\bder potenzielle inhaber sollte jede entscheidung über den kauf|\bpotenzielle inhaber "
+            rf"sollten ihre entscheidung zum kauf) (?:des|dieses) {_TOKEN_DE} auf der grundlage des inhalts "
+            r"des gesamten kryptowerte-whitepapers und nicht allein auf der grundlage der zusammenfassung "
+            r"treffen\.?",
+            rf"\bdas öffentliche angebot (?:dieses|des) {_TOKEN_DE} stellt kein angebot und keine "
+            r"aufforderung zum kauf von finanzinstrumenten dar und ein solches angebot oder eine solche "
+            r"aufforderung kann nur mittels eines prospekts oder anderer (?:im geltenden nationalen recht "
+            r"vorgesehener angebotsunterlagen|angebotsunterlagen gemäß den nationalen rechtsvorschriften) "
+            r"erfolgen\.?",
+            r"\bdieses kryptowerte-whitepaper stellt keinen prospekt im sinne der verordnung \(eu\) "
+            r"2017/1129(?: des europäischen parlaments und des rates)? und kein anderes angebotsdokument im "
+            r"sinne von unionsrecht oder nationalem recht dar\.?",
+        )
+    ),
+    re.IGNORECASE,
+)
+
+
+def _summary_words(text: str, whitepaper: Whitepaper) -> int:
+    """The words of the summary that count toward its minimum: all but the predefined warning.
+
+    A numbered-field draft leaves out the line of the warning field, its label included. In any draft the
+    warning's sentences are left out where they appear in the template's English or German wording; a warning
+    worded otherwise still counts.
+    """
+    answers = whitepaper.metadata.get("numbered_fields")
+    number = _SUMMARY_WARNING_FIELDS.get(whitepaper.type)
+    if isinstance(answers, dict) and number:
+        answer = str(answers.get(number, "")).strip()
+        # A field that occurs twice gives its answers one per line (numbered_fields.field_answers).
+        for part in (answer,) if answer in text else answer.split("\n"):
+            index = text.find(part) if part else -1
+            if index >= 0:
+                start = text.rfind("\n", 0, index) + 1
+                text = text[:start] + text[index + len(part) :]
+    return _count_words(_SUMMARY_WARNING.sub(" ", _collapse_whitespace(text)))

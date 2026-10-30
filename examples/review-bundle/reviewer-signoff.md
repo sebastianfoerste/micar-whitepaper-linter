@@ -5,9 +5,9 @@ It does not certify a white paper, approve a notification or replace legal revie
 
 - Document title: Synthetic EuroStable ART White Paper
 - White paper type: art
-- Generated at: 2026-10-27T20:23:14.117272+00:00
+- Generated at: 2026-10-29T06:57:48.094210+00:00
 - Automated status: Blocked
-- Open blocker count: 4
+- Open blocker count: 3
 
 ## Required Review Steps
 
@@ -19,7 +19,6 @@ It does not certify a white paper, approve a notification or replace legal revie
 ## Blockers
 
 - COMMON.IXBRL_TAGGING
-- ANNEX_II.G.COMPOSITION_DISCLOSURE
 - ANNEX_II.G.DEPOSIT_FLOOR_REVIEW
 - ANNEX_II.G.CUSTODY
 

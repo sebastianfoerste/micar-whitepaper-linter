@@ -5,9 +5,9 @@ section starts: the key inside the JSON ``sections`` object, or the first
 XHTML h1 to h6 heading that maps to the section. Other formats, numbered-field
 XHTML, saved iXBRL viewer pages (whose white paper sits packed in a script),
 sections a JSON draft does not contain and XHTML sections without such a
-heading, including those the XHTML loader found only under a bold-text heading,
-fall back to line 1. Only line numbers
-are derived from the draft; no draft text is returned.
+heading, including those the XHTML loader found only under a bold-text heading
+and a first-page statement it found by its wording, fall back to line 1. Only
+line numbers are derived from the draft; no draft text is returned.
 """
 
 from __future__ import annotations
@@ -134,16 +134,18 @@ def _xhtml_heading_lines(path: Path) -> dict[str, int]:
     """
     try:
         from micar_linter.document import match_heading_to_section
-        from micar_linter.xhtml_parser import element_text, parse_html
+        from micar_linter.xhtml_parser import element_text, load_from_xhtml, parse_html
 
         tree = parse_html(path)
         headings = tree.xpath("//h1 | //h2 | //h3 | //h4 | //h5 | //h6")
+        # A heading element that the loader reads as part of the first-page statement opens no section.
+        statement = set(load_from_xhtml(path).get("not_approved_statement", "").split("\n"))
     except Exception:
         return {}
     lines: dict[str, int] = {}
     for heading in headings:
         text = element_text(heading)
-        if not text or not heading.sourceline:
+        if not text or not heading.sourceline or text in statement:
             continue
         for section_key in match_heading_to_section(text):
             lines.setdefault(section_key, heading.sourceline)
