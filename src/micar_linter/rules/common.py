@@ -15,6 +15,59 @@ from dataclasses import replace
 from micar_linter.rules.base import Rule, Severity
 from micar_linter.rules.terms import TITLE_DE
 
+# Wording that turns a required statement of the risk warning into its opposite: the listed terms appear,
+# but the text says that the crypto-asset cannot lose its value, is always transferable or liquid, or is
+# covered by investor compensation or deposit guarantee schemes. Each pattern has one named group, which a
+# finding reports by name. The statements themselves do not match: "may not always be transferable",
+# "is not covered by", "neither ... nor ... cover", "nicht immer übertragbar", "fällt nicht unter", and a
+# sentence that says no one can guarantee the value holds.
+_CANNOT_LOSE_EN = (
+    r"(?P<it_cannot_lose_its_value>(?:^|(?<=[.!?;:]))"
+    r"(?![^.!?;:]*\b(?:no|not|cannot|without)\s+(?:\w+\s+){0,2}?(?:guarantee|assur|warrant|promise))"
+    r"[^.!?;:]*?\b(?:cannot|can\s?not|can['\u2019]t|will\s+not|won['\u2019]t|will\s+never|never|does\s+not|doesn['\u2019]t"
+    r"|is\s+not\s+able\s+to)\s+(?:\w+\s+){0,2}?los(?:e|es|ing)\b)"
+)
+_ALWAYS_TRANSFERABLE_EN = (
+    r"(?P<it_is_always_transferable>(?<!not )\balways\s+(?:be\s+)?(?:freely\s+)?transfer(?:able|red)\b"
+    r"|(?<!not )(?<!not be )(?<!not be freely )\btransferable\s+at\s+(?:all|any)\s+times?\b)"
+)
+_ALWAYS_LIQUID_EN = (
+    r"(?P<it_is_always_liquid>(?<!not )\balways\s+(?:be\s+)?liquid\b"
+    r"|(?<!not )(?<!not be )\bliquid\s+at\s+all\s+times\b)"
+)
+_SCHEMES_COVER_EN = (
+    r"(?P<a_compensation_or_guarantee_scheme_covers_it>"
+    r"\b(?:is|are)\s+(?:fully\s+|also\s+)?(?:covered|protected)\s+by\s+(?:the\s+|an?\s+|any\s+)?(?:\w+\s+)?"
+    r"(?:investor\s+compensation|deposit\s+guarantee)"
+    r"|(?<!nor )(?<!nor the )(?<!neither )(?<!neither the )"
+    r"\b(?:investor\s+compensation|deposit\s+guarantee)\s+"
+    r"schemes?\s+(?:fully\s+|also\s+)?(?:cover|covers|protect|protects)\b)"
+)
+_CANNOT_LOSE_DE = (
+    r"(?P<er_kann_seinen_Wert_nicht_verlieren>"
+    r"\b(?:kann|können|wird|werden)\s+(?:(?:seinen|ihren|den)\s+Wert\s+)?"
+    r"(?:nicht|niemals|nie)\s+(?:(?:ganz\s+oder\s+teilweise|teilweise\s+oder\s+ganz)\s+)?verlier\w*"
+    r"|\bverlier\w*\s+(?:(?:seinen|ihren|den)\s+Wert\s+)?(?:nicht|niemals|nie)\b)"
+)
+_ALWAYS_TRANSFERABLE_DE = (
+    r"(?P<er_ist_stets_übertragbar>(?<!nicht )\b(?:stets|immer|jederzeit)\s+(?:frei\s+)?übertragbar\w*)"
+)
+_ALWAYS_LIQUID_DE = r"(?P<er_ist_stets_liquide>(?<!nicht )\b(?:stets|immer|jederzeit)\s+liquid\w*)"
+# The German Regulation and template say "Systeme für die Entschädigung der Anleger"; drafts also write
+# "Anlegerentschädigungssysteme".
+_SCHEME_DE = (
+    r"(?:System(?:en?)?\s+(?:für\s+die|zur)\s+Entschädigung\s+der\s+Anleger|Anlegerentschädigungs\w*"
+    r"|Entschädigungssystem\w*|Einlagensicherungs\w*)"
+)
+_SCHEMES_COVER_DE = (
+    r"(?P<ein_Entschädigungssystem_oder_Einlagensicherungssystem_deckt_ihn>"
+    r"\bfäll\w*\s+(?:vollständig\s+|auch\s+)?unter\s+(?:die\s+|das\s+|den\s+|ein\w*\s+)?" + _SCHEME_DE
+    + r"|(?<!nicht )(?<!weder )(?<!noch )\bunter\s+(?:die\s+|das\s+|den\s+|ein\w*\s+)?" + _SCHEME_DE
+    + r"(?:\s+[^\s.;!?]+){0,10}?\s+fäll\w*"
+    r"|\b(?:ist|sind|wird|werden)\s+(?:vollständig\s+|auch\s+)?(?:durch|von)\s+"
+    r"(?:den\s+|die\s+|das\s+|dem\s+|einem?\s+)?" + _SCHEME_DE + ")"
+)
+
 COMMON_RULES: tuple[Rule, ...] = (
     Rule(
         rule_id="COMMON.SUMMARY",
@@ -45,6 +98,13 @@ COMMON_RULES: tuple[Rule, ...] = (
             "deposit guarantee",
         ),
         required_terms_de=("verlier", "übertragbar", "liquid", "entschädigung", "einlagensicherung"),
+        prohibited_patterns=(_CANNOT_LOSE_EN, _ALWAYS_TRANSFERABLE_EN, _ALWAYS_LIQUID_EN, _SCHEMES_COVER_EN),
+        prohibited_patterns_de=(
+            _CANNOT_LOSE_DE,
+            _ALWAYS_TRANSFERABLE_DE,
+            _ALWAYS_LIQUID_DE,
+            _SCHEMES_COVER_DE,
+        ),
         min_words=20,
         severity=Severity.BLOCKER,
     ),
@@ -128,6 +188,8 @@ EMT_COMMON_RULES: tuple[Rule, ...] = tuple(
         rule,
         required_terms=("investor compensation", "deposit guarantee"),
         required_terms_de=("entschädigung", "einlagensicherung"),
+        prohibited_patterns=(_SCHEMES_COVER_EN,),
+        prohibited_patterns_de=(_SCHEMES_COVER_DE,),
     )
     if rule.rule_id == "COMMON.RISK_WARNING"
     else rule

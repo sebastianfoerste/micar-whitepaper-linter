@@ -579,7 +579,7 @@ def test_first_copy_of_a_name_in_other_words_is_split_off(tmp_path: Path):
     ],
 )
 def test_template_field_name_is_split_off_a_field(label: str, content: str, line: str | None):
-    sections, _ = sections_from_numbered_fields([NumberedField("A.4", label, content)], WhitepaperType.OTHER)
+    sections, _, _ = sections_from_numbered_fields([NumberedField("A.4", label, content)], WhitepaperType.OTHER)
     assert sections.get("offeror") == line
 
 
@@ -605,7 +605,7 @@ def test_note_on_a_single_field_left_without_a_label():
         NumberedField("B.3", "", "Legal form GmbH"),
         NumberedField("C.1", "", "Platform Example Exchange S.A."),
     ]
-    _, notes = sections_from_numbered_fields(fields, WhitepaperType.OTHER)
+    _, notes, _ = sections_from_numbered_fields(fields, WhitepaperType.OTHER)
     assert notes[0] == (
         "Field C.1 has no separate label, and its text does not start with a field name of the template, "
         'so a label can run into the answer: such a field answered only "N/A" or "TBD" reads as answered. '
@@ -616,7 +616,7 @@ def test_note_on_a_single_field_left_without_a_label():
 def test_note_lists_ten_fields_and_counts_the_rest():
     recognised = [NumberedField(f"A.{number}", "", "Name N/A") for number in range(1, 41)]
     unrecognised = [NumberedField(f"D.{number}", "", f"Platform {number}") for number in range(1, 13)]
-    _, notes = sections_from_numbered_fields(recognised + unrecognised, WhitepaperType.OTHER)
+    _, notes, _ = sections_from_numbered_fields(recognised + unrecognised, WhitepaperType.OTHER)
     listed = ", ".join(f"D.{number}" for number in range(1, 11))
     assert notes[0].startswith(f"Fields {listed} and 2 more have no separate label, and their text does not")
 
