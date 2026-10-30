@@ -526,6 +526,21 @@ def sections_from_numbered_fields(
     )
 
 
+def field_answers(fields: list[NumberedField], whitepaper_type: WhitepaperType) -> dict[str, str]:
+    """The answer of each field by its number as the table prints it, with the template's name split off.
+
+    The point rules read the fields that carry their Annex point here (ADR 0005). A field that occurs
+    more than once gives its answers one per line; an empty field gives an empty answer.
+    """
+    answers: dict[str, list[str]] = {}
+    for field in map(_with_template_label, fields):
+        content = field.content.strip()
+        lines = answers.setdefault(_printed_number(field.field_id, whitepaper_type), [])
+        if content:
+            lines.append(content)
+    return {number: "\n".join(lines) for number, lines in answers.items()}
+
+
 def _printed_number(field_id: str, whitepaper_type: WhitepaperType) -> str:
     """The field number as its table prints it: Tables 3 and 4 number the leading fields I.00 to I.08."""
     return f"I.{field_id}" if whitepaper_type is not WhitepaperType.OTHER and field_id.isdigit() else field_id

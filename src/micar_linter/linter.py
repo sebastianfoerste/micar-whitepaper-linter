@@ -6,10 +6,12 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
+from functools import partial
 
 from micar_linter.anchors import SourceAnchor, build_source_anchors
+from micar_linter.contact import CONTACT_FIELDS, has_email_address, has_period_in_days, has_telephone_number
 from micar_linter.lei import PARTY_SECTIONS, has_valid_check_digits, leis_by_section, other_person_leis
-from micar_linter.placeholders import is_placeholder
+from micar_linter.placeholders import is_not_applicable, is_placeholder
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Finding, Rule, Severity
 from micar_linter.template_fields import FIELD_NAMES
@@ -80,6 +82,9 @@ class Linter:
 
         if rule.rule_id == "COMMON.LANGUAGE":
             return _language_finding(rule, whitepaper)
+
+        if rule.rule_id in CONTACT_POINT_RULE_IDS:
+            return _contact_point_finding(rule, whitepaper)
 
         is_de = whitepaper.language == "de"
 
@@ -750,3 +755,91 @@ def _answer_finding(
     status = "pass" if answers(text) else "review"
     issues = () if status == "pass" else (german if is_de else english,)
     return Finding(rule=rule, status=status, word_count=_count_words(text), issues=issues)
+
+
+CONTACT_POINT_RULE_IDS = frozenset({"ANNEX_I.A.P6", "ANNEX_III.A.P6"})
+
+# The three items of point 6 in the order of their template fields: the English and German names in a
+# finding, the search of a section and the check of the field that carries the item alone.
+_CONTACT_ITEMS: tuple[tuple[str, str, Callable[[str], bool], Callable[[str], bool]], ...] = (
+    ("telephone number", "Telefonnummer", has_telephone_number, partial(has_telephone_number, labelled=True)),
+    ("e-mail address", "E-Mail-Adresse", has_email_address, has_email_address),
+    ("number of days", "Anzahl der Tage", has_period_in_days, partial(has_period_in_days, labelled=True)),
+)
+_CONTACT_NOT_FOUND = (
+    (
+        "No telephone number was found. A number counts with its country code (+49 ...) or its area code "
+        "(069 ...), or after a label such as Tel. or Phone.",
+        "Keine Telefonnummer gefunden. Eine Nummer zählt mit Ländervorwahl (+49 ...) oder Ortsvorwahl "
+        "(069 ...) oder nach einer Angabe wie Tel. oder Telefon.",
+    ),
+    ("No e-mail address was found.", "Keine E-Mail-Adresse gefunden."),
+    (
+        "No period in days was found, for example 5 business days.",
+        "Keine Frist in Tagen gefunden, etwa 5 Werktage.",
+    ),
+)
+
+
+def _contact_point_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """Annex I and III Part A point 6: a telephone number, an e-mail address and a response time in days.
+
+    A numbered-field draft is checked in the template fields that carry the point, each for its own item
+    (contact.py). Any other draft has no field numbers, so the rule's section is searched for all three.
+    """
+    is_de = whitepaper.language == "de"
+    answers = whitepaper.metadata.get("numbered_fields")
+    numbers = CONTACT_FIELDS.get(whitepaper.type)
+    if isinstance(answers, dict) and numbers is not None:
+        return _contact_fields_finding(rule, whitepaper, answers, numbers, is_de)
+    text = whitepaper.section(rule.section)
+    absent = _absent(text, is_de)
+    if absent:
+        return Finding(rule=rule, status="missing", word_count=0, issues=(absent,))
+    text = _collapse_whitespace(text)
+    issues = tuple(
+        german if is_de else english
+        for (_, _, search, _), (english, german) in zip(_CONTACT_ITEMS, _CONTACT_NOT_FOUND, strict=True)
+        if not search(text)
+    )
+    status = "review" if issues else "pass"
+    return Finding(rule=rule, status=status, word_count=_count_words(text), issues=issues)
+
+
+def _contact_fields_finding(
+    rule: Rule, whitepaper: Whitepaper, answers: dict[str, str], numbers: tuple[str, ...], is_de: bool
+) -> Finding:
+    """Check each field for its item. Missing when no field holds an answer, counting "N/A" as one.
+
+    The template sets no condition on these fields, so "N/A" answers none of them; it goes to review
+    rather than counting as absent, as on the other checks. English findings give the template's name of
+    each field, German findings its number.
+    """
+    names = FIELD_NAMES[whitepaper.type]
+    issues: list[str] = []
+    empty = 0
+    for number, (english, german, _, check) in zip(numbers, _CONTACT_ITEMS, strict=True):
+        answer = str(answers.get(number, "")).strip()
+        name = number if is_de else f"{number} ({names[number]})"
+        if not answer or is_placeholder(answer):
+            empty += 1
+        if not answer:
+            issue = (f"Feld {name} ist leer oder fehlt.", f"Field {name} is empty or not in the draft.")
+        elif is_placeholder(answer):
+            issue = (
+                f"Feld {name} enthält nur einen Platzhalter wie TBD.",
+                f"Field {name} holds only a placeholder such as TBD.",
+            )
+        elif is_not_applicable(answer):
+            issue = (
+                f"Feld {name} ist als nicht anwendbar markiert; Nr. 6 verlangt die {german} ohne Bedingung.",
+                f"Field {name} is marked not applicable; point 6 asks for the {english} without a condition.",
+            )
+        elif not check(answer):
+            issue = (f"Feld {name} enthält keine {german}.", f"Field {name} gives no {english}.")
+        else:
+            continue
+        issues.append(issue[0] if is_de else issue[1])
+    status = "missing" if empty == len(numbers) else "review" if issues else "pass"
+    words = sum(_count_words(str(answers.get(number, ""))) for number in numbers)
+    return Finding(rule=rule, status=status, word_count=words, issues=tuple(issues))

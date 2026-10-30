@@ -3,10 +3,12 @@
 Reference: Anhang I VO (EU) 2023/1114 i.V.m. Art. 6 MiCAR.
 
 Annex I is structured as Parts A through I. Each Part bundles point-level
-disclosure requirements. The rules below are scaffolded at the Part level;
-point-level granularity (e.g. Annex I, Part D, point 5) is left as a
-deliberate extension point - those interpretive calls are the practising
-lawyer's contribution and are tracked in the project issues.
+disclosure requirements. The rules below are scaffolded at the Part level.
+ANNEX_I.A.P6, for the contact details of Part A point 6, is the first point
+rule (ADR 0005); other point-level granularity (e.g. Annex I, Part D,
+point 5) is left as a deliberate extension point - those interpretive calls
+are the practising lawyer's contribution and are tracked in the project
+issues.
 
 ANNEX_I.J covers the sustainability disclosure under Art. 6(1), first
 subparagraph, point (j) MiCAR, which the template in Implementing Regulation
@@ -64,6 +66,21 @@ ANNEX_I_RULES: tuple[Rule, ...] = (
         required_patterns=(ADDRESS_EN,),
         required_patterns_de=(ADDRESS_DE,),
         min_words=50,
+        severity=Severity.BLOCKER,
+    ),
+    # The first point rule (ADR 0005). Teil A Nr. 6 asks for a contact telephone number, an e-mail address and
+    # the period of days within which an investor will receive an answer, and Table 2 of VO (EU) 2024/2984
+    # carries them in fields A.8 to A.10 without a condition (OJ text read on 2026-10-30). linter.py checks
+    # those fields in a numbered-field draft and searches the section elsewhere (contact.py).
+    Rule(
+        rule_id="ANNEX_I.A.P6",
+        citation="Anhang I Teil A Nr. 6 MiCAR",
+        section="offeror",
+        label=(
+            "Contact telephone number, e-mail address and response time in days of the offeror or person "
+            "seeking admission to trading"
+        ),
+        min_words=0,
         severity=Severity.BLOCKER,
     ),
     Rule(
