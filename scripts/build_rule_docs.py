@@ -19,10 +19,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from micar_linter import __version__, citations
+from micar_linter.contact import CONTACT_FIELDS
 from micar_linter.lei import check_digits_for
-from micar_linter.linter import EU_LANGUAGES, NOT_APPROVED_STATEMENT_RULE_IDS, Linter
+from micar_linter.linter import CONTACT_POINT_RULE_IDS, EU_LANGUAGES, NOT_APPROVED_STATEMENT_RULE_IDS, Linter
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Rule
+from micar_linter.template_fields import FIELD_NAMES
 from micar_linter.whitepaper import _RESERVED_METADATA_KEYS, Whitepaper, WhitepaperType
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -115,7 +117,7 @@ OJ_CHECKED = {
     "ANNEX_II.I": (
         "Checked on 2026-10-27 against the Official Journal text in English and German (OJ L 150, 9.6.2023) "
         "and the consolidated version of 9 January 2024. No amendment and no English or German corrigendum "
-        "changes Annex II Parts D and G, Art. 39 or Art. 46."
+        "changes Annex II Parts D and G, Art. 39, Art. 46 or Art. 49(4), which the note on par value cites."
     ),
     "ANNEX_II.G.VALUATION_AUDIT": (
         "Checked on 2026-10-27 against the Official Journal text in English and German (OJ L 150, 9.6.2023) "
@@ -129,14 +131,31 @@ OJ_CHECKED = {
         "consolidated version of 13 January 2018. No amendment and no English or German corrigendum changes "
         "Art. 54 or Annex III Part D."
     ),
+    "ANNEX_I.A.P6": (
+        "Checked on 2026-10-30 against the Official Journal text in English and German (OJ L 150, 9.6.2023), the "
+        "consolidated version of 9 January 2024 and Table 2 of Implementing Regulation (EU) 2024/2984, whose "
+        "fields A.8 to A.10 carry the point without a condition, as the Publications Office served them that day. "
+        "No amendment and no English or German corrigendum changes Annex I Part A point 6 or the template."
+    ),
+    "ANNEX_III.A.P6": (
+        "Checked on 2026-10-30 against the Official Journal text in English and German (OJ L 150, 9.6.2023), the "
+        "consolidated version of 9 January 2024 and Table 4 of Implementing Regulation (EU) 2024/2984, whose "
+        "fields A.9 to A.11 carry the point without a condition, as the Publications Office served them that day. "
+        "No amendment and no English or German corrigendum changes Annex III Part A point 6 or the template."
+    ),
 }
-# Rules that pass when the section holds a value of the right kind, a date or a language, at any length
-# (linter.py).
+# Rules that pass when the section holds a value of the right kind, a date, a language or contact details, at
+# any length (linter.py).
 ANSWER_CHECKS = {
     "COMMON.NOTIFICATION_DATE": "a calendar date",
     "COMMON.LANGUAGE": "an official EU language",
+    **dict.fromkeys(CONTACT_POINT_RULE_IDS, "a telephone number, an e-mail address and a period in days"),
 }
+# The template fields of each point rule, by the table its regime uses (contact.py).
+POINT_TABLES = {WhitepaperType.OTHER: 2, WhitepaperType.EMT: 4}
 FILLER = "This synthetic sentence only adds length and states no fact about any issuer or token."
+# A sentence that turns the scheme statement of the risk warning around, for the rule's examples.
+TURNED_AROUND = "Investor compensation schemes and deposit guarantee schemes cover the crypto-asset."
 FORMAT_GATE = {"COMMON.IXBRL_TAGGING"}
 LEI_RULES = {"COMMON.LEI_CHECK_DIGITS", "COMMON.LEI_CONSISTENCY"}
 # Synthetic LEIs: an obviously fictitious 18-character base completed with computed check digits.
@@ -183,7 +202,8 @@ VARIANT_NOTES = {
         "or in full, may not always be transferable and may not be liquid, and that investor compensation "
         "and deposit guarantee schemes do not cover it; the listed terms come from that wording. Art. 51(4) "
         "asks an e-money token white paper only for the two scheme warnings, so EMT drafts are checked for "
-        "those. The utility-token statement of Art. 6(5)(d) applies to utility tokens only and is not checked."
+        "those, and only wording that turns them around sends an EMT warning to review. The utility-token "
+        "statement of Art. 6(5)(d) applies to utility tokens only and is not checked."
     ),
 }
 
@@ -401,6 +421,8 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
                 "A placeholder alone is no answer, so the section counts as missing.",
             ),
         ]
+        if rule.rule_id in CONTACT_POINT_RULE_IDS:
+            return [*absent, *_contact_examples(rule, regime)]
         if rule.rule_id == "COMMON.NOTIFICATION_DATE":
             return [
                 *absent,
@@ -485,6 +507,28 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
                 f"Every listed term appears, but the section is shorter than {rule.min_words} words.",
             )
         )
+    if rule.rule_id == "ANNEX_II.I":
+        result.append(
+            Example(
+                "Redemption at par",
+                "review",
+                _draft(rule, regime, _passing_text(rule) + " Holders redeem at par."),
+                "Every listed term appears and the section is long enough. It mentions par value, and "
+                "redemption at par value is the e-money token rule of Art. 49(4) MiCAR; an ART issuer redeems "
+                "by paying funds, other than electronic money, equivalent to the market value of the "
+                "referenced assets, or by delivering those assets (Art. 39(2) MiCAR).",
+            )
+        )
+        reserve = " Reserve bills are bought at a discount and redeemed at par."
+        result.append(
+            Example(
+                "Reserve asset at par",
+                "review",
+                _draft(rule, regime, _passing_text(rule) + reserve),
+                "The note also follows where par value describes the reserve of assets. The check reads the "
+                "words and leaves it to the reviewer whether the token's redemption depends on par value.",
+            )
+        )
     result.append(
         Example(
             "Section that matches",
@@ -494,7 +538,61 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
             "model disclosure wording and does not meet MiCAR.",
         )
     )
+    if _named(rule.prohibited_patterns):
+        result.append(
+            Example(
+                "Statement turned around",
+                "review",
+                _draft(rule, regime, f"{_passing_text(rule)} {TURNED_AROUND}"),
+                "Every listed term appears, but the text says that the schemes cover the crypto-asset, the "
+                "opposite of the required statement, so a reviewer checks it.",
+            )
+        )
     return result
+
+
+def _contact_examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
+    """Point 6 in a draft without field numbers: the section is searched for the three items."""
+    person = "issuer" if regime is WhitepaperType.EMT else "offeror"
+    german = "emittent" if regime is WhitepaperType.EMT else "anbieter"
+    phone, email = "+49 30 0000 0000", f"contact@{person}.example"
+    names = FIELD_NAMES[regime]
+    phone_field, email_field, days_field = (names[number] for number in CONTACT_FIELDS[regime])
+    company = f"Synthetic {person.capitalize()} GmbH, a fictional company."
+    return [
+        Example(
+            "No contact details",
+            "review",
+            _draft(rule, regime, f"{company} The members of its management body are two fictional managing directors."),
+            f"The section names the {person} and its management body and gives no telephone number, e-mail address "
+            "or response time.",
+        ),
+        Example(
+            "No response time",
+            "review",
+            _draft(rule, regime, f"{company} Telephone: {phone}. E-mail: {email}."),
+            "The period of days within which an investor will receive an answer is missing.",
+        ),
+        Example(
+            "Answers under the template's field names",
+            "pass",
+            _draft(rule, regime, f"{phone_field}: {phone}. {email_field}: {email}. {days_field}: 5"),
+            f"Each item has the shape the check looks for. A pass does not show that the number or the address works "
+            f"or belongs to the {person}.",
+        ),
+        Example(
+            "German draft",
+            "pass",
+            _draft(
+                rule,
+                regime,
+                f"Telefonnummer zur Kontaktaufnahme: {phone}. E-Mail-Adresse: kontakt@{german}.example. Anleger "
+                "erhalten innerhalb von fünf Werktagen eine Antwort.",
+                language="de",
+            ),
+            "The period counts in German words too, here five working days written out.",
+        ),
+    ]
 
 
 def lint_example(rule: Rule, example: Example) -> str:
@@ -591,6 +689,8 @@ def status_logic(rule: Rule) -> str:
             "<li><strong>Pass</strong>: none of the above. Codes with invalid check digits are reported by "
             '<a href="COMMON.LEI_CHECK_DIGITS.html">COMMON.LEI_CHECK_DIGITS</a>, not here.</li></ul>'
         )
+    if rule.rule_id in CONTACT_POINT_RULE_IDS:
+        return _contact_status_logic(rule)
     if rule.rule_id in ANSWER_CHECKS:
         missing = (
             f'<ul class="plain"><li><strong>Missing</strong>: section <code>{_e(rule.section)}</code> is absent '
@@ -682,14 +782,75 @@ def status_logic(rule: Rule) -> str:
         f"<li><strong>Review</strong>: {review} ({match}).</li>",
     ]
     unnamed = [pattern for pattern in rule.required_patterns if not re.compile(pattern).groupindex]
-    if unnamed or rule.prohibited_patterns:
+    unnamed += [pattern for pattern in rule.prohibited_patterns if not re.compile(pattern).groupindex]
+    if unnamed:
         parts.append(
             "<li>Review also follows when a required pattern is absent or a prohibited pattern matches.</li>"
+        )
+    if any(_named(v.prohibited_patterns) or _named(v.prohibited_patterns_de) for v in groups):
+        parts.append(
+            "<li>Review also follows when the section uses one of the wordings shown above as sent to review, "
+            "each of which turns a required statement around, such as a text saying that the crypto-asset "
+            "cannot lose its value. The finding names the wording, not the draft text.</li>"
+        )
+    parts.append(
+        "<li>In a numbered-field XHTML draft, Review also follows when a field of the section holds only a "
+        "placeholder such as TBD; the finding names the field by its number and, in English, the template's "
+        "name.</li>"
+    )
+    if rule.rule_id == "ANNEX_II.I":
+        parts.append(
+            "<li>Review also follows when the section mentions par value anywhere: the word “par” (as in “at "
+            "par”, “par value” or “at-par”), “face value”, “nominal value”, “nominal amount”, “nominal price” or "
+            "“at nominal”, or a form of “Nennwert”, “Nennbetrag”, “Nominalwert”, “Nominalbetrag”, “nominaler "
+            "Wert”, “nomineller Wert”, “zum Nominale”, “pari”, “Pariwert”, “Parikurs” or “Parirücktausch”, in "
+            "drafts of either language and ignoring case. A soft hyphen, a zero-width character or a hyphen at a "
+            "line end inside the word does not hide it. Only uses that never mean par value do not count: “par” "
+            "for a paragraph next to an article number (“Art. 39 par. 2”, “par. 2 of Art. 39”), “on par” or “on a "
+            "par”, “par for the course”, “par excellence”, “sub-par”, “pari passu”, “rank at par” and “at par "
+            "with each other” or “with one another”. The issue says that redemption at par value is the e-money "
+            "token rule of Art. 49(4) MiCAR and that an ART issuer redeems by paying funds, other than electronic "
+            "money, equivalent to the market value of the referenced assets, or by delivering those assets "
+            "(Art. 39(2) MiCAR), and asks the reviewer to check whether the section ties the token's redemption "
+            "to par value.</li>"
         )
     parts.append(
         "<li><strong>Pass</strong>: none of the above. A pass means the check matched, nothing more.</li>"
     )
     return '<ul class="plain">' + "".join(parts) + "</ul>"
+
+
+def _contact_fields(rule: Rule) -> tuple[str, str, str, str]:
+    """The three template fields of a point rule and the words that name them with their table."""
+    regime = regimes_by_rule()[rule.rule_id][0]
+    phone, email, days = CONTACT_FIELDS[regime]
+    return phone, email, days, f"fields {phone}, {email} and {days} of Table {POINT_TABLES[regime]}"
+
+
+def _contact_status_logic(rule: Rule) -> str:
+    phone, email, days, fields = _contact_fields(rule)
+    section = f"<code>{_e(rule.section)}</code>"
+    return (
+        f'<ul class="plain"><li><strong>Missing</strong>: in a numbered-field XHTML draft, {fields} are each '
+        f"empty, absent or hold only placeholder text such as TBD; in any other draft, section {section} is absent "
+        "or empty, or holds only placeholder text.</li>"
+        "<li><strong>Review</strong>: in a numbered-field XHTML draft, one of those fields is empty or absent, holds "
+        "only a placeholder, is marked not applicable, which the template does not provide for, or gives no "
+        f"telephone number ({phone}), no e-mail address ({email}) or no number of days ({days}). In any other "
+        f"draft, section {section} gives no telephone number, no e-mail address or no period in days. The finding "
+        "names each missing item, and in a numbered-field draft each field by its number and, in English, the "
+        "template's name.</li>"
+        "<li>A telephone number counts with its country code (<code>+49 ...</code>, <code>0049 ...</code>), with "
+        "its area code and its digits in groups (<code>069 1234 5678</code>, <code>(069) 1234-5678</code>), or "
+        f"with at least six digits after a label such as Tel., Phone or Telefon; field {phone} is such a label. A "
+        "fax number and a date do not count. An e-mail address counts as name, @ and domain. A period counts as a "
+        "number of days, in digits or as an English or German word up to thirty (<code>5 business days</code>, "
+        "<code>fünf Werktage</code>), or as a number after the template's label (<code>Response time (Days): "
+        f"5</code>, <code>Reaktionszeit (Tage): 5</code>). In field {days} a number counts alone, unless the field "
+        "names hours, weeks, months or years.</li>"
+        "<li><strong>Pass</strong>: all three items are found. A pass means the three shapes were found, nothing "
+        "more.</li></ul>"
+    )
 
 
 def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
@@ -705,6 +866,14 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
         return "; ".join(f"{text} ({_annexes(found)})" for text, found in rendered)
 
     variant_note = f"<p>{_e(VARIANT_NOTES[rule.rule_id])}</p>" if len(groups) > 1 else ""
+    prohibited = ""
+    if any(variant.prohibited_patterns or variant.prohibited_patterns_de for variant, _ in groups):
+        prohibited = (
+            "<dt>Wording sent to review (English)</dt>"
+            f"<dd>{by_regime(lambda r: _terms((), r.prohibited_patterns))}</dd>\n"
+            '<dt>Wording sent to review (German)</dt><dd lang="de">'
+            f"{by_regime(lambda r: _terms((), r.prohibited_patterns_de))}</dd>\n"
+        )
     citation_en = citations.to_english(rule.citation)
     sources = "".join(
         f'<li><a href="{_e(url)}">{_e(url)}</a></li>' for url in citations.source_urls(rule.citation)
@@ -715,6 +884,9 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             if rule.rule_id in FORMAT_GATE
             else "Reads every section of the draft; findings are anchored to the <code>issuer</code> section."
             if rule.rule_id in LEI_RULES
+            else f"Reads one section key, <code>{_e(rule.section)}</code>, and in a numbered-field XHTML draft only "
+            f"{_contact_fields(rule)[3]}. Text elsewhere in the draft is not considered."
+            if rule.rule_id in CONTACT_POINT_RULE_IDS
             else f"Reads one section key, <code>{_e(rule.section)}</code>. Text elsewhere in the draft is not considered."
         ),
         (
@@ -742,6 +914,12 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             "or whether that language meets the requirement. Language codes such as EN and names in other "
             "languages, such as français, do not count."
             if rule.rule_id == "COMMON.LANGUAGE"
+            else "Recognises the shape of each item. It cannot tell whose number or address it is or whether it "
+            "works, so in a draft without field numbers any telephone number, e-mail address and period in days in "
+            "the section count, a management body member's too, and the period need not be the response time. A "
+            "number without its country code, a grouped area code or a label, an e-mail address written with (at) "
+            "and a period in hours or weeks do not count."
+            if rule.rule_id in CONTACT_POINT_RULE_IDS
             else "Matches words and counts length. It does not test accuracy, consistency with other sections or "
             "the point-level items of the cited Part."
         ),
@@ -768,6 +946,16 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             "identisch). A role named in an earlier sentence does not carry over: in \"The custodian is Example "
             "Bank AG. Its LEI is ...\" the code is still compared with the party sections."
         )
+    if rule.rule_id in CONTACT_POINT_RULE_IDS:
+        limitations.append(
+            "A numbered-field XHTML draft is read by the template's field numbers. Contact details in another field "
+            "do not count, and a draft that numbers these fields otherwise goes to review."
+        )
+    if rule.rule_id == "COMMON.RISK_WARNING":
+        limitations.append(
+            "Recognises a statement turned around only in the wordings shown above, in English and German. A "
+            "contradiction worded otherwise still passes, and so does one in another section."
+        )
     if rule.rule_id in NOT_APPROVED_STATEMENT_RULE_IDS:
         emt = rule.rule_id.startswith("ANNEX_III.")
         field = "I.02" if emt else "02"
@@ -784,6 +972,15 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
         limitations.append(
             "A German draft never passes: the German wording has not been checked against the German Official "
             "Journal."
+        )
+    if rule.rule_id == "ANNEX_II.I":
+        limitations.append(
+            "The note on par value reads the words alone. It also follows where par value "
+            "describes the reserve of assets, issuance or the cover of the reserve, where the section says that "
+            "the token is not redeemed at par, and in idioms such as “take at face value”; the reviewer decides "
+            "whether the token's redemption depends on par value. Other words for the same basis, such as "
+            "“1:1”, “dollar for dollar” or “at parity”, are not found. Text that the loader does not put into "
+            "the redemption section is not read: a heading, and a table in a DOCX or heading-based XHTML draft."
         )
     if rule.rule_id in NEVER_PASS:
         limitations.append("This rule never reports Pass.")
@@ -814,7 +1011,7 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
 <dt>Minimum words</dt><dd>{f"none: checks for {ANSWER_CHECKS[rule.rule_id]}" if rule.rule_id in ANSWER_CHECKS else by_regime(lambda r: str(r.min_words))}</dd>
 <dt>Listed terms (English)</dt><dd>{by_regime(lambda r: _terms(r.required_terms, r.required_patterns))}</dd>
 <dt>Listed terms (German)</dt><dd lang="de">{by_regime(lambda r: _terms(r.required_terms_de, r.required_patterns_de))}</dd>
-<dt>Package version</dt><dd>{_e(__version__)}, built from source that may include unreleased changes</dd>
+{prohibited}<dt>Package version</dt><dd>{_e(__version__)}, built from source that may include unreleased changes</dd>
 <dt>Source</dt><dd><a href="{REPO}/blob/main/src/micar_linter/rules/{SOURCE_MODULES[family]}">rules/{SOURCE_MODULES[family]}</a></dd>
 </dl></div>
 <h2>How the status is set</h2>

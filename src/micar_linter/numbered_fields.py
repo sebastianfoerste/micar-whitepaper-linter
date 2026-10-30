@@ -427,8 +427,8 @@ def is_numbered_layout(fields: list[NumberedField]) -> bool:
 
 def sections_from_numbered_fields(
     fields: list[NumberedField], whitepaper_type: WhitepaperType
-) -> tuple[dict[str, str], tuple[str, ...]]:
-    """Map numbered fields to section texts and extraction notes.
+) -> tuple[dict[str, str], tuple[str, ...], dict[str, tuple[str, ...]]]:
+    """Map numbered fields to section texts, extraction notes and placeholder fields.
 
     An answered field contributes "label: answer". A field answered "N/A" contributes
     "N/A" and a placeholder field ("TBD", "[●]") its placeholder, both without the label,
@@ -437,7 +437,9 @@ def sections_from_numbered_fields(
     when another field holds a placeholder, so a part of placeholders and "N/A" reads as
     placeholders only and is reported missing. A field whose text starts with the template's
     field name has that name split off as its label first, so the safeguards also hold
-    where a layout runs labels into answers.
+    where a layout runs labels into answers. The third value lists, per section, the fields
+    that hold only a placeholder, as the table prints their numbers ("A.10", "08", "I.05"),
+    so a section with answered fields beside them is not read as complete.
     """
     parts = _PART_SECTIONS[whitepaper_type]
     summary = _SUMMARY_SECTIONS[whitepaper_type]
@@ -450,6 +452,7 @@ def sections_from_numbered_fields(
     placeholder_parts = {field.part for field in lettered if field.placeholder} - answered_parts
 
     sections: dict[str, list[str]] = {}
+    placeholders: dict[str, list[str]] = {}
     safeguarding_fields: list[str] = []
     for field in fields:
         keys = parts.get(field.part) or summary.get(field.field_id, ())
@@ -470,6 +473,8 @@ def sections_from_numbered_fields(
             line = field.content
         for key in keys:
             sections.setdefault(key, []).append(line)
+            if field.placeholder:
+                placeholders.setdefault(key, []).append(_printed_number(field.field_id, whitepaper_type))
         if (
             whitepaper_type is WhitepaperType.EMT
             and field.part in parts
@@ -514,4 +519,28 @@ def sections_from_numbered_fields(
                 f"Part {part}: all {len(in_part)} numbered fields are marked not applicable. "
                 "Confirm that the part does not apply."
             )
-    return {key: "\n".join(lines) for key, lines in sections.items()}, tuple(notes)
+    return (
+        {key: "\n".join(lines) for key, lines in sections.items()},
+        tuple(notes),
+        {key: tuple(dict.fromkeys(numbers)) for key, numbers in placeholders.items()},
+    )
+
+
+def field_answers(fields: list[NumberedField], whitepaper_type: WhitepaperType) -> dict[str, str]:
+    """The answer of each field by its number as the table prints it, with the template's name split off.
+
+    The point rules read the fields that carry their Annex point here (ADR 0005). A field that occurs
+    more than once gives its answers one per line; an empty field gives an empty answer.
+    """
+    answers: dict[str, list[str]] = {}
+    for field in map(_with_template_label, fields):
+        content = field.content.strip()
+        lines = answers.setdefault(_printed_number(field.field_id, whitepaper_type), [])
+        if content:
+            lines.append(content)
+    return {number: "\n".join(lines) for number, lines in answers.items()}
+
+
+def _printed_number(field_id: str, whitepaper_type: WhitepaperType) -> str:
+    """The field number as its table prints it: Tables 3 and 4 number the leading fields I.00 to I.08."""
+    return f"I.{field_id}" if whitepaper_type is not WhitepaperType.OTHER and field_id.isdigit() else field_id
