@@ -4,7 +4,7 @@ Reference: Anhang II VO (EU) 2023/1114 i.V.m. Art. 19 MiCAR.
 
 ART white papers carry a heavier disclosure load than Annex I: reserve of
 assets, redemption rights, governance arrangements, and bank-style risk
-information are mandatory. The reserve composition rule (Art. 36 MiCAR) is
+information are mandatory. The reserve composition rule (Annex II Part G Nos. 1 and 2 MiCAR) is
 typically where draft white papers fail in practice.
 
 Scaffold note: this ruleset hits each Part of Annex II at the Part level. The

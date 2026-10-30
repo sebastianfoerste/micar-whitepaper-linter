@@ -34,7 +34,7 @@
       <h2 id="not-heading">What it is not</h2>
       <ul class="plain small">
         <li>Not legal advice, and not a compliance opinion.</li>
-        <li>A pass means a check matched: listed terms appear and the section is long enough, or, for the notification date and the language, the section names a calendar date or an EU language. Accuracy and sufficiency need a lawyer.</li>
+        <li>A pass means a check matched: listed terms appear and the section is long enough, or, for the LEI checks, the LEIs found have valid check digits and the parties' LEIs agree across sections. From the next release, and already in the playground, the notification-date and language checks pass when the section names a calendar date, or one of the 24 official EU languages in English or German; release 1.2.1 (PyPI and <code>@v1</code>) still checks those two by listed terms and length. Accuracy and sufficiency need a lawyer.</li>
         <li>Not an iXBRL validator. The format check never passes; tag completeness needs a taxonomy validator.</li>
       </ul>
     </section>
@@ -60,7 +60,7 @@
 
   <h2>Known limits</h2>
   <ul class="plain small">
-    <li>Rules work at Annex Part level, with topic rules for the reserve of assets. Point-level checks are not built yet.</li>
+    <li>Rules work at Annex Part level, with topic rules for an ART's reserve of assets and valuation and for the safeguarding of an e-money token's funds, and, from the next release (already in the playground), a check of the first-page statement of Art. 6(3) and 51(3) MiCAR for other crypto-assets and EMTs. Point-level checks are not built yet.</li>
     <li>The Annex II and III rules have not yet been run against a real ART or EMT white paper.</li>
     <li>No accuracy rate is published: the pilot study's results await human review.</li>
     <li>Citations link to the acts on EUR-Lex at act level.</li>
