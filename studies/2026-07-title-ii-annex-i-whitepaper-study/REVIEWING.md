@@ -118,6 +118,7 @@ Exit status 0 means no row is pending and every labelled row has the fields that
 - the confusion matrix (`tp` flagged and missing, `fp` flagged and present, `fn` not flagged and missing, `tn` not flagged and present);
 - precision `tp / (tp + fp)`, recall `tp / (tp + fn)` and F1 `2tp / (2tp + fp + fn)`. The protocol does not define F1; `metric_note` records the formula;
 - the counts of `uncertain`, `extraction_failure` and `not_applicable`, which are excluded from the metrics;
+- with `--analyses` (study README), the intervals and analyses of the draft `analysis-plan.md`, sections 7 to 10: Wilson, Clopper-Pearson and document-cluster bootstrap intervals for precision, recall and specificity, the sensitivity analyses and, given the step 3a files, the two reviews' agreement and whether every disagreement is adjudicated. The protocol names no interval method; these intervals follow the plan, a draft until adopted (see below);
 - `reviewers_recorded`, the number of distinct reviewer identifiers across labelled cells (not the number of reviews per cell), and `review_disclosure`;
 - `publication_ready_scope`, which states what `publication_ready` does not check.
 
