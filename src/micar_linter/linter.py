@@ -90,6 +90,8 @@ class Linter:
 
         text = whitepaper.section(rule.section)
         word_count = _count_words(text)
+        # The predefined warning of the summary does not count toward its minimum length (#70).
+        counted = _summary_words(text, whitepaper) if rule.rule_id == "COMMON.SUMMARY" else word_count
 
         absent = _absent(text, is_de)
         if absent:
@@ -101,13 +103,17 @@ class Linter:
         text = _collapse_whitespace(text)
         normalized = text.lower()
 
-        if word_count < rule.min_words:
+        if counted < rule.min_words:
             if is_de:
+                besides = " ohne den vorgegebenen Warnhinweis" if counted < word_count else ""
                 issues.append(
-                    f"Abschnitt ist zu kurz: {word_count} Wörter, mindestens {rule.min_words} erwartet."
+                    f"Abschnitt ist zu kurz: {counted} Wörter{besides}, mindestens {rule.min_words} erwartet."
                 )
             else:
-                issues.append(f"Section is thin: {word_count} words, expected at least {rule.min_words}.")
+                besides = " besides the predefined warning" if counted < word_count else ""
+                issues.append(
+                    f"Section is thin: {counted} words{besides}, expected at least {rule.min_words}."
+                )
 
         # Bilingual required terms
         req_terms = rule.required_terms_de if (is_de and rule.required_terms_de) else rule.required_terms
@@ -843,3 +849,65 @@ def _contact_fields_finding(
     status = "missing" if empty == len(numbers) else "review" if issues else "pass"
     words = sum(_count_words(str(answers.get(number, ""))) for number in numbers)
     return Finding(rule=rule, status=status, word_count=words, issues=tuple(issues))
+
+
+# The predefined warning of the summary (Art. 6(7), 19(6) and 51(6) MiCAR, second subparagraph), as
+# field 07 of Table 2, I.04 of Table 3 and I.05 of Table 4 of Implementing Regulation (EU) 2024/2984
+# print it in English and German (OJ text read on 2026-10-30). It does not count toward the summary's
+# minimum length (#70).
+_SUMMARY_WARNING_FIELDS = {WhitepaperType.OTHER: "07", WhitepaperType.ART: "I.04", WhitepaperType.EMT: "I.05"}
+_WHITE_PAPER_EN = r"crypto[\s\u2013-]*asset white paper"
+_TOKEN_EN = r"(?:crypto[\s\u2013-]*assets?|asset-referenced tokens?|e-money tokens?)"
+_TOKEN_DE = r"(?:kryptowerts?|vermögenswertereferenzierten token|e-geld-token)"
+_SUMMARY_WARNING = re.compile(
+    "|".join(
+        (
+            r"(?:\bwarning\b[:.]?\s*)?\bthis summary should be read as an introduction to the "
+            rf"{_WHITE_PAPER_EN}\.?",
+            rf"\bthe prospective holders? should base any decision to purchase (?:this|the|an?) {_TOKEN_EN} "
+            rf"on the content of the {_WHITE_PAPER_EN} as a whole and not on the summary alone\.?",
+            rf"\bthe offer to the public of (?:this|the) {_TOKEN_EN} does not constitute an offer or "
+            r"solicitation to purchase financial instruments and (?:that )?any such offer or solicitation "
+            r"can be made only by means of a prospectus or other offer documents pursuant to the applicable "
+            r"national law\.?",
+            rf"\bthis {_WHITE_PAPER_EN} does not constitute a prospectus as referred to in regulation "
+            r"\(eu\) 2017/1129(?: of the european parliament and of the council)? or any other offer "
+            r"document pursuant to union or national law\.?",
+            r"(?:\bwarnhinweis\b[:.]?\s*)?\bdiese zusammenfassung ist als einführung in das "
+            r"kryptowerte-whitepaper zu lesen\.?",
+            r"(?:\bder potenzielle inhaber sollte jede entscheidung über den kauf|\bpotenzielle inhaber "
+            rf"sollten ihre entscheidung zum kauf) (?:des|dieses) {_TOKEN_DE} auf der grundlage des inhalts "
+            r"des gesamten kryptowerte-whitepapers und nicht allein auf der grundlage der zusammenfassung "
+            r"treffen\.?",
+            rf"\bdas öffentliche angebot (?:dieses|des) {_TOKEN_DE} stellt kein angebot und keine "
+            r"aufforderung zum kauf von finanzinstrumenten dar und ein solches angebot oder eine solche "
+            r"aufforderung kann nur mittels eines prospekts oder anderer (?:im geltenden nationalen recht "
+            r"vorgesehener angebotsunterlagen|angebotsunterlagen gemäß den nationalen rechtsvorschriften) "
+            r"erfolgen\.?",
+            r"\bdieses kryptowerte-whitepaper stellt keinen prospekt im sinne der verordnung \(eu\) "
+            r"2017/1129(?: des europäischen parlaments und des rates)? und kein anderes angebotsdokument im "
+            r"sinne von unionsrecht oder nationalem recht dar\.?",
+        )
+    ),
+    re.IGNORECASE,
+)
+
+
+def _summary_words(text: str, whitepaper: Whitepaper) -> int:
+    """The words of the summary that count toward its minimum: all but the predefined warning.
+
+    A numbered-field draft leaves out the line of the warning field, its label included. In any draft the
+    warning's sentences are left out where they appear in the template's English or German wording; a warning
+    worded otherwise still counts.
+    """
+    answers = whitepaper.metadata.get("numbered_fields")
+    number = _SUMMARY_WARNING_FIELDS.get(whitepaper.type)
+    if isinstance(answers, dict) and number:
+        answer = str(answers.get(number, "")).strip()
+        # A field that occurs twice gives its answers one per line (numbered_fields.field_answers).
+        for part in (answer,) if answer in text else answer.split("\n"):
+            index = text.find(part) if part else -1
+            if index >= 0:
+                start = text.rfind("\n", 0, index) + 1
+                text = text[:start] + text[index + len(part) :]
+    return _count_words(_SUMMARY_WARNING.sub(" ", _collapse_whitespace(text)))

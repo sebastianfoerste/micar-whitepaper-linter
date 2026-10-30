@@ -131,6 +131,13 @@ OJ_CHECKED = {
         "consolidated version of 13 January 2018. No amendment and no English or German corrigendum changes "
         "Art. 54 or Annex III Part D."
     ),
+    "COMMON.SUMMARY": (
+        "Checked on 2026-10-30 against the Official Journal text in English and German (OJ L 150, 9.6.2023), the "
+        "consolidated version of 9 January 2024, which differs there only in a footnote number, and the predefined "
+        "warnings of field 07 of Table 2, I.04 of Table 3 and I.05 of Table 4 of Implementing Regulation (EU) "
+        "2024/2984, as the Publications Office served them that day. No amendment and no English or German "
+        "corrigendum changes Art. 6(7), Art. 19(6), Art. 51(6) or those fields."
+    ),
     "ANNEX_I.A.P6": (
         "Checked on 2026-10-30 against the Official Journal text in English and German (OJ L 150, 9.6.2023), the "
         "consolidated version of 9 January 2024 and Table 2 of Implementing Regulation (EU) 2024/2984, whose "
@@ -156,6 +163,17 @@ POINT_TABLES = {WhitepaperType.OTHER: 2, WhitepaperType.EMT: 4}
 FILLER = "This synthetic sentence only adds length and states no fact about any issuer or token."
 # A sentence that turns the scheme statement of the risk warning around, for the rule's examples.
 TURNED_AROUND = "Investor compensation schemes and deposit guarantee schemes cover the crypto-asset."
+# The predefined warning of field 07 of Table 2 of Implementing Regulation (EU) 2024/2984, which does not count
+# toward the minimum of COMMON.SUMMARY (linter.py).
+SUMMARY_WARNING = (
+    "Warning This summary should be read as an introduction to the crypto-asset white paper. The prospective "
+    "holder should base any decision to purchase this crypto-asset on the content of the crypto-asset white paper "
+    "as a whole and not on the summary alone. The offer to the public of this crypto-asset does not constitute an "
+    "offer or solicitation to purchase financial instruments and any such offer or solicitation can be made only "
+    "by means of a prospectus or other offer documents pursuant to the applicable national law. This crypto-asset "
+    "white paper does not constitute a prospectus as referred to in Regulation (EU) 2017/1129 of the European "
+    "Parliament and of the Council or any other offer document pursuant to Union or national law."
+)
 FORMAT_GATE = {"COMMON.IXBRL_TAGGING"}
 LEI_RULES = {"COMMON.LEI_CHECK_DIGITS", "COMMON.LEI_CONSISTENCY"}
 # Synthetic LEIs: an obviously fictitious 18-character base completed with computed check digits.
@@ -516,6 +534,16 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
             "model disclosure wording and does not meet MiCAR.",
         )
     )
+    if rule.rule_id == "COMMON.SUMMARY":
+        result.append(
+            Example(
+                "Predefined warning and a short summary",
+                "review",
+                _draft(rule, regime, f"{SUMMARY_WARNING} {thin}"),
+                "The section has more than 80 words, but the predefined warning of the template does not count "
+                "toward them, so the summary itself is thin.",
+            )
+        )
     if _named(rule.prohibited_patterns):
         result.append(
             Example(
@@ -772,7 +800,15 @@ def status_logic(rule: Rule) -> str:
             "cannot lose its value. The finding names the wording, not the draft text.</li>"
         )
     parts.append(
-        "<li>In a numbered-field XHTML draft, Review also follows when a field of the section holds only a "
+        (
+            "<li>The predefined warning of Art. 6(7), Art. 19(6) and Art. 51(6), second subparagraph, does not "
+            "count toward the minimum. A numbered-field XHTML draft leaves out field 07 of Table 2 (I.04 of Table 3, "
+            "I.05 of Table 4) with its label, and any draft leaves out the warning's sentences where they appear in "
+            "the template's English or German wording. The finding then gives the words besides the warning.</li>"
+            if rule.rule_id == "COMMON.SUMMARY"
+            else ""
+        )
+        + "<li>In a numbered-field XHTML draft, Review also follows when a field of the section holds only a "
         "placeholder such as TBD; the finding names the field by its number and, in English, the template's "
         "name.</li>"
     )
@@ -912,6 +948,11 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
         limitations.append(
             "A numbered-field XHTML draft is read by the template's field numbers. Contact details in another field "
             "do not count, and a draft that numbers these fields otherwise goes to review."
+        )
+    if rule.rule_id == "COMMON.SUMMARY":
+        limitations.append(
+            "Only sentences in the template's English or German wording are left out. A warning in other words "
+            "still counts toward the 80 words."
         )
     if rule.rule_id == "COMMON.RISK_WARNING":
         limitations.append(
