@@ -24,7 +24,7 @@ Option 2, checked against the template fields. The owner chose it on 2026-10-28.
 - Part-level rules stay as they are.
 - Every point citation and field mapping is checked against the Official Journal text, with the retrieval date, before it is added. Where EUR-Lex refuses automated retrieval, the Publications Office Cellar serves the same text (`https://publications.europa.eu/resource/celex/32023R1114` and `.../32024R2984` with the header `Accept: application/xhtml+xml`).
 
-Open before the first point rule ships: how a point rule reads a draft without the numbered-field layout (JSON, DOCX, PDF, Markdown, and XHTML or HTML in the heading layout), where no field numbers exist.
+How a point rule reads a draft without the numbered-field layout (JSON, DOCX, PDF, Markdown, and XHTML or HTML in the heading layout), where no field numbers exist, was settled by the owner on 2026-10-29 for the first point rules, `ANNEX_I.A.P6` and `ANNEX_III.A.P6` (#68): in a numbered-field draft the rule checks fields A.8 to A.10 of Table 2 (A.9 to A.11 of Table 4); in a draft without field numbers it searches the offeror or issuer section for an e-mail address, a telephone number and a period in days.
 
 ## Consequences
 

@@ -13,7 +13,7 @@ Required fields:
 3. `section`: the section key the generic checks read, as in the `sections` of a JSON draft (`COMMON.IXBRL_TAGGING` reads no section, and the two LEI rules read every section).
 4. `label`: Human-readable description of the disclosure requirement.
 5. `severity`: `BLOCKER`, `MAJOR` or `MINOR` (default `MAJOR`; set it explicitly).
-6. `min_words` (default 30, for drafts in both languages), required terms, required patterns or prohibited patterns. The three lists each have an optional German variant (`required_terms_de`, `required_patterns_de`, `prohibited_patterns_de`); without one, a German draft is checked against the English list. A term that a plain substring would also find inside other words ("fee" in "feedback") is a required pattern with one named group, kept in `rules/terms.py`: the report names the group, with underscores read as spaces, among the missing terms, and the pattern must match that name.
+6. `min_words` (default 30, for drafts in both languages), required terms, required patterns or prohibited patterns. The three lists each have an optional German variant (`required_terms_de`, `required_patterns_de`, `prohibited_patterns_de`); without one, a German draft is checked against the English list. A term that a plain substring would also find inside other words ("fee" in "feedback") is a required pattern with one named group, kept in `rules/terms.py`: the report names the group, with underscores read as spaces, among the missing terms, and the pattern must match that name. A prohibited pattern with one named group is likewise reported by the group's name, never by the matched text.
 
 ## Severity Contract
 

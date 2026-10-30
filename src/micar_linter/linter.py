@@ -12,6 +12,7 @@ from micar_linter.lei import PARTY_SECTIONS, has_valid_check_digits, leis_by_sec
 from micar_linter.placeholders import is_placeholder
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Finding, Rule, Severity
+from micar_linter.template_fields import FIELD_NAMES
 from micar_linter.whitepaper import Whitepaper, WhitepaperType
 
 
@@ -142,7 +143,9 @@ class Linter:
             issues.append(prefix + ", ".join(missing_terms) + ".")
         issues.extend(pattern_issues)
 
-        # Bilingual prohibited regex patterns
+        # Bilingual prohibited regex patterns. A pattern with a named group stands for wording that turns a
+        # required statement around; the finding reports the group's name, with underscores read as spaces,
+        # and never the matched draft text.
         proh_patterns = (
             rule.prohibited_patterns_de
             if (is_de and rule.prohibited_patterns_de)
@@ -159,15 +162,27 @@ class Linter:
                 )
                 issues.append(msg)
                 continue
-            if compiled.search(text):
-                msg = (
-                    f"Unzulässiger Inhalt gefunden: '{pattern}'."
-                    if is_de
-                    else f"Prohibited content matched: '{pattern}'."
-                )
+            found = compiled.search(text)
+            if found:
+                names = [
+                    name.replace("_", " ") for name, value in found.groupdict().items() if value is not None
+                ]
+                if names:
+                    msg = (
+                        f"Unzulässige Formulierung gefunden: {', '.join(names)}."
+                        if is_de
+                        else f"Prohibited wording found: {', '.join(names)}."
+                    )
+                else:
+                    msg = (
+                        f"Unzulässiger Inhalt gefunden: '{pattern}'."
+                        if is_de
+                        else f"Prohibited content matched: '{pattern}'."
+                    )
                 issues.append(msg)
 
         issues.extend(_rule_specific_issues(rule, normalized, is_de))
+        issues.extend(_placeholder_field_issues(rule, whitepaper, is_de))
 
         status = "review" if issues else "pass"
         return Finding(rule=rule, status=status, word_count=word_count, issues=tuple(issues))
@@ -273,6 +288,32 @@ def _rule_specific_issues(rule: Rule, normalized: str, is_de: bool) -> list[str]
                 "someone else."
             ]
     return []
+
+
+def _placeholder_field_issues(rule: Rule, whitepaper: Whitepaper, is_de: bool) -> list[str]:
+    """Name the numbered fields of the rule's section that hold only a placeholder.
+
+    The loader adds such a field's placeholder without its label, so the section's other fields
+    could otherwise satisfy the rule on their own. The issue names each field by its number and,
+    in English, the template's name for it, never by text from the draft.
+    """
+    numbers = whitepaper.metadata.get("placeholder_fields", {}).get(rule.section, ())
+    if not numbers:
+        return []
+    if is_de:
+        if len(numbers) == 1:
+            return [f"Feld {numbers[0]} enthält nur einen Platzhalter wie TBD."]
+        return [f"Felder {_listed(numbers, 'und')} enthalten nur Platzhalter wie TBD."]
+    names = FIELD_NAMES[whitepaper.type]
+    fields = [f"{number} ({names[number]})" if number in names else number for number in numbers]
+    if len(fields) == 1:
+        return [f"Field {fields[0]} holds only a placeholder such as TBD."]
+    return [f"Fields {_listed(fields, 'and')} hold only placeholders such as TBD."]
+
+
+def _listed(items: list[str] | tuple[str, ...], conjunction: str) -> str:
+    """'A', 'A and B', 'A, B and C'."""
+    return items[0] if len(items) == 1 else f"{', '.join(items[:-1])} {conjunction} {items[-1]}"
 
 
 def _absent(text: str, is_de: bool) -> str | None:

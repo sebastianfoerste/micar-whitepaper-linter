@@ -137,6 +137,8 @@ ANSWER_CHECKS = {
     "COMMON.LANGUAGE": "an official EU language",
 }
 FILLER = "This synthetic sentence only adds length and states no fact about any issuer or token."
+# A sentence that turns the scheme statement of the risk warning around, for the rule's examples.
+TURNED_AROUND = "Investor compensation schemes and deposit guarantee schemes cover the crypto-asset."
 FORMAT_GATE = {"COMMON.IXBRL_TAGGING"}
 LEI_RULES = {"COMMON.LEI_CHECK_DIGITS", "COMMON.LEI_CONSISTENCY"}
 # Synthetic LEIs: an obviously fictitious 18-character base completed with computed check digits.
@@ -183,7 +185,8 @@ VARIANT_NOTES = {
         "or in full, may not always be transferable and may not be liquid, and that investor compensation "
         "and deposit guarantee schemes do not cover it; the listed terms come from that wording. Art. 51(4) "
         "asks an e-money token white paper only for the two scheme warnings, so EMT drafts are checked for "
-        "those. The utility-token statement of Art. 6(5)(d) applies to utility tokens only and is not checked."
+        "those, and only wording that turns them around sends an EMT warning to review. The utility-token "
+        "statement of Art. 6(5)(d) applies to utility tokens only and is not checked."
     ),
 }
 
@@ -494,6 +497,16 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
             "model disclosure wording and does not meet MiCAR.",
         )
     )
+    if _named(rule.prohibited_patterns):
+        result.append(
+            Example(
+                "Statement turned around",
+                "review",
+                _draft(rule, regime, f"{_passing_text(rule)} {TURNED_AROUND}"),
+                "Every listed term appears, but the text says that the schemes cover the crypto-asset, the "
+                "opposite of the required statement, so a reviewer checks it.",
+            )
+        )
     return result
 
 
@@ -682,10 +695,22 @@ def status_logic(rule: Rule) -> str:
         f"<li><strong>Review</strong>: {review} ({match}).</li>",
     ]
     unnamed = [pattern for pattern in rule.required_patterns if not re.compile(pattern).groupindex]
-    if unnamed or rule.prohibited_patterns:
+    unnamed += [pattern for pattern in rule.prohibited_patterns if not re.compile(pattern).groupindex]
+    if unnamed:
         parts.append(
             "<li>Review also follows when a required pattern is absent or a prohibited pattern matches.</li>"
         )
+    if any(_named(v.prohibited_patterns) or _named(v.prohibited_patterns_de) for v in groups):
+        parts.append(
+            "<li>Review also follows when the section uses one of the wordings shown above as sent to review, "
+            "each of which turns a required statement around, such as a text saying that the crypto-asset "
+            "cannot lose its value. The finding names the wording, not the draft text.</li>"
+        )
+    parts.append(
+        "<li>In a numbered-field XHTML draft, Review also follows when a field of the section holds only a "
+        "placeholder such as TBD; the finding names the field by its number and, in English, the template's "
+        "name.</li>"
+    )
     parts.append(
         "<li><strong>Pass</strong>: none of the above. A pass means the check matched, nothing more.</li>"
     )
@@ -705,6 +730,14 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
         return "; ".join(f"{text} ({_annexes(found)})" for text, found in rendered)
 
     variant_note = f"<p>{_e(VARIANT_NOTES[rule.rule_id])}</p>" if len(groups) > 1 else ""
+    prohibited = ""
+    if any(variant.prohibited_patterns or variant.prohibited_patterns_de for variant, _ in groups):
+        prohibited = (
+            "<dt>Wording sent to review (English)</dt>"
+            f"<dd>{by_regime(lambda r: _terms((), r.prohibited_patterns))}</dd>\n"
+            '<dt>Wording sent to review (German)</dt><dd lang="de">'
+            f"{by_regime(lambda r: _terms((), r.prohibited_patterns_de))}</dd>\n"
+        )
     citation_en = citations.to_english(rule.citation)
     sources = "".join(
         f'<li><a href="{_e(url)}">{_e(url)}</a></li>' for url in citations.source_urls(rule.citation)
@@ -768,6 +801,11 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             "identisch). A role named in an earlier sentence does not carry over: in \"The custodian is Example "
             "Bank AG. Its LEI is ...\" the code is still compared with the party sections."
         )
+    if rule.rule_id == "COMMON.RISK_WARNING":
+        limitations.append(
+            "Recognises a statement turned around only in the wordings shown above, in English and German. A "
+            "contradiction worded otherwise still passes, and so does one in another section."
+        )
     if rule.rule_id in NOT_APPROVED_STATEMENT_RULE_IDS:
         emt = rule.rule_id.startswith("ANNEX_III.")
         field = "I.02" if emt else "02"
@@ -814,7 +852,7 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
 <dt>Minimum words</dt><dd>{f"none: checks for {ANSWER_CHECKS[rule.rule_id]}" if rule.rule_id in ANSWER_CHECKS else by_regime(lambda r: str(r.min_words))}</dd>
 <dt>Listed terms (English)</dt><dd>{by_regime(lambda r: _terms(r.required_terms, r.required_patterns))}</dd>
 <dt>Listed terms (German)</dt><dd lang="de">{by_regime(lambda r: _terms(r.required_terms_de, r.required_patterns_de))}</dd>
-<dt>Package version</dt><dd>{_e(__version__)}, built from source that may include unreleased changes</dd>
+{prohibited}<dt>Package version</dt><dd>{_e(__version__)}, built from source that may include unreleased changes</dd>
 <dt>Source</dt><dd><a href="{REPO}/blob/main/src/micar_linter/rules/{SOURCE_MODULES[family]}">rules/{SOURCE_MODULES[family]}</a></dd>
 </dl></div>
 <h2>How the status is set</h2>
