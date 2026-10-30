@@ -21,6 +21,9 @@ htmlcov/
 studies/**/raw/
 studies/**/downloads/
 studies/**/review-worksheet.md
+# Per-document and per-offeror counts (micar-review-summary --internal-out): internal checks only,
+# never published (analysis-plan.md section 10).
+studies/**/human-review-internal*.json
 
 # Safety rules (auto-added)
 node_modules/
