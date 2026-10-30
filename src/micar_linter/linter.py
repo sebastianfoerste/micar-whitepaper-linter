@@ -186,7 +186,7 @@ class Linter:
                     )
                 issues.append(msg)
 
-        issues.extend(_rule_specific_issues(rule, normalized, is_de))
+        issues.extend(_rule_specific_issues(rule, whitepaper.section(rule.section), normalized, is_de))
         issues.extend(_placeholder_field_issues(rule, whitepaper, is_de))
 
         status = "review" if issues else "pass"
@@ -281,9 +281,61 @@ _TITLE_II_RESPONSIBLE_PERSON = re.compile(
     + _TITLE_II_RESPONSIBILITY_CLAUSE
 )
 
+# Art. 49(4) MiCAR has an e-money token redeemed "at par value" ("zum Nennwert"); an ART issuer redeems
+# by paying funds, other than electronic money, equivalent to the market value of the referenced assets,
+# or by delivering those assets (Art. 39(2) MiCAR). Par value anywhere in an ART redemption section
+# therefore goes to review, also where it describes the reserve of assets or issuance, or where the
+# section denies it: what the words refer to is left to the reviewer. Only uses that never mean par
+# value do not count: "par" for a paragraph next to an article number, "on (a) par", "par for the
+# course", "par excellence", "sub-par", "pari passu", "rank at par" and "at par with each other".
+_PAR_VALUE = re.compile(
+    r"(?<!\bon )(?<!\bon a )(?<!\brank at )(?<!\branks at )(?<!\branked at )(?<!\branking at )(?<!\bsub-)"
+    r"\bpar\b(?! (?:for the course|excellence|with each other|with one another)\b)"
+    r"|\bpari(?:wert|kurs|rücktausch)?\b(?![ -]passu\b)"
+    r"|\bface[ -]value|\bnominal[ -](?:value|amount|price)|\bat nominal\b(?![ -](?:costs?|fees?|charges?)\b)"
+    r"|nenn-?(?:wert|betr[aä]g)|nominal-?(?:wert|betr[aä]g)|\bnomin(?:al|ell)e[mnrs]? wert|\bzum nominale\b"
+)
+# "Art. 39 par. 2", "Article 39, par 2", "par. 2 of Art. 39" and "the first par. of Art. 39(2)".
+_PARAGRAPH_AFTER_ARTICLE = re.compile(r"(\b(?:art(?:icle)?s?\.?|§§?) ?\d+[a-z]?,? )par\b")
+_PARAGRAPH_BEFORE_ARTICLE = re.compile(r"\bpar\b(?=\.? ?(?:\(?\d+\)?,? (?:of )?|of )(?:art(?:icle)?s?\b|§))")
+# A soft hyphen marks where a word may break, and a converter can leave a line break after it;
+# zero-width characters can sit inside a word too.
+_SOFT_BREAK = re.compile(r"\u00ad\s*|[\u200b\u200c\u200d\u2060\ufeff]")
+_UNICODE_HYPHENS = str.maketrans({"\u2010": "-", "\u2011": "-"})
 
-def _rule_specific_issues(rule: Rule, normalized: str, is_de: bool) -> list[str]:
-    """Issues a rule needs beyond its terms and patterns; normalized is lowercase, one line."""
+
+def _mentions_par_value(text: str) -> bool:
+    """Whether the section text names par value other than in the uses above."""
+    text = _SOFT_BREAK.sub("", text).translate(_UNICODE_HYPHENS)
+    # A hyphen at a line end joins a compound ("Nenn-" "wert") or breaks a word ("Nennbe-" "trag",
+    # "nom-" "inal"), so the text is read with the hyphen kept and without it.
+    for variant in (text, _LINE_END_HYPHEN.sub("", text)):
+        # Markdown emphasis ("_par value_") would hide the word.
+        lowered = _collapse_whitespace(variant).lower().replace("_", " ")
+        lowered = _PARAGRAPH_AFTER_ARTICLE.sub(r"\1paragraph", lowered)
+        if _PAR_VALUE.search(_PARAGRAPH_BEFORE_ARTICLE.sub("paragraph", lowered)):
+            return True
+    return False
+
+
+def _rule_specific_issues(rule: Rule, text: str, normalized: str, is_de: bool) -> list[str]:
+    """Issues a rule needs beyond its terms and patterns, from the section text as loaded and collapsed."""
+    if rule.rule_id == "ANNEX_II.I" and _mentions_par_value(text):
+        return [
+            "Der Abschnitt erwähnt den Nennwert. Den Rücktausch zum Nennwert schreibt Art. 49 Abs. 4 MiCAR "
+            "für E-Geld-Token vor; der Emittent eines vermögenswertereferenzierten Token nimmt den "
+            "Rücktausch durch Zahlung eines dem Marktwert der Vermögenswerte, auf die der Token Bezug nimmt, "
+            "entsprechenden Geldbetrags, wobei es sich nicht um elektronisches Geld handelt, oder durch "
+            "Bereitstellung dieser Vermögenswerte vor (Art. 39 Abs. 2 MiCAR). Prüfen, ob der Abschnitt den "
+            "Rücktausch des Token an den Nennwert knüpft; der Hinweis erscheint auch, wenn sich der "
+            "Nennwert auf die Vermögenswertreserve oder die Ausgabe bezieht."
+            if is_de
+            else "The section mentions par value. Redemption at par value is the e-money token rule of "
+            "Art. 49(4) MiCAR; an ART issuer redeems by paying funds, other than electronic money, "
+            "equivalent to the market value of the referenced assets, or by delivering those assets "
+            "(Art. 39(2) MiCAR). Check whether the section ties the token's redemption to par value; the "
+            "note also appears where par value refers to the reserve of assets or to issuance."
+        ]
     if rule.rule_id == "ANNEX_I.NOT_APPROVED_STATEMENT" and not is_de:
         names_clause = _TITLE_II_RESPONSIBILITY_CLAUSE in normalized
         if names_clause and not _TITLE_II_RESPONSIBLE_PERSON.search(normalized):

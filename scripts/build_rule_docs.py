@@ -117,7 +117,7 @@ OJ_CHECKED = {
     "ANNEX_II.I": (
         "Checked on 2026-10-27 against the Official Journal text in English and German (OJ L 150, 9.6.2023) "
         "and the consolidated version of 9 January 2024. No amendment and no English or German corrigendum "
-        "changes Annex II Parts D and G, Art. 39 or Art. 46."
+        "changes Annex II Parts D and G, Art. 39, Art. 46 or Art. 49(4), which the note on par value cites."
     ),
     "ANNEX_II.G.VALUATION_AUDIT": (
         "Checked on 2026-10-27 against the Official Journal text in English and German (OJ L 150, 9.6.2023) "
@@ -507,6 +507,28 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
                 f"Every listed term appears, but the section is shorter than {rule.min_words} words.",
             )
         )
+    if rule.rule_id == "ANNEX_II.I":
+        result.append(
+            Example(
+                "Redemption at par",
+                "review",
+                _draft(rule, regime, _passing_text(rule) + " Holders redeem at par."),
+                "Every listed term appears and the section is long enough. It mentions par value, and "
+                "redemption at par value is the e-money token rule of Art. 49(4) MiCAR; an ART issuer redeems "
+                "by paying funds, other than electronic money, equivalent to the market value of the "
+                "referenced assets, or by delivering those assets (Art. 39(2) MiCAR).",
+            )
+        )
+        reserve = " Reserve bills are bought at a discount and redeemed at par."
+        result.append(
+            Example(
+                "Reserve asset at par",
+                "review",
+                _draft(rule, regime, _passing_text(rule) + reserve),
+                "The note also follows where par value describes the reserve of assets. The check reads the "
+                "words and leaves it to the reviewer whether the token's redemption depends on par value.",
+            )
+        )
     result.append(
         Example(
             "Section that matches",
@@ -779,6 +801,22 @@ def status_logic(rule: Rule) -> str:
         "placeholder such as TBD; the finding names the field by its number and, in English, the template's "
         "name.</li>"
     )
+    if rule.rule_id == "ANNEX_II.I":
+        parts.append(
+            "<li>Review also follows when the section mentions par value anywhere: the word “par” (as in “at "
+            "par”, “par value” or “at-par”), “face value”, “nominal value”, “nominal amount”, “nominal price” or "
+            "“at nominal”, or a form of “Nennwert”, “Nennbetrag”, “Nominalwert”, “Nominalbetrag”, “nominaler "
+            "Wert”, “nomineller Wert”, “zum Nominale”, “pari”, “Pariwert”, “Parikurs” or “Parirücktausch”, in "
+            "drafts of either language and ignoring case. A soft hyphen, a zero-width character or a hyphen at a "
+            "line end inside the word does not hide it. Only uses that never mean par value do not count: “par” "
+            "for a paragraph next to an article number (“Art. 39 par. 2”, “par. 2 of Art. 39”), “on par” or “on a "
+            "par”, “par for the course”, “par excellence”, “sub-par”, “pari passu”, “rank at par” and “at par "
+            "with each other” or “with one another”. The issue says that redemption at par value is the e-money "
+            "token rule of Art. 49(4) MiCAR and that an ART issuer redeems by paying funds, other than electronic "
+            "money, equivalent to the market value of the referenced assets, or by delivering those assets "
+            "(Art. 39(2) MiCAR), and asks the reviewer to check whether the section ties the token's redemption "
+            "to par value.</li>"
+        )
     parts.append(
         "<li><strong>Pass</strong>: none of the above. A pass means the check matched, nothing more.</li>"
     )
@@ -939,6 +977,15 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
         limitations.append(
             "A German draft never passes: the German wording has not been checked against the German Official "
             "Journal."
+        )
+    if rule.rule_id == "ANNEX_II.I":
+        limitations.append(
+            "The note on par value reads the words alone. It also follows where par value "
+            "describes the reserve of assets, issuance or the cover of the reserve, where the section says that "
+            "the token is not redeemed at par, and in idioms such as “take at face value”; the reviewer decides "
+            "whether the token's redemption depends on par value. Other words for the same basis, such as "
+            "“1:1”, “dollar for dollar” or “at parity”, are not found. Text that the loader does not put into "
+            "the redemption section is not read: a heading, and a table in a DOCX or heading-based XHTML draft."
         )
     if rule.rule_id in NEVER_PASS:
         limitations.append("This rule never reports Pass.")
