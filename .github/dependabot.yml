@@ -1,5 +1,11 @@
-# Weekly, grouped version updates for the pinned GitHub Actions and the uv lockfile. Dependabot opens
-# pull requests only; nothing merges on its own. The owner can delete this file to stop them.
+# Weekly version updates for the SHA-pinned actions (the workflows in
+# .github/workflows and the composite action.yml at the root) and for the
+# Python dependencies in uv.lock. Dependabot opens pull requests only;
+# nothing merges on its own, and the owner can delete this file to stop them.
+# A release is proposed only once it is seven days old. Minor and patch
+# updates are grouped; each major update gets its own pull request. The
+# cooldown and the groups apply to version updates only; neither affects
+# security updates.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -7,16 +13,28 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 3
+    cooldown:
+      default-days: 7
     groups:
       github-actions:
+        applies-to: version-updates
         patterns:
           - "*"
+        update-types:
+          - minor
+          - patch
   - package-ecosystem: uv
     directory: /
     schedule:
       interval: weekly
     open-pull-requests-limit: 3
+    cooldown:
+      default-days: 7
     groups:
       python-dependencies:
+        applies-to: version-updates
         patterns:
           - "*"
+        update-types:
+          - minor
+          - patch
