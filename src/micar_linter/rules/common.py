@@ -13,6 +13,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 from micar_linter.rules.base import Rule, Severity
+from micar_linter.rules.terms import TITLE_DE
 
 COMMON_RULES: tuple[Rule, ...] = (
     Rule(
@@ -53,7 +54,11 @@ COMMON_RULES: tuple[Rule, ...] = (
         section="management_statement",
         label="Statement by the management body on completeness, fairness, and clarity",
         required_terms=("management body", "complies", "fair", "clear", "not misleading"),
-        required_terms_de=("leitungsorgan", "entspricht", "redlich", "eindeutig", "nicht irreführend"),
+        # The German paragraphs use three verbs ("Rechnung trägt", "entspricht", "erfüllt"), and the
+        # predefined statement of the templates in VO (EU) 2024/2984 says "erfüllt"; all name the Title
+        # ("diesem Titel", "Titel II"), which the pattern tells apart from the white paper's own title.
+        required_terms_de=("leitungsorgan", "redlich", "eindeutig", "nicht irreführend"),
+        required_patterns_de=(TITLE_DE,),
         min_words=40,
         severity=Severity.BLOCKER,
     ),
@@ -89,11 +94,14 @@ COMMON_RULES: tuple[Rule, ...] = (
         severity=Severity.BLOCKER,
     ),
     # The two LEI rules read every section and check identifiers offline (micar_linter.lei).
-    # They cite the Part of each Annex that the existing party rules cite; the point that
-    # names the LEI has not been verified against the Official Journal.
+    # Point 5 of each party Part names the LEI or another identifier required pursuant to applicable
+    # national law, and Art. 2 Abs. 1 Buchst. b and c VO (EU) 2024/2984 ask for the LEI where available.
     Rule(
         rule_id="COMMON.LEI_CHECK_DIGITS",
-        citation="Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR",
+        citation=(
+            "Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, "
+            "Anhang III Teil A Nr. 5 MiCAR"
+        ),
         section="issuer",
         label="Legal Entity Identifier format and check digits (ISO 17442, ISO/IEC 7064 MOD 97-10)",
         min_words=0,
@@ -101,7 +109,10 @@ COMMON_RULES: tuple[Rule, ...] = (
     ),
     Rule(
         rule_id="COMMON.LEI_CONSISTENCY",
-        citation="Anhang I Teil A, Anhang II Teil A, Anhang III Teil A MiCAR",
+        citation=(
+            "Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, "
+            "Anhang III Teil A Nr. 5 MiCAR"
+        ),
         section="issuer",
         label="Legal Entity Identifiers agree across the party sections and the rest of the draft",
         min_words=0,

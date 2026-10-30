@@ -4,9 +4,9 @@ Status: Proposed. The owner chose the option below on 2026-10-28; nothing is bui
 
 ## Context
 
-Rules work at Annex Part level, with four `ANNEX_II.G.*` topic rules and `ANNEX_II.I` citing points. The study uses separate IDs such as `ANNEX_I_PART_A_02_LEGAL_FORM` (`batch.py`). Filing tools check individual numbered fields of Implementing Regulation (EU) 2024/2984 (WhitePaperXBRL, Observed). Rule IDs are stable and may only be added.
+Rules work at Annex Part level, with four `ANNEX_II.G.*` topic rules. In releases 1.2.0 and 1.2.1 only `ANNEX_II.I` cites Annex points. Since 2026-10-29, `main` also has `ANNEX_II.G.COMPOSITION_DISCLOSURE` (Annex II Part G points 1 and 2), `ANNEX_II.G.VALUATION_AUDIT` (Annex II Part D point 10), `ANNEX_III.SAFEGUARDING` (Annex III Part D point 3) and the two LEI rules (point 5 of each party Part) citing points. Each of these still checks whole sections, not numbered fields. The study uses separate IDs such as `ANNEX_I_PART_A_02_LEGAL_FORM` (`batch.py`). Filing tools check individual numbered fields of Implementing Regulation (EU) 2024/2984 (WhitePaperXBRL, Observed). Rule IDs are stable and may only be added.
 
-Since 23 December 2025 (Art. 4 of that Regulation) a white paper follows Table 2, 3 or 4 of its Annex. The tables carry the Annex points as numbered fields, and some fields apply only under a condition the Annex point does not state. In Table 2, legal form, registered address, head office and parent company (A.2 to A.4, A.11) are filled in only if field A.6 gives no LEI (recital 2), and the crypto-asset's name, abbreviation and DLT (D.2, D.3, H.1) only if field F.13 gives no DTI (recital 4). Tables 3 and 4 have conditions of the same kind. A Part-level rule cannot see them: on a Table 2 draft with an LEI in A.6 and A.2 to A.4 marked N/A, `ANNEX_I.A` reports a BLOCKER at Review ("Missing review terms: legal form, registered"), and a Part A whose response time (A.10) reads TBD passes it.
+Since 23 December 2025 (Art. 4 of that Regulation) a white paper follows Table 2, 3 or 4 of its Annex. The tables carry the Annex points as numbered fields, and some fields apply only under a condition the Annex point does not state. In Table 2, legal form, registered address, head office and parent company (A.2 to A.4, A.11) are filled in only if field A.6 gives no LEI (recital 2), and the crypto-asset's name, abbreviation and DLT (D.2, D.3, H.1) only if field F.13 gives no DTI (recital 4). Tables 3 and 4 have conditions of the same kind. A Part-level rule cannot see them. In releases 1.2.0 and 1.2.1, on a Table 2 draft with an LEI in A.6 and A.2 to A.4 marked N/A, `ANNEX_I.A` reports a BLOCKER at Review ("Missing review terms: legal form, registered"). Since 2026-10-29 the party rules on `main` no longer ask for the legal form or the registered address. `ANNEX_I.A` therefore passes that draft once Part A names a postal address elsewhere, such as the business addresses of the management body in A.12. It passes the same way when A.6 gives no LEI and A.2 to A.4 are N/A, and only the LEI rules then show Review. In both versions, a Part A whose response time (A.10) reads TBD passes it.
 
 ## Options
 
@@ -24,11 +24,11 @@ Option 2, checked against the template fields. The owner chose it on 2026-10-28.
 - Part-level rules stay as they are.
 - Every point citation and field mapping is checked against the Official Journal text, with the retrieval date, before it is added. Where EUR-Lex refuses automated retrieval, the Publications Office Cellar serves the same text (`https://publications.europa.eu/resource/celex/32023R1114` and `.../32024R2984` with the header `Accept: application/xhtml+xml`).
 
-Open before the first point rule ships: how a point rule reads a draft without the numbered-field layout (JSON, DOCX, PDF, Markdown), where no field numbers exist.
+Open before the first point rule ships: how a point rule reads a draft without the numbered-field layout (JSON, DOCX, PDF, Markdown, and XHTML or HTML in the heading layout), where no field numbers exist.
 
 ## Consequences
 
-More findings per report; rule pages and SARIF rules grow accordingly (generated, no extra work). Each point rule needs a field mapping for every regime it applies to and fixtures for each template condition.
+More findings per report. SARIF rules grow with the rule set without extra work. Rule pages are generated too, but a point rule that checks numbered fields and applies the template's conditions needs its own logic in `linter.py`. It therefore also needs its own examples (with a `missing` and a `pass` case), status logic and limitations in `scripts/build_rule_docs.py`. Each point rule needs a field mapping for every regime it applies to and fixtures for each template condition.
 
 ## Non-negotiables check
 

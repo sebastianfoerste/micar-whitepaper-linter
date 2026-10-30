@@ -32,10 +32,16 @@ _FIELD_ID = re.compile(
 )
 # A part title of the template, whatever its length ("Part C- Information about the operator of the trading
 # platform ..." runs to 40 words), also in German ("Teil B \u2013 Informationen über den Emittenten, ...").
-_PART_TITLE = re.compile(r"^(?:part|teil)\s+[A-Z]\s*[.:)\u2013\u2014-]\s*\S", re.I)
-# A short line that opens a part without a dash ("Part B", "B. Issuer"); a longer line that starts with a
-# letter and a full stop is body text.
-_PART_HEADING = re.compile(r"^(?:(?:part|teil)\s+[A-Z]\b|[A-Z]\.\s+\S)", re.I)
+# Table 3 prints Part AA without "Part" ("AA- information on other persons ...", "AA \u2013 Gemäß Artikel 19
+# ..."), so that form needs the first word of the title: "AA-rated bonds" is body text.
+_PART_TITLE = re.compile(
+    r"^(?:(?:part|teil)\s+(?:[A-Z]|(?-i:AA))\s*[.:)\u2013\u2014-]\s*\S"
+    r"|(?-i:AA)\s*[.:)\u2013\u2014-]\s*(?:information|gemäß))",
+    re.I,
+)
+# A short line that opens a part without a dash ("Part B", "Part AA", "B. Issuer"); a longer line that starts
+# with a letter and a full stop is body text.
+_PART_HEADING = re.compile(r"^(?:(?:part|teil)\s+(?:[A-Z]|(?-i:AA))\b|[A-Z]\.\s+\S)", re.I)
 # Some authors run several fields together in one paragraph ("A.1 Name: N/A A.2 Legal form: N/A").
 # The colon requirement keeps cross-references such as "see F.14" from opening a field.
 _INLINE_FIELD = re.compile(r"(?<=\s)(?=[A-Z]\.\d{1,2}\s+(?:(?![A-Z]\.\d)[^:]){1,120}:)")
@@ -62,6 +68,9 @@ _PART_SECTIONS: dict[WhitepaperType, dict[str, tuple[str, ...]]] = {
     },
     WhitepaperType.ART: {
         "A": ("issuer",),
+        # Part AA names the persons other than the issuer who offer the token, seek its admission to trading
+        # or draw up the white paper (Art. 19(1), second subparagraph, MiCAR), as the offeror section does.
+        "AA": ("offeror",),
         "B": ("art",),
         "C": ("offer_or_admission",),
         # ANNEX_II.I reads the redemption items of Part D and Part G.
@@ -85,10 +94,13 @@ _PART_SECTIONS: dict[WhitepaperType, dict[str, tuple[str, ...]]] = {
 }
 
 # Leading fields -> section key. Table 2 numbers them 00 to 10; Tables 3 and 4 print
-# I.00 to I.07 and I.00 to I.08, which _field_id reduces to the two digits.
+# I.00 to I.07 and I.00 to I.08, which _field_id reduces to the two digits. Field 02 of
+# Table 2 and I.02 of Table 4 hold the Art. 6(3) and Art. 51(3) statement; I.02 of
+# Table 3 is the Art. 19(4) warning, because Art. 19 MiCAR prescribes no such statement.
 _SUMMARY_SECTIONS: dict[WhitepaperType, dict[str, tuple[str, ...]]] = {
     WhitepaperType.OTHER: {
         "01": ("notification_date",),
+        "02": ("not_approved_statement",),
         "03": ("management_statement",),
         "04": ("risk_warning",),
         "05": ("risk_warning",),
@@ -109,6 +121,7 @@ _SUMMARY_SECTIONS: dict[WhitepaperType, dict[str, tuple[str, ...]]] = {
     },
     WhitepaperType.EMT: {
         "01": ("notification_date",),
+        "02": ("not_approved_statement",),
         "03": ("management_statement",),
         "04": ("risk_warning",),
         "05": ("summary",),
@@ -131,9 +144,12 @@ _LANGUAGE_CONTENT = re.compile(
     re.I,
 )
 # Table 4 has no field for the safeguarding of funds received (Art. 54 MiCAR), so for an EMT the
-# safeguarding section collects the answered lettered fields that describe it.
+# safeguarding section collects the answered lettered fields that describe it, also in the words of
+# Art. 54: "separate accounts", "besichert", "gesonderten Konten".
 _SAFEGUARDING_TEXT = re.compile(
-    r"\bsafeguard\w*|\bsegregat\w*|\babsicherung\w*|\bsicherung\w*.*\bgelder\w*", re.I
+    r"\bsafeguard\w*|\bsegregat\w*|\bseparate\s+(?:\w+\s+)?accounts?\b|\babsicherung\w*|\bbesichert\w*"
+    r"|\bgesondert\w*\s+\w*kont(?:o|os|en)\b|\bsicherung\w*.*\bgelder\w*",
+    re.I,
 )
 
 

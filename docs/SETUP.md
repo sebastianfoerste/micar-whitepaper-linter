@@ -3,7 +3,7 @@
 ## Try it now
 
 - **In the browser, nothing leaves the page:** [live playground](https://sebastianfoerste.github.io/micar-whitepaper-linter/playground/) (Pyodide).
-- **GitHub Action:** add `sebastianfoerste/micar-whitepaper-linter@v1` to a workflow in the repository that holds your draft. See [GitHub Action](#github-action) for the snippet, its inputs and a starter repo.
+- **GitHub Action:** add `sebastianfoerste/micar-whitepaper-linter@v1` to a workflow in the repository that holds your draft. See [GitHub Action](#github-action) for the snippet and a starter repo; [DETAILS.md](DETAILS.md#github-action) lists every input.
 - **Local CLI:** follow the [Quick start](#quick-start) below. The core linter runs locally and does not require external LLM or network processing.
 
 ---
@@ -74,7 +74,7 @@ Run the tool using the CLI command `micar-lint`. To check your own draft, pass i
 
 On the first two routes, DOCX needs the `docx` extra ([From PyPI](#from-pypi)).
 
-- A JSON draft states its regime in its `type` field, and `--type` does not change it. For any other format, the linter infers the regime from the text and `--type other|art|emt` overrides it; the numbered-field XHTML or HTML layout requires it.
+- A JSON draft states its regime in its `type` field (a draft without one is linted as other, with no warning), and `--type` does not change it. For any other format, the linter infers the regime from English phrases (anywhere in a PDF or DOCX; in Markdown and heading-layout XHTML or HTML only in section text, not in headings) ("asset-referenced", "stabilisation mechanism" or "reserve of assets" for an ART, then "e-money token", "referenced currency" or "safeguarding of funds" for an EMT, otherwise other), so a German ART or EMT draft is linted as other and a draft that calls itself "not an asset-referenced token" as an ART; `--type other|art|emt` overrides it, and the numbered-field XHTML or HTML layout requires it.
 - `--strict` exits with status 1 while any BLOCKER finding is open. For a directory, it also exits 1 when a file could not be linted or no file was linted.
 - `--json` prints machine-readable JSON instead of text.
 
@@ -112,7 +112,7 @@ uv run micar-lint examples/incomplete.json \
 
 ## Browser workbench (local preview)
 
-The repository includes a browser workbench in `docs/playground/`. The full linter runs client-side via Pyodide. Nothing you paste leaves the page.
+The repository includes a browser workbench in `docs/playground/`. It runs the linter's rules client-side via Pyodide on JSON and XHTML or HTML drafts; PDF, DOCX and Markdown drafts, review bundles and CI outputs need the CLI. Nothing you paste leaves the page.
 
 For local preview, run `python3 -m http.server 8765 --bind 127.0.0.1 --directory docs` and open `http://127.0.0.1:8765/playground/`. The first runtime load needs an internet connection. The app does not persist drafts in browser storage.
 

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import html
 import json
+import re
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -19,7 +20,7 @@ from pathlib import Path
 
 from micar_linter import __version__, citations
 from micar_linter.lei import check_digits_for
-from micar_linter.linter import EU_LANGUAGES, Linter
+from micar_linter.linter import EU_LANGUAGES, NOT_APPROVED_STATEMENT_RULE_IDS, Linter
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Rule
 from micar_linter.whitepaper import _RESERVED_METADATA_KEYS, Whitepaper, WhitepaperType
@@ -45,11 +46,54 @@ VERIFICATION_NOTE = (
     "Not re-verified since these pages were introduced (2026-10-20): EUR-Lex was unreachable from the "
     "build environment. The citation is the rule's own, unchanged."
 )
-OJ_CHECKED = {
-    "COMMON.RISK_WARNING": (
+
+
+def _oj_checked(provisions: str, also: str = "") -> str:
+    return (
         "Checked on 2026-10-27 against the Official Journal text in English and German (OJ L 150, 9.6.2023) "
-        "and the consolidated version of 9 January 2024. No amendment and no English or German corrigendum "
-        "changes Art. 6(5), Art. 19(4) or Art. 51(4)."
+        f"and the consolidated version of 9 January 2024{also}. No amendment and no English or German "
+        f"corrigendum changes {provisions}."
+    )
+
+
+TEMPLATES = ", and against the templates of Implementing Regulation (EU) 2024/2984"
+SUSTAINABILITY = (
+    ", and against Delegated Regulation (EU) 2025/422 and the templates of Implementing Regulation (EU) 2024/2984"
+)
+OJ_CHECKED = {
+    "COMMON.RISK_WARNING": _oj_checked("Art. 6(5), Art. 19(4) or Art. 51(4)"),
+    "COMMON.MANAGEMENT_STATEMENT": _oj_checked("Art. 6(6), Art. 19(5), Art. 51(5) or the templates", TEMPLATES),
+    "ANNEX_I.A": _oj_checked("Annex I Part A or the templates", TEMPLATES),
+    "ANNEX_I.B": _oj_checked("Annex I Part B or the templates", TEMPLATES),
+    "ANNEX_I.D": _oj_checked("Annex I Part D or the templates", TEMPLATES),
+    "ANNEX_I.E": _oj_checked("Annex I Part E or the templates", TEMPLATES),
+    "ANNEX_I.F": _oj_checked("Annex I Part F or the templates", TEMPLATES),
+    "ANNEX_I.G": _oj_checked("Annex I Part G or the templates", TEMPLATES),
+    "ANNEX_I.H": _oj_checked("Annex I Part H or the templates", TEMPLATES),
+    "ANNEX_I.I": _oj_checked("Annex I Part I or the templates", TEMPLATES),
+    "ANNEX_I.J": _oj_checked(
+        "Art. 6(1), first subparagraph, point (j), Art. 4 of Delegated Regulation (EU) 2025/422 or the templates",
+        SUSTAINABILITY,
+    ),
+    "ANNEX_II.A": _oj_checked("Annex II Part A or the templates", TEMPLATES),
+    "ANNEX_II.B": _oj_checked("Annex II Part B or the templates", TEMPLATES),
+    "ANNEX_II.C": _oj_checked("Annex II Part C or the templates", TEMPLATES),
+    "ANNEX_II.E": _oj_checked("Annex II Part E or the templates", TEMPLATES),
+    "ANNEX_II.F": _oj_checked("Annex II Part F or the templates", TEMPLATES),
+    "ANNEX_II.G.COMPOSITION_DISCLOSURE": _oj_checked("Annex II Part G or the templates", TEMPLATES),
+    "ANNEX_II.H": _oj_checked(
+        "Art. 19(1), first subparagraph, point (h), Art. 4 of Delegated Regulation (EU) 2025/422 or the "
+        "templates",
+        SUSTAINABILITY,
+    ),
+    "ANNEX_III.A": _oj_checked("Art. 48, Annex III Part A or the templates", TEMPLATES),
+    "ANNEX_III.B": _oj_checked("Annex III Part B or the templates", TEMPLATES),
+    "ANNEX_III.C": _oj_checked("Annex III Part C"),
+    "ANNEX_III.D": _oj_checked("Annex III Part D or Art. 49(4)"),
+    "ANNEX_III.E": _oj_checked("Annex III Part E or the templates", TEMPLATES),
+    "ANNEX_III.F": _oj_checked("Annex III Part F or the templates", TEMPLATES),
+    "ANNEX_III.G": _oj_checked(
+        "Art. 51(1), point (g), Art. 4 of Delegated Regulation (EU) 2025/422 or the templates", SUSTAINABILITY
     ),
     "COMMON.NOTIFICATION_DATE": (
         "Checked on 2026-10-27 against the Official Journal text in English and German (OJ L 150, 9.6.2023) "
@@ -62,6 +106,28 @@ OJ_CHECKED = {
         "and the consolidated version of 9 January 2024. No amendment and no English or German corrigendum "
         "changes Art. 6(9), Art. 19(8) or Art. 51(8). The list of languages is Art. 1 of Council Regulation "
         "No 1 in its consolidated version of 1 July 2013."
+    ),
+    "ANNEX_II.D": (
+        "Checked on 2026-10-27 against the Official Journal text in English and German (OJ L 150, 9.6.2023) "
+        "and the consolidated version of 9 January 2024. No amendment and no English or German corrigendum "
+        "changes Annex II Part D or Art. 39."
+    ),
+    "ANNEX_II.I": (
+        "Checked on 2026-10-27 against the Official Journal text in English and German (OJ L 150, 9.6.2023) "
+        "and the consolidated version of 9 January 2024. No amendment and no English or German corrigendum "
+        "changes Annex II Parts D and G, Art. 39 or Art. 46."
+    ),
+    "ANNEX_II.G.VALUATION_AUDIT": (
+        "Checked on 2026-10-27 against the Official Journal text in English and German (OJ L 150, 9.6.2023) "
+        "and the consolidated version of 9 January 2024, and against the templates of Implementing Regulation "
+        "(EU) 2024/2984. No amendment and no English or German corrigendum changes Annex II Part D or the "
+        "templates."
+    ),
+    "ANNEX_III.SAFEGUARDING": (
+        "Checked on 2026-10-27 against the Official Journal text in English and German (OJ L 150, 9.6.2023) "
+        "and the consolidated version of 9 January 2024, and against Article 7 of Directive 2009/110/EC in its "
+        "consolidated version of 13 January 2018. No amendment and no English or German corrigendum changes "
+        "Art. 54 or Annex III Part D."
     ),
 }
 # Rules that pass when the section holds a value of the right kind, a date or a language, at any length
@@ -78,8 +144,31 @@ SYNTHETIC_LEI = "9999SYNTH0000ZZQ01" + check_digits_for("9999SYNTH0000ZZQ01")
 OTHER_SYNTHETIC_LEI = "9999SYNTH0000ZZQ02" + check_digits_for("9999SYNTH0000ZZQ02")
 BROKEN_LEI = SYNTHETIC_LEI[:-2] + f"{(int(SYNTHETIC_LEI[-2:]) + 1) % 100:02d}"
 LEI_VERIFICATION_NOTE = (
-    "The citation is the Part of each Annex that the party rules already cite. The point that names the "
-    "LEI has not been verified against the Official Journal; treat the legal basis as pending owner review."
+    "Checked on 2026-10-27 against the Official Journal text in English and German: point 5 of Annex I "
+    "Parts A, B and C and of Annex II and III Part A names the legal entity identifier or another identifier "
+    "required pursuant to applicable national law, and Art. 2(1)(b) and (c) of Implementing Regulation (EU) "
+    "2024/2984 ask for the LEI where available."
+)
+# The first-page statement rules were added after the other pages, with their wording checked.
+STATEMENT_VERIFICATION_NOTE = (
+    "The citation and the English wording the rule checks were read in the EUR-Lex text of Art. 6(3) and "
+    "Art. 51(3) MiCAR as mirrored in legalize-dev/legalize-eu (CELEX 32023R1114), not on EUR-Lex itself, "
+    "which was unreachable from the build environment. The German wording has not been checked."
+)
+
+
+def verification_note(rule_id: str) -> str:
+    """Which reading of the Regulation the rule's citation rests on."""
+    if rule_id in OJ_CHECKED:
+        return OJ_CHECKED[rule_id]
+    if rule_id in NOT_APPROVED_STATEMENT_RULE_IDS:
+        return STATEMENT_VERIFICATION_NOTE
+    return VERIFICATION_NOTE
+
+
+STATEMENT_APPROVAL = (
+    "This crypto-asset white paper has not been approved by any competent authority in any Member State of "
+    "the European Union."
 )
 NEVER_PASS = {"COMMON.IXBRL_TAGGING", "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW"}
 UNTESTED_REGIMES = {
@@ -137,10 +226,21 @@ def _annexes(regimes: list[WhitepaperType]) -> str:
     return ", ".join(REGIME_NAMES[regime].split(" · ")[0] for regime in regimes)
 
 
+def _named(patterns: tuple[str, ...]) -> list[tuple[str, str]]:
+    """The listed terms written as patterns (rules/terms.py): each named group's name and its pattern."""
+    return [
+        (name.replace("_", " "), pattern) for pattern in patterns for name in re.compile(pattern).groupindex
+    ]
+
+
+def _listed(rule: Rule) -> list[str]:
+    """The English terms a passing example names; each pattern matches its own name (tests/test_rules.py)."""
+    return [*rule.required_terms, *(name for name, _ in _named(rule.required_patterns))]
+
+
 def _passing_text(rule: Rule) -> str:
-    sentence = (
-        "Synthetic example naming " + ", ".join(rule.required_terms) + "." if rule.required_terms else ""
-    )
+    listed = _listed(rule)
+    sentence = "Synthetic example naming " + ", ".join(listed) + "." if listed else ""
     words = sentence.split()
     while len(words) < rule.min_words:
         words += FILLER.split()
@@ -152,6 +252,10 @@ def _draft(rule: Rule, regime: WhitepaperType, text: str, **metadata: object) ->
     draft.update(metadata)
     draft["sections"] = {rule.section: text}
     return draft
+
+
+def _responsibility(person: str) -> str:
+    return f"The {person} of the crypto-asset is solely responsible for the content of this crypto-asset white paper."
 
 
 def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
@@ -173,10 +277,18 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
         if rule.rule_id == "COMMON.LEI_CHECK_DIGITS":
             return [
                 Example(
-                    "No LEI in the draft",
+                    "No LEI and no party section",
                     "missing",
+                    {**base, "sections": {"summary": "Synthetic summary of a fictional token."}},
+                    "Without an LEI there are no check digits to verify, and no party section says who the "
+                    "parties are, so the rule fails closed.",
+                ),
+                Example(
+                    "Party section without an LEI",
+                    "review",
                     {**base, "sections": {"issuer": "Synthetic Issuer AG."}},
-                    "Without an LEI there are no check digits to verify, so the rule fails closed.",
+                    "Point 5 of each party Part allows another identifier required pursuant to applicable "
+                    "national law in place of the LEI, so a reviewer checks which one the draft gives.",
                 ),
                 Example(
                     "Check digits do not match",
@@ -194,10 +306,17 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
             ]
         return [
             Example(
-                "No LEI in a party section",
+                "No party section",
                 "missing",
+                {**base, "sections": {"summary": f"LEI {SYNTHETIC_LEI}."}},
+                "The draft has no issuer, offeror or trading platform operator section to compare the LEI with.",
+            ),
+            Example(
+                "No LEI in a party section",
+                "review",
                 {**base, "sections": {"issuer": "Synthetic Issuer AG.", "summary": f"LEI {SYNTHETIC_LEI}."}},
-                "The issuer, offeror and trading platform operator sections carry no valid LEI.",
+                "The issuer section carries no valid LEI. It may give another identifier required pursuant to "
+                "applicable national law, which a reviewer checks.",
             ),
             Example(
                 "LEI outside the party sections",
@@ -213,6 +332,58 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
                 "pass",
                 {**base, "sections": {"issuer": issuer, "summary": f"The issuer's LEI is {SYNTHETIC_LEI}."}},
                 "Every valid LEI in the draft matches a party section, and the issuer states one.",
+            ),
+            Example(
+                "LEI of the provider in charge of the placing",
+                "pass",
+                {
+                    **base,
+                    "sections": {
+                        "issuer": issuer,
+                        "offer_or_admission": f"CASP identifier: {OTHER_SYNTHETIC_LEI}",
+                    },
+                },
+                "Field E.31 of Table 2 asks for the LEI of the crypto-asset service provider in charge of the "
+                "placing. Its label names the role, so the code is not compared with the party sections.",
+            ),
+        ]
+    if rule.rule_id in NOT_APPROVED_STATEMENT_RULE_IDS:
+        emt = regime is WhitepaperType.EMT
+        named, other = ("issuer", "offeror") if emt else ("offeror", "issuer")
+        return [
+            Example(
+                "Statement absent",
+                "missing",
+                {"title": "Synthetic rule example", "type": regime.value, "sections": {}},
+                "The section key is missing or empty.",
+            ),
+            Example(
+                "Statement names someone else",
+                "review",
+                _draft(rule, regime, f"{STATEMENT_APPROVAL} {_responsibility(other)}"),
+                "Art. 51(3) MiCAR names the issuer, so the responsibility sentence is not found."
+                if emt
+                else "Art. 6(3) MiCAR names the offeror, the person seeking admission to trading or the operator "
+                "of the trading platform; this statement names the issuer.",
+            ),
+            Example(
+                "German draft",
+                "review",
+                _draft(
+                    rule,
+                    regime,
+                    "Synthetischer deutscher Beispieltext. Er gibt nicht den Wortlaut des Amtsblatts wieder.",
+                    language="de",
+                ),
+                "The German wording has not been checked against the German Official Journal, so a German "
+                "statement goes to review whatever it says.",
+            ),
+            Example(
+                "Statement in the checked wording",
+                "pass",
+                _draft(rule, regime, f"{STATEMENT_APPROVAL} {_responsibility(named)}"),
+                "Both sentences in the English wording the rule checks. A pass says the words matched; the check "
+                "cannot see whether the statement is on the first page.",
             ),
         ]
     if rule.rule_id in ANSWER_CHECKS:
@@ -304,7 +475,7 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
             "The section key is missing or empty.",
         ),
     ]
-    thin = " ".join(rule.required_terms) or "Short."
+    thin = " ".join(_listed(rule)) or "Short."
     if len(thin.split()) < rule.min_words:
         result.append(
             Example(
@@ -377,8 +548,10 @@ def _status_badge(status: str) -> str:
     return f'<span class="badge {status}">{_e(status.capitalize())}</span>'
 
 
-def _terms(terms: tuple[str, ...]) -> str:
-    return ", ".join(f"<code>{_e(t)}</code>" for t in terms) if terms else "none"
+def _terms(terms: tuple[str, ...], patterns: tuple[str, ...] = ()) -> str:
+    shown = [f"<code>{_e(t)}</code>" for t in terms]
+    shown += [f"<code>{_e(name)}</code> (pattern <code>{_e(pattern)}</code>)" for name, pattern in _named(patterns)]
+    return ", ".join(shown) if shown else "none"
 
 
 def status_logic(rule: Rule) -> str:
@@ -394,16 +567,27 @@ def status_logic(rule: Rule) -> str:
     if rule.rule_id == "COMMON.LEI_CHECK_DIGITS":
         return (
             '<ul class="plain"><li><strong>Missing</strong>: no LEI-shaped code (18 letters or digits and two '
-            "check digits) appears in any section. A 20-digit number counts only next to an LEI label.</li>"
-            "<li><strong>Review</strong>: an LEI-shaped code fails the ISO/IEC 7064 MOD 97-10 check digits.</li>"
+            "check digits) appears in any section, and no section <code>issuer</code>, <code>offeror</code> or "
+            "<code>trading_platform_operator</code> has text other than a placeholder. A 20-digit number counts "
+            "only next to an LEI label.</li>"
+            "<li><strong>Review</strong>: an LEI-shaped code fails the ISO/IEC 7064 MOD 97-10 check digits; or no "
+            "LEI-shaped code appears while a party section has text, since point 5 allows another identifier "
+            "required pursuant to applicable national law in place of the LEI.</li>"
             "<li><strong>Pass</strong>: every LEI-shaped code has valid check digits. No registry is asked.</li></ul>"
         )
     if rule.rule_id == "COMMON.LEI_CONSISTENCY":
         return (
             '<ul class="plain"><li><strong>Missing</strong>: no section <code>issuer</code>, <code>offeror</code> or '
-            "<code>trading_platform_operator</code> carries an LEI with valid check digits.</li>"
-            "<li><strong>Review</strong>: a valid LEI in another section appears in no party section, or the "
-            "<code>issuer</code> section names more than one valid LEI.</li>"
+            "<code>trading_platform_operator</code> has text other than a placeholder.</li>"
+            "<li><strong>Review</strong>: a party section has text but no party section carries an LEI with valid "
+            "check digits, since point 5 allows another identifier required pursuant to applicable national law "
+            "in place of the LEI; a valid LEI in another "
+            "section appears in no party section; or the <code>issuer</code> section names more than one valid "
+            "LEI. An LEI that the draft gives for a person other than the parties counts for neither: the "
+            "crypto-asset service provider in charge of the placing (field E.31 of Table 2, C.22 of Table 3), a "
+            "custodian of the reserve assets (G.8 of Table 3), or a person other than the issuer who offers the "
+            "token, seeks its admission to trading or draws up the white paper (AA.1 and AA.3 of Table 3, A.27 of "
+            "Table 4). The field label, or the sentence that holds the code, names that role before it.</li>"
             "<li><strong>Pass</strong>: none of the above. Codes with invalid check digits are reported by "
             '<a href="COMMON.LEI_CHECK_DIGITS.html">COMMON.LEI_CHECK_DIGITS</a>, not here.</li></ul>'
         )
@@ -441,6 +625,37 @@ def status_logic(rule: Rule) -> str:
             "percentage.</li><li><strong>Pass</strong>: never. Draft flags are assertions pending lawyer "
             "confirmation, not trusted facts.</li></ul>"
         )
+    missing = (
+        f"<li><strong>Missing</strong>: section <code>{_e(rule.section)}</code> is absent or empty, or holds "
+        "only placeholder text such as TBD or TBC.</li>"
+    )
+    if rule.rule_id in NOT_APPROVED_STATEMENT_RULE_IDS:
+        emt = rule.rule_id.startswith("ANNEX_III.")
+        roles = "“offeror”, “person seeking admission to trading” or “operator of the trading platform”"
+        clause = "“of the crypto-asset is solely responsible”"
+        return (
+            f'<ul class="plain">{missing}'
+            "<li><strong>Review</strong>: the draft is German, because the German wording has not been checked "
+            "against the German Official Journal; the section holds only a yes or no value; a listed English "
+            "term does not appear"
+            + (
+                ""
+                if emt
+                else f"; or {clause} appears without {roles} directly before it, as where the statement names the "
+                "issuer or puts the offeror's name in between (“The offeror, Example AG, of the crypto-asset”)"
+            )
+            + ".</li><li><strong>Pass</strong>: an English draft holds both listed terms"
+            + (
+                ""
+                if emt
+                else f", and somewhere in the section {roles} comes directly before {clause}. Another person "
+                "named elsewhere in the section is not checked"
+            )
+            + ". Matching ignores case and reads any run of spaces and line breaks as one space. A compound broken "
+            "after its hyphen at a line end keeps the hyphen, so “crypto-” and “asset” on two lines match "
+            "“crypto-asset”; a word split only for the line break (“Mem-”, “ber”) does not match and goes to "
+            "review. Placement on the first page is not checked.</li></ul>"
+        )
     groups = [variant for variant, _ in variants(rule.rule_id)]
     minimum = (
         f"{rule.min_words} words"
@@ -449,16 +664,25 @@ def status_logic(rule: Rule) -> str:
     )
     terms = (
         "a listed term"
-        if len({(variant.required_terms, variant.required_terms_de) for variant in groups}) == 1
+        if len(
+            {
+                (v.required_terms, v.required_terms_de, v.required_patterns, v.required_patterns_de)
+                for v in groups
+            }
+        )
+        == 1
         else "a term listed for the draft's regime"
     )
     review = f"the section has fewer than {minimum}, or {terms} does not appear"
+    match = "case-insensitive substring match, with any run of spaces and line breaks read as one space"
+    if any(_named(v.required_patterns) or _named(v.required_patterns_de) for v in groups):
+        match += "; a term shown with a pattern counts only where the pattern matches, so that a look-alike word does not stand in for it"
     parts = [
-        f"<li><strong>Missing</strong>: section <code>{_e(rule.section)}</code> is absent or empty, or holds "
-        "only placeholder text such as TBD or TBC.</li>",
-        f"<li><strong>Review</strong>: {review} (case-insensitive substring match).</li>",
+        missing,
+        f"<li><strong>Review</strong>: {review} ({match}).</li>",
     ]
-    if rule.required_patterns or rule.prohibited_patterns:
+    unnamed = [pattern for pattern in rule.required_patterns if not re.compile(pattern).groupindex]
+    if unnamed or rule.prohibited_patterns:
         parts.append(
             "<li>Review also follows when a required pattern is absent or a prohibited pattern matches.</li>"
         )
@@ -501,6 +725,9 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             else "Works offline on the characters of each code. It does not confirm that an LEI is registered, "
             "current or held by the entity the draft names."
             if rule.rule_id in LEI_RULES
+            else "Matches the English wording only. It cannot see whether the statement is on the first page, and "
+            "it does not check that the person it names is the one responsible for the white paper."
+            if rule.rule_id in NOT_APPROVED_STATEMENT_RULE_IDS
             else "Looks for a calendar date only. It does not confirm that the date is the date of notification "
             "or that it is plausible, and it does not check the table of contents that the same provisions "
             "require. Since 23 December 2025 the template of Implementing Regulation (EU) 2024/2984 has the "
@@ -522,8 +749,42 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
     ]
     if family in UNTESTED_REGIMES:
         limitations.append(UNTESTED_REGIMES[family])
-    if rule.rule_id in LEI_RULES:
-        limitations.append(LEI_VERIFICATION_NOTE)
+    if rule.rule_id == "COMMON.LEI_CHECK_DIGITS":
+        limitations.append(
+            "Does not recognise the other identifiers that point 5 allows in place of the LEI, so a draft "
+            "without any LEI goes to review once a party section has text. Once the draft gives one LEI, a "
+            "party section without an LEI of its own does not change the result."
+        )
+    if rule.rule_id == "COMMON.LEI_CONSISTENCY":
+        limitations.append(
+            "Does not recognise the other identifiers that point 5 allows in place of the LEI, so a draft "
+            "whose party sections carry no valid LEI goes to review. Once one party section carries a valid "
+            "LEI, another party section without an LEI does not change the result."
+        )
+        limitations.append(
+            "Knows a person other than the parties only from the words before the code in its sentence or "
+            "field label (CASP, crypto-asset service provider, custodian, other than the issuer, other persons "
+            "drawing up, and the German Kryptowerte-Dienstleistungen, Verwahrer, nicht mit dem Emittenten "
+            "identisch). A role named in an earlier sentence does not carry over: in \"The custodian is Example "
+            "Bank AG. Its LEI is ...\" the code is still compared with the party sections."
+        )
+    if rule.rule_id in NOT_APPROVED_STATEMENT_RULE_IDS:
+        emt = rule.rule_id.startswith("ANNEX_III.")
+        field = "I.02" if emt else "02"
+        limitations.append(
+            "PDF, DOCX, Markdown and heading-based XHTML drafts fill the section from a heading such as “Statement "
+            f"in accordance with Article {'51' if emt else '6'}(3)”, the label of field {field} of Table "
+            f"{'4' if emt else '2'} of Implementing Regulation (EU) 2024/2984, where the label is set as one (a "
+            "Markdown “#” heading, an XHTML h1 to h6 or bold label, a DOCX heading or bold or capitals label, a PDF "
+            "heading or field line), or, without one, from a line or paragraph that opens with the statement's "
+            f"first words. Numbered-field XHTML fills it from field {field}. Table cells are not read in DOCX, nor "
+            "in heading-based XHTML where the text sits directly in a td or th element rather than in a p, div, li "
+            "or bold element inside it, so a statement kept only there is reported missing."
+        )
+        limitations.append(
+            "A German draft never passes: the German wording has not been checked against the German Official "
+            "Journal."
+        )
     if rule.rule_id in NEVER_PASS:
         limitations.append("This rule never reports Pass.")
     example_html = []
@@ -551,8 +812,8 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
 <dt>Severity if open</dt><dd>{_e(rule.severity.label)}</dd>
 <dt>Section key</dt><dd>{"none: checks the file format" if rule.rule_id in FORMAT_GATE else "all sections; anchored to <code>issuer</code>" if rule.rule_id in LEI_RULES else f"<code>{_e(rule.section)}</code>"}</dd>
 <dt>Minimum words</dt><dd>{f"none: checks for {ANSWER_CHECKS[rule.rule_id]}" if rule.rule_id in ANSWER_CHECKS else by_regime(lambda r: str(r.min_words))}</dd>
-<dt>Listed terms (English)</dt><dd>{by_regime(lambda r: _terms(r.required_terms))}</dd>
-<dt>Listed terms (German)</dt><dd lang="de">{by_regime(lambda r: _terms(r.required_terms_de))}</dd>
+<dt>Listed terms (English)</dt><dd>{by_regime(lambda r: _terms(r.required_terms, r.required_patterns))}</dd>
+<dt>Listed terms (German)</dt><dd lang="de">{by_regime(lambda r: _terms(r.required_terms_de, r.required_patterns_de))}</dd>
 <dt>Package version</dt><dd>{_e(__version__)}, built from source that may include unreleased changes</dd>
 <dt>Source</dt><dd><a href="{REPO}/blob/main/src/micar_linter/rules/{SOURCE_MODULES[family]}">rules/{SOURCE_MODULES[family]}</a></dd>
 </dl></div>
@@ -561,7 +822,7 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
 <h2>Legal basis</h2>
 <p>{_e(citation_en)}</p>
 <ul class="plain">{sources}</ul>
-<p class="callout">{_e(OJ_CHECKED.get(rule.rule_id, VERIFICATION_NOTE))}{" " + _e(LEI_VERIFICATION_NOTE) if rule.rule_id in LEI_RULES else ""}</p>
+<p class="callout">{_e(LEI_VERIFICATION_NOTE if rule.rule_id in LEI_RULES else verification_note(rule.rule_id))}</p>
 <h2>Synthetic examples</h2>
 <p class="small muted">Each example is linted when this page is generated. The build fails if a result differs.</p>
 {"".join(example_html)}
@@ -588,7 +849,7 @@ def index_page(rules: list[Rule], regimes: dict[str, list[WhitepaperType]]) -> s
         )
     body = f"""<p class="eyebrow">Rule reference</p>
 <h1>Rules</h1>
-<p class="lede">{len(rules)} deterministic checks, generated from the rule set of release {_e(__version__)}. Each page
+<p class="lede">{len(rules)} deterministic checks, generated from the rule set of package version {_e(__version__)}, built from source that may include unreleased changes. Each page
 states the citation, how the status is set, synthetic examples that are tested on every build, and the limits of the
 check.</p>
 <p class="callout">A pass means a check matched. It is not a compliance opinion. Not legal advice.</p>

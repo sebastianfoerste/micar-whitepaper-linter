@@ -51,7 +51,7 @@ def test_template_wording_cannot_satisfy_a_rule_for_unanswered_fields():
     report = lint_whitepaper(load_whitepaper(SAMPLE, WhitepaperType.OTHER))
     offeror = next(finding for finding in report.findings if finding.rule.rule_id == "ANNEX_I.A")
     assert offeror.status == "review"
-    assert any("legal form" in issue for issue in offeror.issues)
+    assert any("name" in issue for issue in offeror.issues)
     assert any(warning.startswith("Part A: all 3 numbered fields") for warning in report.warnings)
 
 
@@ -127,19 +127,27 @@ def test_leading_fields_of_tables_3_and_4_do_not_collide_with_part_i(tmp_path: P
         f"<tr><td>{number}</td><td>{label}</td><td>{content}</td></tr>"
         for number, label, content in [
             ("I.01", "Date of notification", "2026-03-02"),
-            ("I.06", "Right of redemption", "Holders can redeem at par at any time."),
+            (
+                "I.06",
+                "Right of redemption",
+                "The holders of asset-referenced tokens have a right of redemption at any time.",
+            ),
             ("A.1", "Statutory name", "Example Issuer AG"),
             ("B.14", "Language or languages of the crypto-asset white paper", "German"),
-            ("D.1", "Holder's rights and obligations", "Redemption at market value of the reserve."),
+            (
+                "D.1",
+                "Holder's rights and obligations",
+                "Redemption in funds equal to the market value of the referenced assets.",
+            ),
             ("G.1", "Description of the reserve of assets", "Bank deposits and government bonds."),
         ]
     )
     whitepaper = load_whitepaper(_write(tmp_path, f"<table>{rows}</table>"), WhitepaperType.ART)
     assert whitepaper.section("notification_date") == "Date of notification: 2026-03-02"
     assert "risks" not in whitepaper.sections
-    assert "redeem at par" in whitepaper.section("summary")
+    assert "right of redemption at any time" in whitepaper.section("summary")
     assert "Bank deposits" in whitepaper.section("reserve_of_assets")
-    for part in ("redeem at par", "market value of the reserve", "Bank deposits"):
+    for part in ("right of redemption at any time", "market value of the referenced assets", "Bank deposits"):
         assert part in whitepaper.section("redemption")
     assert "German" in whitepaper.section("language")
 
@@ -251,6 +259,21 @@ def test_emt_safeguarding_reads_the_fields_that_describe_it(tmp_path: Path):
     finding = next(f for f in report.findings if f.rule.rule_id == "ANNEX_III.SAFEGUARDING")
     assert finding.status != "missing"
     assert any(warning.endswith("mention it: D.3.") for warning in report.warnings)
+
+
+@pytest.mark.parametrize(
+    "funds",
+    [
+        "At least 30 % of the funds received is always deposited in separate accounts in credit institutions.",
+        "Die Geldbeträge sind gemäß Artikel 7 Absatz 1 der Richtlinie 2009/110/EG besichert.",
+        "Mindestens 30 % der Geldbeträge sind stets auf gesonderten Konten bei Kreditinstituten hinterlegt.",
+        "Mindestens 30 % der Geldbeträge liegen stets auf einem gesonderten Konto bei einem Kreditinstitut.",
+        "At least 30 % of the funds received is always held in separate bank accounts.",
+    ],
+)
+def test_emt_safeguarding_reads_fields_in_the_words_of_article_54(tmp_path: Path, funds: str):
+    path = _table(tmp_path, [*_EMT_BASE, ("D.3", "Rights of holders", funds)])
+    assert funds in load_whitepaper(path, WhitepaperType.EMT).section("safeguarding")
 
 
 def test_emt_safeguarding_stays_missing_when_no_field_describes_it(tmp_path: Path):

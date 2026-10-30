@@ -52,9 +52,14 @@ def test_find_leis_needs_a_label_for_purely_numeric_codes_and_ignores_longer_cod
 
 
 def test_check_digits_rule_fails_closed_without_an_lei():
+    # Point 5 of each party Part allows another identifier required pursuant to applicable national law
+    # in place of the LEI, so a party section without one goes to review; a draft with no party text
+    # stays missing.
     finding = _finding("COMMON.LEI_CHECK_DIGITS", {"issuer": "Synthetic Issuer AG."})
-    assert finding.status == "missing"
+    assert finding.status == "review"
+    assert "another identifier" in finding.issues[1]
     assert _finding("COMMON.LEI_CHECK_DIGITS", {}).status == "missing"
+    assert _finding("COMMON.LEI_CHECK_DIGITS", {"issuer": "TBD", "summary": "No LEI."}).status == "missing"
 
 
 def test_check_digits_rule_reviews_a_bad_lei_and_passes_good_ones():
@@ -69,7 +74,8 @@ def test_check_digits_rule_reviews_a_bad_lei_and_passes_good_ones():
     ("sections", "status"),
     [
         ({"summary": f"LEI {ISSUER_LEI}"}, "missing"),
-        ({"issuer": f"LEI {BROKEN_LEI}"}, "missing"),
+        ({"issuer": f"LEI {BROKEN_LEI}"}, "review"),
+        ({"issuer": "Synthetic Issuer AG, register number HRB 0000.", "summary": f"LEI {ISSUER_LEI}"}, "review"),
         ({"issuer": f"LEI {ISSUER_LEI}", "summary": f"LEI {OTHER_LEI}"}, "review"),
         ({"issuer": f"LEI {ISSUER_LEI} or {OTHER_LEI}"}, "review"),
         (
@@ -84,8 +90,8 @@ def test_consistency_rule(sections, status):
 
 
 def test_german_drafts_get_german_messages():
-    missing = _finding("COMMON.LEI_CHECK_DIGITS", {"issuer": "Emittent"}, language="de")
-    assert "Rechtsträgerkennung" in missing.issues[0]
+    no_lei = _finding("COMMON.LEI_CHECK_DIGITS", {"issuer": "Emittent"}, language="de")
+    assert "Rechtsträgerkennung" in no_lei.issues[0] and "nationalem Recht" in no_lei.issues[1]
     review = _finding("COMMON.LEI_CONSISTENCY", {"issuer": f"LEI {ISSUER_LEI}", "summary": OTHER_LEI}, "de")
     assert "erscheint in keinem Abschnitt" in review.issues[0]
 

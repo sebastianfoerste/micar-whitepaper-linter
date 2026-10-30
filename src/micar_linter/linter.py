@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from datetime import date
 
 from micar_linter.anchors import SourceAnchor, build_source_anchors
-from micar_linter.lei import PARTY_SECTIONS, has_valid_check_digits, leis_by_section
+from micar_linter.lei import PARTY_SECTIONS, has_valid_check_digits, leis_by_section, other_person_leis
 from micar_linter.placeholders import is_placeholder
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Finding, Rule, Severity
@@ -63,6 +63,11 @@ class Linter:
         if rule.rule_id == "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW":
             return _deposit_floor_finding(rule, whitepaper)
 
+        if rule.rule_id in NOT_APPROVED_STATEMENT_RULE_IDS:
+            statement = _not_approved_statement_finding(rule, whitepaper)
+            if statement is not None:
+                return statement
+
         if rule.rule_id == "COMMON.LEI_CHECK_DIGITS":
             return _lei_check_digits_finding(rule, whitepaper)
 
@@ -85,6 +90,9 @@ class Linter:
             return Finding(rule=rule, status="missing", word_count=0, issues=(absent,))
 
         issues: list[str] = []
+        # PDF, Markdown and DOCX loaders keep line breaks, so a statutory sentence that wraps
+        # across lines must still match a single-line term.
+        text = _collapse_whitespace(text)
         normalized = text.lower()
 
         if word_count < rule.min_words:
@@ -98,14 +106,14 @@ class Linter:
         # Bilingual required terms
         req_terms = rule.required_terms_de if (is_de and rule.required_terms_de) else rule.required_terms
         missing_terms = [term for term in req_terms if term.lower() not in normalized]
-        if missing_terms:
-            prefix = "Fehlende Begriffe: " if is_de else "Missing review terms: "
-            issues.append(prefix + ", ".join(missing_terms) + ".")
 
-        # Bilingual required regex patterns
+        # Bilingual required regex patterns. A pattern with a named group stands for a listed term
+        # that a plain substring would find inside other words ("fee" in "feedback"): when it does not
+        # match, the group's name, with underscores read as spaces, is reported with the missing terms.
         req_patterns = (
             rule.required_patterns_de if (is_de and rule.required_patterns_de) else rule.required_patterns
         )
+        pattern_issues: list[str] = []
         for pattern in req_patterns:
             try:
                 compiled = re.compile(pattern, re.IGNORECASE)
@@ -115,15 +123,24 @@ class Linter:
                     if is_de
                     else f"Invalid required pattern regex '{pattern}': {exc}"
                 )
-                issues.append(msg)
+                pattern_issues.append(msg)
                 continue
             if not compiled.search(text):
+                names = [name.replace("_", " ") for name in compiled.groupindex]
+                if names:
+                    missing_terms.extend(names)
+                    continue
                 msg = (
                     f"Fehlendes gefordertes Muster: '{pattern}'."
                     if is_de
                     else f"Missing required pattern: '{pattern}'."
                 )
-                issues.append(msg)
+                pattern_issues.append(msg)
+
+        if missing_terms:
+            prefix = "Fehlende Begriffe: " if is_de else "Missing review terms: "
+            issues.append(prefix + ", ".join(missing_terms) + ".")
+        issues.extend(pattern_issues)
 
         # Bilingual prohibited regex patterns
         proh_patterns = (
@@ -150,6 +167,8 @@ class Linter:
                 )
                 issues.append(msg)
 
+        issues.extend(_rule_specific_issues(rule, normalized, is_de))
+
         status = "review" if issues else "pass"
         return Finding(rule=rule, status=status, word_count=word_count, issues=tuple(issues))
 
@@ -159,8 +178,9 @@ def lint_whitepaper(whitepaper: Whitepaper) -> Report:
     rules = RULESETS[whitepaper.type]
     findings = Linter(rules).lint(whitepaper)
 
-    # Check for unrecognized/misspelled sections
-    valid_sections = {rule.section for rule in rules}
+    # Check for unrecognized/misspelled sections. The LEI rules read every party section in every regime: an
+    # ART white paper names the persons other than the issuer who offer the token in its offeror section.
+    valid_sections = {rule.section for rule in rules} | set(PARTY_SECTIONS)
     warnings: list[str] = list(whitepaper.metadata.get("extraction_notes", ()))
     for section_name in whitepaper.sections:
         if section_name not in valid_sections:
@@ -180,6 +200,79 @@ def lint_whitepaper(whitepaper: Whitepaper) -> Report:
 
 def _count_words(text: str) -> int:
     return sum(1 for word in text.split() if word.strip())
+
+
+_LINE_END_HYPHEN = re.compile(r"-[ \t]*(?:\r\n|\r|\n)\s*")
+_WHITESPACE_RUN = re.compile(r"\s+")
+
+
+def _collapse_whitespace(text: str) -> str:
+    """Join a hyphenated compound broken at a line end, then collapse every whitespace run."""
+    return _WHITESPACE_RUN.sub(" ", _LINE_END_HYPHEN.sub("-", text)).strip()
+
+
+# Art. 6(3) and Art. 51(3) MiCAR prescribe the first-page statement word for word. The
+# English wording was checked against the EUR-Lex text of Art. 6(3) and 51(3) MiCAR as
+# mirrored in legalize-dev/legalize-eu (CELEX 32023R1114). The German wording has not been
+# checked against the German Official Journal text, so a German draft is referred to review
+# and never passes.
+NOT_APPROVED_STATEMENT_RULE_IDS = frozenset(
+    {"ANNEX_I.NOT_APPROVED_STATEMENT", "ANNEX_III.NOT_APPROVED_STATEMENT"}
+)
+_BOOLEAN_FIELD_VALUES = frozenset({"true", "false", "yes", "no", "ja", "nein"})
+
+
+def _not_approved_statement_finding(rule: Rule, whitepaper: Whitepaper) -> Finding | None:
+    """Return the finding where the generic term check would mislead, otherwise None."""
+    is_de = whitepaper.language == "de"
+    text = whitepaper.section(rule.section)
+    # Empty and placeholder-only text go to the shared checks, which report them missing.
+    if not text.strip() or is_placeholder(text):
+        return None
+    words = _count_words(text)
+    emt = rule.rule_id.startswith("ANNEX_III.")
+    article_de = "Art. 51 Abs. 3" if emt else "Art. 6 Abs. 3"
+    article_en = "Art. 51(3)" if emt else "Art. 6(3)"
+    if _collapse_whitespace(text).lower().strip(" .'\"") in _BOOLEAN_FIELD_VALUES:
+        msg = (
+            f"Das Feld enthält nur einen Ja/Nein-Wert, nicht den Wortlaut nach {article_de} MiCAR. "
+            "Wortlaut und Platzierung auf der ersten Seite manuell prüfen."
+            if is_de
+            else f"The field holds only a yes/no value, not the {article_en} MiCAR wording. "
+            "Check the wording and its first-page placement manually."
+        )
+        return Finding(rule=rule, status="review", word_count=words, issues=(msg,))
+    if is_de:
+        msg = (
+            f"Der deutsche Wortlaut der Erklärung nach {article_de} MiCAR ist in diesem Linter "
+            "noch nicht gegen die deutsche Fassung im Amtsblatt geprüft. Wortlaut und "
+            "Platzierung auf der ersten Seite manuell mit dem Amtsblatt abgleichen."
+        )
+        return Finding(rule=rule, status="review", word_count=words, issues=(msg,))
+    return None
+
+
+# Art. 6(3), second subparagraph, MiCAR: the statement names the offeror, the person seeking
+# admission to trading or the operator of the trading platform (Table 2 field 02 of
+# Implementing Regulation (EU) 2024/2984 prints all three sentences).
+_TITLE_II_RESPONSIBILITY_CLAUSE = "of the crypto-asset is solely responsible"
+_TITLE_II_RESPONSIBLE_PERSON = re.compile(
+    r"\b(?:offeror|person seeking admission to trading|operator of the trading platform) "
+    + _TITLE_II_RESPONSIBILITY_CLAUSE
+)
+
+
+def _rule_specific_issues(rule: Rule, normalized: str, is_de: bool) -> list[str]:
+    """Issues a rule needs beyond its terms and patterns; normalized is lowercase, one line."""
+    if rule.rule_id == "ANNEX_I.NOT_APPROVED_STATEMENT" and not is_de:
+        names_clause = _TITLE_II_RESPONSIBILITY_CLAUSE in normalized
+        if names_clause and not _TITLE_II_RESPONSIBLE_PERSON.search(normalized):
+            return [
+                "Art. 6(3) MiCAR names the offeror, the person seeking admission to trading or the "
+                "operator of the trading platform as solely responsible; the statement names "
+                "someone else."
+            ]
+    return []
 
 
 def _absent(text: str, is_de: bool) -> str | None:
@@ -364,6 +457,32 @@ def _deposit_floor_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     return Finding(rule=rule, status="missing", word_count=words, issues=(msg,))
 
 
+def _other_identifier_note(is_de: bool) -> str:
+    return (
+        "Nr. 5 der Teile A bis C von Anhang I und von Teil A der Anhänge II und III lässt statt der LEI eine "
+        "andere nach geltendem nationalem Recht erforderliche Kennung zu. Ob der Entwurf für jeden "
+        "Beteiligten eine dieser Kennungen angibt, ist von Hand zu prüfen."
+        if is_de
+        else "Point 5 of Annex I Parts A to C and of Annex II and III Part A allows another identifier "
+        "required pursuant to applicable national law in place of the LEI. Whether the draft gives one of "
+        "them for each party needs checking by hand."
+    )
+
+
+def _no_lei_finding(rule: Rule, whitepaper: Whitepaper, msg: str) -> Finding:
+    """Fails closed without an LEI: Missing when no party section has text, Review when one has.
+
+    Point 5 of each party Part allows another identifier required pursuant to applicable national law
+    in place of the LEI, and VO (EU) 2024/2984 asks for the LEI "where available", so a party section
+    without one goes to a reviewer instead of counting as absent.
+    """
+    texts = ((whitepaper.sections.get(section) or "").strip() for section in PARTY_SECTIONS)
+    if not any(text and not is_placeholder(text) for text in texts):
+        return Finding(rule=rule, status="missing", word_count=0, issues=(msg,))
+    note = _other_identifier_note(whitepaper.language == "de")
+    return Finding(rule=rule, status="review", word_count=0, issues=(msg, note))
+
+
 def _lei_check_digits_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     """Fails closed: a draft without any LEI cannot show valid check digits."""
     is_de = whitepaper.language == "de"
@@ -376,7 +495,7 @@ def _lei_check_digits_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
             else "No Legal Entity Identifier (20 characters, ISO 17442) was found in the draft, "
             "so its check digits could not be checked."
         )
-        return Finding(rule=rule, status="missing", word_count=0, issues=(msg,))
+        return _no_lei_finding(rule, whitepaper, msg)
     issues = []
     for section, codes in found.items():
         for code in codes:
@@ -393,8 +512,11 @@ def _lei_check_digits_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
 def _lei_consistency_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     """Every valid LEI in the draft must belong to a party section; the issuer states one LEI.
 
-    Fails closed when no party section carries a valid LEI. Invalid codes are left to
-    COMMON.LEI_CHECK_DIGITS so that one typo is not reported twice.
+    An LEI that the draft gives for a person other than the parties (other_person_leis: the provider in
+    charge of the placing, a custodian, a person other than the issuer) is neither compared with the party
+    sections nor counted as an issuer LEI. Fails closed when no party section carries a valid LEI (see
+    _no_lei_finding). Invalid codes are left to COMMON.LEI_CHECK_DIGITS so that one typo is not reported
+    twice.
     """
     is_de = whitepaper.language == "de"
     valid = {
@@ -411,9 +533,10 @@ def _lei_consistency_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
             else "No valid LEI was found in the issuer, offeror or trading_platform_operator sections, "
             "so consistency cannot be checked."
         )
-        return Finding(rule=rule, status="missing", word_count=0, issues=(msg,))
+        return _no_lei_finding(rule, whitepaper, msg)
+    others = {code for text in whitepaper.sections.values() for code in other_person_leis(str(text))}
     issues = []
-    issuer_codes = valid.get("issuer", ())
+    issuer_codes = [code for code in valid.get("issuer", ()) if code not in others]
     if len(issuer_codes) > 1:
         issues.append(
             f"Der Abschnitt 'issuer' nennt {len(issuer_codes)} verschiedene LEIs; ein Emittent hat eine LEI."
@@ -424,7 +547,7 @@ def _lei_consistency_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
         if section in PARTY_SECTIONS:
             continue
         for code in codes:
-            if code not in party_codes:
+            if code not in party_codes and code not in others:
                 issues.append(
                     f"LEI '{code}' im Abschnitt '{section}' erscheint in keinem Abschnitt zu den Beteiligten."
                     if is_de

@@ -217,7 +217,9 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
                 sections = load_from_xhtml(source)
             if script_packed:
                 # A viewer's rendering is not the XHTML document itself, so validate_ixbrl does not run.
-                viewer_notes = (VIEWER_PAGE_NOTE, VIEWER_EMPTY_NOTE) if not sections else (VIEWER_PAGE_NOTE,)
+                # The first-page statement is found by its wording, not by a heading or field.
+                found = sections.keys() - {"not_approved_statement"}
+                viewer_notes = (VIEWER_PAGE_NOTE, VIEWER_EMPTY_NOTE) if not found else (VIEWER_PAGE_NOTE,)
                 extraction_notes = (*viewer_notes, *extraction_notes)
             else:
                 ixbrl_issues = validate_ixbrl(path)
@@ -244,6 +246,8 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
     if wp_type is WhitepaperType.ART:
         sections.pop("emt", None)
         sections.pop("crypto_asset", None)
+        # Art. 19 MiCAR prescribes no first-page statement, so no ART rule reads one.
+        sections.pop("not_approved_statement", None)
     elif wp_type is WhitepaperType.EMT:
         sections.pop("art", None)
         sections.pop("crypto_asset", None)

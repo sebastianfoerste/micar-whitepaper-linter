@@ -12,7 +12,6 @@ Raw white papers are not committed. Downloaded source files belong under `.study
 - Document-rule cells: 150.
 - Machine-flagged candidate gaps: 21.
 - Human-review status: `pending_review`.
-- Pre-registration: not yet made. `codebook.md` and `analysis-plan.md` are unsigned drafts; their signing order says how they are adopted on `main`. Once they are, this line records the adoption commit's SHA and its tag.
 - Prevalence, precision, recall, and issuer-compliance conclusions: not yet supportable.
 
 ## Files
@@ -22,13 +21,11 @@ Raw white papers are not committed. Downloaded source files belong under `.study
 - `document-provenance.json`: exact source-byte hashes and extraction metadata for processed documents.
 - `findings-pseudonymous.json`: machine-generated candidate flags keyed by WP identifier.
 - `findings-pseudonymous.csv`: flat candidate-flag table.
-- `human-review-r1.csv`: blinded sheet for reviewer `r1`. It omits detector outcomes, adds the rule label and requirement for each cell, and shuffles rows within each document by a recorded seed. A second reviewer gets `human-review-r2.csv`.
-- `human-review-matrix.csv`: all 150 document-rule cells with detector status, for adjudication and metric calculation after the independent labels are recorded. Reviewers do not open it while labelling.
-- `human-review-sheets.json`: generation record for the sheets and the matrix: findings hash, rule source, seed, row-order policy and file hashes.
-- `human-review-summary.json`: current completion and validation metrics; it remains publication-blocking while rows are pending.
+- `human-review-blinded.csv`: detector-hidden sheet for independent first review.
+- `human-review-matrix.csv`: all 150 document-rule cells with detector status for adjudication and metric calculation.
+- `human-review-summary.json`: completion and validation metrics written by `micar-review-summary`; it remains publication-blocking while rows are pending. The committed copy predates the protocol-gap, review-disclosure and publication-scope fields of schema v2, which the command below adds when it regenerates the file.
 - `review-protocol.md`: label definitions, review procedure, adjudication, and publication gate.
-- `codebook.md`: DRAFT, not adopted. Per-rule decision rules and open codebook policies for the reviewer.
-- `analysis-plan.md`: DRAFT, not adopted. Metrics, exclusions, intervals, reporting rules and the detector freeze, to be pre-registered in one adoption commit on `main`.
+- `REVIEWING.md`: reviewer checklist with the reference-standard decision the owner must record before labelling, the commands in order, the disclosures for the report, and a time estimate.
 - `findings-summary.md`: rendered pilot report.
 - `methodology.md`: source, sampling, extraction, rule, and metric methodology.
 - `limitations.md`: limitations and prohibited inferences.
@@ -63,39 +60,35 @@ uv run python -m micar_linter.esma_register \
   --out /tmp/micar-study/source-manifest.json
 ```
 
-The scripts in `scripts/` write to the committed files: `run_batch.py` to the findings, `render_report.py` to `findings-summary.md`, and `fetch_esma_register.py` (from the live ESMA register) and `select_sample.py` to `source-manifest.json` and `sample-manifest.csv`. Do not run `fetch_esma_register.py` or `select_sample.py`: they replace the curated manifest. Run `run_batch.py` only with the full cache in place, and `render_report.py` only to refresh the summary on purpose. A refresh can put committed files out of step. `micar-review-sheets` rebuilds the review sheets and the matrix from the findings (see "Prepare the human review"); no script rebuilds the other files. One that changes the flags, or a flag's `confidence` or `matched_text`, affects the detector columns of `human-review-matrix.csv` (`detector_status`, `detector_confidence`, `detector_context`); one that changes the flags also affects the candidate-gap figures in `docs/overview.md` and this README. One that changes the number of documents processed affects the document and cell counts in this README ("Current status", the file list and the "10 documents processed" check above), `docs/overview.md`, `docs/playground/index.html`, `docs/DETAILS.md`, `methodology.md` and `limitations.md`, the number of rows in `human-review-r1.csv` and `human-review-matrix.csv` (and so `rows_total` in `human-review-summary.json`), and the 150 cells that `study_report.py` writes into `findings-summary.md` as fixed text. One that changes the documents processed, or their bytes, affects the sample description in `methodology.md` and `limitations.md`, the inclusion, `detected_format` and `document_hash_sha256` fields of `source-manifest.json`, the rows of `sample-manifest.csv` (it lists only the included entries), the `study_doc_id` and `document_hash_sha256` columns of `human-review-r1.csv` and `human-review-matrix.csv`, and the `documents` and `excluded_documents` entries of `document-provenance.json`. One that changes a document's extraction affects its `extraction_metadata` in `document-provenance.json`.
-
-## Prepare the human review
-
-Check that the cached source bytes are the bytes the detector processed. The check runs offline and exits non-zero if any document is missing (3) or differs (1):
-
-```bash
-uv run micar-study-verify-cache \
-  --provenance studies/2026-07-title-ii-annex-i-whitepaper-study/document-provenance.json \
-  --cache .study-cache/title-ii-whitepapers \
-  --include-candidates
-```
-
-Regenerate the blinded sheets and the matrix from the findings file. Rule IDs and Annex labels come from `STUDY_RULES`; every new sheet has every label `pending`. Reviewers and the seed recorded in `human-review-sheets.json` are always kept, so pass `--reviewer r2` to add a second reviewer. A sheet that already holds review content is kept unchanged; if its cells or row order would change, the command refuses (exit 3). `--check` confirms that the committed files match the generator, comparing every column except the review fields, so it still passes once labels are entered:
-
-```bash
-uv run micar-review-sheets \
-  --findings studies/2026-07-title-ii-annex-i-whitepaper-study/findings-pseudonymous.json \
-  --out-dir studies/2026-07-title-ii-annex-i-whitepaper-study
-```
+The scripts in `scripts/` write to the committed files: `run_batch.py` to the findings, `render_report.py` to `findings-summary.md`, and `fetch_esma_register.py` (from the live ESMA register) and `select_sample.py` to `source-manifest.json` and `sample-manifest.csv`. Do not run `fetch_esma_register.py` or `select_sample.py`: they replace the curated manifest. Run `run_batch.py` only with the full cache in place, and `render_report.py` only to refresh the summary on purpose. A refresh can put committed files out of step. `scripts/build_review_matrix.py` (below) rebuilds the two review sheets from the new findings, keeping filled reviewer cells; no script rebuilds the rest. One that changes the flags, or a flag's `confidence` or `matched_text`, affects the detector columns of `human-review-matrix.csv` (`detector_status`, `detector_confidence`, `detector_context`); one that changes the flags also affects the candidate-gap figures in `docs/overview.md` and this README. One that changes the number of documents processed affects the document and cell counts in this README ("Current status", the file list and the "10 documents processed" check above), `docs/overview.md`, `docs/playground/index.html`, `docs/DETAILS.md`, `methodology.md` and `limitations.md`, the number of rows in `human-review-blinded.csv` and `human-review-matrix.csv` (and so `rows_total` in `human-review-summary.json`), and the 150 cells that `study_report.py` writes into `findings-summary.md` as fixed text. One that changes the documents processed, or their bytes, affects the sample description in `methodology.md` and `limitations.md`, the inclusion, `detected_format` and `document_hash_sha256` fields of `source-manifest.json`, the rows of `sample-manifest.csv` (it lists only the included entries), the `study_doc_id` and `document_hash_sha256` columns of `human-review-blinded.csv` and `human-review-matrix.csv`, and the `documents` and `excluded_documents` entries of `document-provenance.json`. One that changes a document's extraction affects its `extraction_metadata` in `document-provenance.json`.
 
 ## Validate against human labels
 
-Start labelling the 150 cells only after the adoption commit on `main` that adopts `codebook.md` and `analysis-plan.md` with the pending sheets (`analysis-plan.md`, step 0.10). It follows the signing order in their banners: the study tooling is merged into `main` as unsigned draft tooling first, and Phase 0 is done on `main`. The calibration document is labelled before that commit, in Phase 0 (step 0.9), outside the committed sheets (`analysis-plan.md` section 4).
+The two review sheets are built from `findings-pseudonymous.json`, so their rule IDs match the detector output. Rebuild them after a detector run with:
 
-Each reviewer labels only their own blinded sheet (`human-review-r1.csv`, and `human-review-r2.csv` for a second reviewer) under `review-protocol.md` and `codebook.md`. While labelling, reviewers do not open `human-review-matrix.csv`, `findings-pseudonymous.*` or `findings-summary.md`. Each reviewer's labels are committed on their own. Only then are the final labels merged into `human-review-matrix.csv` with the detector outcomes. Then run:
+```bash
+python3 studies/2026-07-title-ii-annex-i-whitepaper-study/scripts/build_review_matrix.py
+```
+
+The script carries over reviewer cells that are already filled and stops if a filled cell no longer matches a document-rule pair or two filled rows share one. As of this commit no cell has been reviewed.
+
+Before any labelling, the owner records in `review-protocol.md` whether labels are measured against the rules' missing-element descriptions or against the provisions as a whole (`REVIEWING.md`, step 2). Then label `human-review-blinded.csv` under `review-protocol.md` and merge the labels into `human-review-matrix.csv`:
+
+```bash
+uv run python studies/2026-07-title-ii-annex-i-whitepaper-study/scripts/build_review_matrix.py --merge-blinded
+```
+
+Compute the metrics with:
 
 ```bash
 uv run micar-review-summary \
   --matrix studies/2026-07-title-ii-annex-i-whitepaper-study/human-review-matrix.csv \
   --out /tmp/micar-study/human-review-summary.json \
+  --findings studies/2026-07-title-ii-annex-i-whitepaper-study/findings-pseudonymous.json \
   --require-complete
 ```
+
+The command exits with status 2 while any row remains pending, or a labelled row lacks a field that publication gate item 2 or "First review" steps 6 and 7 of `review-protocol.md` require, or has a review date after today or, with `--findings`, before the detector run. With `--findings` it exits with status 1 and writes nothing if the matrix does not hold exactly the detector's cells and detector statuses. Exit status 0 covers publication gate items 1, 2 and 4 only and is necessary for publication, not sufficient (`REVIEWING.md`, step 5).
 
 Copy the output over `human-review-summary.json` only once the command exits 0. Then update the reviewed count (`basis-reviewed`) in `docs/playground/index.html`, which `tests/playground/model.test.mjs` checks against `rows_completed`.
 
