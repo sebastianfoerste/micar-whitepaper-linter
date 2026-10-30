@@ -420,7 +420,8 @@ def carry_adjudications(
 
     A decided row must still match a current row in every review column. If the sheets changed
     after it was decided, or two decided rows name one cell, it is reported, never dropped or
-    overwritten.
+    overwritten. The report names the columns that differ, so a column a spreadsheet rewrote (a
+    date saved as 14.10.2026) can be restored by hand.
     """
     rows = {(row["study_doc_id"], row["rule_id"]): dict(row) for row in current}
     carried: set[tuple[str, str]] = set()
@@ -432,8 +433,17 @@ def carry_adjudications(
         target = rows.get(key)
         if key in carried:
             problems.append(f"{key[0]} {key[1]}: more than one adjudicated row")
-        elif target is None or any(_text(row, f) != target[f] for f in _FIXED_DISAGREEMENT_FIELDS):
-            problems.append(f"{key[0]} {key[1]}: adjudicated, but the two reviews no longer match it")
+        elif target is None:
+            problems.append(
+                f"{key[0]} {key[1]}: adjudicated, but the two sheets no longer list it as a disagreement; "
+                "restore the row as --disagreements wrote it, or empty its adjudication columns"
+            )
+        elif changed := [f for f in _FIXED_DISAGREEMENT_FIELDS if _text(row, f) != target[f]]:
+            problems.append(
+                f"{key[0]} {key[1]}: adjudicated, but these columns no longer match the two sheets: "
+                f"{', '.join(changed)}; restore them as --disagreements wrote them, or empty the "
+                "adjudication columns to adjudicate the cell again"
+            )
         else:
             target.update({field: row.get(field) or "" for field in ADJUDICATION_FIELDS})
             carried.add(key)

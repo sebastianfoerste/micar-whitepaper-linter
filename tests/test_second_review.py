@@ -252,13 +252,34 @@ def test_carrying_adjudications_keeps_decisions_and_refuses_stale_ones():
     assert carry_adjudications(expected, [decided]) == [decided]
     assert carry_adjudications(expected, [expected[0]]) == expected
     with pytest.raises(
-        ValueError, match="SYN-001 SYNTHETIC_RULE_01: adjudicated, but the two reviews no longer"
+        ValueError,
+        match="SYN-001 SYNTHETIC_RULE_01: adjudicated, but these columns no longer match the two "
+        "sheets: second_note; restore them",
     ):
         carry_adjudications(expected, [{**decided, "second_note": "synthetic later edit"}])
     with pytest.raises(ValueError, match="more than one adjudicated row"):
         carry_adjudications(expected, [decided, decided])
-    with pytest.raises(ValueError, match="no longer match it"):
+    with pytest.raises(ValueError, match="no longer list it as a disagreement"):
         carry_adjudications([], [decided])
+
+
+def test_a_decided_row_a_spreadsheet_rewrote_names_the_column_to_restore():
+    # The merge sends a changed review column back to --disagreements, which must then say which
+    # column to restore instead of repeating the advice.
+    _, cells, first, second = _disputed()
+    expected = disagreement_rows(cells, first, second)
+    saved = {**_decided(expected[0]), "first_reviewed_at": "14.10.2026"}
+
+    with pytest.raises(ValueError, match="run --disagreements again"):
+        adjudicated_cells(expected, DISAGREEMENT_FIELDS, [saved], today=TODAY)
+    with pytest.raises(ValueError) as refused:
+        carry_adjudications(expected, [saved])
+    assert "these columns no longer match the two sheets: first_reviewed_at; restore them" in str(
+        refused.value
+    )
+    assert carry_adjudications(expected, [{**saved, "first_reviewed_at": "2026-10-14"}]) == [
+        _decided(expected[0])
+    ]
 
 
 def _label_table(text, start, end):
@@ -502,7 +523,7 @@ def test_merge_with_a_second_review_takes_the_adjudicated_labels(tmp_path, capsy
     _second_review(tmp_path, first, disputed[:1])
     edited = _files(tmp_path)
     assert _run(builder, tmp_path, "--disagreements") == 1
-    assert "adjudicated, but the two reviews no longer match it" in capsys.readouterr().err
+    assert "adjudicated, but the two sheets no longer list it as a disagreement" in capsys.readouterr().err
     assert _files(tmp_path) == edited
 
 
