@@ -2,7 +2,7 @@
 
 This file sets out the order of work for labelling the 150 document-rule cells and producing precision and recall. `review-protocol.md` governs; where the two differ, follow the protocol. Run every command from the repository root after `uv sync --extra dev`.
 
-The checklist covers the first review and a single-reviewed result. The protocol's default goes further: a second qualified reviewer independently assesses every flagged cell, every `uncertain`, `extraction_failure` or `not_applicable` cell and at least 20% of randomly selected non-flagged cells, and disagreements are adjudicated ("Second review and adjudication"). Single review is the fallback the protocol allows: "If no second reviewer is available, the report must state that the labels are single-reviewed."
+The checklist covers the first review and a single-reviewed result, and step 3a the second review. The protocol's default is that second review: a second qualified reviewer independently assesses every flagged cell, every `uncertain`, `extraction_failure` or `not_applicable` cell and at least 20% of randomly selected non-flagged cells, and disagreements are adjudicated ("Second review and adjudication"). Single review is the fallback the protocol allows: "If no second reviewer is available, the report must state that the labels are single-reviewed."
 
 ## 0. Before you start
 
@@ -81,6 +81,18 @@ Apply the reference standard recorded under step 2, not the detector's pattern. 
 
 For a rule with a difference, label against the standard recorded under step 2. Where the other standard would give a different label, say so in `review_note`, for example "against Art. 6(5) as a whole: missing, no liquidity statement found".
 
+## 3a. Second review and adjudication
+
+For a single-reviewed result, skip this step. Otherwise, once `human-review-blinded.csv` is complete, build the second reviewer's sheet:
+
+```bash
+uv run python studies/2026-07-title-ii-annex-i-whitepaper-study/scripts/build_review_matrix.py --second-sheet
+```
+
+`human-review-second.csv` then holds the cells the protocol has the second reviewer assess: the 21 flagged cells, every cell the first review labelled `uncertain`, `extraction_failure` or `not_applicable`, and at least 26 of the 129 non-flagged cells, drawn by a SHA-256 ranking under `--seed` and `--fraction` (at least 0.2). Pass the seed and fraction that `analysis-plan.md` section 6 fixes, or `--second-all` for all 150 cells. The second reviewer labels that sheet as in step 3, under their own reviewer identifier, without opening `human-review-blinded.csv` or the files listed in step 0.
+
+Once both sheets are complete, the same command with `--disagreements` writes `human-review-adjudication.csv`: one row for each cell whose two labels differ, with both reviews and no detector column. The adjudicator fills `final_label`, `adjudicated_by`, `adjudicated_at` (no earlier than the last review), `final_pinpoint` (needed for `present`) and `adjudication_reason`. The script accepts both reviewers by consensus (`reviewer-a+reviewer-b`) or a person who made neither review, and refuses one of the two alone, as the draft `analysis-plan.md` section 6 recommends; the protocol says only "a qualified reviewer". While the second sheet exists, the merge in step 4 stops until it is complete and every disagreement is adjudicated. It then gives each adjudicated cell the adjudicator's label, date and pinpoint and a note naming both labels, and every other cell the first review. `micar-review-summary` (step 5) does not check adjudication.
+
 ## 4. Merge the labels into the matrix
 
 ```bash
@@ -146,4 +158,4 @@ This is an estimate, not a measurement. It assumes ten documents (six HTML or XH
 | Merge and metrics | about 10 minutes, plus fixing any cells the merge lists |
 | Report and status updates | 1 to 2 hours |
 
-The total comes to about 6 to 13 hours, so a single review takes one to two working days. The owner's choice of reference standard (step 2) comes before this and is not included. A second review under the protocol covers at least 47 cells: all 21 flagged cells, at least 26 of the 129 non-flagged cells (20%), and every `uncertain`, `extraction_failure` or `not_applicable` cell not already among them. At the same rate, 47 cells take the second reviewer about 1.5 to 3 hours, plus adjudication time. The repository has no second blinded sheet, no random-selection script and no adjudication record for that step.
+The total comes to about 6 to 13 hours, so a single review takes one to two working days. The owner's choice of reference standard (step 2) comes before this and is not included. A second review under the protocol covers at least 47 cells: all 21 flagged cells, at least 26 of the 129 non-flagged cells (20%), and every `uncertain`, `extraction_failure` or `not_applicable` cell not already among them. At the same rate, 47 cells take the second reviewer about 1.5 to 3 hours, plus adjudication time. `scripts/build_review_matrix.py` builds the second sheet, draws the non-flagged cells and writes the adjudication record (step 3a).
