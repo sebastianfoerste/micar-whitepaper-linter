@@ -24,8 +24,8 @@ ESMA_PAGE_LAST_UPDATE = "3 July 2026"
 
 def render_study_report(payload: dict[str, Any]) -> str:
     summary = payload["summary"]
-    processed = documents_processed(summary)
-    cells = processed * len(payload.get("rules", []))
+    reviewed = summary["documents_reviewed"]
+    cells = reviewed * len(payload.get("rules", []))
     potential_gaps = summary["potential_gaps"]
     high_confidence = summary["high_confidence_gaps"]
     review_status = payload.get("human_review_status", "pending_review")
@@ -62,8 +62,8 @@ def render_study_report(payload: dict[str, Any]) -> str:
         "",
         "## Sample",
         "",
-        f"- Documents processed: {processed}",
-        f"- Target sample size: {payload.get('sample_target', processed)}",
+        f"- Documents reviewed: {reviewed}",
+        f"- Target sample size: {payload.get('sample_target', reviewed)}",
         f"- Documents excluded before or during batch processing: {summary['documents_excluded']}",
         "- Scope: Title II crypto-assets other than asset-referenced tokens and e-money tokens.",
         "- Public identifiers: WP-001 style study IDs only.",
@@ -133,13 +133,13 @@ def render_study_report(payload: dict[str, Any]) -> str:
             "",
             "## Human validation gate",
             "",
-            f"Reviewers label the {cells} document-rule cells in blinded per-reviewer sheets "
-            "(for example `human-review-r1.csv`) that omit detector outcomes. `human-review-matrix.csv` "
-            "already holds the detector outcomes, so reviewers do not open it while labelling; the "
-            "final labels are merged into it only after the independent labels are recorded. No precision, "
-            "recall, false-positive, or false-negative claim is made until qualified reviewers label "
-            "every cell under `review-protocol.md` and `micar-review-summary --require-complete` exits "
-            "successfully.",
+            f"Reviewers label the {cells} document-rule cells in `human-review-blinded.csv`, which omits "
+            "the detector outcomes, following `REVIEWING.md`. `human-review-matrix.csv` already holds the "
+            "detector outcomes, so reviewers do not open it while labelling; "
+            "`scripts/build_review_matrix.py --merge-blinded` copies the labels into it once every blinded "
+            "cell is labelled. No precision, recall, false-positive, or false-negative claim is made until "
+            "qualified reviewers label every cell under `review-protocol.md` and "
+            "`micar-review-summary --require-complete` exits successfully.",
             "",
             "Document byte hashes and extraction metadata are recorded in `document-provenance.json`.",
             "",
@@ -252,17 +252,6 @@ def render_study_report(payload: dict[str, Any]) -> str:
         ]
     )
     return "\n".join(lines)
-
-
-def documents_processed(summary: dict[str, Any]) -> int:
-    """Processed-document count from a v2 summary, or from the v1 ``documents_reviewed`` key.
-
-    Findings schema v1 named the count ``documents_reviewed`` although no human review is
-    implied; v2 renames it. Committed v1 files are left unchanged so that their digests hold.
-    """
-    if "documents_processed" in summary:
-        return int(summary["documents_processed"])
-    return int(summary["documents_reviewed"])
 
 
 def _example_findings(payload: dict[str, Any]) -> list[tuple[dict[str, Any], dict[str, Any]]]:
