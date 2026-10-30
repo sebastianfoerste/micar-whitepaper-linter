@@ -549,13 +549,12 @@ def adjudicated_cells(
 
 def adjudicated_cell(row: Mapping[str, str]) -> dict[str, str]:
     """Return the reviewer fields that an adjudicated row puts into the matrix."""
-    labels = f"first: {_text(row, 'first_label')}, second: {_text(row, 'second_label')}"
     return {
         "human_label": _text(row, "final_label"),
         "reviewer_id": "+".join(part.strip() for part in _text(row, "adjudicated_by").split("+")),
         "reviewed_at": _text(row, "adjudicated_at"),
         "source_pinpoint": _text(row, "final_pinpoint"),
-        "review_note": f"Adjudicated ({labels}): {_text(row, 'adjudication_reason')}",
+        "review_note": f"{_adjudicated_labels(row)}: {_text(row, 'adjudication_reason')}",
     }
 
 
@@ -1167,7 +1166,7 @@ def second_review_agreement(
     }
     second_cells = _second_sheet_cells(second, matrix)
     adjudication = _adjudication_index(second, second_cells)
-    first_cells, merged = _first_review(matrix, adjudication, second.adjudication)
+    first_cells, merged, corrected = _first_review(matrix, adjudication, second.adjudication)
     keys = [(cell.doc, cell.rule) for cell in cells]
     flagged = {(cell.doc, cell.rule) for cell in cells if cell.flagged}
     record.update(
@@ -1229,9 +1228,13 @@ def second_review_agreement(
                 },
             }
         ],
-        "adjudication": _adjudication_state(
-            list(matrix.values()), first_cells, second_cells, second, merged, today=today
-        ),
+        "adjudication": {
+            **_adjudication_state(
+                list(matrix.values()), first_cells, second_cells, second, merged, today=today
+            ),
+            # Adjudicated cells changed in the matrix after the merge (REVIEWING.md step 4).
+            "corrected_after_merge": len(corrected),
+        },
     }
 
 
@@ -1276,33 +1279,51 @@ def _first_review(
     matrix: Mapping[tuple[str, str], Mapping[str, str]],
     adjudication: Mapping[tuple[str, str], Mapping[str, str]],
     adjudication_name: str | None,
-) -> tuple[dict[tuple[str, str], dict[str, str]], set[tuple[str, str]]]:
-    """The first review of every cell, and the cells whose matrix row holds the adjudicated cell."""
+) -> tuple[dict[tuple[str, str], dict[str, str]], set[tuple[str, str]], set[tuple[str, str]]]:
+    """The first review of every cell, the cells adjudicated in the matrix, and those corrected since.
+
+    A matrix cell that still starts with the note the merge wrote for a decided adjudication row,
+    but differs from that row's adjudicated cell, was corrected after the merge (REVIEWING.md
+    step 4); its first review comes from the adjudication file, as for an uncorrected one.
+    """
     first: dict[tuple[str, str], dict[str, str]] = {}
     merged: set[tuple[str, str]] = set()
+    corrected: set[tuple[str, str]] = set()
     for key, row in matrix.items():
         review = {field: _text(row, field) for field in _REVIEW_FIELDS}
         decided = adjudication.get(key)
-        if (
-            decided is not None
-            and (_text(decided, "final_label") or "pending") != "pending"
-            and review == adjudicated_cell(decided)
+        if decided is not None and (_text(decided, "final_label") or "pending") == "pending":
+            decided = None
+        if decided is not None and (
+            review == adjudicated_cell(decided)
+            or review["review_note"].startswith(_adjudicated_labels(decided))
         ):
             first[key] = {field: _text(decided, f"first_{suffix}") for suffix, field in _REVIEW_COLUMNS}
             merged.add(key)
+            if review != adjudicated_cell(decided):
+                corrected.add(key)
             continue
         if review["review_note"].startswith(_ADJUDICATED_NOTE):
-            where = (
-                f"{adjudication_name} has no decided row that gives it"
-                if adjudication_name
-                else "no adjudication file was given (--adjudication)"
-            )
+            if decided is not None:
+                where = (
+                    f"its note does not start with {_adjudicated_labels(decided)!r}, which the merge "
+                    f"writes for the decided row in {adjudication_name}"
+                )
+            elif adjudication_name:
+                where = f"{adjudication_name} has no decided row for it"
+            else:
+                where = "no adjudication file was given (--adjudication)"
             raise ValueError(
                 f"{key[0]} {key[1]}: the matrix holds an adjudicated cell, but {where}; pass the "
                 "adjudication file that the merge used"
             )
         first[key] = review
-    return first, merged
+    return first, merged, corrected
+
+
+def _adjudicated_labels(row: Mapping[str, str]) -> str:
+    """The start of the note that adjudicated_cell writes for a row: both reviews' labels."""
+    return f"{_ADJUDICATED_NOTE}{_text(row, 'first_label')}, second: {_text(row, 'second_label')})"
 
 
 def _adjudication_state(
@@ -1335,7 +1356,8 @@ def _adjudication_state(
             "disagreements": total,
             "adjudicated": None,
             "reason": (
-                f"the reviews differ in {total} cells, and no adjudication file was given (--adjudication)"
+                f"the reviews differ in {_count(total, 'cell')}, and no adjudication file was given "
+                "(--adjudication)"
             ),
         }
     if decided < total:
@@ -1359,8 +1381,11 @@ def _adjudication_state(
             "disagreements": total,
             "adjudicated": total,
             "reason": (
-                f"{len(unmerged)} adjudicated labels are not in the matrix yet; run "
-                "scripts/build_review_matrix.py --merge-blinded"
+                f"{_count(len(unmerged), 'adjudicated label')} {'is' if len(unmerged) == 1 else 'are'} "
+                "not in the matrix yet. scripts/build_review_matrix.py --merge-blinded writes adjudicated "
+                "labels into the matrix, but it refuses a cell that an earlier merge already filled with "
+                "the first review until that cell is set back to pending, with empty reviewer fields, in "
+                "human-review-matrix.csv"
             ),
         }
     return {"status": "complete", "disagreements": total, "adjudicated": total, "reason": None}
@@ -1706,7 +1731,7 @@ def _check_analysis_options(parser: argparse.ArgumentParser, args: argparse.Name
     }
     given = [flag for flag, value in options.items() if value is not None]
     if given and not args.analyses:
-        parser.error(f"{', '.join(given)} apply only with --analyses")
+        parser.error(f"{', '.join(given)} {'applies' if len(given) == 1 else 'apply'} only with --analyses")
     if args.analyses and args.findings is None:
         parser.error("--analyses needs --findings, which gives the detector identity and run date")
     if args.adjudication is not None and args.second_review is None:

@@ -1224,6 +1224,7 @@ def test_agreement_compares_the_two_reviews_after_the_adjudicated_merge(tmp_path
         "disagreements": 1,
         "adjudicated": 1,
         "reason": None,
+        "corrected_after_merge": 0,
     }
 
     # The matrix holds an adjudicated cell, so the summary needs the file the merge used.
@@ -1248,13 +1249,70 @@ def test_adjudication_state_follows_the_decisions(tmp_path):
     _fill(study / "human-review-adjudication.csv", {SYNTHETIC_KEYS[0]: DECIDED})
     state = _agreement(study)["adjudication"]
     assert state["status"] == "not_merged"
-    assert "--merge-blinded" in state["reason"]
+    assert state["reason"].startswith("1 adjudicated label is not in the matrix yet.")
+    assert "until that cell is set back to pending, with empty reviewer fields" in state["reason"]
 
     _fill(
         study / "human-review-adjudication.csv",
         {SYNTHETIC_KEYS[0]: {**DECIDED, "adjudicated_by": "reviewer-a"}},
     )
     with pytest.raises(ValueError, match="names only one of the two reviewers"):
+        _agreement(study)
+
+    # The reason's advice holds: the merge refuses the cell that the earlier merge filled with the
+    # first review, and writes the adjudicated label once that cell is pending again.
+    _fill(study / "human-review-adjudication.csv", {SYNTHETIC_KEYS[0]: DECIDED})
+    assert run("--merge-blinded") == 1
+    cleared = {
+        "human_label": "pending",
+        "reviewer_id": "",
+        "reviewed_at": "",
+        "source_pinpoint": "",
+        "review_note": "",
+    }
+    _fill(study / "human-review-matrix.csv", {SYNTHETIC_KEYS[0]: cleared})
+    assert run("--merge-blinded") == 0
+    assert _agreement(study)["adjudication"]["status"] == "complete"
+
+
+def test_a_correction_after_the_merge_keeps_the_first_review_of_an_adjudicated_cell(tmp_path):
+    study, run = _two_reviews(tmp_path)
+    assert run("--disagreements") == 0
+    _fill(study / "human-review-adjudication.csv", {SYNTHETIC_KEYS[0]: DECIDED})
+    assert run("--merge-blinded") == 0
+    matrix = study / "human-review-matrix.csv"
+    (merged,) = [
+        row for row in _read_sheet(matrix) if (row["study_doc_id"], row["rule_id"]) == SYNTHETIC_KEYS[0]
+    ]
+    # REVIEWING.md step 4: a correction is made in the matrix and recorded in the cell's review_note.
+    correction = {
+        "human_label": "present",
+        "source_pinpoint": "synthetic section 2",
+        "review_note": f"{merged['review_note']}; corrected after the merge: synthetic",
+    }
+    _fill(matrix, {SYNTHETIC_KEYS[0]: correction})
+
+    agreement = _agreement(study)
+    assert agreement["status"] == "computed"
+    # The first review still comes from the adjudication file, so the disagreement stays.
+    (pair,) = agreement["pairs"]
+    assert (pair["first_reviewers"], pair["cells"], pair["disagreements"]) == (["reviewer-a"], 4, 1)
+    assert agreement["adjudication"] == {
+        "status": "complete",
+        "disagreements": 1,
+        "adjudicated": 1,
+        "reason": None,
+        "corrected_after_merge": 1,
+    }
+
+    # A note naming other labels than the decided row is not that row's merge.
+    _fill(
+        matrix,
+        {SYNTHETIC_KEYS[0]: {"review_note": "Adjudicated (first: present, second: missing): synthetic"}},
+    )
+    with pytest.raises(
+        ValueError, match=r"does not start with 'Adjudicated \(first: missing, second: present\)'"
+    ):
         _agreement(study)
 
 
@@ -1332,3 +1390,13 @@ def test_analysis_options_need_analyses_and_findings(tmp_path, extra):
         main(["--matrix", str(tmp_path / "matrix.csv"), "--out", str(tmp_path / "summary.json"), *extra])
     assert exited.value.code == 2
     assert not (tmp_path / "summary.json").exists()
+
+
+def test_analysis_option_errors_name_the_options(tmp_path, capsys):
+    args = ["--matrix", str(tmp_path / "matrix.csv"), "--out", str(tmp_path / "summary.json")]
+    with pytest.raises(SystemExit):
+        main([*args, "--manifest", "manifest.json"])
+    assert "--manifest applies only with --analyses" in capsys.readouterr().err
+    with pytest.raises(SystemExit):
+        main([*args, "--manifest", "manifest.json", "--seed", "1"])
+    assert "--manifest, --seed apply only with --analyses" in capsys.readouterr().err
