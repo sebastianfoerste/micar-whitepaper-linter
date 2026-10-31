@@ -4,13 +4,13 @@
 - **Regime/Type**: ART
 - **Source File**: examples/art-stablecoin.json
 - **SHA-256 Checksum**: `e8969fa1d2b061343085e85b22eec491f0b7adde670f9abfa937f2737fbb46ff`
-- **Review Timestamp**: 2026-10-29 06:57:48
+- **Review Timestamp**: 2026-10-31 12:22:27
 
 ## Rule Compliance Checklist
 
 | Rule ID | Citation | Description | Severity | Status | Reviewer Checked |
 |---|---|---|---|---|---|
-| `COMMON.SUMMARY` | Art. 6 Abs. 7, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR | Plain-language summary | BLOCKER | **PASS** | [x] |
+| `COMMON.SUMMARY` | Art. 6 Abs. 7, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR | Plain-language summary | BLOCKER | **REVIEW** | [ ] |
 | `COMMON.RISK_WARNING` | Art. 6 Abs. 5, Art. 19 Abs. 4, Art. 51 Abs. 4 MiCAR | Mandatory risk warning statement | BLOCKER | **PASS** | [x] |
 | `COMMON.MANAGEMENT_STATEMENT` | Art. 6 Abs. 6, Art. 19 Abs. 5, Art. 51 Abs. 5 MiCAR | Statement by the management body on completeness, fairness, and clarity | BLOCKER | **PASS** | [x] |
 | `COMMON.NOTIFICATION_DATE` | Art. 6 Abs. 8, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR | Date of notification to the competent authority | MAJOR | **PASS** | [x] |
@@ -33,10 +33,10 @@
 
 ## Summary of Findings
 
-- **Passed Checks**: 17
-- **Under Review**: 2
+- **Passed Checks**: 16
+- **Under Review**: 3
 - **Missing Sections**: 1
-- **BLOCKER Issues**: 3
+- **BLOCKER Issues**: 4
 
 > [!WARNING]
 > **BLOCKER issues are currently open.** The draft is not package-ready for an external review or filing workflow until the gaps are cured and a lawyer has signed off.

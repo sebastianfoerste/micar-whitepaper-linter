@@ -10,7 +10,7 @@ This markdown table is a local review artifact. It does not approve filing, publ
 
 | Rule ID | Citation | Status | Blocker | Reviewer decision | Anchor verified |
 | --- | --- | --- | --- | --- | --- |
-| COMMON.SUMMARY | Art. 6 Abs. 7, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR | pass | no | pending_lawyer_confirmation | yes |
+| COMMON.SUMMARY | Art. 6 Abs. 7, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR | review | yes | remediation_required | yes |
 | COMMON.RISK_WARNING | Art. 6 Abs. 5, Art. 19 Abs. 4, Art. 51 Abs. 4 MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | COMMON.MANAGEMENT_STATEMENT | Art. 6 Abs. 6, Art. 19 Abs. 5, Art. 51 Abs. 5 MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | COMMON.NOTIFICATION_DATE | Art. 6 Abs. 8, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR | pass | no | pending_lawyer_confirmation | yes |

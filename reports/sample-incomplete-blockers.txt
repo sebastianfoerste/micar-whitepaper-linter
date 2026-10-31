@@ -9,6 +9,8 @@ Pass: 1  |  Review: 13  |  Missing: 6  |  Blockers: 15
            Section: 'summary'  (4 words)
            -  Section is thin: 4 words, expected at least 80.
            -  Missing review terms: summary, key information.
+           -  Warning of Art. 19(6) MiCAR, second subparagraph, not found in the template's wording: point (a) introduction; point (b) decision on the whole white paper; point (c) no offer of financial instruments; point (d) no prospectus.
+           -  Right of redemption at any time (Art. 19(6), third subparagraph, MiCAR) not found: no sentence names redemption together with 'at any time'.
 
 [MISS  ] [BLOCKER] COMMON.RISK_WARNING  Mandatory risk warning statement
            Cite:  Art. 6(5), Art. 19(4), Art. 51(4) MiCAR

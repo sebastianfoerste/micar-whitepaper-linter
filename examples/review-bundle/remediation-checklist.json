@@ -4,12 +4,33 @@
   "whitepaper_type": "art",
   "status": "BLOCKED",
   "summary": {
-    "open_items": 3,
-    "blockers": 3,
-    "review_items": 2,
+    "open_items": 4,
+    "blockers": 4,
+    "review_items": 3,
     "missing_sections": 1
   },
   "items": [
+    {
+      "rule_id": "COMMON.SUMMARY",
+      "citation": "Art. 6 Abs. 7, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR",
+      "section": "summary",
+      "label": "Plain-language summary",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "Warning of Art. 19(6) MiCAR, second subparagraph, not found in the template's wording: point (a) introduction; point (b) decision on the whole white paper; point (c) no offer of financial instruments; point (d) no prospectus.",
+        "Right of redemption at any time (Art. 19(6), third subparagraph, MiCAR) not found: no sentence names redemption together with 'at any time'."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "summary",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:summary:12eadaf307ff87db",
+        "section_length": 681
+      }
+    },
     {
       "rule_id": "COMMON.IXBRL_TAGGING",
       "citation": "Art. 2 VO (EU) 2024/2984",
