@@ -136,10 +136,7 @@ OJ_CHECKED = {
         "consolidated version of 9 January 2024, which differs there only in a footnote number, and the predefined "
         "warnings of field 07 of Table 2, I.04 of Table 3 and I.05 of Table 4 of Implementing Regulation (EU) "
         "2024/2984, as the Publications Office served them that day. No amendment and no English or German "
-        "corrigendum changes Art. 6(7), Art. 19(6), Art. 51(6) or those fields. The redemption statements of the "
-        "third subparagraph of Art. 19(6) and Art. 51(6) and of fields I.06 of Table 3 and I.07 of Table 4 were "
-        "read on 2026-10-31 in the same English and German Official Journal texts, as the Publications Office "
-        "served them that day."
+        "corrigendum changes Art. 6(7), Art. 19(6), Art. 51(6) or those fields."
     ),
     "ANNEX_I.A.P6": (
         "Checked on 2026-10-30 against the Official Journal text in English and German (OJ L 150, 9.6.2023), the "
