@@ -58,6 +58,22 @@ def _oj_checked(provisions: str, also: str = "") -> str:
     )
 
 
+def _oj_checked_2026_10_31(provisions: str, statement: bool = False) -> str:
+    """The note of the rules read on 2026-10-31 (docs/research/2026-10-31-oj-verification.md)."""
+    german = (
+        " The German wording was read in the same texts and is recorded in "
+        "docs/research/2026-10-31-oj-verification.md; the linter does not check it yet, so a German draft goes "
+        "to review."
+        if statement
+        else " The reading is recorded in docs/research/2026-10-31-oj-verification.md."
+    )
+    return (
+        "Checked on 2026-10-31 against the Official Journal text in English and German (OJ L 150, 9.6.2023) and "
+        "the consolidated version of 9 January 2024, as the Publications Office served them that day. No "
+        f"amendment and no English or German corrigendum changes {provisions}.{german}"
+    )
+
+
 TEMPLATES = ", and against the templates of Implementing Regulation (EU) 2024/2984"
 SUSTAINABILITY = (
     ", and against Delegated Regulation (EU) 2025/422 and the templates of Implementing Regulation (EU) 2024/2984"
@@ -149,6 +165,30 @@ OJ_CHECKED = {
         "consolidated version of 9 January 2024 and Table 4 of Implementing Regulation (EU) 2024/2984, whose "
         "fields A.9 to A.11 carry the point without a condition, as the Publications Office served them that day. "
         "No amendment and no English or German corrigendum changes Annex III Part A point 6 or the template."
+    ),
+    # Read on 2026-10-31 (docs/research/2026-10-31-oj-verification.md records the excerpts and addresses).
+    "COMMON.IXBRL_TAGGING": (
+        "Checked on 2026-10-31 against the Official Journal text of Implementing Regulation (EU) 2024/2984 in "
+        "English and German, as the Publications Office served it that day. No amendment and no corrigendum is on "
+        "record for it. Art. 2 has the wording the rule relies on (XHTML, Inline XBRL 1.1, the elements of the "
+        "taxonomy); the taxonomy namespace the check expects comes from ESMA's taxonomy files under Art. 3, not "
+        "from the Regulation. The reading is recorded in docs/research/2026-10-31-oj-verification.md."
+    ),
+    "ANNEX_I.C": _oj_checked_2026_10_31("Annex I Part C"),
+    "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW": _oj_checked_2026_10_31(
+        "Art. 35(4), Art. 36(4)(d), Art. 45(3) or Art. 45(7)(b); both percentages are floors for the regulatory "
+        "technical standards that EBA drafts"
+    ),
+    "ANNEX_II.G.CUSTODY": _oj_checked_2026_10_31("Art. 36(2) or Art. 37"),
+    "ANNEX_I.NOT_APPROVED_STATEMENT": _oj_checked_2026_10_31(
+        "Art. 6(3) or field 02 of Table 2 of Implementing Regulation (EU) 2024/2984, whose English wording the rule "
+        "checks word for word",
+        statement=True,
+    ),
+    "ANNEX_III.NOT_APPROVED_STATEMENT": _oj_checked_2026_10_31(
+        "Art. 51(3) or field I.02 of Table 4 of Implementing Regulation (EU) 2024/2984, whose English wording the "
+        "rule checks word for word",
+        statement=True,
     ),
 }
 # Rules that pass when the section holds a value of the right kind, a date, a language or contact details, at
@@ -413,8 +453,8 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
                     "Synthetischer deutscher Beispieltext. Er gibt nicht den Wortlaut des Amtsblatts wieder.",
                     language="de",
                 ),
-                "The German wording has not been checked against the German Official Journal, so a German "
-                "statement goes to review whatever it says.",
+                "The linter does not check the German wording yet (it is recorded in "
+                "docs/research/2026-10-31-oj-verification.md), so a German statement goes to review whatever it says.",
             ),
             Example(
                 "Statement in the checked wording",
@@ -763,9 +803,8 @@ def status_logic(rule: Rule) -> str:
         clause = "“of the crypto-asset is solely responsible”"
         return (
             f'<ul class="plain">{missing}'
-            "<li><strong>Review</strong>: the draft is German, because the German wording has not been checked "
-            "against the German Official Journal; the section holds only a yes or no value; a listed English "
-            "term does not appear"
+            "<li><strong>Review</strong>: the draft is German, because the linter does not check the German wording "
+            "yet; the section holds only a yes or no value; a listed English term does not appear"
             + (
                 ""
                 if emt
@@ -1011,8 +1050,9 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             "or bold element inside it, so a statement kept only there is reported missing."
         )
         limitations.append(
-            "A German draft never passes: the German wording has not been checked against the German Official "
-            "Journal."
+            "A German draft never passes: the linter does not check the German wording yet. The German Official "
+            "Journal and template wording is recorded in docs/research/2026-10-31-oj-verification.md for a later "
+            "check."
         )
     if rule.rule_id == "ANNEX_II.I":
         limitations.append(
