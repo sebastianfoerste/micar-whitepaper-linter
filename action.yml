@@ -39,7 +39,7 @@ runs:
   using: 'composite'
   steps:
     - name: Install uv
-      uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       with:
         # uvx runs with --no-cache and never creates the cache directory, which
         # setup-uv's post step would otherwise report as an error on a passing job.
@@ -89,7 +89,7 @@ runs:
 
     - name: Upload SARIF
       if: ${{ always() && inputs.upload-sarif == 'true' && steps.lint.outputs.sarif-file != '' }}
-      uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+      uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
       with:
         # The SARIF log sets automationDetails.id per draft path, which codeql-action uses as the category.
         sarif_file: ${{ steps.lint.outputs.sarif-file }}
