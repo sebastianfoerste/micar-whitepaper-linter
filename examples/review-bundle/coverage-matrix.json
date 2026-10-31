@@ -1,14 +1,14 @@
 {
   "schema": "micar-whitepaper-linter.coverage-matrix.v1",
-  "generated_at": "2026-10-29T06:57:48.094210+00:00",
+  "generated_at": "2026-10-31T11:22:27.404780+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "summary": {
     "total": 20,
-    "pass": 17,
-    "review": 2,
+    "pass": 16,
+    "review": 3,
     "missing": 1,
-    "blockers": 3
+    "blockers": 4
   },
   "coverage": [
     {
@@ -17,10 +17,10 @@
       "section": "summary",
       "citation": "Art. 6 Abs. 7, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR",
       "severity": "BLOCKER",
-      "status": "pass",
+      "status": "review",
       "word_count": 103,
-      "blocker": false,
-      "next_action": "Keep disclosure under lawyer review before external use.",
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
       "source_anchor": {
         "section_key": "summary",
         "parser_source_type": "json",
@@ -353,11 +353,12 @@
     }
   ],
   "blockers": [
+    "COMMON.SUMMARY",
     "COMMON.IXBRL_TAGGING",
     "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
     "ANNEX_II.G.CUSTODY"
   ],
   "warnings": [],
   "review_notice": "Coverage matrix is a deterministic disclosure checklist. It is not legal advice, a signature, a notification, or filing approval.",
-  "digest": "a8dc5245ffa31917b9ebd8cd3dc986ddc9a6a64a3e7985cdadd1d6f5f3d6508e"
+  "digest": "e7f1f447e43f36c1801229063a07641369f6dad06fcde412eb60ee5640082a99"
 }

@@ -174,6 +174,40 @@ SUMMARY_WARNING = (
     "white paper does not constitute a prospectus as referred to in Regulation (EU) 2017/1129 of the European "
     "Parliament and of the Council or any other offer document pursuant to Union or national law."
 )
+# The warnings of field I.04 of Table 3 and I.05 of Table 4 differ from field 07 in the token named and, for an
+# e-money token, in "and that any such offer".
+SUMMARY_WARNING_ART = SUMMARY_WARNING.replace("purchase this crypto-asset on", "purchase this asset-referenced token on")
+SUMMARY_WARNING_EMT = SUMMARY_WARNING.replace("purchase this crypto-asset on", "purchase this e-money token on").replace(
+    "instruments and any such", "instruments and that any such"
+)
+# Field 07 of Table 2 in German.
+SUMMARY_WARNING_DE = (
+    "Warnhinweis: Diese Zusammenfassung ist als Einführung in das Kryptowerte-Whitepaper zu lesen. Der potenzielle "
+    "Inhaber sollte jede Entscheidung über den Kauf des Kryptowerts auf der Grundlage des Inhalts des gesamten "
+    "Kryptowerte-Whitepapers und nicht allein auf der Grundlage der Zusammenfassung treffen. Das öffentliche Angebot "
+    "dieses Kryptowerts stellt kein Angebot und keine Aufforderung zum Kauf von Finanzinstrumenten dar und ein "
+    "solches Angebot oder eine solche Aufforderung kann nur mittels eines Prospekts oder anderer im geltenden "
+    "nationalen Recht vorgesehener Angebotsunterlagen erfolgen. Dieses Kryptowerte-Whitepaper stellt keinen Prospekt "
+    "im Sinne der Verordnung (EU) 2017/1129 des Europäischen Parlaments und des Rates und kein anderes "
+    "Angebotsdokument im Sinne von Unionsrecht oder nationalem Recht dar."
+)
+# The warning's four points in other words, which the check does not recognise.
+SUMMARY_WARNING_PARAPHRASED = (
+    "Read this summary only as an introduction to the white paper and base any purchase on the white paper as a "
+    "whole. Nothing here offers financial instruments, and the white paper is no prospectus under Union or national "
+    "law."
+)
+# The redemption statements of field I.06 of Table 3 and I.07 of Table 4 (Art. 19(6) and Art. 51(6), third
+# subparagraph), each with a sentence on the conditions.
+ART_REDEMPTION = (
+    "The holders of asset-referenced tokens have a right of redemption at any time. The conditions for redemption "
+    "are described in the redemption section of this white paper."
+)
+EMT_REDEMPTION = (
+    "The holders of this e-money token have a right of redemption at any time and at par value. The conditions for "
+    "redemption are described in the redemption section of this white paper."
+)
+FILLER_DE = "Dieser synthetische Satz dient nur der Länge und trifft keine Aussage über einen Emittenten oder Token."
 FORMAT_GATE = {"COMMON.IXBRL_TAGGING"}
 LEI_RULES = {"COMMON.LEI_CHECK_DIGITS", "COMMON.LEI_CONSISTENCY"}
 # Synthetic LEIs: an obviously fictitious 18-character base completed with computed check digits.
@@ -507,6 +541,8 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
                 "a floor.",
             ),
         ]
+    if rule.rule_id == "COMMON.SUMMARY":
+        return _summary_examples(rule)
     result = [
         Example(
             "Section absent",
@@ -556,16 +592,6 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
             "model disclosure wording and does not meet MiCAR.",
         )
     )
-    if rule.rule_id == "COMMON.SUMMARY":
-        result.append(
-            Example(
-                "Predefined warning and a short summary",
-                "review",
-                _draft(rule, regime, f"{SUMMARY_WARNING} {thin}"),
-                "The section has more than 80 words, but the predefined warning of the template does not count "
-                "toward them, so the summary itself is thin.",
-            )
-        )
     if _named(rule.prohibited_patterns):
         result.append(
             Example(
@@ -577,6 +603,96 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
             )
         )
     return result
+
+
+def _summary_examples(rule: Rule) -> list[Example]:
+    """COMMON.SUMMARY: the listed terms and length, the warning's four points and the redemption statement."""
+    other, art, emt = WhitepaperType.OTHER, WhitepaperType.ART, WhitepaperType.EMT
+    thin = " ".join(_listed(rule))
+    body = _passing_text(rule)
+    german = "Diese Zusammenfassung nennt wesentliche Informationen zu dem Angebot. " + " ".join([FILLER_DE] * 5)
+    return [
+        Example(
+            "Section absent",
+            "missing",
+            {"title": "Synthetic rule example", "type": other.value, "sections": {}},
+            "The section key is missing or empty.",
+        ),
+        Example(
+            "Thin section",
+            "review",
+            _draft(rule, other, thin),
+            "Every listed term appears, but the section is shorter than 80 words and holds no warning.",
+        ),
+        Example(
+            "Predefined warning and a short summary",
+            "review",
+            _draft(rule, other, f"{SUMMARY_WARNING} {thin}"),
+            "The section has more than 80 words, but the predefined warning of the template does not count "
+            "toward them, so the summary itself is thin.",
+        ),
+        Example(
+            "Summary without the warning",
+            "review",
+            _draft(rule, other, body),
+            "Every listed term appears and the section is long enough, but the warning of Art. 6(7), second "
+            "subparagraph, is not found. The finding names the four points.",
+        ),
+        Example(
+            "Warning in other words",
+            "review",
+            _draft(rule, other, f"{SUMMARY_WARNING_PARAPHRASED} {body}"),
+            "The paraphrase states the four points in its own words. Only the template's wording is recognised, "
+            "so the finding names all four points for the reviewer; the paraphrase counts toward the 80 words.",
+        ),
+        Example(
+            "Warning and summary (other crypto-asset)",
+            "pass",
+            _draft(rule, other, f"{SUMMARY_WARNING} {body}"),
+            "The template's warning (field 07 of Table 2) and 80 own words naming the listed terms. A pass means "
+            "the check matched, nothing more; the text is not model disclosure wording.",
+        ),
+        Example(
+            "ART summary without the redemption statement",
+            "review",
+            _draft(rule, art, f"{SUMMARY_WARNING_ART} {body}"),
+            "Art. 19(6), third subparagraph, has the summary state that the holders have a right of redemption at "
+            "any time, and the conditions for redemption. No sentence names redemption together with “at any "
+            "time”.",
+        ),
+        Example(
+            "ART summary with the redemption statement",
+            "pass",
+            _draft(rule, art, f"{SUMMARY_WARNING_ART} {body} {ART_REDEMPTION}"),
+            "The warning of field I.04 of Table 3 and the redemption statement of field I.06. The conditions for "
+            "redemption are not checked.",
+        ),
+        Example(
+            "EMT summary without par value",
+            "review",
+            _draft(
+                rule,
+                emt,
+                f"{SUMMARY_WARNING_EMT} {body} The holders of this e-money token have a right of redemption at any "
+                "time.",
+            ),
+            "Art. 51(6), third subparagraph, has the summary state that the holders have a right of redemption at "
+            "any time and at par value; par value is not named.",
+        ),
+        Example(
+            "EMT summary with the redemption statement",
+            "pass",
+            _draft(rule, emt, f"{SUMMARY_WARNING_EMT} {body} {EMT_REDEMPTION}"),
+            "The warning of field I.05 of Table 4 and the redemption statement of field I.07.",
+        ),
+        Example(
+            "German draft with the template warning",
+            "pass",
+            _draft(rule, other, f"{SUMMARY_WARNING_DE} {german}", language="de"),
+            "The German warning of field 07 of Table 2, the German listed terms and 80 own words. The warning is "
+            "left out of the count in German too.",
+        ),
+    ]
 
 
 def _contact_examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
@@ -827,6 +943,18 @@ def status_logic(rule: Rule) -> str:
             "count toward the minimum. A numbered-field XHTML draft leaves out field 07 of Table 2 (I.04 of Table 3, "
             "I.05 of Table 4) with its label, and any draft leaves out the warning's sentences where they appear in "
             "the template's English or German wording. The finding then gives the words besides the warning.</li>"
+            "<li>Review also follows when a point of that warning, (a) to (d), is not found in the template's "
+            "English or German wording, whichever language the draft is in; the finding names the points not found. "
+            "The patterns also take the Regulation's own openings (“the summary should be read”, “the crypto-asset "
+            "white paper does not constitute”) where the template says “this”. A numbered-field XHTML draft is read "
+            "by field 07 of Table 2 (I.04 of Table 3, I.05 of Table 4) alone: a field that is empty, absent or holds "
+            "only a placeholder such as TBD counts as absent, and the finding names it.</li>"
+            "<li>For an asset-referenced or e-money token, Review also follows when no sentence names redemption "
+            "(“redemption”, “redeem”, “Rücktausch”) together with “at any time” or “at all times” (“jederzeit”), the "
+            "statement of Art. 19(6) and Art. 51(6), third subparagraph, and for an e-money token when par value "
+            "(“par value”, “at par”, “Nennwert”) is not named in the text read. A numbered-field XHTML draft is read "
+            "by field I.06 of Table 3 or I.07 of Table 4 alone, with the same rule for an empty or placeholder "
+            "field. Other crypto-assets are not asked for a redemption statement.</li>"
             if rule.rule_id == "COMMON.SUMMARY"
             else ""
         )
@@ -989,8 +1117,17 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
         )
     if rule.rule_id == "COMMON.SUMMARY":
         limitations.append(
-            "Only sentences in the template's English or German wording are left out. A warning in other words "
-            "still counts toward the 80 words."
+            "Recognises the warning only in the template's English or German wording, with the Regulation's own "
+            "openings. A warning in other words counts toward the 80 words and goes to review, as does a point "
+            "split across sentences. The check cannot see whether the summary follows the statement of the "
+            "management body, as the cited paragraphs require."
+        )
+        limitations.append(
+            "Reads the redemption statement from one sentence that names redemption and “at any time” (for an "
+            "e-money token, par value anywhere in the text read). The conditions for redemption, which the same "
+            "sentence of the Regulation requires the summary to state, are not checked, and nor is whether the "
+            "statement is true. In a numbered-field XHTML draft a warning or redemption statement outside its "
+            "template field is not seen."
         )
     if rule.rule_id == "COMMON.RISK_WARNING":
         limitations.append(
