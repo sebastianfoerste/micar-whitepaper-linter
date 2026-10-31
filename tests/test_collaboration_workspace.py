@@ -1,4 +1,5 @@
 import hashlib
+import json
 import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
@@ -15,10 +16,12 @@ from micar_linter.collaboration_workspace import (
     build_review_sidecar,
     build_workflow_pack,
     decide_change,
+    export_tracked_docx,
     lock_cell,
     reconcile_sidecar,
     render_tracked_docx,
     update_cell,
+    validate_workflow_pack,
 )
 from micar_linter.workspace import build_whitepaper_workspace
 
@@ -60,15 +63,21 @@ def test_sidecar_uses_stable_cells_and_stale_lock_conflicts() -> None:
 
 
 def test_docx_redline_uses_tracked_insertions_and_deletions(tmp_path) -> None:
+    workspace = _workspace()
+    change_set = build_change_set(workspace)
+    first = change_set["changes"][0]
     source = tmp_path / "source.docx"
     document = docx.Document()
     document.add_paragraph("Original clause survives")
     document.add_table(rows=1, cols=1).cell(0, 0).text = "Original table survives"
+    # The change set built from a draft records the rule label as the original text (#59); a paragraph
+    # that holds it lets the accepted change be redlined in place.
+    document.add_paragraph(first["original_text"])
     document.save(source)
     source_digest = hashlib.sha256(source.read_bytes()).hexdigest()
-    change_set = build_change_set(_workspace())
-    change_set["source_digests"] = {"source": source_digest}
-    change_set = decide_change(change_set, change_set["changes"][0]["id"], "accepted")
+    # The change set names its document (#60): the workspace document id maps to the DOCX digest.
+    change_set["source_digests"] = {first["document_id"]: source_digest}
+    change_set = decide_change(change_set, first["id"], "accepted")
     for change in list(change_set["changes"][1:]):
         change_set = decide_change(change_set, change["id"], "rejected")
     output = render_tracked_docx(source, tmp_path / "reviewed.docx", change_set)
@@ -76,16 +85,148 @@ def test_docx_redline_uses_tracked_insertions_and_deletions(tmp_path) -> None:
     with zipfile.ZipFile(output) as package:
         xml = etree.fromstring(package.read("word/document.xml"))
     ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
-    assert xml.xpath("count(.//w:ins)", namespaces=ns) > 0
-    assert xml.xpath("count(.//w:del)", namespaces=ns) > 0
+    assert xml.xpath("count(.//w:ins)", namespaces=ns) == 1
+    assert xml.xpath("count(.//w:del)", namespaces=ns) == 1
     text = "".join(xml.xpath(".//w:t/text()", namespaces=ns))
     assert "Original clause survives" in text
     assert "Original table survives" in text
-    assert xml.xpath("count(.//w:ins)", namespaces=ns) == 1
+    assert xml.xpath("string(.//w:del//w:delText)", namespaces=ns) == first["original_text"]
     inserted_changes = [
         "".join(node.xpath(".//w:t/text()", namespaces=ns)) for node in xml.xpath(".//w:ins", namespaces=ns)
     ]
-    assert inserted_changes == [change_set["changes"][0]["proposed_text"]]
+    assert inserted_changes == [first["proposed_text"]]
+    result = export_tracked_docx(source, tmp_path / "reviewed-again.docx", change_set)
+    assert (result.path, result.placed, result.unplaced, result.skipped) == (
+        tmp_path / "reviewed-again.docx",
+        (first["id"],),
+        (),
+        (),
+    )
+
+
+def test_unplaced_change_is_appended_as_an_insertion_without_a_deletion(tmp_path) -> None:
+    # #61: the original text is not in the document, so the proposed text is appended as an insertion alone.
+    source = tmp_path / "unplaced.docx"
+    _docx_with_paragraphs(source, _run("The issuer is Example AG."))
+    change_set = _accepted_change_set(source, "Plain-language summary", "Summary: key information follows.")
+    change_set["changes"][0]["id"] = "change:summary"
+    result = export_tracked_docx(source, tmp_path / "unplaced-reviewed.docx", change_set)
+    assert (result.placed, result.unplaced, result.skipped) == ((), ("change:summary",), ())
+    with zipfile.ZipFile(result.path) as package:
+        xml = etree.fromstring(package.read("word/document.xml"))
+    ns = {"w": _W}
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
+    assert len(paragraphs) == 2
+    assert paragraphs[0].xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
+    assert xml.xpath("count(.//w:del | .//w:delText)", namespaces=ns) == 0
+    # Accept All shows the proposed text; Reject All leaves nothing, not "Plain-language summary".
+    assert _paragraph_views(paragraphs[1]) == ("Summary: key information follows.", "")
+    assert paragraphs[1].xpath("string(w:ins/@w:author)", namespaces=ns) == "MiCAR reviewer"
+    # A change without an id is named by its position.
+    del change_set["changes"][0]["id"]
+    assert export_tracked_docx(source, tmp_path / "positional.docx", change_set).unplaced == ("changes[0]",)
+
+
+def test_export_applies_only_the_changes_of_the_exported_document(tmp_path) -> None:
+    # #60: a change set built from two drafts carries each change's document_id; exporting one DOCX writes
+    # the changes recorded for that DOCX and skips the other document's.
+    source = Path("examples/sample-draft.docx")
+    workspace = build_whitepaper_workspace([source, Path("examples/incomplete.json")])
+    change_set = build_change_set(workspace)
+    for change in list(change_set["changes"]):
+        change_set = decide_change(change_set, change["id"], "accepted")
+    docx_digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    by_document = {}
+    for change in change_set["changes"]:
+        by_document.setdefault(change["document_id"], []).append(change["id"])
+    assert set(by_document) == set(change_set["source_digests"])
+    own = by_document[docx_digest]
+    other = [change_id for document_id, ids in by_document.items() if document_id != docx_digest for change_id in ids]
+    assert own and other
+    result = export_tracked_docx(source, tmp_path / "sample-reviewed.docx", change_set)
+    assert sorted(result.placed + result.unplaced) == sorted(own)
+    assert sorted(result.skipped) == sorted(other)
+    with zipfile.ZipFile(result.path) as package:
+        xml = etree.fromstring(package.read("word/document.xml"))
+    ns = {"w": _W}
+    assert xml.xpath("count(.//w:ins)", namespaces=ns) == len(own)
+    assert xml.xpath("count(.//w:del)", namespaces=ns) == len(result.placed)
+    assert hashlib.sha256(source.read_bytes()).hexdigest() == docx_digest
+    # A change set without document ids keeps applying every change, as before.
+    change_set["source_digests"] = {"source": docx_digest}
+    for change in change_set["changes"]:
+        change.pop("document_id")
+    everything = export_tracked_docx(source, tmp_path / "all-reviewed.docx", change_set)
+    assert everything.skipped == ()
+    assert len(everything.placed + everything.unplaced) == len(own) + len(other)
+
+
+def test_validate_workflow_pack_accepts_the_built_pack_and_names_each_problem() -> None:
+    workspace = _workspace()
+    pack = build_workflow_pack(workspace, build_review_sidecar(workspace), build_change_set(workspace))
+    assert validate_workflow_pack(pack) == []
+
+    def broken(**run_changes):
+        copy = json.loads(json.dumps(pack))
+        copy["run"].update(run_changes)
+        return copy
+
+    assert validate_workflow_pack("pack") == ["workflow pack is not an object"]
+    assert validate_workflow_pack({"definitions": [], "run": {}}) == [
+        "definitions: expected a non-empty list",
+        "run: schema is not workflow.run.v1",
+        "run: id is missing or empty",
+        "run: definition_version is not an integer",
+        "run: definition_snapshot is not one of the definitions at definition_version",
+        "run: inputs.workspace_digest is not a SHA-256 hex digest",
+        "run: source_refs is not a list of strings",
+        "run: decisions is not a list of review cell decisions",
+        "run: audit is not a list",
+        "run: artifacts is not a non-empty list of strings",
+        "run: blockers is not an object",
+    ]
+    assert validate_workflow_pack({"definitions": [1], "run": "x"}) == [
+        "definitions[0]: expected an object",
+        "run: expected an object",
+    ]
+    definition = json.loads(json.dumps(pack))
+    definition["definitions"][0].update(
+        {"schema": "other", "status": "paused", "steps": ["lint"], "external_action_allowed": True}
+    )
+    problems = validate_workflow_pack(definition)
+    assert "definitions[0]: schema is not workflow.definition.v1" in problems
+    assert "definitions[0]: status is not one of active, draft, retired" in problems
+    assert "definitions[0]: steps do not end in the export gate" in problems
+    assert "definitions[0]: external_action_allowed is not false" in problems
+    assert "run: definition_snapshot is not one of the definitions at definition_version" in problems
+    assert validate_workflow_pack(broken(external_action_allowed=True)) == ["run: external_action_allowed is not false"]
+    assert validate_workflow_pack(broken(status="review_required")) == [
+        "run: status review_required does not follow from the blockers (blocked expected)"
+    ]
+    assert validate_workflow_pack(broken(status="done")) == ["run: status is not one of blocked, review_required"]
+    assert validate_workflow_pack(broken(export_allowed=True)) == [
+        "run: export_allowed is true while lint blockers or pending review cells remain"
+    ]
+    assert validate_workflow_pack(broken(decisions=["approved"])) == [
+        "run: blockers.pending_review_cells does not count the pending decisions"
+    ]
+    assert validate_workflow_pack(broken(decisions=["maybe"])) == [
+        "run: decisions is not a list of review cell decisions",
+        "run: blockers.pending_review_cells does not count the pending decisions",
+    ]
+    assert validate_workflow_pack(broken(blockers={"lint": -1, "pending_review_cells": "3", "stale_sidecar": 1})) == [
+        "run: blockers.lint and blockers.pending_review_cells are not non-negative integers",
+        "run: blockers.stale_sidecar is not a boolean",
+    ]
+    assert validate_workflow_pack(broken(inputs={"workspace_digest": "abc"})) == [
+        "run: inputs.workspace_digest is not a SHA-256 hex digest"
+    ]
+    cleared = broken(blockers={"lint": 0, "pending_review_cells": 0, "stale_sidecar": False}, decisions=[])
+    assert validate_workflow_pack(cleared) == [
+        "run: status blocked does not follow from the blockers (review_required expected)"
+    ]
+    cleared["run"]["status"] = "review_required"
+    assert validate_workflow_pack(cleared) == []
 
 
 def test_docx_replaces_matching_paragraph_inside_table_cell(tmp_path) -> None:
@@ -132,6 +273,14 @@ def test_workflow_pack_blocks_unreviewed_cells() -> None:
     pack = build_workflow_pack(workspace, sidecar, build_change_set(workspace))
     assert pack["run"]["status"] == "blocked"
     assert pack["run"]["external_action_allowed"] is False
+
+
+def _fallbacks(paragraphs) -> list[str]:
+    """The proposed text of each appended paragraph: an unplaced change is an insertion without a deletion."""
+    ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+    for paragraph in paragraphs:
+        assert paragraph.xpath("count(.//w:del | .//w:delText)", namespaces=ns) == 0
+    return ["".join(paragraph.xpath("w:ins//w:t/text()", namespaces=ns)) for paragraph in paragraphs]
 
 
 def _accepted_change_set(source: Path, original: str, proposed: str) -> dict:
@@ -293,7 +442,7 @@ def test_docx_redline_leaves_field_results_and_codes_alone(tmp_path) -> None:
     for field_paragraph in paragraphs[:2]:
         assert field_paragraph.xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
     assert _paragraph_views(paragraphs[2]) == ("Status confirmed.", "Status TBD.")
-    assert paragraphs[-1].xpath("string(w:del//w:delText)", namespaces=ns) == "Name TBD is pending"
+    assert _fallbacks(paragraphs[-1:]) == ["Name confirmed"]
 
 
 def test_docx_redline_skips_table_of_contents_and_hidden_fallback_copy(tmp_path) -> None:
@@ -396,7 +545,7 @@ def test_docx_redline_skips_managed_content_controls_and_equations(tmp_path) -> 
         "Example Issuer AG offers from 31.12.2026.",
         "Issuer name TBD offers from 01.01.2026.",
     )
-    assert paragraphs[-1].xpath("string(w:del//w:delText)", namespaces=ns) == "rate  is TBD"
+    assert _fallbacks(paragraphs[-1:]) == ["rate is set"]
 
 
 def test_docx_redline_stays_within_links_and_content_controls_and_deletes_soft_hyphens(tmp_path) -> None:
@@ -424,8 +573,7 @@ def test_docx_redline_stays_within_links_and_content_controls_and_deletes_soft_h
     assert paragraphs[2].xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
     assert _paragraph_views(paragraphs[3])[0] == "Der E-Geld-Token gilt."
     assert paragraphs[3].xpath("count(.//w:softHyphen[not(ancestor::w:del)])", namespaces=ns) == 0
-    fallbacks = ["".join(p.xpath("w:del//w:delText/text()", namespaces=ns)) for p in paragraphs[4:]]
-    assert fallbacks == ["published at example.invalid", "Example Issuer AG is"]
+    assert _fallbacks(paragraphs[4:]) == ["posted at example.invalid", "Example Issuer SE is"]
 
 
 def test_docx_redline_runs_through_a_whole_link_and_smart_tags(tmp_path) -> None:
@@ -497,8 +645,7 @@ def test_docx_redline_replaces_external_link_after_it_and_keeps_custom_xml_exten
     assert paragraphs[0].xpath("count(w:ins//w:rStyle | w:ins//w:color | w:ins//w:u | w:ins//w:b)", namespaces=ns) == 0
     for untouched in paragraphs[1:4]:
         assert untouched.xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
-    fallbacks = ["".join(p.xpath("w:del//w:delText/text()", namespaces=ns)) for p in paragraphs[4:]]
-    assert fallbacks == ["old.invalid", "EUR 5 per token", "www.old.invalid"]
+    assert _fallbacks(paragraphs[4:]) == ["new.invalid", "EUR 7 per token", "www.new.invalid"]
 
 
 def test_docx_later_change_does_not_match_an_earlier_insertion(tmp_path) -> None:
@@ -509,8 +656,7 @@ def test_docx_later_change_does_not_match_an_earlier_insertion(tmp_path) -> None
     ns = {"w": _W}
     paragraphs = xml.xpath(".//w:body/w:p", namespaces=ns)
     assert _paragraph_views(paragraphs[0]) == ("The issuer is Example AG, seat TBC.", "The issuer is TBD.")
-    fallbacks = ["".join(p.xpath("w:del//w:delText/text()", namespaces=ns)) for p in paragraphs[1:]]
-    assert fallbacks == ["TBC", "Missing clause", "TBA"]
+    assert _fallbacks(paragraphs[1:]) == ["Berlin", "Seat TBA", "Leipzig"]
 
 
 def test_docx_redline_spans_markers_and_stays_inside_tagged_controls_and_custom_xml(tmp_path) -> None:
@@ -556,7 +702,7 @@ def test_docx_redline_spans_markers_and_stays_inside_tagged_controls_and_custom_
     assert paragraphs[1].xpath("string(w:sdt/w:sdtContent/w:ins)", namespaces=ns) == "Sample Issuer"
     assert _paragraph_views(paragraphs[2]) == ("The fee is EUR 7 per token.", "The fee is EUR 5 per token.")
     assert paragraphs[3].xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
-    assert "".join(paragraphs[4].xpath("w:del//w:delText/text()", namespaces=ns)) == "Utility token"
+    assert _fallbacks(paragraphs[4:5]) == ["Payment token"]
 
 
 def test_docx_redline_deletes_a_link_at_either_end_of_the_match(tmp_path) -> None:
@@ -596,8 +742,7 @@ def test_docx_redline_deletes_a_link_at_either_end_of_the_match(tmp_path) -> Non
         assert replaced.xpath("count(w:ins//w:rStyle)", namespaces=ns) == 0
     for untouched in paragraphs[2:4]:
         assert untouched.xpath("count(.//w:del | .//w:ins)", namespaces=ns) == 0
-    fallbacks = ["".join(p.xpath("w:del//w:delText/text()", namespaces=ns)) for p in paragraphs[4:]]
-    assert fallbacks == ["old.invalid and www.old", "info@old.invalid"]
+    assert _fallbacks(paragraphs[4:]) == ["new.invalid and www.new", "info@new.invalid"]
 
 
 def test_docx_redline_reaches_the_heading_before_a_static_table_of_contents(tmp_path) -> None:

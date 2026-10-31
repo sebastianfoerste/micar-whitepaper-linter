@@ -149,7 +149,9 @@ Python, Hatchling, uv and pytest.
 
 ## Collaborative redline bundle
 
-Run `micar-lint <draft> --workspace-output workspace.json --collaboration-bundle-dir review/` to generate a digest-bound collaboration sidecar, MiCAR playbook change set and supervised workflow pack. Accepted changes can be rendered as genuine OOXML tracked insertions and deletions in a copied DOCX. The source draft is never overwritten.
+Run `micar-lint <draft> --workspace-output workspace.json --collaboration-bundle-dir review/` to generate a digest-bound collaboration sidecar, MiCAR playbook change set and supervised workflow pack. `--workflow-action validate` checks the pack's structure (schema ids, required keys, no external action, a run status that follows from the lint blockers and pending review cells, a closed export gate while they remain) and exits 2 listing any problem; `inspect` prints the pack; `run` reports its status and needs `--collaboration-bundle-dir`.
+
+The tracked DOCX export is a Python API only, with no CLI flag: `export_tracked_docx(source, output, change_set)` in `micar_linter.collaboration_workspace` (`render_tracked_docx` returns the output path alone). It writes a copy of the DOCX in which each accepted change whose original text it finds becomes an OOXML tracked deletion and insertion in place; it applies only the changes recorded for that document (`document_id` mapped through `source_digests`) and changes without a `document_id`; and it appends a change it cannot place at the end of the document as a tracked insertion alone, without a deletion, reporting the ids of the placed, unplaced and skipped changes. A change set built from a draft records the rule label as `original_text` ([#59](https://github.com/sebastianfoerste/micar-whitepaper-linter/issues/59)), so most of its changes are appended rather than placed until that representation is decided. The source draft is never overwritten.
 
 ## Example output
 

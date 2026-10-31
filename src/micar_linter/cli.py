@@ -16,6 +16,7 @@ from micar_linter.collaboration_workspace import (
     build_change_set,
     build_review_sidecar,
     build_workflow_pack,
+    validate_workflow_pack,
     write_collaboration_bundle,
 )
 from micar_linter.coverage import build_coverage_matrix, render_coverage_matrix
@@ -211,7 +212,21 @@ def main(argv: list[str] | None = None) -> int:
             change_set = build_change_set(workspace)
             workflow = build_workflow_pack(workspace, sidecar, change_set)
             if args.workflow_action == "validate":
-                print("workflow.definition.v1 and workflow.run.v1 validated")
+                problems = validate_workflow_pack(workflow)
+                if problems:
+                    print("error: workflow pack failed validation:", file=sys.stderr)
+                    for problem in problems:
+                        print(f"  - {problem}", file=sys.stderr)
+                    return 2
+                run = workflow["run"]
+                print(
+                    "workflow.definition.v1 and workflow.run.v1 validated: "
+                    f"{len(workflow['definitions'])} definition(s); run status {run['status']}; "
+                    f"export {'allowed' if run['export_allowed'] else 'blocked'} "
+                    f"({run['blockers']['lint']} lint blockers, "
+                    f"{run['blockers']['pending_review_cells']} pending review cells); "
+                    "external action disabled."
+                )
             elif args.workflow_action == "inspect":
                 print(json.dumps(workflow, indent=2))
             else:
