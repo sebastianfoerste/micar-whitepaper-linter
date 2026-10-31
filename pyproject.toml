@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
@@ -7,7 +7,8 @@ name = "micar-whitepaper-linter"
 version = "1.2.1"
 description = "Deterministic first-pass linter for MiCAR crypto-asset white paper drafts."
 readme = "README.md"
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.13"
 authors = [
   { name = "Sebastian Förste" },
@@ -17,7 +18,6 @@ classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
   "Intended Audience :: Legal Industry",
-  "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
   "Topic :: Office/Business :: Financial",
@@ -49,6 +49,8 @@ micar-review-summary = "micar_linter.review_validation:main"
 Homepage = "https://github.com/sebastianfoerste/micar-whitepaper-linter"
 Repository = "https://github.com/sebastianfoerste/micar-whitepaper-linter"
 Issues = "https://github.com/sebastianfoerste/micar-whitepaper-linter/issues"
+Documentation = "https://sebastianfoerste.github.io/micar-whitepaper-linter/"
+Changelog = "https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/micar_linter"]
