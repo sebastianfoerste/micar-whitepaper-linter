@@ -193,6 +193,8 @@ class Linter:
                 issues.append(msg)
 
         issues.extend(_rule_specific_issues(rule, whitepaper.section(rule.section), normalized, is_de))
+        if rule.rule_id == "COMMON.SUMMARY":
+            issues.extend(_summary_statement_issues(whitepaper, text, is_de))
         issues.extend(_placeholder_field_issues(rule, whitepaper, is_de))
 
         status = "review" if issues else "pass"
@@ -905,44 +907,167 @@ def _contact_fields_finding(
 
 # The predefined warning of the summary (Art. 6(7), 19(6) and 51(6) MiCAR, second subparagraph), as
 # field 07 of Table 2, I.04 of Table 3 and I.05 of Table 4 of Implementing Regulation (EU) 2024/2984
-# print it in English and German (OJ text read on 2026-10-30). It does not count toward the summary's
-# minimum length (#70).
+# print it in English and German (OJ text read on 2026-10-30), one pattern per point (a) to (d) in each
+# language. The summary must contain all four points; the warning does not count toward the summary's
+# minimum length (#70). The patterns also take the Regulation's own openings ("the summary", "the
+# crypto-asset white paper") where the template says "this".
 _SUMMARY_WARNING_FIELDS = {WhitepaperType.OTHER: "07", WhitepaperType.ART: "I.04", WhitepaperType.EMT: "I.05"}
 _WHITE_PAPER_EN = r"crypto[\s\u2013-]*asset white paper"
 _TOKEN_EN = r"(?:crypto[\s\u2013-]*assets?|asset-referenced tokens?|e-money tokens?)"
-_TOKEN_DE = r"(?:kryptowerts?|vermögenswertereferenzierten token|e-geld-token)"
-_SUMMARY_WARNING = re.compile(
-    "|".join(
-        (
-            r"(?:\bwarning\b[:.]?\s*)?\bthis summary should be read as an introduction to the "
-            rf"{_WHITE_PAPER_EN}\.?",
-            rf"\bthe prospective holders? should base any decision to purchase (?:this|the|an?) {_TOKEN_EN} "
-            rf"on the content of the {_WHITE_PAPER_EN} as a whole and not on the summary alone\.?",
-            rf"\bthe offer to the public of (?:this|the) {_TOKEN_EN} does not constitute an offer or "
-            r"solicitation to purchase financial instruments and (?:that )?any such offer or solicitation "
-            r"can be made only by means of a prospectus or other offer documents pursuant to the applicable "
-            r"national law\.?",
-            rf"\bthis {_WHITE_PAPER_EN} does not constitute a prospectus as referred to in regulation "
-            r"\(eu\) 2017/1129(?: of the european parliament and of the council)? or any other offer "
-            r"document pursuant to union or national law\.?",
-            r"(?:\bwarnhinweis\b[:.]?\s*)?\bdiese zusammenfassung ist als einführung in das "
-            r"kryptowerte-whitepaper zu lesen\.?",
-            r"(?:\bder potenzielle inhaber sollte jede entscheidung über den kauf|\bpotenzielle inhaber "
-            rf"sollten ihre entscheidung zum kauf) (?:des|dieses) {_TOKEN_DE} auf der grundlage des inhalts "
-            r"des gesamten kryptowerte-whitepapers und nicht allein auf der grundlage der zusammenfassung "
-            r"treffen\.?",
-            rf"\bdas öffentliche angebot (?:dieses|des) {_TOKEN_DE} stellt kein angebot und keine "
-            r"aufforderung zum kauf von finanzinstrumenten dar und ein solches angebot oder eine solche "
-            r"aufforderung kann nur mittels eines prospekts oder anderer (?:im geltenden nationalen recht "
-            r"vorgesehener angebotsunterlagen|angebotsunterlagen gemäß den nationalen rechtsvorschriften) "
-            r"erfolgen\.?",
-            r"\bdieses kryptowerte-whitepaper stellt keinen prospekt im sinne der verordnung \(eu\) "
-            r"2017/1129(?: des europäischen parlaments und des rates)? und kein anderes angebotsdokument im "
-            r"sinne von unionsrecht oder nationalem recht dar\.?",
-        )
-    ),
-    re.IGNORECASE,
+# The German Official Journal prints "vermögenswertreferenzierten" in Art. 19(6), point (c).
+_TOKEN_DE = r"(?:kryptowerts?|vermögenswerte?referenzierten token|e-geld-token)"
+_SUMMARY_WARNING_EN = (
+    r"(?:\bwarning\b[:.]?\s*)?\b(?:this|the) summary should be read as an introduction to the "
+    rf"{_WHITE_PAPER_EN}\.?",
+    rf"\b(?:the )?prospective holders? should base any decision to purchase (?:this|the|an?) {_TOKEN_EN} "
+    rf"on the content of the {_WHITE_PAPER_EN} as a whole and not on the summary alone\.?",
+    rf"\bthe offer to the public of (?:this|the) {_TOKEN_EN} does not constitute an offer or "
+    r"solicitation to purchase financial instruments and (?:that )?any such offer or solicitation "
+    r"can be made only by means of a prospectus or other offer documents pursuant to the applicable "
+    r"national law\.?",
+    rf"\b(?:this|the) {_WHITE_PAPER_EN} does not constitute a prospectus as referred to in regulation "
+    r"\(eu\) 2017/1129(?: of the european parliament and of the council)? or any other offer "
+    r"document pursuant to union or national law\.?",
 )
+_SUMMARY_WARNING_DE = (
+    r"(?:\bwarnhinweis\b[:.]?\s*)?\b(?:diese|die) zusammenfassung ist als einführung in das "
+    r"kryptowerte-whitepaper zu lesen\.?",
+    r"(?:\bder potenzielle inhaber sollte jede entscheidung über den kauf|\bpotenzielle inhaber "
+    rf"sollten ihre entscheidung zum kauf) (?:des|dieses) {_TOKEN_DE} auf der grundlage des inhalts "
+    r"des gesamten kryptowerte-whitepapers und nicht allein auf der grundlage der zusammenfassung "
+    r"treffen\.?",
+    rf"\bdas öffentliche angebot (?:dieses|des) {_TOKEN_DE} stellt kein angebot und keine "
+    r"aufforderung zum kauf von finanzinstrumenten dar und ein solches angebot oder eine solche "
+    r"aufforderung kann nur mittels eines prospekts oder anderer (?:im geltenden nationalen recht "
+    r"vorgesehener angebotsunterlagen|angebotsunterlagen gemäß den nationalen rechtsvorschriften) "
+    r"erfolgen\.?",
+    r"\b(?:dieses|das) kryptowerte-whitepaper stellt keinen prospekt im sinne der verordnung \(eu\) "
+    r"2017/1129(?: des europäischen parlaments und des rates)? und kein anderes angebotsdokument im "
+    r"sinne von unionsrecht oder nationalem recht dar\.?",
+)
+_SUMMARY_WARNING_POINTS = tuple(
+    (re.compile(english, re.IGNORECASE), re.compile(german, re.IGNORECASE))
+    for english, german in zip(_SUMMARY_WARNING_EN, _SUMMARY_WARNING_DE, strict=True)
+)
+# What each point says, for a finding that names the points not found.
+_SUMMARY_WARNING_TAGS = (
+    ("introduction", "Einführung"),
+    ("decision on the whole white paper", "Entscheidung auf Grundlage des gesamten Whitepapers"),
+    ("no offer of financial instruments", "kein Angebot von Finanzinstrumenten"),
+    ("no prospectus", "kein Prospekt"),
+)
+_SUMMARY_WARNING = re.compile("|".join((*_SUMMARY_WARNING_EN, *_SUMMARY_WARNING_DE)), re.IGNORECASE)
+_SUMMARY_ARTICLES = {
+    WhitepaperType.OTHER: ("Art. 6(7)", "Art. 6 Abs. 7"),
+    WhitepaperType.ART: ("Art. 19(6)", "Art. 19 Abs. 6"),
+    WhitepaperType.EMT: ("Art. 51(6)", "Art. 51 Abs. 6"),
+}
+# Art. 19(6) and Art. 51(6) MiCAR, third subparagraph: the summary states that holders have a right of
+# redemption at any time (e-money token: and at par value), and the conditions for redemption. Field
+# I.06 of Table 3 and I.07 of Table 4 print the statement as predefined text ("The holders of
+# asset-referenced tokens have a right of redemption at any time"; "The holders of this e-money token
+# have a right of redemption at any time and at par value."; in German "haben jederzeit ein Recht auf
+# Rücktausch" and "... zum Nennwert"). The check reads a sentence that names redemption together with
+# "at any time" or "at all times" ("jederzeit"), and for an e-money token par value anywhere in the text
+# read. The conditions for redemption are not checked.
+_SUMMARY_REDEMPTION_FIELDS = {WhitepaperType.ART: "I.06", WhitepaperType.EMT: "I.07"}
+_REDEEM = r"(?:\bredemption\w*|\bredeem\w*|rücktausch\w*)"
+_ANY_TIME = r"(?:\bat (?:any|all) times?\b|\bjederzeit\b)"
+_REDEMPTION_AT_ANY_TIME = re.compile(
+    rf"{_REDEEM}[^.;!?]{{0,80}}?{_ANY_TIME}|{_ANY_TIME}[^.;!?]{{0,80}}?{_REDEEM}", re.IGNORECASE
+)
+_SUMMARY_PAR_VALUE = re.compile(r"\bpar[\s-]*value\b|\bat par\b|\bzum nennwert\b|\bnennwert\b", re.IGNORECASE)
+
+
+def _summary_field(whitepaper: Whitepaper, number: str, text: str, is_de: bool) -> tuple[str, str | None]:
+    """The text a summary statement is read from, and why it counts as absent when its field is empty.
+
+    A draft without field numbers is read as a whole: the section text and None. A numbered-field draft
+    is read by the field that carries the statement: its answer and None, or an empty text and the reason
+    (the field is empty or not in the draft, or holds only a placeholder such as TBD).
+    """
+    answers = whitepaper.metadata.get("numbered_fields")
+    if not isinstance(answers, dict):
+        return text, None
+    answer = _collapse_whitespace(str(answers.get(number, "")))
+    name = number if is_de else f"{number} ({FIELD_NAMES[whitepaper.type][number]})"
+    if not answer:
+        reason = f"Feld {name} ist leer oder fehlt" if is_de else f"field {name} is empty or not in the draft"
+        return "", reason
+    if is_placeholder(answer):
+        reason = (
+            f"Feld {name} enthält nur einen Platzhalter wie TBD"
+            if is_de
+            else f"field {name} holds only a placeholder such as TBD"
+        )
+        return "", reason
+    return answer, None
+
+
+def _summary_statement_issues(whitepaper: Whitepaper, text: str, is_de: bool) -> list[str]:
+    """The warning of Art. 6(7), 19(6) and 51(6) MiCAR, second subparagraph, points (a) to (d), and for an
+    asset-referenced or e-money token the redemption statement of the third subparagraph.
+
+    Each point counts in the template's English or German wording, whatever the draft's language. A
+    numbered-field draft is read by its fields (07, I.04 or I.05 for the warning; I.06 or I.07 for the
+    redemption statement); any other draft by its section text. The issues send the finding to review,
+    never to missing.
+    """
+    article_en, article_de = _SUMMARY_ARTICLES[whitepaper.type]
+    issues: list[str] = []
+    warning_text, absent = _summary_field(whitepaper, _SUMMARY_WARNING_FIELDS[whitepaper.type], text, is_de)
+    if absent:
+        issues.append(
+            f"Warnhinweis nach {article_de} Unterabs. 2 MiCAR nicht gefunden: {absent}."
+            if is_de
+            else f"Warning of {article_en} MiCAR, second subparagraph, not found: {absent}."
+        )
+    else:
+        points_found = zip("abcd", _SUMMARY_WARNING_POINTS, _SUMMARY_WARNING_TAGS, strict=True)
+        missing = [
+            (letter, tags)
+            for letter, (english, german), tags in points_found
+            if not english.search(warning_text) and not german.search(warning_text)
+        ]
+        if missing:
+            if is_de:
+                points = "; ".join(f"Buchst. {letter} {german}" for letter, (_, german) in missing)
+                issues.append(
+                    f"Warnhinweis nach {article_de} Unterabs. 2 MiCAR nicht im Wortlaut der Vorlage "
+                    f"gefunden: {points}."
+                )
+            else:
+                points = "; ".join(f"point ({letter}) {english}" for letter, (english, _) in missing)
+                issues.append(
+                    f"Warning of {article_en} MiCAR, second subparagraph, not found in the template's "
+                    f"wording: {points}."
+                )
+
+    number = _SUMMARY_REDEMPTION_FIELDS.get(whitepaper.type)
+    if number is None:
+        return issues
+    emt = whitepaper.type is WhitepaperType.EMT
+    statement_en = "Right of redemption at any time" + (" and at par value" if emt else "")
+    statement_de = "Jederzeitiges Recht auf Rücktausch" + (" zum Nennwert" if emt else "")
+    heading = (
+        f"{statement_de} ({article_de} Unterabs. 3 MiCAR) nicht gefunden"
+        if is_de
+        else f"{statement_en} ({article_en}, third subparagraph, MiCAR) not found"
+    )
+    redemption_text, absent = _summary_field(whitepaper, number, text, is_de)
+    if absent:
+        issues.append(f"{heading}: {absent}.")
+    elif not _REDEMPTION_AT_ANY_TIME.search(redemption_text):
+        issues.append(
+            f"{heading}: kein Satz nennt den Rücktausch zusammen mit „jederzeit“."
+            if is_de
+            else f"{heading}: no sentence names redemption together with 'at any time'."
+        )
+    elif emt and not _SUMMARY_PAR_VALUE.search(redemption_text):
+        issues.append(
+            f"{heading}: der Nennwert wird nicht genannt." if is_de else f"{heading}: par value is not named."
+        )
+    return issues
 
 
 def _summary_words(text: str, whitepaper: Whitepaper) -> int:

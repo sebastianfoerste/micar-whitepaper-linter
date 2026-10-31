@@ -36,6 +36,17 @@ def test_german_draft_linting():
         type=WhitepaperType.OTHER,
         sections={
             "summary": (
+                # The warning of Art. 6(7) MiCAR, second subparagraph, as field 07 of Table 2 of Implementing
+                # Regulation (EU) 2024/2984 prints it in German.
+                "Warnhinweis: Diese Zusammenfassung ist als Einführung in das Kryptowerte-Whitepaper zu lesen. "
+                "Der potenzielle Inhaber sollte jede Entscheidung über den Kauf des Kryptowerts auf der Grundlage "
+                "des Inhalts des gesamten Kryptowerte-Whitepapers und nicht allein auf der Grundlage der "
+                "Zusammenfassung treffen. Das öffentliche Angebot dieses Kryptowerts stellt kein Angebot und keine "
+                "Aufforderung zum Kauf von Finanzinstrumenten dar und ein solches Angebot oder eine solche "
+                "Aufforderung kann nur mittels eines Prospekts oder anderer im geltenden nationalen Recht "
+                "vorgesehener Angebotsunterlagen erfolgen. Dieses Kryptowerte-Whitepaper stellt keinen Prospekt im "
+                "Sinne der Verordnung (EU) 2017/1129 des Europäischen Parlaments und des Rates und kein anderes "
+                "Angebotsdokument im Sinne von Unionsrecht oder nationalem Recht dar. "
                 "Diese Zusammenfassung bietet wesentliche Informationen für alle potenziellen "
                 "Anleger und Erwerber dieses neuartigen Krypto-Assets. Die hier bereitgestellten "
                 "Details dienen dazu, ein grundlegendes Verständnis des Projekts und der damit "

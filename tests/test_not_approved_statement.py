@@ -430,7 +430,18 @@ def test_numbered_field_statement_wrapped_after_a_hyphen_at_a_line_break_passes(
 
 # Regression: an incomplete statement swallowed the sections that followed it, so a draft
 # that has a summary and a risk warning got MISSING blockers for both.
-SUMMARY_BODY = " ".join(["The summary gives key information about the offer and the token."] * 15)
+# The summary needs the warning of Art. 6(7) MiCAR, second subparagraph, to pass (COMMON.SUMMARY); the
+# fixture carries it without its "Warning" label, which a loader could take for a heading.
+SUMMARY_WARNING = (
+    "This summary should be read as an introduction to the crypto-asset white paper. The prospective holder should "
+    "base any decision to purchase this crypto-asset on the content of the crypto-asset white paper as a whole and "
+    "not on the summary alone. The offer to the public of this crypto-asset does not constitute an offer or "
+    "solicitation to purchase financial instruments and any such offer or solicitation can be made only by means of "
+    "a prospectus or other offer documents pursuant to the applicable national law. This crypto-asset white paper "
+    "does not constitute a prospectus as referred to in Regulation (EU) 2017/1129 of the European Parliament and of "
+    "the Council or any other offer document pursuant to Union or national law."
+)
+SUMMARY_BODY = " ".join(["The summary gives key information about the offer and the token."] * 15 + [SUMMARY_WARNING])
 RISK_BODY = "The crypto-asset may lose its value in part or in full."
 
 

@@ -30,12 +30,14 @@ The linter was run on `examples/art-stablecoin.json` with the default English ci
 MiCAR Whitepaper Linter - Synthetic EuroStable ART White Paper
 Whitepaper type: ART
 ==============================================================================
-Pass: 17  |  Review: 2  |  Missing: 1  |  Blockers: 3
+Pass: 16  |  Review: 3  |  Missing: 1  |  Blockers: 4
 
-[PASS  ] [BLOCKER] COMMON.SUMMARY  Plain-language summary
+[REVIEW] [BLOCKER] COMMON.SUMMARY  Plain-language summary
            Cite:  Art. 6(7), Art. 19(6), Art. 51(6) MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'summary'  (103 words)
+           -  Warning of Art. 19(6) MiCAR, second subparagraph, not found in the template's wording: point (a) introduction; point (b) decision on the whole white paper; point (c) no offer of financial instruments; point (d) no prospectus.
+           -  Right of redemption at any time (Art. 19(6), third subparagraph, MiCAR) not found: no sentence names redemption together with 'at any time'.
 
 [PASS  ] [BLOCKER] COMMON.RISK_WARNING  Mandatory risk warning statement
            Cite:  Art. 6(5), Art. 19(4), Art. 51(4) MiCAR
@@ -147,10 +149,10 @@ This tool is not legal advice.
 ## Coverage Statistics
 
 - **Total Checked Rules**: 20
-- **Passed Rules**: 17
-- **Rules Requiring Review**: 2 (the fact-dependent deposit floor, and custody under Annex II, Part G)
+- **Passed Rules**: 16
+- **Rules Requiring Review**: 3 (the summary without the predefined warning and the redemption statement, the fact-dependent deposit floor, and custody under Annex II, Part G)
 - **Missing Sections**: 1 (format: a JSON draft cannot satisfy the XHTML/iXBRL notification format)
-- **Open Blockers**: 3 (`COMMON.IXBRL_TAGGING`, `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW`, `ANNEX_II.G.CUSTODY`)
+- **Open Blockers**: 4 (`COMMON.SUMMARY`, `COMMON.IXBRL_TAGGING`, `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW`, `ANNEX_II.G.CUSTODY`)
 
 ---
 
