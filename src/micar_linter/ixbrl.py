@@ -17,7 +17,11 @@ from lxml import etree
 IX_NAMESPACE = "http://www.xbrl.org/2013/inlineXBRL"
 IX_LEGACY_NAMESPACE = "http://www.xbrl.org/2008/inlineXBRL"
 # targetNamespace of mica_cor.xsd in ESMA's "MiCA White Papers Taxonomy 2025",
-# the only taxonomy version published when this was checked on 2026-10-09.
+# the only taxonomy version published when this was checked on 2026-10-09. In the package
+# published on 5 August 2025 (mica_taxonomy_2025.zip, read on 2026-10-31) mica_cor.xsd declares
+# every fact concept (719 xbrli:item elements); the entry-point schemas of Tables 2 to 4
+# (targetNamespaces .../mica/table2, table3, table4) and mica_all.xsd (.../mica/all) declare no
+# element and import the core, so a fact named in an entry-point namespace is no taxonomy fact.
 ESMA_MICA_NAMESPACE = "https://www.esma.europa.eu/taxonomy/2025-03-31/mica/"
 
 COMPLETENESS_NOTE = (

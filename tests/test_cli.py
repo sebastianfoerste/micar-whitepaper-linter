@@ -361,3 +361,175 @@ def test_cli_coverage(tmp_path: Path, capsys):
     assert "MiCAR Whitepaper Coverage Matrix - Coverage Test Token" in captured.out
     assert "Whitepaper type: OTHER" in captured.out
     assert "COMMON.SUMMARY" in captured.out
+
+
+# The workspace, collaboration-bundle and workflow modes, and the output-file error paths.
+
+EXAMPLES = Path(__file__).resolve().parents[1] / "examples"
+INCOMPLETE = EXAMPLES / "incomplete.json"
+
+
+def test_cli_workspace_output_writes_the_workspace(tmp_path: Path, capsys):
+    out = tmp_path / "review" / "workspace.json"
+    assert main([str(INCOMPLETE), "--workspace-output", str(out)]) == 0
+    captured = capsys.readouterr()
+    assert captured.out.startswith(f"White paper workspace written to {out}. Documents: 1.")
+    workspace = json.loads(out.read_text(encoding="utf-8"))
+    assert workspace["schema"] == "micar-whitepaper-linter.workspace.v1"
+    assert workspace["vault"]["document_count"] == 1
+    assert workspace["external_action_allowed"] is False
+
+
+def test_cli_workspace_output_json_prints_the_workspace(tmp_path: Path, capsys):
+    out = tmp_path / "workspace.json"
+    assert main([str(INCOMPLETE), "--workspace-output", str(out), "--json"]) == 0
+    printed = json.loads(capsys.readouterr().out)
+    assert printed == json.loads(out.read_text(encoding="utf-8"))
+
+
+def test_cli_workspace_strict_exits_one_on_open_blockers(tmp_path: Path):
+    out = tmp_path / "workspace.json"
+    assert main([str(INCOMPLETE), "--workspace-output", str(out), "--strict"]) == 1
+    assert json.loads(out.read_text(encoding="utf-8"))["review_table"]["summary"]["blockers"] > 0
+
+
+def test_cli_workspace_write_failure_is_visible(tmp_path: Path, capsys):
+    assert main([str(INCOMPLETE), "--workspace-output", str(tmp_path)]) == 2
+    assert "error: cannot write white paper workspace" in capsys.readouterr().err
+
+
+def test_cli_workspace_mode_reports_a_draft_it_cannot_load(tmp_path: Path, capsys):
+    broken = tmp_path / "broken.json"
+    broken.write_text("{not json", encoding="utf-8")
+    assert main([str(broken), "--workspace-output", str(tmp_path / "workspace.json")]) == 2
+    assert "error: cannot write white paper workspace" in capsys.readouterr().err
+
+
+def test_cli_collaboration_bundle_writes_the_three_files(tmp_path: Path, capsys):
+    bundle = tmp_path / "review"
+    assert main([str(INCOMPLETE), "--collaboration-bundle-dir", str(bundle)]) == 0
+    assert sorted(path.name for path in bundle.iterdir()) == [
+        "document-change-set.json",
+        "review-sidecar.json",
+        "workflow-pack.json",
+    ]
+    pack = json.loads((bundle / "workflow-pack.json").read_text(encoding="utf-8"))
+    assert pack["run"]["schema"] == "workflow.run.v1"
+    assert pack["run"]["external_action_allowed"] is False
+    assert capsys.readouterr().out == ""
+
+
+def test_cli_workflow_validate_checks_the_pack(capsys):
+    assert main([str(INCOMPLETE), "--workflow-action", "validate"]) == 0
+    out = capsys.readouterr().out
+    assert out.startswith(
+        "workflow.definition.v1 and workflow.run.v1 validated: 1 definition(s); run status blocked; export blocked ("
+    )
+    assert out.rstrip().endswith("pending review cells); external action disabled.")
+
+
+def test_cli_workflow_validate_fails_on_an_invalid_pack(monkeypatch, capsys):
+    from micar_linter import cli
+
+    monkeypatch.setattr(cli, "build_workflow_pack", lambda *args: {"definitions": [], "run": {}})
+    assert main([str(INCOMPLETE), "--workflow-action", "validate"]) == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err.startswith("error: workflow pack failed validation:\n  - definitions: expected a non-empty list\n")
+
+
+def test_cli_workflow_inspect_prints_the_pack(capsys):
+    from micar_linter.collaboration_workspace import validate_workflow_pack
+
+    assert main([str(INCOMPLETE), "--workflow-action", "inspect"]) == 0
+    pack = json.loads(capsys.readouterr().out)
+    assert pack["definitions"][0]["schema"] == "workflow.definition.v1"
+    assert validate_workflow_pack(pack) == []
+
+
+def test_cli_workflow_run_requires_a_bundle_dir(capsys):
+    assert main([str(INCOMPLETE), "--workflow-action", "run"]) == 2
+    assert "error: --workflow-action run requires --collaboration-bundle-dir" in capsys.readouterr().err
+
+
+def test_cli_workflow_run_with_a_bundle_dir(tmp_path: Path, capsys):
+    bundle = tmp_path / "review"
+    assert main([str(INCOMPLETE), "--workflow-action", "run", "--collaboration-bundle-dir", str(bundle)]) == 0
+    assert capsys.readouterr().out == (
+        "Supervised workflow run status: blocked. External action remains disabled.\n"
+    )
+    assert (bundle / "workflow-pack.json").is_file()
+
+
+@pytest.mark.parametrize(
+    ("flag", "name"),
+    [
+        ("--remediation-output", "remediation report"),
+        ("--coverage-output", "coverage matrix"),
+        ("--review-table-output", "review table"),
+        ("--sarif-output", "SARIF log"),
+        ("--summary-output", "summary"),
+        ("--annotations-output", "annotations"),
+        ("--manifest-output", "artifact manifest"),
+    ],
+)
+def test_cli_output_file_write_failures_are_visible(flag: str, name: str, tmp_path: Path, capsys):
+    # A directory in place of the output file cannot be written.
+    assert main([str(INCOMPLETE), flag, str(tmp_path)]) == 2
+    captured = capsys.readouterr()
+    assert f"error: cannot write {name} to {tmp_path}:" in captured.err
+    assert captured.out.startswith("MiCAR Whitepaper Linter - ")
+
+
+def test_cli_review_bundle_write_failure_is_visible(tmp_path: Path, capsys):
+    occupied = tmp_path / "bundle"
+    occupied.write_text("not a directory", encoding="utf-8")
+    assert main([str(INCOMPLETE), "--review-bundle-dir", str(occupied)]) == 2
+    assert f"error: cannot write review bundle to {occupied}:" in capsys.readouterr().err
+
+
+def _draft_directory(tmp_path: Path) -> Path:
+    directory = tmp_path / "drafts"
+    directory.mkdir()
+    for name in ("incomplete.json", "art-stablecoin.json"):
+        (directory / name).write_text((EXAMPLES / name).read_text(encoding="utf-8"), encoding="utf-8")
+    return directory
+
+
+def test_cli_batch_requires_an_output_path(tmp_path: Path, capsys):
+    assert main([str(_draft_directory(tmp_path))]) == 2
+    assert "error: directory input requires --batch-output <path>" in capsys.readouterr().err
+
+
+def test_cli_batch_writes_the_pack_and_strict_fails_closed(tmp_path: Path, capsys):
+    directory = _draft_directory(tmp_path)
+    out = tmp_path / "packs" / "batch.json"
+    assert main([str(directory), "--batch-output", str(out)]) == 0
+    assert capsys.readouterr().out.startswith(
+        f"Batch review pack written to {out}. Supported files: 2. Blocked files: 2. Failed files: 0."
+    )
+    pack = json.loads(out.read_text(encoding="utf-8"))
+    assert pack["summary"]["supported_files"] == 2
+    assert main([str(directory), "--batch-output", str(out), "--json"]) == 0
+    assert json.loads(capsys.readouterr().out) == json.loads(out.read_text(encoding="utf-8"))
+    assert main([str(directory), "--batch-output", str(out), "--strict"]) == 1
+
+
+def test_cli_batch_write_failure_is_visible(tmp_path: Path, capsys):
+    assert main([str(_draft_directory(tmp_path)), "--batch-output", str(tmp_path)]) == 2
+    assert f"error: cannot write batch review pack to {tmp_path}:" in capsys.readouterr().err
+
+
+def test_cli_comparison_rejects_directories_and_reports_write_failures(tmp_path: Path, capsys):
+    directory = _draft_directory(tmp_path)
+    drafts = [str(directory / "incomplete.json"), str(directory / "art-stablecoin.json")]
+    out = tmp_path / "comparison.json"
+    assert main([str(directory), drafts[0], "--compare-review-table-output", str(out)]) == 2
+    assert "error: comparison input must be local draft files, not directories" in capsys.readouterr().err
+    assert main([*drafts, "--compare-review-table-output", str(tmp_path)]) == 2
+    assert f"error: cannot write review table comparison to {tmp_path}:" in capsys.readouterr().err
+    assert main([*drafts, "--compare-review-table-output", str(out), "--json"]) == 0
+    comparison = json.loads(capsys.readouterr().out)
+    assert comparison == json.loads(out.read_text(encoding="utf-8"))
+    assert comparison["summary"]["blocker_groups"] > 0
+    assert main([*drafts, "--compare-review-table-output", str(out), "--strict"]) == 1
