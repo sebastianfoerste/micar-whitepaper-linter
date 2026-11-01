@@ -1,0 +1,22 @@
+# Weekly, grouped version updates for the pinned GitHub Actions and the uv lockfile. Dependabot opens
+# pull requests only; nothing merges on its own. The owner can delete this file to stop them.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"
