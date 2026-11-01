@@ -10,6 +10,7 @@ import os
 import tempfile
 import zipfile
 from collections.abc import Iterator
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -503,16 +504,48 @@ def _contents_styles(styles_path: Path, parser: etree.XMLParser) -> set[str]:
     }
 
 
+@dataclass(frozen=True)
+class TrackedDocxExport:
+    """What export_tracked_docx wrote: the output path and the ids of the accepted changes it placed in the
+    document, appended at its end because their original text was not found, or left out because they belong
+    to another document of the change set. A change without an id is named by its position, "changes[3]"."""
+
+    path: Path
+    placed: tuple[str, ...]
+    unplaced: tuple[str, ...]
+    skipped: tuple[str, ...]
+
+
 def render_tracked_docx(
     source: Path, output: Path, change_set: dict[str, Any], author: str = "MiCAR reviewer"
 ) -> Path:
+    """Write the tracked DOCX and return its path; export_tracked_docx also reports the changes not placed."""
+    return export_tracked_docx(source, output, change_set, author).path
+
+
+def export_tracked_docx(
+    source: Path, output: Path, change_set: dict[str, Any], author: str = "MiCAR reviewer"
+) -> TrackedDocxExport:
+    """Write a copy of the source DOCX with the accepted changes of the change set as tracked revisions.
+
+    A change whose original text is found in the document is written in place as a tracked deletion and
+    insertion. One that is not found is appended at the end of the body as a tracked insertion alone, with
+    no deletion of text the document never held (#61), and its id is reported as unplaced. With a change set
+    that names its documents (`source_digests`), only the changes whose `document_id` maps to the source's
+    digest apply, besides changes without a `document_id`; the others are reported as skipped (#60).
+    """
     if source.resolve() == output.resolve():
         raise ValueError("redline output must not overwrite the source document")
     if not change_set.get("export_allowed"):
         raise ValueError("tracked DOCX export requires every change to be decided")
-    expected_digests = set(change_set.get("source_digests", {}).values())
-    if expected_digests and hashlib.sha256(source.read_bytes()).hexdigest() not in expected_digests:
+    source_digests: dict[str, str] = change_set.get("source_digests") or {}
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    if source_digests and digest not in set(source_digests.values()):
         raise ValueError("source DOCX digest does not match the reviewed workspace")
+    document_ids = {document_id for document_id, value in source_digests.items() if value == digest}
+    placed: list[str] = []
+    unplaced: list[str] = []
+    skipped: list[str] = []
     change_timestamp = _reproducible_timestamp()
     with tempfile.TemporaryDirectory() as temp_dir:
         extracted = Path(temp_dir)
@@ -547,8 +580,15 @@ def render_tracked_docx(
             )
         }
         candidates = [p for p in candidates if p not in contents] + [p for p in candidates if p in contents]
-        for change in (item for item in change_set["changes"] if item["decision"] == "accepted"):
-            original = change["original_text"]
+        for index, change in enumerate(change_set["changes"]):
+            if change["decision"] != "accepted":
+                continue
+            change_id = str(change.get("id") or f"changes[{index}]")
+            document_id = change.get("document_id")
+            if source_digests and document_id is not None and document_id not in document_ids:
+                skipped.append(change_id)
+                continue
+            original = change.get("original_text") or ""
             proposed = change.get("proposed_text") or ""
             match = next(
                 (
@@ -561,24 +601,25 @@ def render_tracked_docx(
             )
             if match is not None:
                 _redline_match(*match, original, proposed, ids, author, change_timestamp, excluded)
+                placed.append(change_id)
                 continue
-            deletion = _revision("del", ids, author, change_timestamp)
-            deleted_run = etree.SubElement(deletion, f"{{{W_NS}}}r")
-            etree.SubElement(deleted_run, f"{{{W_NS}}}delText").text = original or "Missing disclosure"
+            # The original text is not in the document (for a change set built from a draft, it is the rule
+            # label, #59), so the proposed text is appended as an insertion that Reject All removes whole.
             insertion = _revision("ins", ids, author, change_timestamp)
             inserted_run = etree.SubElement(insertion, f"{{{W_NS}}}r")
             etree.SubElement(inserted_run, f"{{{W_NS}}}t").text = proposed
             excluded.add(insertion)
             paragraph = etree.Element(f"{{{W_NS}}}p")
-            paragraph.extend([deletion, insertion])
+            paragraph.append(insertion)
             body.insert(body.index(section) if section is not None else len(body), paragraph)
+            unplaced.append(change_id)
         tree.write(str(document_path), xml_declaration=True, encoding="UTF-8", standalone=True)
         output.parent.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as target:
             for path in sorted(extracted.rglob("*")):
                 if path.is_file():
                     target.write(path, path.relative_to(extracted))
-    return output
+    return TrackedDocxExport(output, tuple(placed), tuple(unplaced), tuple(skipped))
 
 
 def build_workflow_pack(
@@ -634,6 +675,138 @@ def build_workflow_pack(
         "external_action_allowed": False,
     }
     return {"definitions": definitions, "run": run}
+
+
+_DEFINITION_SCHEMA = "workflow.definition.v1"
+_RUN_SCHEMA = "workflow.run.v1"
+_DEFINITION_STATUSES = {"active", "draft", "retired"}
+_RUN_STATUSES = {"blocked", "review_required"}
+# The decision of a review cell: "pending" from build_review_sidecar, the others from update_cell.
+_CELL_DECISIONS = {"pending", "approved", "changes_requested", "rejected"}
+_DIGEST = 64
+
+
+def _is_string_list(value: Any, non_empty: bool = False) -> bool:
+    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+        return False
+    return bool(value) or not non_empty
+
+
+def _definition_problems(definition: Any) -> list[str]:
+    if not isinstance(definition, dict):
+        return ["expected an object"]
+    problems = []
+    if definition.get("schema") != _DEFINITION_SCHEMA:
+        problems.append(f"schema is not {_DEFINITION_SCHEMA}")
+    if not isinstance(definition.get("id"), str) or not definition["id"]:
+        problems.append("id is missing or empty")
+    if not isinstance(definition.get("version"), int) or definition["version"] < 1:
+        problems.append("version is not a positive integer")
+    if definition.get("status") not in _DEFINITION_STATUSES:
+        problems.append("status is not one of " + ", ".join(sorted(_DEFINITION_STATUSES)))
+    for key in ("source_policy", "input_schema"):
+        if not isinstance(definition.get(key), str) or not definition[key]:
+            problems.append(f"{key} is missing or empty")
+    for key in ("permitted_roles", "artifact_contracts", "steps"):
+        if not _is_string_list(definition.get(key), non_empty=True):
+            problems.append(f"{key} is not a non-empty list of strings")
+    if "export_gate" not in (definition.get("steps") or []):
+        problems.append("steps do not end in the export gate")
+    if definition.get("external_action_allowed") is not False:
+        problems.append("external_action_allowed is not false")
+    return problems
+
+
+def _run_problems(run: dict[str, Any], definitions: list[Any]) -> list[str]:
+    problems = []
+    if run.get("schema") != _RUN_SCHEMA:
+        problems.append(f"schema is not {_RUN_SCHEMA}")
+    if not isinstance(run.get("id"), str) or not run["id"]:
+        problems.append("id is missing or empty")
+    version = run.get("definition_version")
+    snapshot = run.get("definition_snapshot")
+    if not isinstance(version, int):
+        problems.append("definition_version is not an integer")
+    if not any(
+        isinstance(item, dict) and item == snapshot and item.get("version") == version for item in definitions
+    ):
+        problems.append("definition_snapshot is not one of the definitions at definition_version")
+    inputs = run.get("inputs")
+    workspace_digest = inputs.get("workspace_digest") if isinstance(inputs, dict) else None
+    if not (
+        isinstance(workspace_digest, str) and len(workspace_digest) == _DIGEST and _is_hex(workspace_digest)
+    ):
+        problems.append("inputs.workspace_digest is not a SHA-256 hex digest")
+    if not _is_string_list(run.get("source_refs")):
+        problems.append("source_refs is not a list of strings")
+    decisions = run.get("decisions")
+    if not _is_string_list(decisions) or any(item not in _CELL_DECISIONS for item in decisions):
+        problems.append("decisions is not a list of review cell decisions")
+        decisions = []
+    if not isinstance(run.get("audit"), list):
+        problems.append("audit is not a list")
+    if not _is_string_list(run.get("artifacts"), non_empty=True):
+        problems.append("artifacts is not a non-empty list of strings")
+    blockers = run.get("blockers")
+    if not isinstance(blockers, dict):
+        problems.append("blockers is not an object")
+        return problems
+    lint, pending = blockers.get("lint"), blockers.get("pending_review_cells")
+    stale = blockers.get("stale_sidecar")
+    counts_valid = all(
+        isinstance(value, int) and not isinstance(value, bool) and value >= 0 for value in (lint, pending)
+    )
+    if not counts_valid:
+        problems.append("blockers.lint and blockers.pending_review_cells are not non-negative integers")
+    if not isinstance(stale, bool):
+        problems.append("blockers.stale_sidecar is not a boolean")
+    if counts_valid and pending != decisions.count("pending"):
+        problems.append("blockers.pending_review_cells does not count the pending decisions")
+    status = run.get("status")
+    if status not in _RUN_STATUSES:
+        problems.append("status is not one of " + ", ".join(sorted(_RUN_STATUSES)))
+    elif counts_valid and isinstance(stale, bool):
+        expected = "blocked" if lint or pending or stale else "review_required"
+        if status != expected:
+            problems.append(f"status {status} does not follow from the blockers ({expected} expected)")
+    export_allowed = run.get("export_allowed")
+    if not isinstance(export_allowed, bool):
+        problems.append("export_allowed is not a boolean")
+    elif export_allowed and counts_valid and (lint or pending):
+        problems.append("export_allowed is true while lint blockers or pending review cells remain")
+    if run.get("external_action_allowed") is not False:
+        problems.append("external_action_allowed is not false")
+    return problems
+
+
+def _is_hex(value: str) -> bool:
+    return all(character in "0123456789abcdef" for character in value)
+
+
+def validate_workflow_pack(pack: Any) -> list[str]:
+    """The structural problems of a workflow pack from build_workflow_pack, or an empty list when it is sound.
+
+    Checks the schema ids and required keys of every definition and of the run, that no definition or run
+    allows an external action, that the run's definition snapshot is one of the definitions, that its status
+    follows from its blockers (lint blockers, pending review cells, a stale sidecar), that the pending count
+    matches the decisions, and that the export gate stays closed while blockers or pending cells remain. It
+    does not decide whether the review is complete.
+    """
+    if not isinstance(pack, dict):
+        return ["workflow pack is not an object"]
+    problems: list[str] = []
+    definitions = pack.get("definitions")
+    if not isinstance(definitions, list) or not definitions:
+        problems.append("definitions: expected a non-empty list")
+        definitions = []
+    for index, definition in enumerate(definitions):
+        problems.extend(f"definitions[{index}]: {problem}" for problem in _definition_problems(definition))
+    run = pack.get("run")
+    if not isinstance(run, dict):
+        problems.append("run: expected an object")
+    else:
+        problems.extend(f"run: {problem}" for problem in _run_problems(run, definitions))
+    return problems
 
 
 def write_collaboration_bundle(workspace: dict[str, Any], output_dir: Path) -> list[Path]:
