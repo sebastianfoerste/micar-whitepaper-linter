@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from micar_linter.ixbrl import COMPLETENESS_NOTE
+from micar_linter.ixbrl import COMPLETENESS_NOTE, validate_ixbrl
 from micar_linter.linter import Linter
 from micar_linter.rules import RULESETS
 from micar_linter.whitepaper import load_whitepaper
@@ -42,6 +42,34 @@ MALFORMED = """<?xml version="1.0" encoding="UTF-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml"><body><p>unclosed
 """
 
+# A filing declares the entry-point namespace of its table beside the core namespace. In ESMA's package
+# (mica_taxonomy_2025.zip, published 5 August 2025, read on 2026-10-31) mica_cor.xsd
+# (targetNamespace https://www.esma.europa.eu/taxonomy/2025-03-31/mica/) declares every fact concept,
+# 719 xbrli:item elements, while mica_entry_table_2.xsd, _3 and _4 (.../mica/table2, table3, table4) and
+# mica_all.xsd (.../mica/all) declare no element and import the core. Facts are therefore counted in the
+# core namespace only, whatever other MiCA namespaces the file declares.
+TABLE_ENTRY_POINT_DECLARED = """<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ix="http://www.xbrl.org/2013/inlineXBRL"
+      xmlns:mica="https://www.esma.europa.eu/taxonomy/2025-03-31/mica/"
+      xmlns:mica_table2="https://www.esma.europa.eu/taxonomy/2025-03-31/mica/table2">
+  <body>
+    <p><ix:nonNumeric name="mica:DateOfNotificationForOtherTokenWhitePaper">2026-03-02</ix:nonNumeric></p>
+  </body>
+</html>
+"""
+
+FACTS_IN_TABLE_ENTRY_POINT = """<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ix="http://www.xbrl.org/2013/inlineXBRL"
+      xmlns:mica="https://www.esma.europa.eu/taxonomy/2025-03-31/mica/"
+      xmlns:mica_table2="https://www.esma.europa.eu/taxonomy/2025-03-31/mica/table2">
+  <body>
+    <p><ix:nonNumeric name="mica_table2:DateOfNotificationForOtherTokenWhitePaper">2026-03-02</ix:nonNumeric></p>
+  </body>
+</html>
+"""
+
 
 def _ixbrl_finding(path: Path):
     whitepaper = load_whitepaper(path)
@@ -64,12 +92,31 @@ def test_tagged_xhtml_stays_under_review_because_completeness_is_not_checked(tmp
     assert finding.issues == (COMPLETENESS_NOTE,)
 
 
+def test_table_entry_point_namespace_beside_the_core_changes_nothing(tmp_path: Path):
+    finding = _ixbrl_finding(_write(tmp_path, "entry-point.xhtml", TABLE_ENTRY_POINT_DECLARED))
+    assert finding.status == "review"
+    assert finding.issues == (COMPLETENESS_NOTE,)
+
+
+def test_facts_named_in_a_table_entry_point_namespace_are_no_taxonomy_facts(tmp_path: Path):
+    path = _write(tmp_path, "entry-point-facts.xhtml", FACTS_IN_TABLE_ENTRY_POINT)
+    issues = validate_ixbrl(path)
+    assert issues == [
+        "No fact is tagged with an element of the ESMA MiCA taxonomy "
+        "(https://www.esma.europa.eu/taxonomy/2025-03-31/mica/).",
+        "Facts use other namespaces: https://www.esma.europa.eu/taxonomy/2025-03-31/mica/table2.",
+        COMPLETENESS_NOTE,
+    ]
+    assert _ixbrl_finding(path).status == "review"
+
+
 @pytest.mark.parametrize(
     "name,body",
     [
         ("no-namespace.xhtml", NO_NAMESPACE),
         ("missing-tags.xhtml", MISSING_TAGS),
         ("malformed.xhtml", MALFORMED),
+        ("entry-point-facts.xhtml", FACTS_IN_TABLE_ENTRY_POINT),
     ],
 )
 def test_defective_xhtml_never_passes(tmp_path: Path, name: str, body: str):
