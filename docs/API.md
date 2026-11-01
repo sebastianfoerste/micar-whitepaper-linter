@@ -31,7 +31,7 @@ Supported options:
 - `--batch-output <path>`: required when the input path is a directory; writes a JSON batch review pack. Its summary counts `supported_files` and `blocked_files`, and in `failed_files` the files that could not be linted, such as numbered-field XHTML, whose regime a directory run cannot take from `--type`.
 - `--workspace-output <path>`: write a local white paper vault, interactive review table and reusable playbook.
 - `--collaboration-bundle-dir <path>`: write the collaboration sidecar, document change set and supervised workflow pack.
-- `--workflow-action validate|inspect|run`: validate, inspect or run the supervised local workflow (`run` needs `--collaboration-bundle-dir`).
+- `--workflow-action validate|inspect|run`: `validate` checks the workflow pack built from the drafts (schema ids `workflow.definition.v1` and `workflow.run.v1`, required keys, `external_action_allowed` false throughout, the run's definition snapshot among the definitions, a run status that follows from the lint blockers, pending review cells and sidecar staleness, a pending count that matches the decisions, and an export gate closed while blockers or pending cells remain) and prints a one-line summary, or lists the problems on stderr and exits 2; `inspect` prints the pack as JSON; `run` reports the run status (`run` needs `--collaboration-bundle-dir`).
 - `--version`: print the package version.
 
 ### CI outputs
