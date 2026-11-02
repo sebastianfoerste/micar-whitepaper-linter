@@ -1,4 +1,5 @@
 import csv
+import hashlib
 import io
 import json
 import runpy
@@ -9,10 +10,21 @@ from pathlib import Path
 import pytest
 
 from micar_linter.review_validation import (
+    AGREEMENT_CATEGORIES,
+    ALLOWED_LABELS,
+    BOOTSTRAP_REPLICATES,
+    BOOTSTRAP_SEED,
+    EXCLUDED_LABELS,
+    NOTE_REQUIRED_LABELS,
     SCHEMA_VERSION,
+    AnalysisContext,
     detector_cells,
+    internal_detail,
+    load_analysis_context,
     main,
     matrix_mismatches,
+    plan_phrase,
+    plan_status,
     summarize_rows,
 )
 
@@ -693,3 +705,698 @@ def test_builder_explains_a_merge_run_without_the_package(tmp_path, capsys, monk
     err = capsys.readouterr().err
     assert "merge stopped: the merge needs the micar_linter package" in err
     assert "uv run python" in err
+
+
+# Analyses of the draft analysis plan (--analyses), ported from the earlier summary rewrite as
+# additions. Every document, rule, reviewer and label below is synthetic and exists only in memory
+# or under tmp_path; tests/test_study_consistency.py reads the committed study files.
+ANALYSIS_RULES = [f"SYNTHETIC_RULE_{index:02d}" for index in range(1, 6)]
+FLAG, NO_FLAG = "flagged", "not_flagged"
+# A synthetic five-rule document: one TP, one FP, one FN and two TN.
+MIXED = [
+    (FLAG, "missing"),
+    (FLAG, "present"),
+    (NO_FLAG, "missing"),
+    (NO_FLAG, "present"),
+    (NO_FLAG, "present"),
+]
+TODAY = date(2026, 10, 30)
+
+
+def _analysis_row(doc, rule, status, label, note=""):
+    return {
+        "study_doc_id": doc,
+        "document_hash_sha256": hashlib.sha256(doc.encode()).hexdigest(),
+        "rule_id": rule,
+        "detector_status": status,
+        "human_label": label,
+        "review_note": note,
+    }
+
+
+def _document(doc, labels, note=""):
+    """One synthetic document: (detector_status, human_label) for each rule."""
+    return [
+        _analysis_row(doc, rule, status, label, note)
+        for rule, (status, label) in zip(ANALYSIS_RULES, labels, strict=True)
+    ]
+
+
+def _analyses(rows, replicates=300, **context):
+    return summarize_rows(rows, analyses=AnalysisContext(replicates=replicates, **context))
+
+
+def test_analyses_add_keys_after_the_summary_and_change_none():
+    rows = _document("SYN-001", MIXED) + _document("SYN-002", [(FLAG, "pending"), *MIXED[1:]])
+    plain = summarize_rows(rows)
+    summary = _analyses(iter(rows))
+
+    assert list(summary)[: len(plain)] == list(plain)
+    assert {key: summary[key] for key in plain} == plain
+    assert list(summary)[len(plain) :] == ["detector", "settings", "exclusions", "analyses", "agreement"]
+    assert summary["schema_version"] == SCHEMA_VERSION
+    assert set(EXCLUDED_LABELS) == NOTE_REQUIRED_LABELS
+    assert set(AGREEMENT_CATEGORIES) == ALLOWED_LABELS - {"pending"}
+
+
+def test_analyses_exclude_unresolved_labels_from_metrics():
+    rows = _document(
+        "SYN-001",
+        [
+            (FLAG, "missing"),
+            (FLAG, "present"),
+            (NO_FLAG, "missing"),
+            (NO_FLAG, "present"),
+            (FLAG, "uncertain"),
+        ],
+    )
+    rows.append(_analysis_row("SYN-001", "SYNTHETIC_RULE_06", NO_FLAG, "pending"))
+
+    summary = _analyses(rows)
+    primary = summary["analyses"]["primary"]
+
+    assert primary["confusion_matrix"] == summary["confusion_matrix"] == {"tp": 1, "fp": 1, "fn": 1, "tn": 1}
+    assert primary["metrics"]["precision"]["estimate"] == 0.5
+    assert primary["metrics"]["recall"]["estimate"] == 0.5
+    assert primary["metrics"]["specificity"]["estimate"] == 0.5
+    assert primary["metrics"]["f1"]["estimate"] == summary["metrics"]["f1"] == 0.5
+    assert (primary["evaluable_cells"], primary["excluded_cells"], primary["pending_cells"]) == (4, 1, 1)
+    assert summary["publication_ready"] is False
+
+
+def test_primary_exclusions_come_only_from_the_command_line():
+    rows = (
+        _document("SYN-001", MIXED)
+        + _document("SYN-007", [(FLAG, "missing")] * 5)
+        + _document("SYN-002", MIXED)
+    )
+    # By default nothing is excluded: the primary set is S1.
+    default = _analyses(rows)
+    assert default["analyses"]["primary"]["documents"] == default["analyses"]["S1"]["documents"]
+    assert default["exclusions"]["primary"] == []
+    assert default["settings"]["primary_exclusions"] == []
+
+    summary = _analyses(rows, primary_exclusions=("SYN-007",))
+    analyses = summary["analyses"]
+    assert analyses["primary"]["documents"] == ["SYN-001", "SYN-002"]
+    assert analyses["S1"]["documents"] == ["SYN-001", "SYN-002", "SYN-007"]
+    assert analyses["primary"]["confusion_matrix"] == {"tp": 2, "fp": 2, "fn": 2, "tn": 4}
+    assert analyses["S1"]["confusion_matrix"] == {"tp": 7, "fp": 2, "fn": 2, "tn": 4}
+    (excluded,) = summary["exclusions"]["primary"]
+    assert excluded["study_doc_id"] == "SYN-007"
+    # Complete: the excluded document's share of the flags, which the analysis plan asks for.
+    assert (excluded["detector_flags"], excluded["detector_flags_total"]) == (5, 9)
+    assert summary["settings"]["primary_exclusions"] == ["SYN-007"]
+    # Per-rule counts for the primary set only, in matrix order. S1 differs from it by one
+    # document, so a second per-rule table would give that document's cells; it goes to --internal-out.
+    assert "per_rule" not in analyses["S1"]
+    assert [item["rule_id"] for item in analyses["primary"]["per_rule"]] == ANALYSIS_RULES
+    assert analyses["primary"]["per_rule"][0] == {
+        "rule_id": "SYNTHETIC_RULE_01",
+        "cells": 2,
+        "label_counts": {
+            "extraction_failure": 0,
+            "missing": 2,
+            "not_applicable": 0,
+            "pending": 0,
+            "present": 0,
+            "uncertain": 0,
+        },
+        "tp": 2,
+        "fp": 0,
+        "fn": 0,
+        "tn": 0,
+    }
+    with pytest.raises(ValueError, match="--primary-exclude SYN-009: not a document of the matrix"):
+        _analyses(rows, primary_exclusions=("SYN-009",))
+
+
+def test_no_detector_outcome_while_any_cell_is_pending():
+    rows = _document("SYN-001", MIXED) + _document("SYN-007", [(FLAG, "pending")] * 5)
+    context = AnalysisContext(replicates=300, primary_exclusions=("SYN-007",))
+    summary = summarize_rows(rows, analyses=context)
+    (excluded,) = summary["exclusions"]["primary"]
+    assert excluded["detector_flags"] is None
+    assert excluded["detector_flags_total"] is None
+    assert "withheld while any cell is pending" in excluded["detector_flags_reason"]
+    detail = internal_detail(rows, context)
+    by_doc = {item["study_doc_id"]: item for item in detail["documents"]}
+    assert by_doc["SYN-007"]["detector_flags"] is None
+    assert by_doc["SYN-001"]["detector_flags"] == 2
+    assert detail["S1_per_rule"]["documents"] == ["SYN-001", "SYN-007"]
+    assert [item["rule_id"] for item in detail["S1_per_rule"]["per_rule"]] == ANALYSIS_RULES
+
+
+def test_undefined_reasons_do_not_read_like_findings_while_cells_are_pending():
+    pending = _analyses(
+        _document("SYN-001", [(FLAG, "pending"), (NO_FLAG, "pending")] + [(NO_FLAG, "present")] * 3)
+    )
+    metrics = pending["analyses"]["primary"]["metrics"]
+    recall = metrics["recall"]["undefined_reason"]
+    assert recall == "TP + FN = 0 so far: no cell is labelled missing yet (2 of 5 cells in this set pending)"
+    assert "identified no gap" not in json.dumps(pending)
+    assert metrics["recall"]["document_cluster_bootstrap"]["undefined_reason"] == (
+        f"point estimate undefined ({recall}); not resampled"
+    )
+    assert metrics["f1"]["undefined_reason"] == "precision and recall undefined, so F1 is null (metric_note)"
+    # Complete, and the reviewer found no gap: now the reason may say so.
+    complete = _analyses(_document("SYN-001", [(NO_FLAG, "present")] * 5))["analyses"]["primary"]["metrics"]
+    assert complete["recall"]["undefined_reason"] == (
+        "TP + FN = 0: no cell is labelled missing (the reviewer identified no gap)"
+    )
+
+
+def test_analyses_f1_follows_the_summary_rule():
+    # [hand] TP = 0, FP = 1, FN = 1: precision 0/1 and recall 0/1 are defined, so F1 is 0/2 = 0.
+    zero = _analyses(
+        _document(
+            "SYN-001",
+            [
+                (FLAG, "present"),
+                (NO_FLAG, "missing"),
+                (NO_FLAG, "present"),
+                (NO_FLAG, "present"),
+                (NO_FLAG, "present"),
+            ],
+        )
+    )
+    f1 = zero["analyses"]["primary"]["metrics"]["f1"]
+    assert (f1["estimate"], f1["numerator"], f1["denominator"], f1["undefined_reason"]) == (0.0, 0, 2, None)
+    assert zero["metrics"]["f1"] == 0.0
+    # TP = FP = 0 and FN = 1: precision is null, so F1 is null too (METRIC_NOTE), not 0.
+    no_flags = _analyses(_document("SYN-001", [(NO_FLAG, "missing")] + [(NO_FLAG, "present")] * 4))
+    metrics = no_flags["analyses"]["primary"]["metrics"]
+    assert metrics["precision"]["estimate"] is None
+    assert metrics["f1"]["estimate"] is None
+    assert metrics["f1"]["undefined_reason"] == "precision undefined, so F1 is null (metric_note)"
+    assert no_flags["metrics"]["f1"] is None
+    # [hand] TP = 2, FP = 1, FN = 3: 4 / 8 = 0.5, the harmonic mean of 2/3 and 2/5.
+    rows = _document(
+        "SYN-001",
+        [(FLAG, "missing"), (FLAG, "missing"), (FLAG, "present"), (NO_FLAG, "missing"), (NO_FLAG, "missing")],
+    )
+    rows += _document("SYN-002", [(NO_FLAG, "missing")] + [(NO_FLAG, "present")] * 4)
+    assert _analyses(rows)["analyses"]["primary"]["metrics"]["f1"]["estimate"] == 0.5
+
+
+BANNER_DRAFT = """# Analysis plan
+
+> **DRAFT, not adopted; it reaches `main` as unsigned draft tooling and is adopted there in a separate commit.**
+>
+> - Adopted by: [reviewer name], on [YYYY-MM-DD]
+> - Pre-registration commit: not recorded in this file (signing order, step 5)
+"""
+
+
+def test_plan_status_is_read_from_the_banner():
+    draft = plan_status(BANNER_DRAFT)
+    assert (draft["status"], draft["adopted_on"], draft["preregistration_commit"]) == ("draft", None, None)
+    adopted_text = (
+        "# Analysis plan\n\n> - Adopted by: A. Reviewer, on 2026-11-02\n"
+        "> - Pre-registration commit: not recorded in this file (signing order, step 5)\n"
+    )
+    adopted = plan_status(adopted_text)
+    assert (adopted["status"], adopted["adopted_on"], adopted["preregistration_commit"]) == (
+        "adopted",
+        "2026-11-02",
+        None,
+    )
+    assert plan_phrase(adopted) == (
+        "adopted on 2026-11-02; pre-registration commit: see the study README (signing order, step 5)"
+    )
+    # A SHA on that line is still read, although the signing order records it outside the plan.
+    named = plan_status(
+        adopted_text.replace("not recorded in this file (signing order, step 5)", "`ABC1234`")
+    )
+    assert named["preregistration_commit"] == "abc1234"
+    contradictory = plan_status(
+        BANNER_DRAFT.replace("[reviewer name], on [YYYY-MM-DD]", "A. Reviewer, on 2026-11-02")
+    )
+    assert contradictory["status"] == "unknown"
+    assert "is filled in" in contradictory["reason"]
+    assert plan_status("# Analysis plan\n")["status"] == "unknown"
+    assert plan_status(None)["reason"] == "no analysis plan was given (--analysis-plan)"
+
+    # The status reaches the summary's definitions and the exclusion ground; nothing is hard-coded.
+    rows = _document("SYN-001", MIXED) + _document("SYN-007", MIXED)
+    for plan, definitions, ground in (
+        (draft, "(DRAFT, not adopted)", "(DRAFT, not adopted)"),
+        (named, "(adopted on 2026-11-02; pre-registration commit abc1234)", "(adopted on 2026-11-02)"),
+        (
+            plan_status(None),
+            "(adoption status unknown: no analysis plan was given (--analysis-plan))",
+            "(adoption status unknown)",
+        ),
+    ):
+        summary = _analyses(rows, plan=plan, primary_exclusions=("SYN-007",))
+        assert summary["settings"]["definitions"] == f"analysis-plan.md sections 7 to 10 {definitions}"
+        assert summary["settings"]["analysis_plan"] == plan
+        assert summary["exclusions"]["primary"][0]["ground"] == (
+            f"named with --primary-exclude; the exclusion rule is analysis-plan.md section 5 {ground}"
+        )
+
+
+def test_calibration_document_is_excluded_from_every_set():
+    rows = (
+        _document("SYN-001", MIXED)
+        + _document("SYN-012", MIXED, note="calibration")
+        + _document("SYN-007", MIXED)
+        + _document("SYN-004", MIXED)
+    )
+    summary = _analyses(rows, primary_exclusions=("SYN-007",))
+    assert summary["exclusions"]["calibration_document"]["study_doc_id"] == "SYN-012"
+    assert "--internal-out" in summary["exclusions"]["calibration_document"]["note"]
+    assert summary["analyses"]["primary"]["documents"] == ["SYN-001", "SYN-004"]
+    assert summary["analyses"]["S1"]["documents"] == ["SYN-001", "SYN-004", "SYN-007"]
+    assert summary["analyses"]["primary"]["cells"] == 10
+    # The calibration document cannot also be a primary exclusion.
+    assert _analyses(rows, primary_exclusions=("SYN-012",))["exclusions"]["primary"] == []
+
+
+def test_ambiguous_calibration_marking_stops_the_run():
+    partial = _document("SYN-001", MIXED)
+    partial[0]["review_note"] = "Calibration: P1 applied"
+    with pytest.raises(ValueError, match="some but not all cells"):
+        _analyses(partial + _document("SYN-002", MIXED))
+    # The word inside another word does not count.
+    other = _document("SYN-001", MIXED)
+    other[0]["review_note"] = "recalibration-free note"
+    assert _analyses(other)["exclusions"]["calibration_document"]["study_doc_id"] is None
+    two = _document("SYN-001", MIXED, note="calibration") + _document("SYN-002", MIXED, note="calibration")
+    with pytest.raises(ValueError, match="more than one document"):
+        _analyses(two)
+
+
+def test_uncertain_bounds_s3_and_s4():
+    rows = _document(
+        "SYN-001",
+        [
+            (FLAG, "uncertain"),
+            (FLAG, "missing"),
+            (NO_FLAG, "uncertain"),
+            (NO_FLAG, "present"),
+            (NO_FLAG, "present"),
+        ],
+    )
+    analyses = _analyses(rows)["analyses"]
+    assert analyses["primary"]["confusion_matrix"] == {"tp": 1, "fp": 0, "fn": 0, "tn": 2}
+    assert analyses["S3"]["uncertain_counted_as"] == "missing"
+    assert analyses["S3"]["confusion_matrix"] == {"tp": 2, "fp": 0, "fn": 1, "tn": 2}
+    assert analyses["S4"]["confusion_matrix"] == {"tp": 1, "fp": 1, "fn": 0, "tn": 3}
+    assert analyses["S5"]["computed"] is False
+    assert analyses["S5"]["undefined_reason"]
+
+
+def test_zero_denominators_are_null_with_a_reason_never_nan():
+    # Only true negatives: precision and recall are 0/0.
+    summary = _analyses(_document("SYN-001", [(NO_FLAG, "present")] * 5))
+    precision = summary["analyses"]["primary"]["metrics"]["precision"]
+    assert precision["estimate"] is None
+    assert precision["undefined_reason"].startswith("TP + FP = 0")
+    assert precision["wilson"] == {
+        "lower": None,
+        "upper": None,
+        "undefined_reason": precision["undefined_reason"],
+    }
+    assert precision["clopper_pearson"]["lower"] is None
+    assert precision["document_cluster_bootstrap"]["lower"] is None
+    assert precision["headline"]["method"] is None
+    assert summary["analyses"]["primary"]["metrics"]["f1"]["estimate"] is None
+    json.dumps(summary, allow_nan=False)  # raises if any NaN slipped in
+    empty = _analyses([])
+    assert empty["rows_total"] == 0
+    assert empty["analyses"]["primary"]["cells"] == 0
+    json.dumps(empty, allow_nan=False)
+
+
+def test_headline_falls_back_to_wilson_when_replicates_are_dropped():
+    # Ten documents; only SYN-001 has flagged cells. A replicate misses it with probability
+    # (9/10)^10 = 0.35, above the draft 10% limit, so Wilson is the headline.
+    rows = _document("SYN-001", MIXED)
+    for number in range(2, 11):
+        rows += _document(
+            f"SYN-{number:03d}",
+            [
+                (NO_FLAG, "present"),
+                (NO_FLAG, "missing"),
+                (NO_FLAG, "present"),
+                (NO_FLAG, "present"),
+                (NO_FLAG, "present"),
+            ],
+        )
+    metrics = _analyses(rows, replicates=2000)["analyses"]["primary"]["metrics"]
+    precision = metrics["precision"]
+    assert precision["document_cluster_bootstrap"]["exceeds_dropped_limit"] is True
+    assert precision["headline"]["method"] == "wilson"
+    assert "more than 10%" in precision["headline"]["reason"]
+    # Recall has a denominator in every document: nothing is dropped, and the wider interval wins.
+    recall = metrics["recall"]
+    assert recall["document_cluster_bootstrap"]["dropped"] == 0
+    wilson = recall["wilson"]["upper"] - recall["wilson"]["lower"]
+    bootstrap = recall["document_cluster_bootstrap"]["upper"] - recall["document_cluster_bootstrap"]["lower"]
+    expected = "document_cluster_bootstrap" if round(bootstrap, 6) > round(wilson, 6) else "wilson"
+    assert recall["headline"]["method"] == expected
+
+
+def test_settings_record_the_pre_registered_parameters():
+    settings = summarize_rows(_document("SYN-001", MIXED), analyses=AnalysisContext())["settings"]
+    assert settings["bootstrap"]["replicates"] == BOOTSTRAP_REPLICATES == 10_000
+    assert settings["bootstrap"]["seed"] == BOOTSTRAP_SEED == 20261014
+    assert settings["wilson_z"] == 1.959964
+    assert settings["confidence_level"] == 0.95
+    assert settings["max_dropped_fraction"] == 0.1
+    assert settings["primary_exclusions"] == []
+    assert "null when precision or recall is null" in settings["f1"]
+
+
+def test_offeror_sensitivity_analyses(tmp_path):
+    rows = []
+    for doc in ("SYN-001", "SYN-003", "SYN-004", "SYN-005", "SYN-011", "SYN-012"):
+        rows += _document(doc, MIXED)
+    offerors = {
+        "SYN-001": ("Example Offeror One GmbH", ""),
+        "SYN-003": ("Example Offeror Two S.A.", ""),
+        "SYN-004": ("Example  offeror two s.a.", ""),  # spacing and case are normalised
+        "SYN-005": ("Example Offeror Two S.A.", ""),
+        "SYN-011": ("Example Offeror Three AG", ""),
+        "SYN-012": ("Example Offeror Three AG", ""),
+    }
+    analyses = _analyses(rows, offerors=offerors, offerors_reason=None)["analyses"]
+    assert analyses["S2a"]["offeror_clusters"] == 3
+    assert analyses["S2a"]["metrics"]["precision"]["offeror_cluster_bootstrap"]["clusters"] == 3
+    assert analyses["S2b"]["documents"] == ["SYN-001", "SYN-003", "SYN-011"]
+
+    unknown = _analyses(rows)["analyses"]
+    assert "metrics" not in unknown["S2a"]
+    assert (
+        unknown["S2b"]["undefined_reason"]
+        == "no source manifest was given (--manifest), so the offerors are unknown"
+    )
+
+    with pytest.raises(ValueError, match="not in the source manifest"):
+        _analyses(rows, offerors={"SYN-001": ("A", "")}, offerors_reason=None)
+    wrong_hash = {doc: (name, "0" * 64) for doc, (name, _) in offerors.items()}
+    with pytest.raises(ValueError, match="differs from the source manifest"):
+        _analyses(rows, offerors=wrong_hash, offerors_reason=None)
+
+    # load_analysis_context reads the offerors from a manifest's entries.
+    findings = tmp_path / "findings.json"
+    findings.write_text(json.dumps({"generated_at": "2026-07-06T00:00:00+00:00"}), encoding="utf-8")
+    manifest = tmp_path / "manifest.json"
+    entries = [{"study_doc_id": doc, "offeror_or_issuer": name} for doc, (name, _) in offerors.items()]
+    manifest.write_text(json.dumps({"entries": entries}), encoding="utf-8")
+    context = load_analysis_context(findings, manifest=manifest, replicates=300)
+    assert summarize_rows(rows, analyses=context)["analyses"]["S2a"]["offeror_clusters"] == 3
+
+
+def test_detector_identity_comes_from_the_findings_file_or_the_analysis_plan(tmp_path):
+    findings = {"schema": "synthetic.v1", "digest": "d" * 64, "generated_at": "2026-07-06T00:00:00+00:00"}
+    path = tmp_path / "findings.json"
+    path.write_text(json.dumps(findings), encoding="utf-8")
+    detector = load_analysis_context(path).detector
+    assert detector["findings_file"] == "findings.json"
+    assert detector["findings_sha256"] == hashlib.sha256(path.read_bytes()).hexdigest()
+    assert (detector["findings_schema"], detector["findings_digest"]) == ("synthetic.v1", "d" * 64)
+    assert detector["commit"] is None
+    assert "no analysis plan was given (--analysis-plan)" in detector["commit_status"]
+
+    plan = tmp_path / "analysis-plan.md"
+    plan.write_text("| Detector | code; detector commit: [SHA, see step 0.4] |\n", encoding="utf-8")
+    assert load_analysis_context(path, analysis_plan=plan).detector["commit"] is None
+    plan.write_text("| Detector | code; detector commit: `abc1234` |\n", encoding="utf-8")
+    detector = load_analysis_context(path, analysis_plan=plan).detector
+    assert detector["commit"] == "abc1234"
+    assert detector["commit_source"] == "analysis-plan.md, section 2, Detector row"
+
+    path.write_text(json.dumps({**findings, "detector_commit": "fedcba9876"}), encoding="utf-8")
+    assert load_analysis_context(path, analysis_plan=plan).detector["commit"] == "fedcba9876"
+
+
+def _reviewed(label, reviewer="reviewer-a", when="2026-10-14"):
+    return {
+        "human_label": label,
+        "reviewer_id": reviewer,
+        "reviewed_at": when,
+        "source_pinpoint": "synthetic section 1",
+        "review_note": "" if label == "present" else "synthetic note",
+    }
+
+
+def _fill(path, cells):
+    """Write values into the rows of a sheet the builder wrote, by cell."""
+    rows = _read_sheet(path)
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=list(rows[0]), lineterminator="\n")
+    writer.writeheader()
+    for row in rows:
+        writer.writerow({**row, **cells.get((row["study_doc_id"], row["rule_id"]), {})})
+    path.write_text(buffer.getvalue(), encoding="utf-8")
+
+
+def _two_reviews(tmp_path, *, merge_first=False):
+    """A synthetic study with a complete first review and a second review that differs on one cell."""
+    study = _synthetic_study(tmp_path)
+    builder = _builder()
+
+    def run(*args):
+        return builder["main"](list(args), study_dir=study, today=TODAY)
+
+    assert run() == 0
+    first = {key: _reviewed("present") for key in SYNTHETIC_KEYS}
+    first[SYNTHETIC_KEYS[0]] = _reviewed("missing")
+    _fill(study / "human-review-blinded.csv", first)
+    if merge_first:
+        assert run("--merge-blinded") == 0
+    assert run("--second-sheet", "--second-all") == 0
+    second = {
+        key: {**cell, "reviewer_id": "reviewer-b", "reviewed_at": "2026-10-21"} for key, cell in first.items()
+    }
+    second[SYNTHETIC_KEYS[0]] = _reviewed("present", "reviewer-b", "2026-10-21")
+    _fill(study / "human-review-second.csv", second)
+    return study, run
+
+
+def _agreement(study, *, adjudication=True):
+    path = study / "human-review-adjudication.csv"
+    context = load_analysis_context(
+        study / "findings-pseudonymous.json",
+        second_review=study / "human-review-second.csv",
+        adjudication=path if adjudication and path.exists() else None,
+        replicates=50,
+    )
+    matrix = _read_sheet(study / "human-review-matrix.csv")
+    return summarize_rows(matrix, today=TODAY, analyses=context)["agreement"]
+
+
+DECIDED = {
+    "final_label": "missing",
+    "adjudicated_by": "reviewer-a+reviewer-b",
+    "adjudicated_at": "2026-10-25",
+    "adjudication_reason": "synthetic reason",
+}
+
+
+def test_agreement_compares_the_two_reviews_after_the_adjudicated_merge(tmp_path):
+    study, run = _two_reviews(tmp_path)
+    assert _agreement(study, adjudication=False)["status"] == "awaiting_merge"
+    assert _analyses(_document("SYN-001", MIXED))["agreement"]["status"] == "not_given"
+
+    assert run("--disagreements") == 0
+    _fill(study / "human-review-adjudication.csv", {SYNTHETIC_KEYS[0]: DECIDED})
+    assert run("--merge-blinded") == 0
+    agreement = _agreement(study)
+
+    assert agreement["status"] == "computed"
+    assert (agreement["second_review_file"], agreement["adjudication_file"]) == (
+        "human-review-second.csv",
+        "human-review-adjudication.csv",
+    )
+    assert agreement["cells_double_reviewed"] == 4
+    assert (agreement["scope"]["cells"], agreement["scope"]["flagged_cells"]) == (4, 1)
+    (pair,) = agreement["pairs"]
+    assert (pair["first_reviewers"], pair["second_reviewers"]) == (["reviewer-a"], ["reviewer-b"])
+    # The first review of the adjudicated cell comes from the adjudication file, not the matrix.
+    assert (pair["cells"], pair["disagreements"]) == (4, 1)
+    assert pair["all_labels"]["raw_agreement"] == 0.75
+    assert pair["present_missing"]["cells"] == 4
+    assert agreement["adjudication"] == {
+        "status": "complete",
+        "disagreements": 1,
+        "adjudicated": 1,
+        "reason": None,
+        "corrected_after_merge": 0,
+    }
+
+    # The matrix holds an adjudicated cell, so the summary needs the file the merge used.
+    with pytest.raises(
+        ValueError, match="the matrix holds an adjudicated cell, but no adjudication file was given"
+    ):
+        _agreement(study, adjudication=False)
+
+
+def test_adjudication_state_follows_the_decisions(tmp_path):
+    # The first review was merged before the second sheet was built, so the matrix holds it.
+    study, run = _two_reviews(tmp_path, merge_first=True)
+    agreement = _agreement(study)
+    assert agreement["status"] == "computed"
+    assert agreement["pairs"][0]["disagreements"] == 1
+    assert agreement["adjudication"]["status"] == "not_given"
+
+    assert run("--disagreements") == 0
+    state = _agreement(study)["adjudication"]
+    assert (state["status"], state["disagreements"], state["adjudicated"]) == ("pending", 1, 0)
+
+    _fill(study / "human-review-adjudication.csv", {SYNTHETIC_KEYS[0]: DECIDED})
+    state = _agreement(study)["adjudication"]
+    assert state["status"] == "not_merged"
+    assert state["reason"].startswith("1 adjudicated label is not in the matrix yet.")
+    assert "until that cell is set back to pending, with empty reviewer fields" in state["reason"]
+
+    _fill(
+        study / "human-review-adjudication.csv",
+        {SYNTHETIC_KEYS[0]: {**DECIDED, "adjudicated_by": "reviewer-a"}},
+    )
+    with pytest.raises(ValueError, match="names only one of the two reviewers"):
+        _agreement(study)
+
+    # The reason's advice holds: the merge refuses the cell that the earlier merge filled with the
+    # first review, and writes the adjudicated label once that cell is pending again.
+    _fill(study / "human-review-adjudication.csv", {SYNTHETIC_KEYS[0]: DECIDED})
+    assert run("--merge-blinded") == 1
+    cleared = {
+        "human_label": "pending",
+        "reviewer_id": "",
+        "reviewed_at": "",
+        "source_pinpoint": "",
+        "review_note": "",
+    }
+    _fill(study / "human-review-matrix.csv", {SYNTHETIC_KEYS[0]: cleared})
+    assert run("--merge-blinded") == 0
+    assert _agreement(study)["adjudication"]["status"] == "complete"
+
+
+def test_a_correction_after_the_merge_keeps_the_first_review_of_an_adjudicated_cell(tmp_path):
+    study, run = _two_reviews(tmp_path)
+    assert run("--disagreements") == 0
+    _fill(study / "human-review-adjudication.csv", {SYNTHETIC_KEYS[0]: DECIDED})
+    assert run("--merge-blinded") == 0
+    matrix = study / "human-review-matrix.csv"
+    (merged,) = [
+        row for row in _read_sheet(matrix) if (row["study_doc_id"], row["rule_id"]) == SYNTHETIC_KEYS[0]
+    ]
+    # REVIEWING.md step 4: a correction is made in the matrix and recorded in the cell's review_note.
+    correction = {
+        "human_label": "present",
+        "source_pinpoint": "synthetic section 2",
+        "review_note": f"{merged['review_note']}; corrected after the merge: synthetic",
+    }
+    _fill(matrix, {SYNTHETIC_KEYS[0]: correction})
+
+    agreement = _agreement(study)
+    assert agreement["status"] == "computed"
+    # The first review still comes from the adjudication file, so the disagreement stays.
+    (pair,) = agreement["pairs"]
+    assert (pair["first_reviewers"], pair["cells"], pair["disagreements"]) == (["reviewer-a"], 4, 1)
+    assert agreement["adjudication"] == {
+        "status": "complete",
+        "disagreements": 1,
+        "adjudicated": 1,
+        "reason": None,
+        "corrected_after_merge": 1,
+    }
+
+    # A note naming other labels than the decided row is not that row's merge.
+    _fill(
+        matrix,
+        {SYNTHETIC_KEYS[0]: {"review_note": "Adjudicated (first: present, second: missing): synthetic"}},
+    )
+    with pytest.raises(
+        ValueError, match=r"does not start with 'Adjudicated \(first: missing, second: present\)'"
+    ):
+        _agreement(study)
+
+
+def test_agreement_waits_for_a_complete_second_review_and_refuses_an_invalid_one(tmp_path):
+    study, _run = _two_reviews(tmp_path, merge_first=True)
+    second = study / "human-review-second.csv"
+    _fill(second, {SYNTHETIC_KEYS[1]: {"human_label": "pending", "reviewer_id": "", "reviewed_at": ""}})
+    agreement = _agreement(study)
+    assert agreement["status"] == "incomplete"
+    assert "1 of 4 second-review cells are still pending" in agreement["reason"]
+    assert agreement["pairs"] == []
+
+    _fill(second, {SYNTHETIC_KEYS[1]: _reviewed("present", "reviewer-a", "2026-10-21")})
+    with pytest.raises(ValueError, match="also made the first review of this cell"):
+        _agreement(study)
+
+    rows = _read_sheet(second)
+    rows[1]["study_doc_id"] = "SYN-009"
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=list(rows[0]), lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+    second.write_text(buffer.getvalue(), encoding="utf-8")
+    with pytest.raises(ValueError, match="SYN-009 SYNTHETIC_RULE_B is not a cell of the matrix"):
+        _agreement(study)
+
+
+def test_analyses_command_writes_the_internal_file_and_nothing_on_error(tmp_path, capsys):
+    study = _synthetic_study(tmp_path)
+    assert _builder()["main"]([], study_dir=study) == 0
+    matrix, findings = study / "human-review-matrix.csv", study / "findings-pseudonymous.json"
+    out, internal = tmp_path / "out" / "summary.json", tmp_path / "out" / "human-review-internal.json"
+    args = ["--matrix", str(matrix), "--out", str(out), "--findings", str(findings)]
+
+    assert main(args, today=TODAY) == 0
+    plain = json.loads(out.read_text(encoding="utf-8"))
+    assert "analyses" not in plain
+
+    assert (
+        main([*args, "--analyses", "--replicates", "50", "--internal-out", str(internal)], today=TODAY) == 0
+    )
+    summary = json.loads(out.read_text(encoding="utf-8"))
+    assert {key: summary[key] for key in plain} == plain
+    assert summary["detector"]["findings_file"] == "findings-pseudonymous.json"
+    assert summary["settings"]["bootstrap"]["replicates"] == 50
+    assert "per_rule" not in summary["analyses"]["S1"]
+    detail = json.loads(internal.read_text(encoding="utf-8"))
+    assert [item["study_doc_id"] for item in detail["documents"]] == ["SYN-001", "SYN-002"]
+    assert detail["offerors"] is None
+    assert main([*args, "--analyses", "--require-complete"], today=TODAY) == 2
+
+    out.unlink()
+    internal.unlink()
+    capsys.readouterr()
+    assert main([*args, "--analyses", "--primary-exclude", "SYN-009", "--internal-out", str(internal)]) == 1
+    assert "the analyses stopped; nothing written: --primary-exclude SYN-009" in capsys.readouterr().err
+    assert not out.exists()
+    assert not internal.exists()
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        ["--analyses"],
+        ["--manifest", "manifest.json"],
+        ["--primary-exclude", "SYN-001"],
+        ["--seed", "1"],
+        ["--findings", "findings.json", "--internal-out", "internal.json"],
+        ["--findings", "findings.json", "--analyses", "--adjudication", "adjudication.csv"],
+        ["--findings", "findings.json", "--analyses", "--replicates", "0"],
+    ],
+)
+def test_analysis_options_need_analyses_and_findings(tmp_path, extra):
+    with pytest.raises(SystemExit) as exited:
+        main(["--matrix", str(tmp_path / "matrix.csv"), "--out", str(tmp_path / "summary.json"), *extra])
+    assert exited.value.code == 2
+    assert not (tmp_path / "summary.json").exists()
+
+
+def test_analysis_option_errors_name_the_options(tmp_path, capsys):
+    args = ["--matrix", str(tmp_path / "matrix.csv"), "--out", str(tmp_path / "summary.json")]
+    with pytest.raises(SystemExit):
+        main([*args, "--manifest", "manifest.json"])
+    assert "--manifest applies only with --analyses" in capsys.readouterr().err
+    with pytest.raises(SystemExit):
+        main([*args, "--manifest", "manifest.json", "--seed", "1"])
+    assert "--manifest, --seed apply only with --analyses" in capsys.readouterr().err
