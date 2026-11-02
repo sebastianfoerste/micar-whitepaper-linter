@@ -158,6 +158,8 @@ def test_casp_named_in_the_same_sentence_as_its_lei_in_prose():
         f"The LEI is {CASP_LEI}.",
         # The role ends with its sentence: the next sentence's LEI is not the provider's.
         f"Example CASP S.A. acts as crypto-asset service provider for the placing. The issuer's LEI is {CASP_LEI}.",
+        # A line ends a field of the numbered layout, so a role in the line before does not carry over either.
+        f"Example CASP S.A. acts as crypto-asset service provider for the placing\nThe issuer's LEI is {CASP_LEI}",
     ],
 )
 def test_an_lei_not_given_as_another_persons_is_still_compared_with_the_parties(summary: str):

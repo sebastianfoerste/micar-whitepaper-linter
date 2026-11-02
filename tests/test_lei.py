@@ -1060,9 +1060,10 @@ def test_a_code_glued_to_a_word_never_passes(code: str):
         # Markup and references that a renderer shows as written, and words around them.
         "The offeror's e-mail is info_desk@synthetic.example; its snake_case_2024 key is not an LEI.",
         "Synthetic Offeror GmbH &amp; Co. KG, **Frankfurt am Main**, [website](https://synthetic.example).",
-        # Pieces with letters and digits on lines that name no LEI label (DTI codes, a VAT number).
-        "The DTI is 4H95J0R2X.\nThe functionally fungible group DTI is 4H95J0R2Y.\nThe VAT number is DE123456789."
-        "\nRegister number HRB12345678.",
+        # Pieces with letters and digits on lines that name no LEI label (fictional DTI codes, VAT and register
+        # numbers).
+        "The DTI is SYNTH0DT1.\nThe functionally fungible group DTI is SYNTH0DT2.\nThe VAT number is DE000000000."
+        "\nRegister number HRB00000000.",
     ],
     ids=["underscores in words", "markup around words", "pieces without a label"],
 )
