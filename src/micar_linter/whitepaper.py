@@ -97,6 +97,33 @@ _RESERVED_METADATA_KEYS = (
 )
 
 
+def _section_text(value: Any) -> str:
+    """The text of a JSON section value: a string as it is; a list as its items and an object as its entries
+    ("key: value"), one per line, nested ones too; any other value as Python writes it ("123", "True").
+
+    Python's representation of a list or an object ("['...', '...']") quoted each string with escapes, so a
+    zero-width space or a line end inside it became the letters "\\u200b" or "\\n" next to the text around it.
+    """
+    if isinstance(value, str):
+        return value
+    if not isinstance(value, list | dict):
+        return str(value)
+    lines: list[str] = []
+    # The values still to write, last first, each with the key it stands under (or "").
+    pending: list[tuple[str, Any]] = [("", value)]
+    while pending:
+        key, item = pending.pop()
+        if isinstance(item, list | dict):
+            if key:
+                lines.append(f"{key}:")
+            children = item.items() if isinstance(item, dict) else (("", child) for child in item)
+            pending.extend(reversed([(str(name), child) for name, child in children]))
+        else:
+            text = item if isinstance(item, str) else str(item)
+            lines.append(f"{key}: {text}" if key else text)
+    return "\n".join(lines)
+
+
 def _load_json(path: Path) -> Whitepaper:
     try:
         raw = path.read_text(encoding="utf-8")
@@ -120,7 +147,7 @@ def _load_json(path: Path) -> Whitepaper:
             + ", ".join(t.value for t in WhitepaperType)
         ) from exc
 
-    sections = {str(k): (v if isinstance(v, str) else str(v)) for k, v in data["sections"].items()}
+    sections = {str(k): _section_text(v) for k, v in data["sections"].items()}
     metadata = {
         k: v
         for k, v in data.items()

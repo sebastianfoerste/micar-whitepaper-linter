@@ -851,3 +851,284 @@ def test_a_code_the_reading_did_not_take_for_lei_like_never_passes(text: str):
 )
 def test_the_wider_reading_leaves_words_and_short_numbers_alone(text: str):
     assert malformed_leis(text, party=True) == ()
+
+
+# Round 3 of the follow-up verification: codes that markup, a table cell, an invisible character, a JSON list or
+# a glued word split or hid. Every such code must keep COMMON.LEI_CHECK_DIGITS from passing.
+def _spaced(code: str, separator: str) -> str:
+    return separator.join(code[i : i + 4] for i in range(0, len(code), 4))
+
+
+MARKDOWN_CODES = {"19 characters": OTHER_LEI[:-1], "invalid check digits": OTHER_BROKEN}
+MARKDOWN_LINES = {
+    # Character references, which a renderer shows as the character they name.
+    **{
+        f"{reference}, {name}": f"LEI: {_spaced(code, reference)}"
+        for reference in ("&nbsp;", "&#160;", "&thinsp;", "&ndash;")
+        for name, code in MARKDOWN_CODES.items()
+    },
+    "&nbsp;, lower case": f"lei: {_spaced(OTHER_LEI[:-1].lower(), '&nbsp;')}",
+    # Inline markup inside the code, which a renderer does not show.
+    **{
+        f"{shape}, {name}": template.format(code[:9], code[9:])
+        for shape, template in {
+            "bold first part": "LEI: **{}**{}",
+            "bold second part": "LEI: {}**{}**",
+            "b tag": "LEI: <b>{}</b>{}",
+            "HTML comment": "LEI: {}<!-- -->{}",
+            "&shy;": "LEI: {}&shy;{}",
+            "&#8203;": "LEI: {}&#8203;{}",
+            "spans": "LEI: <span>{}</span><span>{}</span>",
+            "br tag": "LEI: {}<br>{}",
+            "wbr tag": "LEI: {}<wbr>{}",
+            "backslash line break": "LEI: {}\\\n{}",
+            "code spans": "LEI: `{}``{}`",
+            "link": "LEI: [{}](#x){}",
+        }.items()
+        for name, code in MARKDOWN_CODES.items()
+    },
+}
+
+
+@pytest.mark.parametrize("line", MARKDOWN_LINES.values(), ids=MARKDOWN_LINES.keys())
+def test_a_malformed_lei_that_markdown_markup_splits_never_passes(tmp_path: Path, line: str):
+    # The Markdown loader keeps the file as written, so a reference or markup inside a code split it into
+    # groups that did not join. Each text is now read as written and as a renderer shows it.
+    path = tmp_path / "draft.md"
+    path.write_text(
+        f"## Information about the Issuer\n\n{ISSUER_TEXT}\n\n## Information about the Offeror\n\n"
+        f"Synthetic Offeror GmbH, a fictional company.\n\n{line}\n",
+        encoding="utf-8",
+    )
+    check_digits, consistency = _check_digits(path)
+    assert check_digits.status == "review"
+    # The code is named in its section, as shown.
+    assert any("in section 'offeror'" in issue for issue in check_digits.issues)
+    assert consistency.status == "pass"
+
+
+def test_a_valid_lei_that_markup_splits_is_checked_as_shown_but_not_found(tmp_path: Path):
+    # As shown, the code is a valid LEI, so it adds no issue; as written it is no LEI, so it does not count as
+    # found and the draft keeps the no-LEI status.
+    sections = {"offeror": f"Synthetic Offeror GmbH. LEI: {OTHER_LEI[:9]}**{OTHER_LEI[9:]}**"}
+    assert find_leis(sections["offeror"]) == ()
+    assert find_leis(sections["offeror"], shown=True) == (OTHER_LEI,)
+    finding = _finding("COMMON.LEI_CHECK_DIGITS", sections)
+    assert finding.status == "review" and len(finding.issues) == 2
+    assert _finding("COMMON.LEI_CHECK_DIGITS", {"issuer": ISSUER_TEXT, **sections}).status == "pass"
+
+
+# A narrow table column wraps the code, and the next cell's words stand between its two pieces in the text
+# that pypdf extracts. The pieces are typos of OTHER_LEI.
+TABLE_WRAPS = {
+    "19 characters": (OTHER_LEI[:13], OTHER_LEI[13:-1]),
+    "21 characters": (MALFORMED["21 characters"][:13], MALFORMED["21 characters"][13:]),
+    "lower case": (OTHER_LEI[:13].lower(), OTHER_LEI[13:].lower()),
+    "letter in a check-digit position": (OTHER_LEI[:13], MALFORMED["letter in a check-digit position"][13:]),
+    "invalid check digits": (OTHER_BROKEN[:13], OTHER_BROKEN[13:]),
+}
+
+
+@pytest.mark.parametrize(("first", "second"), TABLE_WRAPS.values(), ids=TABLE_WRAPS.keys())
+def test_a_malformed_lei_that_a_pdf_table_cell_wraps_never_passes(tmp_path: Path, first: str, second: str):
+    blocks = [
+        ("heading", "Information about the Issuer"),
+        ("body", ISSUER_TEXT),
+        ("heading", OFFEROR),
+        ("line", f"Offeror LEI {first} Synthetic Offeror GmbH"),
+        ("line", f"{second} Frankfurt am Main"),
+    ]
+    path = _write_pdf(tmp_path / "draft.pdf", blocks)
+    check_digits, consistency = _check_digits(path)
+    assert check_digits.status == "review"
+    assert any(f"'{first} \u2026 {second}'" in issue for issue in check_digits.issues)
+    assert consistency.status == "pass"
+    # The same table in a DOCX, whose cells are paragraphs of their own, already gave Review.
+    docx_path = _write_docx_rows(
+        tmp_path / "draft.docx",
+        [*blocks[:3], ("row", f"Offeror LEI | {first}{second} | Synthetic Offeror GmbH, Frankfurt am Main")],
+    )
+    assert _check_digits(docx_path)[0].status == "review"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        # Two pieces on the line after a label line, or with the label on the second line.
+        f"Offeror LEI {OTHER_LEI[:13]} Synthetic Offeror GmbH\n{OTHER_LEI[13:-1]} Frankfurt am Main",
+        f"Offeror {OTHER_LEI[:13]} Synthetic Offeror GmbH\nLEI {OTHER_LEI[13:-1]} Frankfurt am Main",
+    ],
+    ids=["label on the first line", "label on the second line"],
+)
+def test_two_pieces_of_a_code_on_a_label_line_and_the_next_are_read_as_one(text: str):
+    assert malformed_leis(text) == (f"{OTHER_LEI[:13]} \u2026 {OTHER_LEI[13:-1]}",)
+
+
+FORMAT_CHARACTERS = {
+    "left-to-right mark": "\u200e",
+    "right-to-left mark": "\u200f",
+    "left-to-right embedding": "\u202a",
+    "pop directional formatting": "\u202c",
+    "left-to-right isolate": "\u2066",
+    "pop directional isolate": "\u2069",
+    "function application": "\u2061",
+    "invisible times": "\u2062",
+    "invisible separator": "\u2063",
+    "Mongolian vowel separator": "\u180e",
+    "Arabic letter mark": "\u061c",
+    "variation selector 16": "\ufe0f",
+    "middle dot": "\u00b7",
+    "two-em dash": "\u2e3a",
+    "hyphen bullet": "\u2043",
+    "control character": "\u0007",
+    "small em dash": "\ufe58",
+}
+
+
+@pytest.mark.parametrize("code", MARKDOWN_CODES.values(), ids=MARKDOWN_CODES.keys())
+@pytest.mark.parametrize("character", FORMAT_CHARACTERS.values(), ids=FORMAT_CHARACTERS.keys())
+def test_a_format_character_or_separator_inside_a_code_never_hides_it(code: str, character: str):
+    # Every format character joins groups as a zero-width space does, a mark stays inside its group, and
+    # every dash, the hyphen bullet and the middle dot join as a hyphen does.
+    sections = {"issuer": ISSUER_TEXT, "offeror": f"LEI: {code[:9]}{character}{code[9:]}"}
+    assert len(malformed_leis(sections["offeror"])) == 1
+    assert _finding("COMMON.LEI_CHECK_DIGITS", sections).status == "review"
+    assert _finding("COMMON.LEI_CONSISTENCY", sections).status == "pass"
+
+
+@pytest.mark.parametrize("code", MARKDOWN_CODES.values(), ids=MARKDOWN_CODES.keys())
+def test_a_format_character_inside_a_code_never_hides_it_in_a_json_or_xhtml_draft(tmp_path: Path, code: str):
+    path = tmp_path / "draft.json"
+    draft = {
+        "title": "Synthetic",
+        "type": "other",
+        "sections": {"issuer": ISSUER_TEXT, "offeror": f"LEI: {code[:9]}\u200e{code[9:]}"},
+    }
+    path.write_text(json.dumps(draft), encoding="utf-8")
+    assert _check_digits(path, None)[0].status == "review"
+    xhtml = _write_xhtml(tmp_path / "draft.xhtml", f"<p>LEI: {code[:9]}&#8206;{code[9:]}</p>")
+    assert _check_digits(xhtml)[0].status == "review"
+
+
+@pytest.mark.parametrize(
+    ("offeror", "text"),
+    [
+        (
+            ["Synthetic Offeror GmbH.", f"LEI: {OTHER_LEI[:9]}\u200b{OTHER_LEI[9:-1]}"],
+            f"Synthetic Offeror GmbH.\nLEI: {OTHER_LEI[:9]}\u200b{OTHER_LEI[9:-1]}",
+        ),
+        (["Synthetic Offeror GmbH.", f"LEI:\n{OTHER_LEI}1234"], f"Synthetic Offeror GmbH.\nLEI:\n{OTHER_LEI}1234"),
+        ({"lei": f"LEI:\t{OTHER_LEI}1234"}, f"lei: LEI:\t{OTHER_LEI}1234"),
+    ],
+    ids=["list with a zero-width space", "list with a line end", "object with a tab"],
+)
+def test_a_json_section_given_as_a_list_or_object_is_read_as_its_text(tmp_path: Path, offeror, text: str):
+    # The JSON loader wrote such a value as Python's representation of it, whose escapes ("\\u200b", "\\n",
+    # "\\t") split a code or glued a letter to it.
+    path = tmp_path / "draft.json"
+    draft = {"title": "Synthetic", "type": "other", "sections": {"issuer": ISSUER_TEXT, "offeror": offeror}}
+    path.write_text(json.dumps(draft), encoding="utf-8")
+    assert load_whitepaper(path).sections["offeror"] == text
+    check_digits, consistency = _check_digits(path, None)
+    assert check_digits.status == "review"
+    assert consistency.status == "pass"
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        "Kennung" + OTHER_LEI[:-1],
+        "Kennung" + MALFORMED["21 characters"],
+        "Kennung" + OTHER_LEI.lower(),
+        "Kennung" + MALFORMED["letter in a check-digit position"],
+        "Code" + MALFORMED["21 characters"],
+        "KennungSYNTH" + OTHER_LEI[4:-1],
+        OTHER_LEI + "Kennung",
+    ],
+    ids=["19 characters", "21 characters", "lower case", "letter in a check-digit position", "Code", "camel case", "word after"],
+)
+def test_a_code_glued_to_a_word_never_passes(code: str):
+    # One group of more than 24 characters was no code unless it started with "LEI".
+    sections = {"issuer": ISSUER_TEXT, "offeror": f"Synthetic Offeror GmbH. LEI: {code}."}
+    assert malformed_leis(sections["offeror"]) == (code,)
+    assert _finding("COMMON.LEI_CHECK_DIGITS", sections).status == "review"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        # Markup and references that a renderer shows as written, and words around them.
+        "The offeror's e-mail is info_desk@synthetic.example; its snake_case_2024 key is not an LEI.",
+        "Synthetic Offeror GmbH &amp; Co. KG, **Frankfurt am Main**, [website](https://synthetic.example).",
+        # Pieces with letters and digits on lines that name no LEI label (DTI codes, a VAT number).
+        "The DTI is 4H95J0R2X.\nThe functionally fungible group DTI is 4H95J0R2Y.\nThe VAT number is DE123456789."
+        "\nRegister number HRB12345678.",
+    ],
+    ids=["underscores in words", "markup around words", "pieces without a label"],
+)
+def test_the_round_3_reading_leaves_words_and_unlabelled_pieces_alone(text: str):
+    assert malformed_leis(text, party=True) == ()
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        # Table pieces that hold no letter, or that sit two lines apart, or more than one line below a label.
+        f"Offeror LEI {OTHER_LEI[:4]} Synthetic Offeror GmbH\n{OTHER_LEI[4:-1]} Frankfurt am Main",
+        f"Offeror LEI {OTHER_LEI[:13]} Synthetic Offeror GmbH\nFrankfurt am Main\n{OTHER_LEI[13:-1]}",
+        f"LEI\nOfferor {OTHER_LEI[:13]} Synthetic Offeror GmbH\n{OTHER_LEI[13:-1]} Frankfurt am Main",
+        # Pieces of spaced groups in a table cell.
+        f"Offeror LEI {_spaced(OTHER_LEI[:12], ' ')} Synthetic Offeror GmbH\n{_spaced(OTHER_LEI[12:-1], ' ')} Main",
+        # A code in lower case and in groups, with three groups of letters in a row.
+        "LEI: 9999 synt habc defg h012",
+        # Groups split by full stops.
+        "LEI: 9999.SYNT.HABC.DEFG.H012",
+        # Text a renderer does not show at all: an HTML comment, a link target.
+        f"LEI <!-- {OTHER_LEI[:-1]} --> to be obtained",
+        f"LEI [to be obtained](#{OTHER_LEI[:-1]})",
+    ],
+)
+def test_the_round_3_documented_limits_of_the_reading(text: str):
+    # ADR 0007 and the rule page name these limits; the comment and the link target are read as written.
+    malformed = malformed_leis(text)
+    if "<!--" in text or "](" in text:
+        assert malformed == (OTHER_LEI[:-1],)
+    else:
+        assert malformed == ()
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "LEI **A1** " * 20_000,
+        "LEI _a_ b_c " * 17_000,
+        "LEI 9999&nbsp;SYNT " * 11_000,
+        "<!--" * 50_000,
+        "<a " * 70_000,
+        "](" * 100_000,
+        "LEI A1B2C3 x\n" * 16_000,
+        "LEI 9999SYNTH0000 Synthetic GmbH\nZZQ026 Frankfurt\n" * 4_200,
+        ("A1" + "\u200b" * 10) * 17_000,
+        "A1" + "\u200e" * 200_000 + "B2",
+        "LEI Kennung9999SYNTH0000ZZQ026 " * 6_500,
+    ],
+    ids=[
+        "bold",
+        "underscores",
+        "references",
+        "unclosed comments",
+        "unclosed tags",
+        "link brackets",
+        "pieces on label lines",
+        "table wraps",
+        "invisible characters",
+        "one long invisible gap",
+        "glued words",
+    ],
+)
+def test_200_kb_of_text_with_markup_pieces_or_invisible_characters_is_read_in_linear_time(text: str):
+    assert len(text) >= 200_000
+    start = time.perf_counter()
+    malformed_leis(text)
+    find_leis(text, shown=True)
+    assert time.perf_counter() - start < 2

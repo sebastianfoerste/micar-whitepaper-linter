@@ -634,11 +634,12 @@ def _lei_check_digits_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     A draft reads LEIs in all its text once it has a party section, or a section or its file text names an
     LEI label or holds an LEI-shaped code with a letter (lei.draft_reads_leis). Then every section is read,
     and so is the text of a document file outside its sections (the reserved metadata key document_text,
-    set only by the document loaders: headings, tables, headers and footers, text in no section). An
-    LEI-shaped code there with invalid check digits, and an LEI-like code that is not LEI-shaped (wrong
-    length, lower case, a letter in a check-digit position, a character outside ASCII, split into groups),
-    keeps the rule from passing. Only an LEI-shaped code in a section that reads LEIs on its own counts as
-    found, so a draft whose only LEI sits outside such a section keeps the no-LEI status.
+    set only by the document loaders: headings, tables, headers and footers, text in no section). Each text
+    is read as written and, where markup or a character reference changes it, as shown. An LEI-shaped code
+    there with invalid check digits, and an LEI-like code that is not LEI-shaped (wrong length, lower case, a
+    letter in a check-digit position, a character outside ASCII, glued to a word, split into groups), keeps
+    the rule from passing. Only an LEI-shaped code that a section that reads LEIs on its own holds as written
+    counts as found, so a draft whose only LEI sits outside such a section keeps the no-LEI status.
     """
     is_de = whitepaper.language == "de"
     sections = whitepaper.sections
@@ -649,7 +650,7 @@ def _lei_check_digits_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     )
     issues = [
         _invalid_lei_issue(code, section, is_de)
-        for section, codes in leis_by_section(sections, everywhere).items()
+        for section, codes in leis_by_section(sections, everywhere, shown=True).items()
         for code in codes
         if not has_valid_check_digits(code)
     ]
