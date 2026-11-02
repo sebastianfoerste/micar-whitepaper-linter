@@ -188,13 +188,22 @@ _EMT_MARKERS = ("e-money token", "referenced currency", "safeguarding of funds")
 # "neither an asset-referenced token nor an e-money token", "crypto-assets other than asset-referenced tokens
 # or e-money tokens" (the title of Title II MiCAR), "has no reserve of assets". A marker counts only where no
 # negation stands before it in its clause, at most _NEGATION_REACH words away. A clause ends at a sentence
-# mark, a colon or a word that turns the sentence ("but", "however"), and at the edge of a heading or a
-# section (_regime_pieces), but not at a paragraph or line end between two headings, since a DOCX may split a
-# sentence over paragraphs and a PDF wraps its lines inside a sentence.
+# mark, a colon inside a line or a word that turns the sentence ("but", "however"), and at the edge of a
+# heading or a section. In a DOCX or PDF it also ends at a paragraph or line end before a line that starts
+# with a capital letter, a new sentence; it runs on into a line that starts otherwise, since a DOCX may split
+# a sentence over paragraphs and a PDF wraps its lines inside a sentence, and into each item of a list after
+# a lead-in (_regime_pieces).
 _NEGATION = re.compile(r"\b(?:not|no|neither|nor|never|without|other than|except|excluding|unlike)\b|n't\b")
 _CLAUSE_END = re.compile(r"[.!?;:](?=\s|$)|\b(?:but|however|whereas|although|though|while)\b")
 _NEGATION_REACH = 8
 _NEGATION_LOOKBACK = 200
+# A list item: a bullet or dash, or a list letter or number, before its text.
+_LIST_ITEM = re.compile(
+    r"(?:[-*\u2013\u2014\u2022\u2023\u2043\u00b7\u25aa\u25cf]|\(?(?:[a-z]|[ivx]{1,4}|\d{1,2})[.)])\s"
+)
+_FIRST_CHARACTER = re.compile(r"[^\W_]")
+# A heading that ends in a negation, perhaps with a colon after it, leads into the line after it.
+_ENDS_IN_NEGATION = re.compile(rf"(?:{_NEGATION.pattern})\W*$")
 
 
 def _negated(text: str, start: int) -> bool:
@@ -206,11 +215,12 @@ def _negated(text: str, start: int) -> bool:
     return bool(negations) and len(clause[negations[-1].end() :].split()) <= _NEGATION_REACH
 
 
-def _names_regime(pieces: list[str], markers: tuple[str, ...]) -> bool:
-    """Whether one of the lower-case pieces holds one of the markers with no negation before it."""
-    for text in pieces:
+def _names_regime(pieces: list[tuple[str, int]], markers: tuple[str, ...]) -> bool:
+    """Whether one of the lower-case pieces holds, from its offset on, one of the markers with no negation
+    before it. The text before the offset is the clause a piece continues."""
+    for text, offset in pieces:
         for marker in markers:
-            start = text.find(marker)
+            start = text.find(marker, offset)
             while start != -1:
                 if not _negated(text, start):
                     return True
@@ -218,38 +228,98 @@ def _names_regime(pieces: list[str], markers: tuple[str, ...]) -> bool:
     return False
 
 
-def _regime_pieces(
-    suffix: str, sections: dict[str, str], extracted: str, headings: tuple[str, ...]
-) -> list[str]:
-    """The pieces of a draft's text, in lower case, that a negation cannot reach across.
+def _joined(lines: list[str]) -> str:
+    """Lines as one lower-case text with each run of whitespace as one space."""
+    return " ".join(" ".join(lines).lower().split())
 
-    In a DOCX or PDF each heading is a piece: a DOCX heading paragraph, or a PDF heading line (or the two or
-    three lines of a wrapped heading). So is each run of paragraphs or lines between two headings, since a
-    DOCX may split a sentence over paragraphs ("... is neither" / "an asset-referenced token nor" / ...) and
-    a PDF wraps its lines inside a paragraph. In the other formats each section is a piece. A heading is
-    judged on its own words: a negation at the end of the paragraph before it does not reach it.
-    """
-    if not extracted:
-        return [text.lower() for text in sections.values()]
-    lines = extracted.lower().split("\n")
+
+def _line_units(suffix: str, extracted: str, headings: tuple[str, ...]) -> list[tuple[str, bool]]:
+    """The lines of a DOCX's or PDF's extracted text, each with whether it is a heading: a DOCX heading
+    paragraph, or a PDF heading line or the two or three lines of a wrapped heading, as one unit."""
+    lines = extracted.split("\n")
     # A DOCX heading is one paragraph, one line of the extracted text.
     sizes = (1,) if suffix == ".docx" else (1, 2, 3)
     heading_texts = {" ".join(heading.lower().split()) for heading in headings}
-    pieces: list[str] = []
-    run: list[str] = []
+    units: list[tuple[str, bool]] = []
     index = 0
     while index < len(lines):
-        size = next(
-            (k for k in sizes if " ".join(" ".join(lines[index : index + k]).split()) in heading_texts), 0
-        )
+        size = next((k for k in sizes if _joined(lines[index : index + k]) in heading_texts), 0)
         if size:
-            pieces.extend(("\n".join(run), "\n".join(lines[index : index + size])))
-            run = []
+            units.append(("\n".join(lines[index : index + size]), True))
             index += size
         else:
-            run.append(lines[index])
+            units.append((lines[index], False))
             index += 1
-    pieces.append("\n".join(run))
+    return units
+
+
+def _starts_sentence(text: str) -> bool:
+    """Whether the first letter or digit of a line is a capital letter."""
+    first = _FIRST_CHARACTER.search(text)
+    return first is not None and first.group().isupper()
+
+
+def _continued(previous: tuple[str, str, bool] | None) -> str:
+    """The clause that a line continues after the previous line (its own clause, text and whether it is a
+    heading), in lower case and at most _NEGATION_LOOKBACK characters.
+
+    A heading is judged on its own words, so nothing continues it unless it ends in a negation ("For the
+    purposes of MiCAR the token is not", which a PDF may read as a heading). A line that ends in a
+    semicolon is an item of a list, and the next line continues the clause that it continued. A colon at
+    the end of a line introduces the line after it, so it ends no clause there.
+    """
+    if previous is None:
+        return ""
+    clause, text, heading = previous
+    if heading:
+        return text[-_NEGATION_LOOKBACK:] if _ENDS_IN_NEGATION.search(text) else ""
+    text = text.rstrip()
+    if text.endswith(";"):
+        return clause
+    return f"{clause}\n{text.removesuffix(':')}"[-_NEGATION_LOOKBACK:]
+
+
+def _regime_pieces(
+    suffix: str, sections: dict[str, str], extracted: str, headings: tuple[str, ...]
+) -> list[tuple[str, int]]:
+    """The pieces of a draft's text, in lower case, each with the offset where its own text starts after the
+    clause it continues.
+
+    In a DOCX or PDF each line is a piece (a heading of two or three PDF lines is one). A heading is judged
+    on its own words: no clause runs into it. A line that starts with a capital letter starts a new
+    sentence. A list item (a bullet, a dash, a list letter or number) continues the lead-in before its
+    list, so a negated lead-in governs every item, also where the items end in a semicolon; an item that
+    starts with a capital letter does so only after a lead-in that ends in a colon or a negation. Any other
+    line continues the line before it, as a DOCX may split a sentence over paragraphs ("... is neither" / "an
+    asset-referenced token nor" / ...) and a PDF wraps its lines. In the other formats each section is a
+    piece.
+    """
+    if not extracted:
+        return [(text.lower(), 0) for text in sections.values()]
+    pieces: list[tuple[str, int]] = []
+    previous: tuple[str, str, bool] | None = None
+    # The clause the items of the current list continue, that of their lead-in, and whether the lead-in
+    # ends in a colon or a negation, so that it governs an item that starts with a capital letter too.
+    lead: str | None = None
+    lead_opens = False
+    for text, heading in _line_units(suffix, extracted, headings):
+        item = _LIST_ITEM.match(text.lstrip())
+        if heading:
+            clause, lead = "", None
+        elif item:
+            if lead is None:
+                lead = _continued(previous)
+                lead_opens = previous is not None and bool(
+                    previous[1].rstrip().endswith(":") or _ENDS_IN_NEGATION.search(previous[1])
+                )
+            clause = lead if lead_opens or not _starts_sentence(text.lstrip()[item.end() :]) else ""
+        elif _starts_sentence(text):
+            clause, lead = "", None
+        else:
+            clause = _continued(previous)
+        low = text.lower()
+        pieces.append((f"{clause}\n{low}", len(clause) + 1) if clause else (low, 0))
+        previous = (clause, low, heading)
     return pieces
 
 

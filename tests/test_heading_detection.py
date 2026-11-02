@@ -907,6 +907,122 @@ def test_a_negation_at_the_end_of_a_markdown_section_does_not_reach_the_next(tmp
     assert load_whitepaper(path).type is WhitepaperType.ART
 
 
+_SST_ISSUER = [
+    ("heading", "Information about the Issuer"),
+    (
+        "body",
+        "Synthetic Issuer AG, a fictional company, issues the Synthetic Stable Token (SST) to the public in the Union.",
+    ),
+]
+
+
+@pytest.mark.parametrize("suffix", sorted(WRITERS))
+@pytest.mark.parametrize(
+    ("blocks", "regime"),
+    [
+        # A list item without a full stop, then a paragraph or line that starts a new sentence: the negation
+        # of the first does not reach the marker in the second.
+        (
+            [
+                *_SST_ISSUER,
+                ("heading", "Risk Factors"),
+                ("body", "Holders have no claim against the custodian"),
+                ("body", "The reserve of assets may lose value in a market stress event and be insufficient"),
+            ],
+            WhitepaperType.ART,
+        ),
+        (
+            [
+                *_SST_ISSUER,
+                ("heading", "Risk Factors"),
+                ("body", "Holders are not covered by deposit guarantee schemes"),
+                ("body", "The e-money token may be redeemed at par only on a business day in the Union"),
+            ],
+            WhitepaperType.EMT,
+        ),
+        # The same with a plain-style "Reserve of Assets" paragraph, which is no heading.
+        (
+            [
+                *_SST_ISSUER,
+                ("heading", "Risk Factors"),
+                ("body", "Holders should note that the token is not covered by any investor compensation scheme"),
+                ("body", "Reserve of Assets"),
+                ("body", "The reserve is held in cash and short-term government bonds."),
+            ],
+            WhitepaperType.ART,
+        ),
+        # Cover lines.
+        (
+            [
+                ("body", "Synthetic Euro Token, not approved by any competent authority"),
+                ("body", "E-money token issued by Synthetic Bank AG"),
+                *_SST_ISSUER,
+            ],
+            WhitepaperType.EMT,
+        ),
+        # A negated lead-in governs every item of the list after it, also where the items end in a
+        # semicolon, and also where a PDF reads the lead-in as a heading.
+        (
+            [
+                ("body", "For the purposes of MiCAR the token is not"),
+                ("body", "- an asset-referenced token;"),
+                ("body", "- an e-money token."),
+                *_SST_ISSUER,
+            ],
+            WhitepaperType.OTHER,
+        ),
+        # The same list without dashes: a line after one that ends in a semicolon continues the lead-in.
+        (
+            [
+                ("body", "For the purposes of MiCAR the token is not"),
+                ("body", "an asset-referenced token;"),
+                ("body", "an e-money token."),
+                *_SST_ISSUER,
+            ],
+            WhitepaperType.OTHER,
+        ),
+        # A dash item that starts a new sentence after a line that ends in neither a colon nor a negation.
+        (
+            [
+                *_SST_ISSUER,
+                ("heading", "Risk Factors"),
+                ("body", "Holders have no claim against the custodian"),
+                ("body", "- The reserve of assets may lose value in a market stress event"),
+            ],
+            WhitepaperType.ART,
+        ),
+        # A colon at the end of a lead-in introduces the lines after it.
+        (
+            [
+                ("body", "The token is neither:"),
+                ("body", "an asset-referenced token, nor"),
+                ("body", "an e-money token."),
+                *_SST_ISSUER,
+            ],
+            WhitepaperType.OTHER,
+        ),
+    ],
+    ids=[
+        "no claim, then reserve of assets",
+        "not covered, then e-money token",
+        "plain Reserve of Assets paragraph",
+        "cover lines",
+        "negated lead-in, then a dash list",
+        "negated lead-in, then items ending in a semicolon",
+        "capitalised dash item after a line without a colon",
+        "neither with a colon",
+    ],
+)
+def test_a_negation_reaches_the_lines_that_continue_its_sentence_only(
+    tmp_path: Path, suffix: str, blocks: list[tuple[str, str]], regime: WhitepaperType
+):
+    # Between two headings a negation reaches a paragraph or line that continues its sentence (one that
+    # starts in lower case, or a list item after a lead-in that ends without a full stop), but not one that
+    # starts a new sentence with a capital letter.
+    write, _ = WRITERS[suffix]
+    assert load_whitepaper(write(tmp_path / f"synthetic{suffix}", blocks)).type is regime
+
+
 @pytest.mark.parametrize(
     "field,answer,key",
     [
