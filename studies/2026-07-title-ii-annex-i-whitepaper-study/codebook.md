@@ -74,7 +74,7 @@ Only `present` and `missing` enter precision and recall. The other labels are co
 - `reviewer_id`: the reviewer's study ID, for example `r1`.
 - `reviewed_at`: ISO 8601 date, `YYYY-MM-DD`.
 - `source_pinpoint`:
-  - XHTML or HTML in the template layout of Implementing Regulation (EU) 2024/2984: the field as printed, with its heading, for example `Part A, field A.2 "Legal form"`. Template field numbers (A.1, A.2, ...) are not Annex I item numbers, and authors number fields differently (`src/micar_linter/numbered_fields.py:4-6`). Cite the field as printed.
+  - XHTML or HTML in the template layout of Implementing Regulation (EU) 2024/2984: the field as printed, with its heading, for example `Part A, field A.2 "Legal form"`. Template field numbers (A.1, A.2, ...) are not Annex I item numbers, and authors number fields differently (`src/micar_linter/numbered_fields.py:4-7`). Cite the field as printed.
   - Inline XBRL: the concept name of the fact, if used.
   - PDF: `p. N` using the page index the PDF viewer shows (first page = 1), plus the section heading.
   - For `missing`: the part and fields inspected and the search terms used, for example `Part A fields A.1 to A.12; searched "phone", "tel", "+"`.
@@ -106,7 +106,7 @@ Each card gives the element, what counts as `present` and `missing`, and the pol
 > **Documents that give a valid LEI (5.1 and 5.2).** The repository holds three readings, and this codebook has no policy for the case:
 >
 > - The CLI's party rules: since #51 (merged through #62), the comment at `src/micar_linter/rules/annex_i.py` lines 54 to 58 reads recital 2 of Implementing Regulation (EU) 2024/2984 as letting a white paper that gives an LEI leave out the legal form and the registered address, so ANNEX_I.A and ANNEX_I.B no longer ask for them.
-> - The CLI's LEI rules: `_no_lei_finding` in `src/micar_linter/linter.py` (lines 576 to 587) sends a party section that has text but no LEI to Review, because point 5 of each party Part allows another identifier required pursuant to applicable national law.
+> - The CLI's LEI rules: `_no_lei_finding` in `src/micar_linter/linter.py` (lines 577 to 589) sends a party section that has text but no LEI to Review, because point 5 of each party Part allows another identifier required pursuant to applicable national law.
 > - The study: the `REVIEWING.md` table finds "No difference" between the legal-form rule and Annex I, Part A, item 2 of MiCAR (line 66), and `STUDY_RULES` in `src/micar_linter/batch.py` still checks the legal form.
 >
 > [Decide: present, missing or not_applicable for 5.1 and 5.2 when a valid LEI is given, and whether the study follows the CLI's reading.]
@@ -258,3 +258,4 @@ Before adopting this codebook, the reviewer labels one calibration document unde
 | 2026-10-30 | Rebuilt on the review workflow of #17: reviewers label `human-review-blinded.csv`, rows keep the `STUDY_RULES` order, the reference standard follows the record of `REVIEWING.md` step 2 in `review-protocol.md`, the [OJ check] items that the `REVIEWING.md` table answers cite it, the LEI box cites the three readings in the repository, and the tools' acceptance of a `missing` cell with a note is stated. | Owner's decision to keep `human-review-blinded.csv`, `REVIEWING.md` and `scripts/build_review_matrix.py` as the labelling path. | Before |
 | 2026-10-30 | Cards 5.3, 5.4, 5.8 and 5.13 and policies P4 and P13 give the label under each reference standard; card 5.3 cites `REVIEWING.md` line 68; the repository line citations follow `main` at `d662f25`. | Review of the rebuild: some cards still settled the reference standard themselves. | Before |
 | 2026-10-30 | Section 2 names `human-review-second.csv` as the second reviewer's sheet. | Second review added to `scripts/build_review_matrix.py` (`REVIEWING.md` step 3a). | Before |
+| 2026-11-02 | The repository line citations follow `main` at `c7c99cf`: `_no_lei_finding` at `linter.py` lines 577 to 589 (before: 576 to 587) and the module docstring at `numbered_fields.py:4-7` (before: 4-6); the other line citations are unchanged. | #90 (`c7c99cf`) edited comments and docstrings in `linter.py` and `numbered_fields.py`. | Before |
