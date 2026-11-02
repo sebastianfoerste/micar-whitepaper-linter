@@ -1023,6 +1023,70 @@ def test_a_negation_reaches_the_lines_that_continue_its_sentence_only(
     assert load_whitepaper(write(tmp_path / f"synthetic{suffix}", blocks)).type is regime
 
 
+@pytest.mark.parametrize("suffix", sorted(WRITERS))
+@pytest.mark.parametrize(
+    ("blocks", "regime"),
+    [
+        # Round 3 of the follow-up verification: a line that starts with a digit or with a name in lower case
+        # starts a new sentence too, so the negation of the line before does not reach it.
+        (
+            [
+                *_SST_ISSUER,
+                ("heading", "Risk Factors"),
+                ("body", "Holders have no claim against the custodian"),
+                ("body", "100% of the reserve of assets is held in cash and short-term government bonds."),
+            ],
+            WhitepaperType.ART,
+        ),
+        (
+            [
+                *_SST_ISSUER,
+                ("heading", "Risk Factors"),
+                ("body", "Holders should note that the token is not covered by any compensation scheme"),
+                ("body", "xStable's reserve of assets is held in cash."),
+            ],
+            WhitepaperType.ART,
+        ),
+        (
+            [
+                *_SST_ISSUER,
+                ("heading", "Risk Factors"),
+                ("body", "Holders are not covered by deposit guarantee schemes"),
+                ("body", "1 e-money token is redeemable at par."),
+            ],
+            WhitepaperType.EMT,
+        ),
+        # A heading that the PDF sets in the body font is no heading of the loader, but a line shaped like a
+        # title is judged on its own words, so its negation does not reach the next line.
+        (
+            [*_SST_ISSUER, ("heading", "No Investor Compensation"), ("body", "the reserve of assets is held in cash.")],
+            WhitepaperType.ART,
+        ),
+        # Controls: a title-like line that ends in a negation still leads into the next line, and a title
+        # shaped like a negated marker is negated.
+        (
+            [*_SST_ISSUER, ("body", "The Synthetic Token Is Not"), ("body", "an asset-referenced token.")],
+            WhitepaperType.OTHER,
+        ),
+        ([*_SST_ISSUER, ("body", "No Reserve of Assets"), ("body", "The token is a utility token.")], WhitepaperType.OTHER),
+    ],
+    ids=[
+        "no claim, then a line that starts with a digit",
+        "not covered, then a name in lower case",
+        "deposit guarantee, then a number",
+        "title in the body font",
+        "title ending in a negation",
+        "negated title",
+    ],
+)
+def test_a_line_that_starts_a_sentence_otherwise_than_with_a_capital_ends_the_negation(
+    tmp_path: Path, suffix: str, blocks: list[tuple[str, str]], regime: WhitepaperType
+):
+    # A genuine ART or EMT draft whose only marker sat in such a line loaded as other (main: art or emt).
+    write, _ = WRITERS[suffix]
+    assert load_whitepaper(write(tmp_path / f"synthetic{suffix}", blocks)).type is regime
+
+
 @pytest.mark.parametrize(
     "field,answer,key",
     [

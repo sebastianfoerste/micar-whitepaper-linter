@@ -216,10 +216,11 @@ _EMT_MARKERS = ("e-money token", "referenced currency", "safeguarding of funds")
 # or e-money tokens" (the title of Title II MiCAR), "has no reserve of assets". A marker counts only where no
 # negation stands before it in its clause, at most _NEGATION_REACH words away. A clause ends at a sentence
 # mark, a colon inside a line or a word that turns the sentence ("but", "however"), and at the edge of a
-# heading or a section. In a DOCX or PDF it also ends at a paragraph or line end before a line that starts
-# with a capital letter, a new sentence; it runs on into a line that starts otherwise, since a DOCX may split
-# a sentence over paragraphs and a PDF wraps its lines inside a sentence, and into each item of a list after
-# a lead-in (_regime_pieces).
+# heading or a section. In a DOCX or PDF it also ends at a paragraph or line end before a line that starts a
+# new sentence (with a capital letter or a digit, or with a name such as "xStable"), and after a line shaped
+# like a title ("No Investor Compensation"); it runs on into a line that starts otherwise, since a DOCX may
+# split a sentence over paragraphs and a PDF wraps its lines inside a sentence, and into each item of a list
+# after a lead-in (_regime_pieces).
 _NEGATION = re.compile(r"\b(?:not|no|neither|nor|never|without|other than|except|excluding|unlike)\b|n't\b")
 _CLAUSE_END = re.compile(r"[.!?;:](?=\s|$)|\b(?:but|however|whereas|although|though|while)\b")
 _NEGATION_REACH = 8
@@ -228,7 +229,7 @@ _NEGATION_LOOKBACK = 200
 _LIST_ITEM = re.compile(
     r"(?:[-*\u2013\u2014\u2022\u2023\u2043\u00b7\u25aa\u25cf]|\(?(?:[a-z]|[ivx]{1,4}|\d{1,2})[.)])\s"
 )
-_FIRST_CHARACTER = re.compile(r"[^\W_]")
+_FIRST_WORD = re.compile(r"[^\W_]+")
 # A heading that ends in a negation, perhaps with a colon after it, leads into the line after it.
 _ENDS_IN_NEGATION = re.compile(rf"(?:{_NEGATION.pattern})\W*$")
 
@@ -261,8 +262,9 @@ def _joined(lines: list[str]) -> str:
 
 
 def _line_units(suffix: str, extracted: str, headings: tuple[str, ...]) -> list[tuple[str, bool]]:
-    """The lines of a DOCX's or PDF's extracted text, each with whether it is a heading: a DOCX heading
-    paragraph, or a PDF heading line or the two or three lines of a wrapped heading, as one unit."""
+    """The lines of a DOCX's or PDF's extracted text, each with whether it is read as a heading: a DOCX
+    heading paragraph, a PDF heading line or the two or three lines of a wrapped heading, as one unit, and a
+    line that the loader did not take for a heading but is shaped like a title (_titled)."""
     lines = extracted.split("\n")
     # A DOCX heading is one paragraph, one line of the extracted text.
     sizes = (1,) if suffix == ".docx" else (1, 2, 3)
@@ -275,15 +277,30 @@ def _line_units(suffix: str, extracted: str, headings: tuple[str, ...]) -> list[
             units.append(("\n".join(lines[index : index + size]), True))
             index += size
         else:
-            units.append((lines[index], False))
+            units.append((lines[index], _titled(lines[index])))
             index += 1
     return units
 
 
+def _titled(text: str) -> bool:
+    """Whether a line is shaped like a title: a short label without sentence punctuation (at most twelve
+    words) in which every word other than a short connective starts with a capital letter, such as a
+    heading set in the body font of a PDF ("No Investor Compensation")."""
+    from micar_linter.document import _is_label, _is_title_like
+
+    return _is_label(text.strip()) and _is_title_like(text.strip())
+
+
 def _starts_sentence(text: str) -> bool:
-    """Whether the first letter or digit of a line is a capital letter."""
-    first = _FIRST_CHARACTER.search(text)
-    return first is not None and first.group().isupper()
+    """Whether a line starts a new sentence: its first word starts with a capital letter or a digit
+    ("100% of the reserve ...", "1 e-money token ..."), or holds a capital letter, as a name such as
+    "xStable" does. A line that starts with a word in lower case ("an e-money token") continues the line
+    before it."""
+    first = _FIRST_WORD.search(text)
+    if first is None:
+        return False
+    word = first.group()
+    return not word[0].islower() or any(char.isupper() for char in word)
 
 
 def _continued(previous: tuple[str, str, bool] | None) -> str:
@@ -312,14 +329,15 @@ def _regime_pieces(
     """The pieces of a draft's text, in lower case, each with the offset where its own text starts after the
     clause it continues.
 
-    In a DOCX or PDF each line is a piece (a heading of two or three PDF lines is one). A heading is judged
-    on its own words: no clause runs into it. A line that starts with a capital letter starts a new
-    sentence. A list item (a bullet, a dash, a list letter or number) continues the lead-in before its
-    list, so a negated lead-in governs every item, also where the items end in a semicolon; an item that
-    starts with a capital letter does so only after a lead-in that ends in a colon or a negation. Any other
-    line continues the line before it, as a DOCX may split a sentence over paragraphs ("... is neither" / "an
-    asset-referenced token nor" / ...) and a PDF wraps its lines. In the other formats each section is a
-    piece.
+    In a DOCX or PDF each line is a piece (a heading of two or three PDF lines is one). A heading, and a line
+    shaped like a title, is judged on its own words: no clause runs into it, and none runs on from it unless
+    it ends in a negation. A line that starts with a capital letter or a digit, or with a word that holds a
+    capital letter, starts a new sentence (_starts_sentence). A list item (a bullet, a dash, a list letter or
+    number) continues the lead-in before its list, so a negated lead-in governs every item, also where the
+    items end in a semicolon; an item that starts a new sentence does so only after a lead-in that ends in a
+    colon or a negation. Any other line continues the line before it, as a DOCX may split a sentence over
+    paragraphs ("... is neither" / "an asset-referenced token nor" / ...) and a PDF wraps its lines. In the
+    other formats each section is a piece.
     """
     if not extracted:
         return [(text.lower(), 0) for text in sections.values()]
