@@ -877,6 +877,25 @@ def test_a_negation_before_a_heading_does_not_reach_the_heading(tmp_path: Path, 
     assert "ANNEX_II.G.COMPOSITION_DISCLOSURE" in findings and "ANNEX_I.I" not in findings
 
 
+@pytest.mark.parametrize("suffix", sorted(WRITERS))
+def test_a_negation_reaches_across_paragraphs_between_two_headings(tmp_path: Path, suffix: str):
+    # A DOCX may split one sentence over paragraphs with no colon. Between two headings the paragraphs are
+    # one piece, so the negation in the first still governs the markers in the next; read paragraph by
+    # paragraph, the draft loaded as an ART and the Annex I rules did not run.
+    write, _ = WRITERS[suffix]
+    blocks = [
+        ("body", "The token described here is neither"),
+        ("body", "an asset-referenced token nor"),
+        ("body", "an e-money token"),
+        ("heading", "Information about the Offeror"),
+        ("body", "Meadow Labs GmbH, a fictional company, offers the MeadowPoints loyalty token to the public."),
+        ("heading", "Risk Factors"),
+        ("body", "Holders may lose the full amount, and the token may not always be transferable."),
+    ]
+    path = write(tmp_path / f"meadowpoints{suffix}", blocks)
+    assert load_whitepaper(path).type is WhitepaperType.OTHER
+
+
 def test_a_negation_at_the_end_of_a_markdown_section_does_not_reach_the_next(tmp_path: Path):
     # Markdown headings are not read for the regime, so the reserve section's own text names it.
     path = tmp_path / "synthetic.md"

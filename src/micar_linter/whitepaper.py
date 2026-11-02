@@ -180,8 +180,8 @@ _EMT_MARKERS = ("e-money token", "referenced currency", "safeguarding of funds")
 # or e-money tokens" (the title of Title II MiCAR), "has no reserve of assets". A marker counts only where no
 # negation stands before it in its clause, at most _NEGATION_REACH words away. A clause ends at a sentence
 # mark, a colon or a word that turns the sentence ("but", "however"), and at the edge of a heading or a
-# paragraph (_regime_pieces), but not at a line end inside a PDF paragraph, since a PDF wraps its lines
-# inside a sentence.
+# section (_regime_pieces), but not at a paragraph or line end between two headings, since a DOCX may split a
+# sentence over paragraphs and a PDF wraps its lines inside a sentence.
 _NEGATION = re.compile(r"\b(?:not|no|neither|nor|never|without|other than|except|excluding|unlike)\b|n't\b")
 _CLAUSE_END = re.compile(r"[.!?;:](?=\s|$)|\b(?:but|however|whereas|although|though|while)\b")
 _NEGATION_REACH = 8
@@ -214,23 +214,24 @@ def _regime_pieces(
 ) -> list[str]:
     """The pieces of a draft's text, in lower case, that a negation cannot reach across.
 
-    A DOCX gives one paragraph per line of its text, and each line is a piece. A PDF wraps its lines inside
-    a paragraph, so each heading line (or the two or three lines of a wrapped heading) is a piece, and so is
-    each run of lines between two headings. In the other formats each section is a piece. A heading is
+    In a DOCX or PDF each heading is a piece: a DOCX heading paragraph, or a PDF heading line (or the two or
+    three lines of a wrapped heading). So is each run of paragraphs or lines between two headings, since a
+    DOCX may split a sentence over paragraphs ("... is neither" / "an asset-referenced token nor" / ...) and
+    a PDF wraps its lines inside a paragraph. In the other formats each section is a piece. A heading is
     judged on its own words: a negation at the end of the paragraph before it does not reach it.
     """
     if not extracted:
         return [text.lower() for text in sections.values()]
     lines = extracted.lower().split("\n")
-    if suffix == ".docx":
-        return lines
+    # A DOCX heading is one paragraph, one line of the extracted text.
+    sizes = (1,) if suffix == ".docx" else (1, 2, 3)
     heading_texts = {" ".join(heading.lower().split()) for heading in headings}
     pieces: list[str] = []
     run: list[str] = []
     index = 0
     while index < len(lines):
         size = next(
-            (k for k in (1, 2, 3) if " ".join(" ".join(lines[index : index + k]).split()) in heading_texts), 0
+            (k for k in sizes if " ".join(" ".join(lines[index : index + k]).split()) in heading_texts), 0
         )
         if size:
             pieces.extend(("\n".join(run), "\n".join(lines[index : index + size])))
