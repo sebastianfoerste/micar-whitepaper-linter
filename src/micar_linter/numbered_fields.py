@@ -3,7 +3,8 @@ Implementing Regulation (EU) 2024/2984 ("A.1 Name", "A.2 Legal form", ...).
 
 Notified white papers follow that template rather than prose headings, so the
 heading-based loader finds little in them. Field numbers vary between authors;
-only the part letter is treated as reliable.
+lettered fields are mapped to sections by their part letter, not their number,
+though the point rules (ADR 0005) read their fields by number (field_answers).
 """
 
 from __future__ import annotations

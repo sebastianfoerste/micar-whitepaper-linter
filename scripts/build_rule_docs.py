@@ -834,8 +834,8 @@ def status_logic(rule: Rule) -> str:
             else ""
         )
         + "<li>In a numbered-field XHTML draft, Review also follows when a field of the section holds only a "
-        "placeholder such as TBD; the finding names the field by its number and, in English, the template's "
-        "name.</li>"
+        "placeholder such as TBD; the finding names the field by its number and, in English, by the template's "
+        "name where the linter has one for that field.</li>"
     )
     if rule.rule_id == "ANNEX_II.I":
         parts.append(
@@ -846,8 +846,9 @@ def status_logic(rule: Rule) -> str:
             "drafts of either language and ignoring case. A soft hyphen, a zero-width character or a hyphen at a "
             "line end inside the word does not hide it. Only uses that never mean par value do not count: “par” "
             "for a paragraph next to an article number (“Art. 39 par. 2”, “par. 2 of Art. 39”), “on par” or “on a "
-            "par”, “par for the course”, “par excellence”, “sub-par”, “pari passu”, “rank at par” and “at par "
-            "with each other” or “with one another”. The issue says that redemption at par value is the e-money "
+            "par”, “par for the course”, “par excellence”, “sub-par”, “pari passu”, “rank at par”, “at par "
+            "with each other” or “with one another”, and “at nominal” before “cost”, “fee” or “charge”. The "
+            "issue says that redemption at par value is the e-money "
             "token rule of Art. 49(4) MiCAR and that an ART issuer redeems by paying funds, other than electronic "
             "money, equivalent to the market value of the referenced assets, or by delivering those assets "
             "(Art. 39(2) MiCAR), and asks the reviewer to check whether the section ties the token's redemption "
@@ -885,7 +886,8 @@ def _contact_status_logic(rule: Rule) -> str:
         "fax number and a date do not count. An e-mail address counts as name, @ and domain. A period counts as a "
         "number of days, in digits or as an English or German word up to thirty (<code>5 business days</code>, "
         "<code>fünf Werktage</code>), or as a number after the template's label (<code>Response time (Days): "
-        f"5</code>, <code>Reaktionszeit (Tage): 5</code>). In field {days} a number counts alone, unless the field "
+        f"5</code>, <code>Reaktionszeit (Tage): 5</code>). In field {days} a number counts alone, in digits or as "
+        "an English word from two to thirty or a German word from zwei to zwanzig or dreißig, unless the field "
         "names hours, weeks, months or years.</li>"
         "<li><strong>Pass</strong>: all three items are found. A pass means the three shapes were found, nothing "
         "more.</li></ul>"
@@ -988,12 +990,14 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
     if rule.rule_id in CONTACT_POINT_RULE_IDS:
         limitations.append(
             "A numbered-field XHTML draft is read by the template's field numbers. Contact details in another field "
-            "do not count, and a draft that numbers these fields otherwise goes to review."
+            "do not count, so a draft that numbers these fields otherwise goes to review, or is reported missing "
+            "where the fields with the template's numbers are each absent, empty or hold only a placeholder."
         )
     if rule.rule_id == "COMMON.SUMMARY":
         limitations.append(
-            "Only sentences in the template's English or German wording are left out. A warning in other words "
-            "still counts toward the 80 words."
+            "Outside field 07 of Table 2 (I.04 of Table 3, I.05 of Table 4) of a numbered-field XHTML draft, only "
+            "sentences in the template's English or German wording are left out. A warning in other words outside "
+            "that field still counts toward the 80 words."
         )
     if rule.rule_id == "COMMON.RISK_WARNING":
         limitations.append(
@@ -1026,7 +1030,9 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             "the token is not redeemed at par, and in idioms such as “take at face value”; the reviewer decides "
             "whether the token's redemption depends on par value. Other words for the same basis, such as "
             "“1:1”, “dollar for dollar” or “at parity”, are not found. Text that the loader does not put into "
-            "the redemption section is not read: a heading, and a table in a DOCX or heading-based XHTML draft."
+            "the redemption section is not read: a heading, a table in a DOCX draft, and text in a table cell "
+            "of a heading-based XHTML draft unless a p, li or bold element, or a div with no div or p child, "
+            "holds it, in the cell or around the table."
         )
     if rule.rule_id in NEVER_PASS:
         limitations.append("This rule never reports Pass.")
