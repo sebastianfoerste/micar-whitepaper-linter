@@ -822,6 +822,39 @@ def test_regime_is_inferred_from_text_in_no_section(tmp_path: Path, suffix: str)
     assert (findings["ANNEX_II.I"].status, findings["ANNEX_II.I"].word_count) == ("review", 6)
 
 
+@pytest.mark.parametrize("suffix", sorted(WRITERS))
+@pytest.mark.parametrize(
+    "introduction",
+    [
+        "Synthetic MeadowPoints white paper. This crypto-asset is not an asset-referenced token and not an "
+        "e-money token.",
+        "MeadowPoints is neither an asset-referenced token nor an e-money token, and it has no reserve of assets.",
+        "This white paper is drawn up under Title II of Regulation (EU) 2023/1114, for crypto-assets other than "
+        "asset-referenced tokens or e-money tokens.",
+    ],
+)
+def test_a_negated_regime_marker_does_not_switch_the_regime(tmp_path: Path, suffix: str, introduction: str):
+    # An Annex I white paper says in its introduction what its token is not. Read as a marker, the negated
+    # phrase made the draft an ART: the Annex I rules did not run and the crypto-asset section was dropped.
+    write, _ = WRITERS[suffix]
+    blocks = [
+        ("body", introduction),
+        ("heading", "Information about the Offeror"),
+        ("body", "Meadow Labs GmbH, a fictional company, offers the MeadowPoints loyalty token to the public."),
+        ("heading", "Information about the Crypto-Asset"),
+        ("body", "MeadowPoints is a fictional loyalty token with a fixed supply of ten million units."),
+        ("heading", "Risk Factors"),
+        ("body", "Holders may lose the full amount, and the token may not always be transferable."),
+    ]
+    path = write(tmp_path / f"meadowpoints{suffix}", blocks)
+
+    whitepaper = load_whitepaper(path)
+    assert whitepaper.type is WhitepaperType.OTHER
+    assert sorted(whitepaper.sections) == ["crypto_asset", "offeror", "risks"]
+    findings = _findings(path, None)
+    assert "ANNEX_I.I" in findings and "ANNEX_II.A" not in findings
+
+
 @pytest.mark.parametrize(
     "field,answer,key",
     [

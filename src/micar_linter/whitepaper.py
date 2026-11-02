@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -171,6 +172,41 @@ def _unpack_viewer_page(path: Path) -> bytes:
     return document
 
 
+# English phrases that name the regime of a draft that states none.
+_ART_MARKERS = ("asset-referenced", "stabilisation mechanism", "reserve of assets")
+_EMT_MARKERS = ("e-money token", "referenced currency", "safeguarding of funds")
+# A white paper for another crypto-asset often says what its token is not: "not an asset-referenced token",
+# "neither an asset-referenced token nor an e-money token", "crypto-assets other than asset-referenced tokens
+# or e-money tokens" (the title of Title II MiCAR), "has no reserve of assets". A marker counts only where no
+# negation stands before it in its clause, at most _NEGATION_REACH words away. A clause ends at a sentence
+# mark, a colon or a word that turns the sentence ("but", "however"), not at a line end, since a PDF wraps
+# its lines inside a sentence.
+_NEGATION = re.compile(r"\b(?:not|no|neither|nor|never|without|other than|except|excluding|unlike)\b|n't\b")
+_CLAUSE_END = re.compile(r"[.!?;:](?=\s|$)|\b(?:but|however|whereas|although|though|while)\b")
+_NEGATION_REACH = 8
+_NEGATION_LOOKBACK = 200
+
+
+def _negated(text: str, start: int) -> bool:
+    """Whether a negation governs the marker at start of the lower-case text."""
+    before = text[max(0, start - _NEGATION_LOOKBACK) : start]
+    ends = list(_CLAUSE_END.finditer(before))
+    clause = before[ends[-1].end() :] if ends else before
+    negations = list(_NEGATION.finditer(clause))
+    return bool(negations) and len(clause[negations[-1].end() :].split()) <= _NEGATION_REACH
+
+
+def _names_regime(text: str, markers: tuple[str, ...]) -> bool:
+    """Whether the lower-case text holds one of the markers with no negation before it."""
+    for marker in markers:
+        start = text.find(marker)
+        while start != -1:
+            if not _negated(text, start):
+                return True
+            start = text.find(marker, start + 1)
+    return False
+
+
 def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | None) -> Whitepaper:
     if not path.exists():
         raise SystemExit(f"File not found: {path}")
@@ -240,15 +276,13 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
         raise SystemExit(f"Error reading document {path}: {exc}") from exc
 
     # The regime of a PDF or DOCX is inferred from its whole text: a heading ("Reserve of Assets"), which is
-    # not section body, or text in no section may be all that names it.
+    # not section body, or text in no section may be all that names it. A negated marker does not count.
     full_text = (extracted or "\n".join(sections.values())).lower()
-    art_markers = ("asset-referenced", "stabilisation mechanism", "reserve of assets")
-    emt_markers = ("e-money token", "referenced currency", "safeguarding of funds")
     if whitepaper_type is not None:
         wp_type = whitepaper_type
-    elif any(marker in full_text for marker in art_markers):
+    elif _names_regime(full_text, _ART_MARKERS):
         wp_type = WhitepaperType.ART
-    elif any(marker in full_text for marker in emt_markers):
+    elif _names_regime(full_text, _EMT_MARKERS):
         wp_type = WhitepaperType.EMT
     else:
         wp_type = WhitepaperType.OTHER
