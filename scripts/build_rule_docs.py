@@ -831,8 +831,8 @@ def status_logic(rule: Rule) -> str:
             else ""
         )
         + "<li>In a numbered-field XHTML draft, Review also follows when a field of the section holds only a "
-        "placeholder such as TBD; the finding names the field by its number and, in English, the template's "
-        "name.</li>"
+        "placeholder such as TBD; the finding names the field by its number and, in English, by the template's "
+        "name where the linter has one for that field.</li>"
     )
     if rule.rule_id == "ANNEX_II.I":
         parts.append(

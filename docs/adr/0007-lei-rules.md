@@ -27,7 +27,7 @@ Option 2, offline.
   - Pass: otherwise.
 - **Citation.** `Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, Anhang III Teil A Nr. 5 MiCAR`, checked against the Official Journal on 2026-10-27. Point 5 of each party Part names the LEI or another identifier required pursuant to applicable national law, and Art. 2(1)(b) and (c) of Implementing Regulation (EU) 2024/2984 ask for the LEI where available. Releases 1.2.0 and 1.2.1 cite Part A of each Annex without a point, although Annex I Part A covers the offeror, and report Missing where the amended rules report Review. The amendment reached `main` on 2026-10-29, after 1.2.1.
 - **Anchoring.** Both rules anchor to the `issuer` section for line mapping and the review table.
-- **CI outputs.** Issue text quotes the LEI, so both rules are in `DRAFT_ECHO_RULES` and the summary, annotations and SARIF use the fixed sentence instead.
+- **CI outputs.** Issue text quotes the LEI, so both rules are in `DRAFT_ECHO_RULES` and the SARIF log uses the fixed sentence instead; the job summary and annotations print no issue text.
 - **Network.** No registry lookup: a pass means the characters are consistent, not that the LEI exists or belongs to the named entity.
 
 ## Consequences
