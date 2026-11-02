@@ -138,7 +138,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--coverage",
         action="store_true",
-        help=("Print a console coverage table instead of the report. Output files and --strict still apply."),
+        help=(
+            "Print a console coverage table instead of the report, unless --review-bundle-dir is given. "
+            "Output files and --strict still apply."
+        ),
     )
     parser.add_argument(
         "--review-bundle-dir",

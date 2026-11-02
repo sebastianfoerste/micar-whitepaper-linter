@@ -10,4 +10,4 @@
 | [0006](0006-shared-site-tokens.md) | Shared site tokens (light theme; dark theme removed 2026-10-21) | Accepted |
 | [0007](0007-lei-rules.md) | LEI check-digit and consistency rules | Accepted |
 
-Each record has Status, Context, Options, Decision, Consequences and a non-negotiables check. "Accepted" records describe code in this repository; "Proposed" records describe nothing built yet.
+Each record has Status, Context, Options, Decision, Consequences and a non-negotiables check. "Accepted" records describe code in this repository; "Proposed" records describe nothing built yet, except ADR 0005, whose first point rules (`ANNEX_I.A.P6`, `ANNEX_III.A.P6`) are built.

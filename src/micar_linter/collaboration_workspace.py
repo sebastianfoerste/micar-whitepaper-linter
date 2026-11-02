@@ -23,7 +23,7 @@ R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 NSMAP = {"w": W_NS}
 # Paragraph content skipped without ending a match: deleted or moved-away text, properties and range markers.
 # A drawing, including its hidden mc:Fallback copy, ends a match; paragraphs inside mc:Fallback are never
-# candidates (see render_tracked_docx).
+# candidates (see export_tracked_docx).
 _SKIPPED = {
     f"{{{W_NS}}}{name}"
     for name in [
@@ -507,8 +507,9 @@ def _contents_styles(styles_path: Path, parser: etree.XMLParser) -> set[str]:
 @dataclass(frozen=True)
 class TrackedDocxExport:
     """What export_tracked_docx wrote: the output path and the ids of the accepted changes it placed in the
-    document, appended at its end because their original text was not found, or left out because they belong
-    to another document of the change set. A change without an id is named by its position, "changes[3]"."""
+    document, appended at its end because their original text was not found where it can be redlined, or left
+    out because they belong to another document of the change set. A change without an id is named by its
+    position, "changes[3]"."""
 
     path: Path
     placed: tuple[str, ...]
@@ -528,11 +529,12 @@ def export_tracked_docx(
 ) -> TrackedDocxExport:
     """Write a copy of the source DOCX with the accepted changes of the change set as tracked revisions.
 
-    A change whose original text is found in the document is written in place as a tracked deletion and
-    insertion. One that is not found is appended at the end of the body as a tracked insertion alone, with
-    no deletion of text the document never held (#61), and its id is reported as unplaced. With a change set
-    that names its documents (`source_digests`), only the changes whose `document_id` maps to the source's
-    digest apply, besides changes without a `document_id`; the others are reported as skipped (#60).
+    A change whose original text is found where it can be redlined is written there as a tracked deletion
+    and insertion. Any other change, including one whose text lies only across the edge of a content control
+    or over part of a link to an external address, is appended at the end of the body as a tracked insertion
+    alone, with no deletion of text the document never held (#61), and its id is reported as unplaced. With a
+    change set that names its documents (`source_digests`), only the changes whose `document_id` maps to the
+    source's digest apply, besides changes without a `document_id`; the others are reported as skipped (#60).
     """
     if source.resolve() == output.resolve():
         raise ValueError("redline output must not overwrite the source document")
