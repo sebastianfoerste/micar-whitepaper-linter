@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterator
+from functools import lru_cache
 
 # 18 alphanumerics and 2 digits, not part of a longer code.
 _LEI_SHAPE = re.compile(r"(?<![A-Z0-9])[A-Z0-9]{18}[0-9]{2}(?![A-Z0-9])")
@@ -18,26 +19,45 @@ _LEI_SHAPE = re.compile(r"(?<![A-Z0-9])[A-Z0-9]{18}[0-9]{2}(?![A-Z0-9])")
 # label, with at most two short words between them ("LEI: ...", "the LEI is ...", "LEI code ..."), or as
 # the code an LEI label introduces (_labelled_codes below).
 _LEI_LABEL = re.compile(
-    r"\b(?:LEI|legal entity identifier|Rechtstr(?:ä|ae)gerkennung)\W*(?:[^\W\d_]{1,12}\W+){0,2}$",
+    r"\b(?:LEI|legal\s+entity\s+identifier|Rechtstr(?:ä|ae)gerkennung)\W*(?:[^\W\d_]{1,12}\W+){0,2}$",
     re.IGNORECASE,
 )
 _LABEL_WINDOW = 60
 
 # An LEI label introduces a code: the acronym in capitals (lower-case "lei" is a Romanian word, the plural of
-# the currency "leu") or the English or German name in any case. The code is the first run of letters and
-# digits that holds a digit and, with any groups that follow it after a single space or hyphen, has at least
-# _MIN_CODE_LENGTH of them. At most _MAX_LABEL_WORDS other words may stand between label and code ("The LEI
-# of the offeror is ...", "Legal Entity Identifier (LEI), synthetic and not registered, is ..."), with no
-# sentence end. A shorter number on the way, such as a year or "ISO 17442", counts as one of those words.
-# The code must be on the label's line, or on the next line that holds a word where nothing but punctuation
-# follows the label on its own ("Legal entity identifier" above its code), so the next field of the
-# numbered layout ("Contact telephone number: ...") is never read as the code.
-_LABEL = re.compile(r"\bLEIs?\b|(?i:\blegal entity identifiers?\b|\bRechtstr(?:ä|ae)gerkennung(?:en)?\b)")
+# the currency "leu") or the English or German name in any case, whose words a PDF may wrap onto two lines.
+# The code is the first run of letters and digits that holds a digit and, with any groups that follow it after
+# a single space or hyphen, has at least _MIN_CODE_LENGTH of them. At most _MAX_LABEL_WORDS other words may
+# stand between label and code ("The LEI of the offeror is ...", "Legal Entity Identifier (LEI), synthetic and
+# not registered, is ..."), with no sentence end; the full stop of "e.g." or "i.e.", and of "No." or "Nr."
+# before a word with a digit ("LEI No. ..."), ends no sentence. A shorter number on the way, such as a
+# year or "ISO 17442", counts as one of those words. The search runs on over line ends, since a PDF wraps its
+# lines inside a sentence, but not into a line that starts a field of the numbered layout ("Contact telephone
+# number: ...", "A.8 ...") or a list item, so the next field is never read as the code of a label answered in
+# words. A further code joined to a labelled code, or to an LEI-shaped code that holds a letter, by a comma,
+# "and", "or", "und" or "oder" is read too ("LEIs: ... and ...").
+_LABEL = re.compile(r"\bLEIs?\b|(?i:\blegal\s+entity\s+identifiers?\b|\bRechtstr(?:ä|ae)gerkennung(?:en)?\b)")
 _WORD = re.compile(r"[^\W_]+")
 _GAP_SENTENCE_END = re.compile(r"[.!?;](?=\s)")
+# The full stop of an abbreviation, always ("e.g.") or before a word with a digit ("No. 9999 ...").
+_ABBREVIATION = re.compile(r"(?<![^\W_])(?:e\.g|i\.e)\.\Z", re.IGNORECASE)
+_NUMBER_ABBREVIATION = re.compile(r"(?<![^\W_])(?:No|Nos|Nr|Nrn)\.\Z", re.IGNORECASE)
+_DIGIT_WORD = re.compile(r"\s+[^\W_]*\d")
+# The start of a line that opens a field or a list item: a field number of Implementing Regulation (EU)
+# 2024/2984 ("A.8", "08") before a capital, a label of up to twelve words of letters in front of a colon
+# ("Contact telephone number:"), or a bullet.
+_FIELD_WORD = r"(?:[^\W\d_]|[-'\u2019()/])+"
+_FIELD_LINE = re.compile(
+    r"\s*(?:(?:[A-Z]\.\d{1,2}(?:\.\d{1,2})*\.?|0\d|10)[^\S\n]+[A-ZÄÖÜ]"
+    rf"|[A-ZÄÖÜ]{_FIELD_WORD}?(?:[^\S\n]+{_FIELD_WORD}){{0,11}}:(?!\S)"
+    r"|[*\u00b7\u2013\u2014\u2022\u25aa\u25cf\u25e6-][^\S\n])"
+)
 # A group that continues a code after a single space or hyphen: one with a digit, or capitals only, as in
-# "9999 SYNT H000 0ZZQ 0263".
+# "9999 SYNT H000 0ZZQ 0263". Joining stops at _MAX_CODE_SPAN characters, well past the 24 of an LEI in
+# groups of four, so a long run of such groups costs no more than one code.
 _CODE_GROUP = re.compile(r"[ -](?:[A-Za-z0-9]*[0-9][A-Za-z0-9]*|[A-Z]+)(?![^\W_])")
+_MAX_CODE_SPAN = 32
+_JOINER = re.compile(r"[^\S\n]*,\s*(?:(?:and|or|und|oder)\s+)?|\s+(?:and|or|und|oder)\s+")
 _MAX_LABEL_WORDS = 6
 _MIN_CODE_LENGTH = 10
 
@@ -86,38 +106,65 @@ def _code_span(text: str, word: re.Match[str]) -> tuple[int, int] | None:
     if _LEI_SHAPE.fullmatch(token):
         return word.span()
     end = word.end()
-    while group := _CODE_GROUP.match(text, end):
+    while end - word.start() < _MAX_CODE_SPAN and (group := _CODE_GROUP.match(text, end)):
         end = group.end()
     if sum(char.isalnum() for char in text[word.start() : end]) < _MIN_CODE_LENGTH:
         return None
     return word.start(), end
 
 
-def _search_end(text: str, start: int) -> int:
-    """The end of the line that holds the first word after a label: the label's own line, or a later line
-    where only punctuation follows the label on its own."""
-    first = _WORD.search(text, start)
-    if first is None:
-        return len(text)
-    end = text.find("\n", first.start())
-    return len(text) if end == -1 else end
+def _ends_reach(text: str, start: int, end: int) -> bool:
+    """Whether the text between two words ends a label's reach: a sentence end other than the full stop of
+    an abbreviation, or a line end before a line that opens a field or a list item."""
+    for mark in _GAP_SENTENCE_END.finditer(text, start, end):
+        if mark.group(0) != ".":
+            return True
+        window = max(0, mark.start() - 5)
+        if _ABBREVIATION.search(text, window, mark.end()):
+            continue
+        if _NUMBER_ABBREVIATION.search(text, window, mark.end()) and _DIGIT_WORD.match(text, mark.end()):
+            continue
+        return True
+    line_end = text.find("\n", start, end)
+    while line_end != -1:
+        if _FIELD_LINE.match(text, line_end + 1):
+            return True
+        line_end = text.find("\n", line_end + 1, end)
+    return False
 
 
-def _labelled_codes(text: str) -> list[tuple[int, int]]:
-    """The spans of the codes that LEI labels introduce, in order, without duplicates."""
-    spans: list[tuple[int, int]] = []
-    for label in _LABEL.finditer(text):
-        position = label.end()
-        for words, word in enumerate(_WORD.finditer(text, label.end(), _search_end(text, label.end()))):
-            if words > _MAX_LABEL_WORDS or _GAP_SENTENCE_END.search(text[position : word.start()]):
+def _first_code(text: str, start: int) -> tuple[int, int] | None:
+    """The span of the code that the label ending at start introduces, if any."""
+    position = start
+    for words, word in enumerate(_WORD.finditer(text, start)):
+        if words > _MAX_LABEL_WORDS or _ends_reach(text, position, word.start()):
+            return None
+        span = _code_span(text, word)
+        if span is not None:
+            return span
+        position = word.end()
+    return None
+
+
+@lru_cache(maxsize=64)
+def _labelled_codes(text: str) -> tuple[tuple[int, int], ...]:
+    """The spans of the codes that LEI labels introduce, and of the codes joined to them or to an LEI-shaped
+    code with a letter, in order, without duplicates."""
+    starts = {span for label in _LABEL.finditer(text) if (span := _first_code(text, label.end()))}
+    starts.update(match.span() for match in _LEI_SHAPE.finditer(text) if not match.group(0).isdigit())
+    spans: dict[tuple[int, int], None] = {}
+    for span in sorted(starts):
+        if span in spans:
+            continue
+        spans[span] = None
+        # Each code's joined codes are read once: a code seen before has had its own read.
+        while (joiner := _JOINER.match(text, span[1])) and (word := _WORD.match(text, joiner.end())):
+            joined = _code_span(text, word)
+            if joined is None or joined in spans:
                 break
-            span = _code_span(text, word)
-            if span is not None:
-                if span not in spans:
-                    spans.append(span)
-                break
-            position = word.end()
-    return spans
+            spans[joined] = None
+            span = joined
+    return tuple(sorted(spans))
 
 
 def _lei_matches(text: str) -> Iterator[re.Match[str]]:

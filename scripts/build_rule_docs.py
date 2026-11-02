@@ -990,11 +990,15 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
         )
         limitations.append(
             "Finds a malformed LEI only after a label: LEI in capitals, legal entity identifier or "
-            "Rechtsträgerkennung. The code is the first run of letters and digits that holds a digit and, with "
-            "the groups that follow it after a single space or hyphen, has at least ten characters; at most six "
-            "other words may stand between label and code, in the same sentence, and the code must be on the "
-            "label's line or, where only punctuation follows the label, on the next line that holds a word. A "
-            "malformed code without a label, or further from it, is not seen."
+            "Rechtsträgerkennung, also in the plural. The code is the first run of letters and digits that holds "
+            "a digit and, with the groups that follow it after a single space or hyphen, has at least ten "
+            "letters and digits; at most six other words may stand between label and code, in the same "
+            "sentence (the full stop of e.g., i.e., or of No. or Nr. before a number, ends none). A code joined "
+            "by a comma, and, or, und or oder to such a code or to an LEI is read too. The search runs on over "
+            "line ends, as a PDF wraps them, but not into a line that starts a field (Contact telephone number: "
+            "...) or a list item. A malformed code without a label, further from it, or joined to it in other "
+            "words is not seen. A date-time, telephone or other number of ten or more letters and digits in "
+            "that place reads as a malformed code and gives Review."
         )
     if rule.rule_id == "COMMON.LEI_CONSISTENCY":
         limitations.append(
