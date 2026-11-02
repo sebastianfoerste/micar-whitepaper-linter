@@ -204,7 +204,33 @@ def test_ci_outputs_never_echo_an_lei(tmp_path: Path):
         assert ISSUER_LEI not in output and BROKEN_LEI not in output
 
 
-@pytest.mark.parametrize("name", ["other-crypto-asset.json", "art-stablecoin.json", "emt-token.json"])
+@pytest.mark.parametrize(
+    ("rule_id", "sections", "quoted"),
+    [
+        # A valid LEI outside the party sections: the consistency issue quotes it.
+        ("COMMON.LEI_CONSISTENCY", {"issuer": f"LEI {ISSUER_LEI}", "summary": f"LEI {OTHER_LEI}"}, OTHER_LEI),
+        # A malformed labelled code next to the valid issuer LEI: the check-digit issue quotes it.
+        ("COMMON.LEI_CHECK_DIGITS", {"issuer": f"LEI {ISSUER_LEI}", "offeror": f"LEI: {OTHER_LEI[:-1]}"}, OTHER_LEI[:-1]),
+    ],
+)
+def test_ci_outputs_replace_lei_issue_text_with_the_fixed_sentence(
+    tmp_path: Path, rule_id: str, sections: dict[str, str], quoted: str
+):
+    path = tmp_path / "draft.json"
+    path.write_text(json.dumps({"title": "t", "type": "other", "sections": sections}), encoding="utf-8")
+    report = lint_whitepaper(load_whitepaper(path))
+    finding = next(f for f in report.findings if f.rule.rule_id == rule_id)
+    assert finding.status == "review" and any(quoted in issue for issue in finding.issues)
+    sarif = render_sarif(report, path)
+    for output in (sarif, render_summary(report, path), render_annotations(report, path)):
+        assert quoted not in output and ISSUER_LEI not in output
+    results = [result for result in json.loads(sarif)["runs"][0]["results"] if result["ruleId"] == rule_id]
+    assert [result["message"]["text"] for result in results] == [
+        f"REVIEW: {finding.rule.label}. Details are in the full lint report; this output does not repeat draft content."
+    ]
+
+
+@pytest.mark.parametrize("name",["other-crypto-asset.json", "art-stablecoin.json", "emt-token.json"])
 def test_full_synthetic_examples_carry_a_valid_lei(name):
     path = Path(__file__).resolve().parents[1] / "examples" / name
     findings = {f.rule.rule_id: f.status for f in lint_whitepaper(load_whitepaper(path)).findings}
