@@ -8,7 +8,7 @@ import pytest
 from test_heading_detection import _write_docx, _write_pdf
 
 from micar_linter.ci_outputs import render_annotations, render_sarif, render_summary
-from micar_linter.lei import check_digits_for, find_leis, has_valid_check_digits, malformed_leis
+from micar_linter.lei import check_digits_for, find_leis, has_valid_check_digits, malformed_leis, reads_leis
 from micar_linter.linter import Linter, lint_whitepaper
 from micar_linter.rules.common import COMMON_RULES
 from micar_linter.whitepaper import Whitepaper, WhitepaperType, load_whitepaper
@@ -46,10 +46,14 @@ def test_generated_check_digits_validate_and_one_changed_digit_fails():
         check_digits_for("too-short")
 
 
-def test_find_leis_needs_a_label_for_purely_numeric_codes_and_ignores_longer_codes():
+def test_find_leis_reads_a_purely_numeric_code_only_in_a_text_that_reads_leis_and_ignores_longer_codes():
+    # A 20-digit number counts as an LEI only in a text that names an LEI label or gives an LEI-shaped code
+    # with a letter; there it has its check digits checked, however far from the label it stands.
     numeric = "12345678901234567890"
+    assert find_leis(f"Account {numeric}. Ref X{ISSUER_LEI}9.") == ()
     text = f"LEI: {ISSUER_LEI}. Account {numeric}. Again {ISSUER_LEI}. Ref X{ISSUER_LEI}9."
-    assert find_leis(text) == (ISSUER_LEI,)
+    assert find_leis(text) == (ISSUER_LEI, numeric)
+    assert find_leis(f"Issuer {ISSUER_LEI}. Account {numeric}.") == (ISSUER_LEI, numeric)
     assert find_leis(f"Legal Entity Identifier {numeric}") == (numeric,)
 
 
@@ -76,8 +80,8 @@ def _grouped(code: str, separator: str) -> str:
     return separator.join(code[i : i + 4] for i in range(0, len(code), 4))
 
 
-# Codes that an LEI label introduces but that are not LEI-shaped. Each is a typo of OTHER_LEI, or a
-# fictional number that fails ISO 17442.
+# LEI-like codes that are not LEI-shaped. Each is a typo of OTHER_LEI, or a fictional number that fails
+# ISO 17442.
 MALFORMED = {
     "19 characters": OTHER_LEI[:-1],
     "21 characters": OTHER_LEI[:10] + "7" + OTHER_LEI[10:],
@@ -88,8 +92,9 @@ MALFORMED = {
 }
 
 
-# How a draft introduces the code. An abbreviation's full stop after the label ends no sentence, a plural
-# label introduces a list, and a PDF wraps its lines inside the label or between label and code.
+# How a draft gives the code. Every LEI-like code in a section that names an LEI label counts, wherever it
+# stands, so neither an abbreviation, a list, a line end, a field label nor a bullet between label and code
+# hides it.
 TEMPLATES = {
     "colon": "LEI: {}.",
     "sentence": "The LEI of the offeror is {}.",
@@ -106,6 +111,27 @@ TEMPLATES = {
     "German list": f"Rechtsträgerkennungen: {OTHER_LEI}, {{}}.",
     "code wrapped": "The offeror's LEI, synthetic,\nis {}.",
     "label wrapped": "The legal entity\nidentifier of the offeror is {}.",
+    # Round 1 of the follow-up verification: shapes that the reading of the code after a label still passed.
+    "plural sentence, swapped": f"The LEIs of the offeror and the operator are {{}} and {OTHER_LEI}.",
+    "list with semicolon": f"LEIs: {OTHER_LEI}; {{}}",
+    "list with slash": f"LEIs: {OTHER_LEI} / {{}}",
+    "list with ampersand": f"LEIs: {OTHER_LEI} & {{}}",
+    "list with as well as": f"LEIs: {OTHER_LEI} as well as {{}}",
+    "list with roles after": f"LEIs: {OTHER_LEI} (offeror) and {{}} (operator).",
+    "list with roles before": f"LEIs: offeror {OTHER_LEI}, operator {{}}.",
+    "list with role labels": f"LEIs: offeror: {OTHER_LEI}; operator: {{}}.",
+    "list on lines": f"LEIs:\n{OTHER_LEI}\n{{}}",
+    "bulleted list": f"LEIs:\n- {OTHER_LEI}\n- {{}}",
+    "field label after a wrap": "The LEI of\nSynthetic Offeror GmbH: {}.",
+    "German hyphen wrap": "Die Rechtsträger-\nkennung des Anbieters lautet {}.",
+    "dash bullet": "LEI:\n- {}",
+    "round bullet": "LEI:\n\u2022 {}",
+    "star bullet": "LEI:\n* {}",
+    "en dash bullet": "Legal entity identifier\n\u2013 {}",
+    "role line under (LEI)": "Legal entity identifier (LEI)\nOfferor: {}",
+    "role line under LEI": "LEI\nOfferor: {}",
+    "German role line": "Rechtsträgerkennung (LEI)\nAnbieter: {}",
+    "Code: line": "LEI:\nCode: {}",
 }
 
 
@@ -116,7 +142,7 @@ def test_a_malformed_labelled_lei_next_to_a_valid_one_never_passes(code: str, te
     finding = _finding("COMMON.LEI_CHECK_DIGITS", sections)
     assert finding.status == "review"
     assert finding.issues == (
-        f"The code '{code}' after an LEI label in section 'offeror' is not a well-formed LEI "
+        f"The code '{code}' in section 'offeror' is not a well-formed LEI "
         "(20 characters: 18 upper-case letters or digits, then two check digits).",
     )
     assert malformed_leis(sections["offeror"]) == (code,)
@@ -174,6 +200,59 @@ def test_a_malformed_lei_in_a_wrapped_pdf_line_never_passes(
     assert any(OTHER_LEI[:-1] in issue for issue in findings["COMMON.LEI_CHECK_DIGITS"].issues)
 
 
+@pytest.mark.parametrize(
+    ("suffix", "offeror"),
+    [
+        # A bare label, then the code in the next paragraph or line after a role label or a bullet.
+        (".docx", ["Legal entity identifier (LEI)", f"Offeror: {OTHER_LEI[:-1]}", f"Operator: {OTHER_LEI}"]),
+        (".docx", ["Legal entity identifier:", f"\u2022 {OTHER_LEI[:-1]}"]),
+        (".pdf", ["Legal entity identifier:", f"\u2022 {OTHER_LEI[:-1]}"]),
+        (".pdf", ["LEI:", f"- {OTHER_LEI[:-1]}"]),
+        # In a DOCX, "LEI:" in capitals is a heading, so the section text holds no label; a party section
+        # reads LEIs all the same.
+        (".docx", ["LEI:", f"- {OTHER_LEI[:-1]}"]),
+        # Wrapped at 90 characters in the PDF onto a line that opens like a field label.
+        (
+            ".pdf",
+            [
+                "Synthetic Offeror GmbH is a fictional company registered in Frankfurt am Main. The LEI of "
+                f"Synthetic Offeror GmbH: {OTHER_LEI[:-1]}."
+            ],
+        ),
+        # A German label hyphenated at a PDF line end.
+        (
+            ".pdf",
+            [
+                "Die Synthetic Offeror GmbH ist ein fiktives Unternehmen mit Sitz in Frankfurt. Die Rechtsträger-",
+                f"kennung des Anbieters lautet {OTHER_LEI[:-1]}.",
+            ],
+        ),
+    ],
+    ids=[
+        "docx role line",
+        "docx bullet",
+        "pdf bullet",
+        "pdf dash item",
+        "docx dash item under a capitals label",
+        "pdf wrap before a field label",
+        "pdf German hyphen wrap",
+    ],
+)
+def test_a_malformed_lei_on_the_line_after_its_label_never_passes(tmp_path: Path, suffix: str, offeror: list[str]):
+    blocks = [
+        ("heading", "Information about the Issuer"),
+        ("body", f"Synthetic Issuer AG, a fictional company. LEI: {ISSUER_LEI}."),
+        ("heading", "Information about the Offeror"),
+        *(("body", paragraph) for paragraph in offeror),
+    ]
+    write = _write_pdf if suffix == ".pdf" else _write_docx
+    whitepaper = load_whitepaper(write(tmp_path / f"draft{suffix}", blocks), WhitepaperType.OTHER)
+    assert OTHER_LEI[:-1] in whitepaper.sections["offeror"]
+    findings = {f.rule.rule_id: f for f in lint_whitepaper(whitepaper).findings}
+    assert findings["COMMON.LEI_CHECK_DIGITS"].status == "review"
+    assert any(f"'{OTHER_LEI[:-1]}'" in issue for issue in findings["COMMON.LEI_CHECK_DIGITS"].issues)
+
+
 def test_a_long_line_of_labels_is_read_in_linear_time():
     # Every "LEI" is a label and the code after it runs on through the labels that follow, so a scan that
     # joined each code to the line end took 46 s on these 48 KB.
@@ -182,6 +261,71 @@ def test_a_long_line_of_labels_is_read_in_linear_time():
     malformed_leis(text)
     find_leis(text)
     assert time.perf_counter() - start < 5
+
+
+@pytest.mark.parametrize("size", [20_000, 200_000])
+@pytest.mark.parametrize(
+    ("before", "line_end", "after"),
+    [
+        ("LEI", "\n", ""),
+        ("LEI", "\n ", ""),
+        ("Legal entity identifier", "\n", ""),
+        ("Die Rechtsträger-\nkennung", "\n", ""),
+        ("Legal entity", "\n", "identifier "),
+    ],
+    ids=["LEI", "LEI, line ends and spaces", "label words", "hyphenated German label", "inside the label"],
+)
+def test_a_run_of_line_ends_after_a_label_is_read_in_linear_time(before: str, line_end: str, after: str, size: int):
+    # A guard that rescanned the rest of the run at every line end took 6 s on 20 KB and over 60 s on 200 KB.
+    text = before + line_end * (size // len(line_end)) + after + OTHER_LEI[:-1]
+    start = time.perf_counter()
+    assert malformed_leis(text) == (OTHER_LEI[:-1],)
+    find_leis(text)
+    assert time.perf_counter() - start < 1
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "LEI 1 " * 35_000,
+        "LEI A1B2 " * 23_000,
+        "LEI: " + "A1B2C3D4E5 " * 18_500,
+        "LEI: " + "A1B2C3D4E5" * 20_000,
+        "LEI: " + "ABCDEFGHIJ0123456789 " * 10_000,
+        "LEIs: " + ", ".join([OTHER_LEI] * 9_500),
+        "LEI " + "synt 0000 " * 20_000,
+        "l" + " " * 200_000 + "egal entity identifier",
+        "Legal entity identi" + "-\n" * 100_000,
+        "LEI" + "-" * 200_000,
+    ],
+    ids=[
+        "labels and digits",
+        "labels and groups",
+        "groups after a label",
+        "one long group",
+        "LEI-like codes",
+        "plural list",
+        "words beside digit groups",
+        "spaces inside a label",
+        "hyphen wraps inside a label",
+        "hyphens",
+    ],
+)
+def test_200_kb_of_text_is_read_in_linear_time(text: str):
+    assert len(text) >= 200_000
+    start = time.perf_counter()
+    malformed_leis(text)
+    find_leis(text)
+    assert time.perf_counter() - start < 2
+
+
+def test_both_lei_rules_read_a_200_kb_section_in_linear_time():
+    sections = {"issuer": f"LEI: {ISSUER_LEI}.", "offeror": "LEI" + "\n" * 200_000 + OTHER_LEI[:-1]}
+    whitepaper = Whitepaper(title="Synthetic", type=WhitepaperType.OTHER, sections=sections, metadata={})
+    start = time.perf_counter()
+    findings = {f.rule.rule_id: f for f in lint_whitepaper(whitepaper).findings}
+    assert time.perf_counter() - start < 5
+    assert findings["COMMON.LEI_CHECK_DIGITS"].status == "review"
 
 
 def test_a_malformed_lei_without_a_valid_one_keeps_the_no_lei_status():
@@ -212,12 +356,68 @@ def test_a_malformed_lei_without_a_valid_one_keeps_the_no_lei_status():
         "- LEI: to be obtained\n- Contact telephone +49 69 0000 0000",
         # Only a code joins a list: the words after the comma are not one.
         f"LEIs: {OTHER_LEI}, registered on 2 March 2026 under number 12345.",
+        # Words of 18 to 22 letters with a lower-case letter are words, not codes.
+        "Aktiengesellschaft, Handelsregisternummer and aufsichtsrechtlichen Anforderungen.",
+        # A telephone number before short words (examples/other-crypto-asset.json): a word joins a code only
+        # beside a group of its length with a digit.
+        "Investors can contact the offeror at the fictional telephone number +49 30 0000 0000 or the e-mail.",
+        # A heading in capitals has no digit, and its words differ in length.
+        "INFORMATION ABOUT THE OFFEROR AND THE ISSUER",
+        "Share capital: EUR 1 000 000, paid up in full on 2 March 2026.",
     ],
 )
 def test_labels_without_a_malformed_code_leave_the_rule_alone(text: str):
     assert malformed_leis(text) == ()
     sections = {"issuer": f"Synthetic Issuer AG. LEI: {ISSUER_LEI}.", "offeror": f"LEI {OTHER_LEI}. {text}"}
     assert _finding("COMMON.LEI_CHECK_DIGITS", sections).status == "pass"
+
+
+@pytest.mark.parametrize(
+    ("text", "code"),
+    [
+        # A run of 18 to 22 letters and digits in a section that names an LEI is read as a code, whatever it
+        # is: an IBAN goes to Review too. A false Review is the price of never passing a malformed LEI.
+        ("LEI: to be obtained. Account: IBAN DE00 0000 0000 0000 0000 00.", "IBAN DE00 0000 0000 0000 0000 00"),
+        ("LEI: XXXXXXXXXXXXXXXXXXXX (to be obtained).", "XXXXXXXXXXXXXXXXXXXX"),
+        ("LEI: XXXX XXXX XXXX XXXX XXXX (to be obtained).", "XXXX XXXX XXXX XXXX XXXX"),
+        # A code in lower case and in groups: a word joins beside a group of its length with a digit.
+        ("LEI: 9999 synt h000 0zzq 0263.", "9999 synt h000 0zzq 0263"),
+        # The code stands before its label, and a 20-digit number fails its check digits.
+        (f"{OTHER_LEI[:-1]} is the offeror's LEI.", OTHER_LEI[:-1]),
+        # A zero-width space copied into a code splits it as a space does.
+        (f"LEI: {OTHER_LEI[:9]}\u200b{OTHER_LEI[9:]}.", f"{OTHER_LEI[:9]} {OTHER_LEI[9:]}"),
+        # Neighbouring groups join the code and are quoted with it, up to 40 characters.
+        ("LEI CODE 9999 SYNT H000 0ZZQ 0263 HRB 12345", "CODE 9999 SYNT H000 0ZZQ 0263 HRB 12345"),
+        ("LEI: " + "A1B2 " * 20, "A1B2 " * 7 + "A1B2 \u2026"),
+    ],
+)
+def test_every_lei_like_code_in_a_section_that_names_an_lei_is_read(text: str, code: str):
+    assert reads_leis(text)
+    assert malformed_leis(text) == (code,)
+    sections = {"issuer": f"Synthetic Issuer AG. LEI: {ISSUER_LEI}.", "offeror": text}
+    assert _finding("COMMON.LEI_CHECK_DIGITS", sections).status == "review"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        # A section that names no LEI label and holds no LEI-shaped code with a letter is not read.
+        f"Synthetic Offeror GmbH, {OTHER_LEI[:-1]}.",
+        # One group of more than 22 or fewer than 18 letters and digits is not LEI-like.
+        f"LEI: {OTHER_LEI}123.",
+        f"LEI: {OTHER_LEI[:17]}.",
+        # Letters only with a lower-case letter read as a word, alone or between groups of another length.
+        "LEI: abcdefghijklmnopqrst.",
+        "LEI: 99 synth 0000zzq0263.",
+        # Groups of capitals without a digit count only if all have the same length.
+        "LEI: XXXXX XXXX XXXX XXXX XXX.",
+        # Only spaces, a hyphen and a line end join groups.
+        "LEI: 9999.SYNT.H000.0ZZQ.0263.",
+    ],
+)
+def test_the_documented_limits_of_the_reading(text: str):
+    # ADR 0007 and the rule page name these limits; this test keeps the docs and the code in step.
+    assert malformed_leis(text) == ()
 
 
 @pytest.mark.parametrize(
@@ -248,7 +448,7 @@ def test_german_drafts_get_german_messages():
     malformed = _finding("COMMON.LEI_CHECK_DIGITS", sections, "de")
     assert malformed.status == "review"
     assert malformed.issues == (
-        f"Der Code '{OTHER_LEI[:-1]}' nach der LEI-Angabe im Abschnitt 'offeror' ist keine korrekt "
+        f"Der Code '{OTHER_LEI[:-1]}' im Abschnitt 'offeror' ist keine korrekt "
         "gebildete LEI (20 Zeichen: 18 Großbuchstaben oder Ziffern, dann zwei Prüfziffern).",
     )
 

@@ -344,8 +344,8 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
                             "offeror": f"Synthetic Offeror GmbH. LEI: {OTHER_SYNTHETIC_LEI[:-1]}.",
                         },
                     },
-                    "The code after the offeror's LEI label has 19 characters, one short of an LEI, so it is "
-                    "malformed. The valid issuer LEI does not let the rule pass.",
+                    "The offeror section names an LEI and gives a code of 19 characters, one short of an LEI, so "
+                    "the code is malformed. The valid issuer LEI does not let the rule pass.",
                 ),
                 Example(
                     "Check digits match",
@@ -708,15 +708,21 @@ def status_logic(rule: Rule) -> str:
             '<ul class="plain"><li><strong>Missing</strong>: no LEI-shaped code (18 upper-case letters or digits '
             "and two check digits) appears in any section, and no section <code>issuer</code>, <code>offeror</code> "
             "or <code>trading_platform_operator</code> has text other than a placeholder. A 20-digit number counts "
-            "only next to an LEI label. A malformed code (below) is named in the finding but does not change "
-            "this status.</li>"
-            "<li><strong>Review</strong>: an LEI-shaped code fails the ISO/IEC 7064 MOD 97-10 check digits; the "
-            "code after an LEI label is malformed: of the wrong length, in lower case, with a letter where a check "
-            "digit belongs, or split into groups by spaces or hyphens; or no LEI-shaped code appears while a party "
+            "only in a section that reads LEIs (below). A malformed code (below) is named in the finding but does "
+            "not change this status.</li>"
+            "<li><strong>Review</strong>: an LEI-shaped code fails the ISO/IEC 7064 MOD 97-10 check digits; an "
+            "LEI-like code in a section that reads LEIs is malformed; or no LEI-shaped code appears while a party "
             "section has text, since point 5 allows another identifier required pursuant to applicable national "
-            "law in place of the LEI.</li>"
-            "<li><strong>Pass</strong>: every LEI-shaped code has valid check digits and no code after an LEI "
-            "label is malformed. No registry is asked.</li></ul>"
+            "law in place of the LEI. A section reads LEIs if it is <code>issuer</code>, <code>offeror</code> or "
+            "<code>trading_platform_operator</code>, names an LEI label (LEI or LEIs, legal entity identifier or "
+            "ID, Rechtsträgerkennung, in any case, also split by hyphens or line ends) or holds an LEI-shaped code "
+            "with a letter. There every LEI-like code counts, wherever it stands: a run of 18 to 22 letters and "
+            "digits that holds a digit or no lower-case letter, or groups joined by spaces (also invisible ones), "
+            "hyphens or a line end that together hold at least 18. It is malformed unless it is one LEI-shaped "
+            "run: of 18, 19, 21 or 22 characters, in lower case, with a letter where a check digit belongs, or "
+            "split into groups.</li>"
+            "<li><strong>Pass</strong>: every LEI-shaped code has valid check digits and no LEI-like code is "
+            "malformed. No registry is asked.</li></ul>"
         )
     if rule.rule_id == "COMMON.LEI_CONSISTENCY":
         return (
@@ -989,16 +995,21 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             "party section without an LEI of its own does not change the result."
         )
         limitations.append(
-            "Finds a malformed LEI only after a label: LEI in capitals, legal entity identifier or "
-            "Rechtsträgerkennung, also in the plural. The code is the first run of letters and digits that holds "
-            "a digit and, with the groups that follow it after a single space or hyphen, has at least ten "
-            "letters and digits; at most six other words may stand between label and code, in the same "
-            "sentence (the full stop of e.g., i.e., or of No. or Nr. before a number, ends none). A code joined "
-            "by a comma, and, or, und or oder to such a code or to an LEI is read too. The search runs on over "
-            "line ends, as a PDF wraps them, but not into a line that starts a field (Contact telephone number: "
-            "...) or a list item. A malformed code without a label, further from it, or joined to it in other "
-            "words is not seen. A date-time, telephone or other number of ten or more letters and digits in "
-            "that place reads as a malformed code and gives Review."
+            "Reads section text only. A heading and text in no section are not read, so a code on a line that "
+            "the loader takes for a heading (in a PDF, a line such as Offeror: ... that names a section) is not "
+            "seen. A malformed code is not seen in a section that is not a party section, names no LEI label and "
+            "holds no LEI-shaped code with a letter, nor when it is no LEI-like code: one run of fewer than 18 "
+            "or more than 22 letters and digits, as when a code has lost or gained three or more characters, "
+            "also right after a label; "
+            "groups that together hold fewer than 18; a run of letters only with a lower-case letter, which "
+            "reads as a word; groups split by other characters, such as full stops or slashes, by more than three "
+            "characters, or by two hyphens or two line ends (a blank line); or a code split into groups where a group of letters only with a "
+            "lower-case letter stands beside no group of its length with a digit. Groups in capitals without a "
+            "digit count only if all have the same length. Every "
+            "LEI-like code in a "
+            "section that reads LEIs counts, so an IBAN, a long number in groups, a placeholder such as "
+            "XXXXXXXXXXXXXXXXXXXX, or an address or a heading in capitals with a digit in it gives Review too, "
+            "which fails safe."
         )
     if rule.rule_id == "COMMON.LEI_CONSISTENCY":
         limitations.append(

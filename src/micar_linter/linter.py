@@ -596,13 +596,14 @@ def _no_lei_finding(rule: Rule, whitepaper: Whitepaper, msg: str) -> Finding:
 
 
 def _malformed_lei_issues(whitepaper: Whitepaper) -> list[str]:
-    """One issue per code that an LEI label introduces but that is not LEI-shaped (lei.malformed_leis)."""
+    """One issue per LEI-like code that is not LEI-shaped, in a section that reads LEIs (lei.malformed_leis):
+    a party section, or one that names an LEI label or holds an LEI-shaped code with a letter."""
     is_de = whitepaper.language == "de"
     return [
-        f"Der Code '{code}' nach der LEI-Angabe im Abschnitt '{section}' ist keine korrekt gebildete LEI "
+        f"Der Code '{code}' im Abschnitt '{section}' ist keine korrekt gebildete LEI "
         "(20 Zeichen: 18 Großbuchstaben oder Ziffern, dann zwei Prüfziffern)."
         if is_de
-        else f"The code '{code}' after an LEI label in section '{section}' is not a well-formed LEI "
+        else f"The code '{code}' in section '{section}' is not a well-formed LEI "
         "(20 characters: 18 upper-case letters or digits, then two check digits)."
         for section, codes in malformed_leis_by_section(whitepaper.sections).items()
         for code in codes
@@ -610,8 +611,9 @@ def _malformed_lei_issues(whitepaper: Whitepaper) -> list[str]:
 
 
 def _lei_check_digits_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
-    """Fails closed: a draft without any LEI cannot show valid check digits, and a labelled code that is
-    not LEI-shaped (wrong length, lower case, a letter in a check-digit position) keeps the rule from passing.
+    """Fails closed: a draft without any LEI cannot show valid check digits, and an LEI-like code that is not
+    LEI-shaped (wrong length, lower case, a letter in a check-digit position, split into groups), in a section
+    that reads LEIs, keeps the rule from passing.
     """
     is_de = whitepaper.language == "de"
     found = leis_by_section(whitepaper.sections)
@@ -665,7 +667,11 @@ def _lei_consistency_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
             "so consistency cannot be checked."
         )
         return _no_lei_finding(rule, whitepaper, msg)
-    others = {code for text in whitepaper.sections.values() for code in other_person_leis(str(text))}
+    others = {
+        code
+        for section, text in whitepaper.sections.items()
+        for code in other_person_leis(str(text), section in PARTY_SECTIONS)
+    }
     issues = []
     issuer_codes = [code for code in valid.get("issuer", ()) if code not in others]
     if len(issuer_codes) > 1:
