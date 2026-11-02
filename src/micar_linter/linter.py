@@ -293,7 +293,8 @@ _TITLE_II_RESPONSIBLE_PERSON = re.compile(
 # therefore goes to review, also where it describes the reserve of assets or issuance, or where the
 # section denies it: what the words refer to is left to the reviewer. Only uses that never mean par
 # value do not count: "par" for a paragraph next to an article number, "on (a) par", "par for the
-# course", "par excellence", "sub-par", "pari passu", "rank at par" and "at par with each other".
+# course", "par excellence", "sub-par", "pari passu", "rank at par", "at par with each other" or "with one
+# another", and "at nominal" before "cost", "fee" or "charge".
 _PAR_VALUE = re.compile(
     r"(?<!\bon )(?<!\bon a )(?<!\brank at )(?<!\branks at )(?<!\branked at )(?<!\branking at )(?<!\bsub-)"
     r"\bpar\b(?! (?:for the course|excellence|with each other|with one another)\b)"
@@ -574,7 +575,8 @@ def _other_identifier_note(is_de: bool) -> str:
 
 
 def _no_lei_finding(rule: Rule, whitepaper: Whitepaper, msg: str) -> Finding:
-    """Fails closed without an LEI: Missing when no party section has text, Review when one has.
+    """Fails closed without an LEI: Missing when no party section has text other than placeholders, Review
+    when one has.
 
     Point 5 of each party Part allows another identifier required pursuant to applicable national law
     in place of the LEI, and VO (EU) 2024/2984 asks for the LEI "where available", so a party section

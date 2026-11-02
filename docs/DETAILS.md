@@ -1,6 +1,6 @@
 # Detailed usage and reference
 
-Long-form detail moved out of the README. Everything here was in the previous README.
+Long-form detail moved out of the README.
 
 ## Browser workbench
 
@@ -128,7 +128,7 @@ See also [FEATURES.md](FEATURES.md), [SETUP.md](SETUP.md), [ARCHITECTURE.md](ARC
 
 ## What the checks establish
 
-A pass means that the section exists, meets the minimum length and contains the rule's keywords; for the LEI checks, that the LEIs found have valid check digits and the parties' LEIs agree across sections; for the notification date and the language, that the section names a calendar date or an official EU language in a form the rule page lists (from the next release; release 1.2.1, on PyPI and `@v1`, still checks those two by listed terms and length). It does not mean that the disclosure is correct, complete or compliant. Annex selection follows the `type` field of a JSON draft (a CLI run lints a draft without one as other, with no warning) and the regime stated for numbered-field XHTML; for other formats it is set by `--type` (in the playground, by the regime chosen for an XHTML file) or else inferred from English phrases in the text (in Markdown and heading-layout XHTML or HTML, from the section text only, not the headings); rule IDs are stable, unmatched keywords produce cited candidate flags, severity is tested, and JSON outputs can be used by review workflows without hiding the legal basis.
+A pass means that the section exists, meets the minimum length and contains the rule's keywords; for the LEI checks, that the LEIs found have valid check digits and the parties' LEIs agree across sections; for the notification date and the language, that the section names a calendar date or an official EU language in a form the rule page lists (from the next release; release 1.2.1, on PyPI and `@v1`, still checks those two by listed terms and length); for the contact details of Annex I and III Part A point 6 (`ANNEX_I.A.P6`, `ANNEX_III.A.P6`, from the next release), that a telephone number, an e-mail address and a period in days are found, in the template fields that carry them in a numbered-field draft and otherwise in the `offeror` section (Annex I) or the `issuer` section (Annex III). It does not mean that the disclosure is correct, complete or compliant. Annex selection follows the `type` field of a JSON draft (a CLI run lints a draft without one as other, with no warning) and the regime stated for numbered-field XHTML; for other formats it is set by `--type` (in the playground, by the regime chosen for an XHTML file) or else inferred from English phrases in the text (in Markdown and heading-layout XHTML or HTML, from the section text only, not the headings); rule IDs are stable, unmatched keywords produce cited candidate flags, severity is tested, and JSON outputs can be used by review workflows without hiding the legal basis.
 
 The tool preserves legal judgment. It flags candidate disclosure gaps and produces draft review artifacts. It does not decide whether a white paper is lawful or complete.
 

@@ -23,7 +23,7 @@ R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 NSMAP = {"w": W_NS}
 # Paragraph content skipped without ending a match: deleted or moved-away text, properties and range markers.
 # A drawing, including its hidden mc:Fallback copy, ends a match; paragraphs inside mc:Fallback are never
-# candidates (see render_tracked_docx).
+# candidates (see export_tracked_docx).
 _SKIPPED = {
     f"{{{W_NS}}}{name}"
     for name in [
