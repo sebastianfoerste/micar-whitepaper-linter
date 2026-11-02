@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from micar_linter.ci_outputs import render_annotations, render_sarif, render_summary
-from micar_linter.lei import check_digits_for, find_leis, has_valid_check_digits
+from micar_linter.lei import check_digits_for, find_leis, has_valid_check_digits, malformed_leis
 from micar_linter.linter import Linter, lint_whitepaper
 from micar_linter.rules.common import COMMON_RULES
 from micar_linter.whitepaper import Whitepaper, WhitepaperType, load_whitepaper
@@ -70,6 +70,81 @@ def test_check_digits_rule_reviews_a_bad_lei_and_passes_good_ones():
     assert good.status == "pass" and good.issues == ()
 
 
+def _grouped(code: str, separator: str) -> str:
+    return separator.join(code[i : i + 4] for i in range(0, len(code), 4))
+
+
+# Codes that an LEI label introduces but that are not LEI-shaped. Each is a typo of OTHER_LEI, or a
+# fictional number that fails ISO 17442.
+MALFORMED = {
+    "19 characters": OTHER_LEI[:-1],
+    "21 characters": OTHER_LEI[:10] + "7" + OTHER_LEI[10:],
+    "letter in a check-digit position": OTHER_LEI[:-1] + "O",
+    "lower case": OTHER_LEI.lower(),
+    "space-separated groups": _grouped(OTHER_LEI, " "),
+    "hyphenated groups": _grouped(OTHER_LEI, "-"),
+}
+
+
+@pytest.mark.parametrize("code", MALFORMED.values(), ids=MALFORMED.keys())
+@pytest.mark.parametrize(
+    "template", ["LEI: {}.", "The LEI of the offeror is {}.", "Legal entity identifier\n{}", "LEI:\n\n{}"]
+)
+def test_a_malformed_labelled_lei_next_to_a_valid_one_never_passes(code: str, template: str):
+    sections = {"issuer": f"Synthetic Issuer AG. LEI: {ISSUER_LEI}.", "offeror": template.format(code)}
+    finding = _finding("COMMON.LEI_CHECK_DIGITS", sections)
+    assert finding.status == "review"
+    assert finding.issues == (
+        f"The code '{code}' after an LEI label in section 'offeror' is not a well-formed LEI "
+        "(20 characters: 18 upper-case letters or digits, then two check digits).",
+    )
+    assert malformed_leis(sections["offeror"]) == (code,)
+    # A code that is not an LEI is left to the check-digit rule, as a code with bad check digits is, so one
+    # typo is reported once.
+    assert _finding("COMMON.LEI_CONSISTENCY", sections).status == "pass"
+
+
+def test_a_numeric_code_further_from_its_label_still_has_its_check_digits_checked():
+    numeric = "12345678901234567890"
+    assert not has_valid_check_digits(numeric)
+    offeror = f"The LEI of the offeror is {numeric}."
+    assert find_leis(offeror) == (numeric,)
+    finding = _finding("COMMON.LEI_CHECK_DIGITS", {"issuer": f"LEI: {ISSUER_LEI}.", "offeror": offeror})
+    assert finding.status == "review"
+    assert finding.issues == (
+        f"LEI '{numeric}' in section 'offeror' fails the ISO/IEC 7064 MOD 97-10 check digits.",
+    )
+
+
+def test_a_malformed_lei_without_a_valid_one_keeps_the_no_lei_status():
+    # The no-LEI statuses stay as they were; the malformed code is named after the no-LEI message.
+    review = _finding("COMMON.LEI_CHECK_DIGITS", {"issuer": f"LEI: {OTHER_LEI[:-1]}."})
+    assert review.status == "review" and len(review.issues) == 3
+    assert OTHER_LEI[:-1] in review.issues[2]
+    missing = _finding("COMMON.LEI_CHECK_DIGITS", {"summary": f"LEI: {OTHER_LEI[:-1]}."})
+    assert missing.status == "missing" and OTHER_LEI[:-1] in missing.issues[1]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        f"LEI {OTHER_LEI} AG.",
+        "The LEI will be obtained by 1 March 2026.",
+        "LEI as required by Article 2(1)(b) of Implementing Regulation (EU) 2024/2984.",
+        "LEI: none. The national register number is HRB 1234567890.",
+        "LEI eligibility: TRUE",
+        # The next field of the numbered layout is not the code of a label answered in words.
+        "Legal entity identifier: not available\nContact telephone number: +49 69 0000 0000",
+        "Prețul de 10 lei se plătește în contul IBAN RO00SYNTH00000000000000.",
+        f"Its fictional Legal Entity Identifier (LEI), synthetic and not registered, is {OTHER_LEI}.",
+    ],
+)
+def test_labels_without_a_malformed_code_leave_the_rule_alone(text: str):
+    assert malformed_leis(text) == ()
+    sections = {"issuer": f"Synthetic Issuer AG. LEI: {ISSUER_LEI}.", "offeror": f"LEI {OTHER_LEI}. {text}"}
+    assert _finding("COMMON.LEI_CHECK_DIGITS", sections).status == "pass"
+
+
 @pytest.mark.parametrize(
     ("sections", "status"),
     [
@@ -94,6 +169,13 @@ def test_german_drafts_get_german_messages():
     assert "Rechtsträgerkennung" in no_lei.issues[0] and "nationalem Recht" in no_lei.issues[1]
     review = _finding("COMMON.LEI_CONSISTENCY", {"issuer": f"LEI {ISSUER_LEI}", "summary": OTHER_LEI}, "de")
     assert "erscheint in keinem Abschnitt" in review.issues[0]
+    sections = {"issuer": f"LEI {ISSUER_LEI}", "offeror": f"Rechtsträgerkennung: {OTHER_LEI[:-1]}"}
+    malformed = _finding("COMMON.LEI_CHECK_DIGITS", sections, "de")
+    assert malformed.status == "review"
+    assert malformed.issues == (
+        f"Der Code '{OTHER_LEI[:-1]}' nach der LEI-Angabe im Abschnitt 'offeror' ist keine korrekt "
+        "gebildete LEI (20 Zeichen: 18 Großbuchstaben oder Ziffern, dann zwei Prüfziffern).",
+    )
 
 
 def test_lei_rules_run_for_every_regime():

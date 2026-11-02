@@ -3,7 +3,8 @@
 An LEI is 20 characters (ISO 17442): 18 upper-case letters or digits followed by
 two check digits under ISO/IEC 7064 MOD 97-10. The check is offline and never
 asks a registry whether an LEI exists or belongs to the named entity, so a pass
-says only that the characters are internally consistent.
+says only that the characters are internally consistent. A code that an LEI label introduces but
+that does not have that shape is malformed (malformed_leis).
 """
 
 from __future__ import annotations
@@ -14,12 +15,31 @@ from collections.abc import Iterator
 # 18 alphanumerics and 2 digits, not part of a longer code.
 _LEI_SHAPE = re.compile(r"(?<![A-Z0-9])[A-Z0-9]{18}[0-9]{2}(?![A-Z0-9])")
 # A purely numeric 20-digit run (an account or reference number) counts only right after an LEI
-# label, with at most two short words between them ("LEI: ...", "the LEI is ...", "LEI code ...").
+# label, with at most two short words between them ("LEI: ...", "the LEI is ...", "LEI code ..."), or as
+# the code an LEI label introduces (_labelled_codes below).
 _LEI_LABEL = re.compile(
     r"\b(?:LEI|legal entity identifier|Rechtstr(?:ä|ae)gerkennung)\W*(?:[^\W\d_]{1,12}\W+){0,2}$",
     re.IGNORECASE,
 )
 _LABEL_WINDOW = 60
+
+# An LEI label introduces a code: the acronym in capitals (lower-case "lei" is a Romanian word, the plural of
+# the currency "leu") or the English or German name in any case. The code is the first run of letters and
+# digits that holds a digit and, with any groups that follow it after a single space or hyphen, has at least
+# _MIN_CODE_LENGTH of them. At most _MAX_LABEL_WORDS other words may stand between label and code ("The LEI
+# of the offeror is ...", "Legal Entity Identifier (LEI), synthetic and not registered, is ..."), with no
+# sentence end. A shorter number on the way, such as a year or "ISO 17442", counts as one of those words.
+# The code must be on the label's line, or on the next line that holds a word where nothing but punctuation
+# follows the label on its own ("Legal entity identifier" above its code), so the next field of the
+# numbered layout ("Contact telephone number: ...") is never read as the code.
+_LABEL = re.compile(r"\bLEIs?\b|(?i:\blegal entity identifiers?\b|\bRechtstr(?:ä|ae)gerkennung(?:en)?\b)")
+_WORD = re.compile(r"[^\W_]+")
+_GAP_SENTENCE_END = re.compile(r"[.!?;](?=\s)")
+# A group that continues a code after a single space or hyphen: one with a digit, or capitals only, as in
+# "9999 SYNT H000 0ZZQ 0263".
+_CODE_GROUP = re.compile(r"[ -](?:[A-Za-z0-9]*[0-9][A-Za-z0-9]*|[A-Z]+)(?![^\W_])")
+_MAX_LABEL_WORDS = 6
+_MIN_CODE_LENGTH = 10
 
 # Sections that name the parties to the white paper.
 PARTY_SECTIONS = ("issuer", "offeror", "trading_platform_operator")
@@ -57,10 +77,54 @@ def check_digits_for(base: str) -> str:
     return f"{98 - remainder:02d}"
 
 
+def _code_span(text: str, word: re.Match[str]) -> tuple[int, int] | None:
+    """The span of the code that starts at a word, or None if the word does not start one."""
+    token = word.group(0)
+    if not (token.isascii() and any(char.isdigit() for char in token)):
+        return None
+    # A well-formed LEI stands alone, so the name of a legal form after it ("... 0166 AG") is not joined.
+    if _LEI_SHAPE.fullmatch(token):
+        return word.span()
+    end = word.end()
+    while group := _CODE_GROUP.match(text, end):
+        end = group.end()
+    if sum(char.isalnum() for char in text[word.start() : end]) < _MIN_CODE_LENGTH:
+        return None
+    return word.start(), end
+
+
+def _search_end(text: str, start: int) -> int:
+    """The end of the line that holds the first word after a label: the label's own line, or a later line
+    where only punctuation follows the label on its own."""
+    first = _WORD.search(text, start)
+    if first is None:
+        return len(text)
+    end = text.find("\n", first.start())
+    return len(text) if end == -1 else end
+
+
+def _labelled_codes(text: str) -> list[tuple[int, int]]:
+    """The spans of the codes that LEI labels introduce, in order, without duplicates."""
+    spans: list[tuple[int, int]] = []
+    for label in _LABEL.finditer(text):
+        position = label.end()
+        for words, word in enumerate(_WORD.finditer(text, label.end(), _search_end(text, label.end()))):
+            if words > _MAX_LABEL_WORDS or _GAP_SENTENCE_END.search(text[position : word.start()]):
+                break
+            span = _code_span(text, word)
+            if span is not None:
+                if span not in spans:
+                    spans.append(span)
+                break
+            position = word.end()
+    return spans
+
+
 def _lei_matches(text: str) -> Iterator[re.Match[str]]:
     """Every LEI-shaped code in a text, in order; a purely numeric one only after an LEI label."""
+    labelled = set(_labelled_codes(text))
     for match in _LEI_SHAPE.finditer(text):
-        if match.group(0).isdigit():
+        if match.group(0).isdigit() and match.span() not in labelled:
             window = text[max(0, match.start() - _LABEL_WINDOW) : match.start()]
             if not _LEI_LABEL.search(window):
                 continue
@@ -70,6 +134,17 @@ def _lei_matches(text: str) -> Iterator[re.Match[str]]:
 def find_leis(text: str) -> tuple[str, ...]:
     """LEI-shaped codes in a text, in order of first appearance, without duplicates."""
     return tuple(dict.fromkeys(match.group(0) for match in _lei_matches(text)))
+
+
+def malformed_leis(text: str) -> tuple[str, ...]:
+    """Codes that an LEI label introduces but that are not LEI-shaped, as written, without duplicates.
+
+    That is a code of the wrong length, in lower case, with a letter where a check digit belongs, or split
+    into groups by spaces or hyphens. COMMON.LEI_CHECK_DIGITS sends such a code to Review, so that a typo
+    next to a valid LEI cannot pass.
+    """
+    codes = (text[start:end] for start, end in _labelled_codes(text))
+    return tuple(dict.fromkeys(code for code in codes if not _LEI_SHAPE.fullmatch(code)))
 
 
 def other_person_leis(text: str) -> tuple[str, ...]:
@@ -100,3 +175,8 @@ def _last_sentence(text: str) -> str:
 def leis_by_section(sections: dict[str, str]) -> dict[str, tuple[str, ...]]:
     """LEI-shaped codes per section key, for sections that contain any, in draft order."""
     return {key: codes for key, text in sections.items() if (codes := find_leis(str(text)))}
+
+
+def malformed_leis_by_section(sections: dict[str, str]) -> dict[str, tuple[str, ...]]:
+    """Malformed labelled codes (malformed_leis) per section key, for sections that contain any."""
+    return {key: codes for key, text in sections.items() if (codes := malformed_leis(str(text)))}

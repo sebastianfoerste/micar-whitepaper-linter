@@ -1,6 +1,6 @@
 # 0007. LEI check-digit and consistency rules
 
-Status: Accepted (2026-10-21). Amended on 2026-10-27, after the owner's decisions on the rule terms review: point 5 citation, and Review for a party section without an LEI. Amended on 2026-10-29: the LEI of a person other than the parties counts toward neither Review condition of `COMMON.LEI_CONSISTENCY`.
+Status: Accepted (2026-10-21). Amended on 2026-10-27, after the owner's decisions on the rule terms review: point 5 citation, and Review for a party section without an LEI. Amended on 2026-10-29: the LEI of a person other than the parties counts toward neither Review condition of `COMMON.LEI_CONSISTENCY`. Amended on 2026-11-02, after an audit: a code that an LEI label introduces but that is not LEI-shaped sends `COMMON.LEI_CHECK_DIGITS` to Review, so a malformed LEI next to a valid one no longer passes.
 
 ## Context
 
@@ -16,11 +16,11 @@ White papers identify their parties by Legal Entity Identifier. The repo's study
 
 Option 2, offline.
 
-- **`COMMON.LEI_CHECK_DIGITS`** (MAJOR) reads every section for 20-character codes: 18 upper-case letters or digits, then two digits. A purely numeric run counts only right after an LEI label, with at most two short words between them. Statuses:
-  - Missing: no code is found anywhere and no party section has text other than a placeholder (fail closed).
-  - Review: any code fails ISO/IEC 7064 MOD 97-10, or no code is found while a party section has text. Point 5 of each party Part allows another identifier required pursuant to applicable national law in place of the LEI, and the rule cannot recognise one.
-  - Pass: every code is well formed.
-- **`COMMON.LEI_CONSISTENCY`** (MAJOR) looks only at codes with valid check digits, so a single typo is reported once. Statuses:
+- **`COMMON.LEI_CHECK_DIGITS`** (MAJOR) reads every section for 20-character codes: 18 upper-case letters or digits, then two digits. A purely numeric run counts only right after an LEI label, with at most two short words between them, or as the code an LEI label introduces. That code is the first run of letters and digits after the label (LEI in capitals, legal entity identifier or Rechtsträgerkennung in any case) that holds a digit and, with the groups that follow it after a single space or hyphen, has at least ten characters, with at most six other words between label and code in the same sentence. The code is on the label's line or, where only punctuation follows the label on its line, on the next line that holds a word (`lei.malformed_leis`). A labelled code that is not LEI-shaped is malformed: of the wrong length, in lower case, with a letter where a check digit belongs, or split into groups. Statuses:
+  - Missing: no LEI-shaped code is found anywhere and no party section has text other than a placeholder (fail closed). A malformed code is named in the issues and does not change this status.
+  - Review: any code fails ISO/IEC 7064 MOD 97-10, a labelled code is malformed, or no code is found while a party section has text. Point 5 of each party Part allows another identifier required pursuant to applicable national law in place of the LEI, and the rule cannot recognise one.
+  - Pass: every code is well formed and no labelled code is malformed.
+- **`COMMON.LEI_CONSISTENCY`** (MAJOR) looks only at codes with valid check digits, so a single typo, or a malformed code, is reported once, by `COMMON.LEI_CHECK_DIGITS`. Statuses:
   - Missing: no party section (`issuer`, `offeror`, `trading_platform_operator`) has text other than a placeholder.
   - Review: a party section has text but none has a valid LEI; a valid LEI outside the party sections appears in none of them; or `issuer` names more than one LEI.
   - Neither of the last two counts an LEI that the draft gives for a person other than the parties, which the template of Implementing Regulation (EU) 2024/2984 asks for: the crypto-asset service provider in charge of the placing (Table 2 field E.31, Table 3 C.22), a custodian of the reserve assets (Table 3 G.8), and a person other than the issuer who offers the token, seeks its admission to trading or draws up the white paper (Table 3 AA.1 and AA.3, Table 4 A.27). The field label or the sentence that holds the code must name the role before it (`lei.other_person_leis`).
@@ -34,10 +34,11 @@ Option 2, offline.
 
 - Each regime gains two rules, and every existing report gains two findings. The three full synthetic examples carry a fictional LEI with computed check digits and pass both rules; `examples/incomplete.json` has none and shows both as Review, because its issuer section has text.
 - Rule IDs are new; no existing ID, status, severity or exit code changes. `--strict` is unaffected, because neither rule is a BLOCKER.
+- The 2026-11-02 amendment changes no rule ID, severity or exit code and adds no status: a draft that gives a malformed LEI after a label next to a valid LEI moves from Pass to Review on `COMMON.LEI_CHECK_DIGITS`, and a 20-digit number up to six words after an LEI label has its check digits checked.
 
 ## Non-negotiables check
 
-- Fails closed when there is no LEI.
+- Fails closed when there is no LEI, and a malformed labelled LEI never ends in Pass.
 - Deterministic, with no model and no network.
 - Test LEIs are synthetic with computed check digits; no real identifier appears in the repo.
 - The point 5 pinpoint was added on 2026-10-27 after the Official Journal check.

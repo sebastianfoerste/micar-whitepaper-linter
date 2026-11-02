@@ -10,7 +10,13 @@ from functools import partial
 
 from micar_linter.anchors import SourceAnchor, build_source_anchors
 from micar_linter.contact import CONTACT_FIELDS, has_email_address, has_period_in_days, has_telephone_number
-from micar_linter.lei import PARTY_SECTIONS, has_valid_check_digits, leis_by_section, other_person_leis
+from micar_linter.lei import (
+    PARTY_SECTIONS,
+    has_valid_check_digits,
+    leis_by_section,
+    malformed_leis_by_section,
+    other_person_leis,
+)
 from micar_linter.placeholders import is_not_applicable, is_placeholder
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Finding, Rule, Severity
@@ -589,10 +595,27 @@ def _no_lei_finding(rule: Rule, whitepaper: Whitepaper, msg: str) -> Finding:
     return Finding(rule=rule, status="review", word_count=0, issues=(msg, note))
 
 
+def _malformed_lei_issues(whitepaper: Whitepaper) -> list[str]:
+    """One issue per code that an LEI label introduces but that is not LEI-shaped (lei.malformed_leis)."""
+    is_de = whitepaper.language == "de"
+    return [
+        f"Der Code '{code}' nach der LEI-Angabe im Abschnitt '{section}' ist keine korrekt gebildete LEI "
+        "(20 Zeichen: 18 Großbuchstaben oder Ziffern, dann zwei Prüfziffern)."
+        if is_de
+        else f"The code '{code}' after an LEI label in section '{section}' is not a well-formed LEI "
+        "(20 characters: 18 upper-case letters or digits, then two check digits)."
+        for section, codes in malformed_leis_by_section(whitepaper.sections).items()
+        for code in codes
+    ]
+
+
 def _lei_check_digits_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
-    """Fails closed: a draft without any LEI cannot show valid check digits."""
+    """Fails closed: a draft without any LEI cannot show valid check digits, and a labelled code that is
+    not LEI-shaped (wrong length, lower case, a letter in a check-digit position) keeps the rule from passing.
+    """
     is_de = whitepaper.language == "de"
     found = leis_by_section(whitepaper.sections)
+    malformed = _malformed_lei_issues(whitepaper)
     if not found:
         msg = (
             "Im Entwurf wurde keine Rechtsträgerkennung (LEI, 20 Zeichen nach ISO 17442) gefunden; "
@@ -601,7 +624,8 @@ def _lei_check_digits_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
             else "No Legal Entity Identifier (20 characters, ISO 17442) was found in the draft, "
             "so its check digits could not be checked."
         )
-        return _no_lei_finding(rule, whitepaper, msg)
+        finding = _no_lei_finding(rule, whitepaper, msg)
+        return Finding(rule=rule, status=finding.status, word_count=0, issues=(*finding.issues, *malformed))
     issues = []
     for section, codes in found.items():
         for code in codes:
@@ -612,6 +636,7 @@ def _lei_check_digits_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
                     if is_de
                     else f"LEI '{code}' in section '{section}' fails the ISO/IEC 7064 MOD 97-10 check digits."
                 )
+    issues.extend(malformed)
     return Finding(rule=rule, status="review" if issues else "pass", word_count=0, issues=tuple(issues))
 
 

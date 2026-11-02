@@ -335,6 +335,19 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
                     "The last two digits do not satisfy ISO/IEC 7064 MOD 97-10, which usually means a typo.",
                 ),
                 Example(
+                    "Malformed LEI next to a valid one",
+                    "review",
+                    {
+                        **base,
+                        "sections": {
+                            "issuer": issuer,
+                            "offeror": f"Synthetic Offeror GmbH. LEI: {OTHER_SYNTHETIC_LEI[:-1]}.",
+                        },
+                    },
+                    "The code after the offeror's LEI label has 19 characters, one short of an LEI, so it is "
+                    "malformed. The valid issuer LEI does not let the rule pass.",
+                ),
+                Example(
                     "Check digits match",
                     "pass",
                     {**base, "sections": {"issuer": issuer}},
@@ -692,14 +705,18 @@ def status_logic(rule: Rule) -> str:
         )
     if rule.rule_id == "COMMON.LEI_CHECK_DIGITS":
         return (
-            '<ul class="plain"><li><strong>Missing</strong>: no LEI-shaped code (18 letters or digits and two '
-            "check digits) appears in any section, and no section <code>issuer</code>, <code>offeror</code> or "
-            "<code>trading_platform_operator</code> has text other than a placeholder. A 20-digit number counts "
-            "only next to an LEI label.</li>"
-            "<li><strong>Review</strong>: an LEI-shaped code fails the ISO/IEC 7064 MOD 97-10 check digits; or no "
-            "LEI-shaped code appears while a party section has text, since point 5 allows another identifier "
-            "required pursuant to applicable national law in place of the LEI.</li>"
-            "<li><strong>Pass</strong>: every LEI-shaped code has valid check digits. No registry is asked.</li></ul>"
+            '<ul class="plain"><li><strong>Missing</strong>: no LEI-shaped code (18 upper-case letters or digits '
+            "and two check digits) appears in any section, and no section <code>issuer</code>, <code>offeror</code> "
+            "or <code>trading_platform_operator</code> has text other than a placeholder. A 20-digit number counts "
+            "only next to an LEI label. A malformed code (below) is named in the finding but does not change "
+            "this status.</li>"
+            "<li><strong>Review</strong>: an LEI-shaped code fails the ISO/IEC 7064 MOD 97-10 check digits; the "
+            "code after an LEI label is malformed: of the wrong length, in lower case, with a letter where a check "
+            "digit belongs, or split into groups by spaces or hyphens; or no LEI-shaped code appears while a party "
+            "section has text, since point 5 allows another identifier required pursuant to applicable national "
+            "law in place of the LEI.</li>"
+            "<li><strong>Pass</strong>: every LEI-shaped code has valid check digits and no code after an LEI "
+            "label is malformed. No registry is asked.</li></ul>"
         )
     if rule.rule_id == "COMMON.LEI_CONSISTENCY":
         return (
@@ -970,6 +987,14 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             "Does not recognise the other identifiers that point 5 allows in place of the LEI, so a draft "
             "without any LEI goes to review once a party section has text. Once the draft gives one LEI, a "
             "party section without an LEI of its own does not change the result."
+        )
+        limitations.append(
+            "Finds a malformed LEI only after a label: LEI in capitals, legal entity identifier or "
+            "Rechtsträgerkennung. The code is the first run of letters and digits that holds a digit and, with "
+            "the groups that follow it after a single space or hyphen, has at least ten characters; at most six "
+            "other words may stand between label and code, in the same sentence, and the code must be on the "
+            "label's line or, where only punctuation follows the label, on the next line that holds a word. A "
+            "malformed code without a label, or further from it, is not seen."
         )
     if rule.rule_id == "COMMON.LEI_CONSISTENCY":
         limitations.append(
