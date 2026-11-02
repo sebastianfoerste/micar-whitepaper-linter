@@ -119,8 +119,9 @@ def has_period_in_days(text: str, *, labelled: bool = False) -> bool:
     """True if the text gives a period in days: "5 business days", "fünf Werktage", "Response time (Days): 5".
 
     labelled reads the whole text as the answer to a response time field, which the template counts in
-    days, so a number that names no other unit of time counts too: "5", "up to 10". A period in hours or
-    weeks does not count.
+    days, so a number that names no other unit of time counts too: "5", "up to 10", in up to three digits or
+    as an English word from two to thirty or a German word from zwei to zwanzig or dreißig, but not "one" or
+    "ein", which also read as a pronoun or an article. A period in hours or weeks does not count.
     """
     if _DAYS.search(text) or _DAYS_LABEL.search(text):
         return True

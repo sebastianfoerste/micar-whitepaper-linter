@@ -35,7 +35,7 @@ class Severity(IntEnum):
 class Rule:
     """One Annex-level disclosure requirement.
 
-    rule_id:             stable identifier, e.g. 'ANNEX_II.A.1'.
+    rule_id:             stable identifier, e.g. 'ANNEX_II.A' or 'ANNEX_I.A.P6'.
     citation:            pinpoint citation in canonical legal form.
     section:             section key the generic checks read, as in the `sections` of a JSON
                          draft (COMMON.IXBRL_TAGGING reads no section; the LEI rules read every one).
