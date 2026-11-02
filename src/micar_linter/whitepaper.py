@@ -6,6 +6,7 @@ import json
 import re
 from dataclasses import dataclass
 from enum import StrEnum
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -45,16 +46,21 @@ class Whitepaper:
         meta_lang = self.metadata.get("language")
         if meta_lang in ("en", "de"):
             return meta_lang
+        # Every rule asks for the language, so the count is kept per section text.
+        return _detected_language(tuple(self.sections.values()))
 
-        full_text = " ".join(self.sections.values()).lower()
-        german_words = {"der", "die", "das", "und", "ist", "mit", "von", "eine", "oder"}
-        english_words = {"the", "and", "is", "of", "with", "for", "that", "this", "or"}
 
-        words = [w.strip(".,;:?!()[]{}") for w in full_text.split()]
-        de_count = sum(1 for w in words if w in german_words)
-        en_count = sum(1 for w in words if w in english_words)
+_GERMAN_WORDS = frozenset({"der", "die", "das", "und", "ist", "mit", "von", "eine", "oder"})
+_ENGLISH_WORDS = frozenset({"the", "and", "is", "of", "with", "for", "that", "this", "or"})
 
-        return "de" if de_count > en_count else "en"
+
+@lru_cache(maxsize=8)
+def _detected_language(texts: tuple[str, ...]) -> str:
+    """de where the section texts hold more common German words than common English ones, en otherwise."""
+    words = [w.strip(".,;:?!()[]{}") for w in " ".join(texts).lower().split()]
+    de_count = sum(1 for w in words if w in _GERMAN_WORDS)
+    en_count = sum(1 for w in words if w in _ENGLISH_WORDS)
+    return "de" if de_count > en_count else "en"
 
 
 def load_whitepaper(path: Path, whitepaper_type: WhitepaperType | None = None) -> Whitepaper:
@@ -83,6 +89,9 @@ _RESERVED_METADATA_KEYS = (
     # placeholder, which the shared checks name, and the answer of every field, which the point rules read.
     "placeholder_fields",
     "numbered_fields",
+    # Set by the document loaders: the whole text of the file, headings, tables and text in no section
+    # included, which COMMON.LEI_CHECK_DIGITS reads besides the sections.
+    "document_text",
     "reserve_characterisation_reviewed_by",
     "reserve_characterisation_reviewed_on",
 )
@@ -256,21 +265,26 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
     numbered_fields: dict[str, str] | None = None
     extracted = ""
     headings: tuple[str, ...] = ()
+    # The whole text of the file, which COMMON.LEI_CHECK_DIGITS reads besides the sections.
+    document_text = ""
     try:
         if suffix == ".pdf":
             from micar_linter.document import parse_pdf
 
             parsed = parse_pdf(path)
             sections, extracted, headings = parsed.sections, parsed.text, parsed.headings
+            document_text = parsed.document_text
         elif suffix == ".docx":
             from micar_linter.document import parse_docx
 
             parsed = parse_docx(path)
             sections, extracted, headings = parsed.sections, parsed.text, parsed.headings
+            document_text = parsed.document_text
         elif suffix == ".md":
             from micar_linter.document import load_from_markdown
 
             sections = load_from_markdown(path)
+            document_text = path.read_text(encoding="utf-8")
         else:
             from micar_linter.ixbrl import validate_ixbrl
             from micar_linter.numbered_fields import (
@@ -279,10 +293,12 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
                 is_numbered_layout,
                 sections_from_numbered_fields,
             )
+            from micar_linter.xhtml_parser import document_text as xhtml_document_text
             from micar_linter.xhtml_parser import is_script_packed, load_from_xhtml
 
             script_packed = is_script_packed(path)
             source = _unpack_viewer_page(path) if script_packed else path
+            document_text = xhtml_document_text(source)
             fields = extract_numbered_fields(source)
             if is_numbered_layout(fields):
                 # The template wording names every regime ("not an asset-referenced token"),
@@ -345,6 +361,7 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
         "extraction_notes": extraction_notes,
         "script_packed_source": script_packed,
         "placeholder_fields": placeholder_fields,
+        "document_text": document_text,
     }
     # Only a numbered-field draft carries the key, so a point rule can tell which layout it reads.
     if numbered_fields is not None:

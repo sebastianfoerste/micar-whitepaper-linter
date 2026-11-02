@@ -293,6 +293,50 @@ def _is_markup(document: bytes) -> bool:
     return head.startswith(b"<") and (b"<html" in head or b"<!doctype html" in head)
 
 
+# Elements whose text a browser does not show on the page.
+_UNSHOWN_TAGS = {"head", "script", "style", "template"}
+
+
+def _unshown(element: etree._Element) -> bool:
+    return isinstance(element.tag, str) and element.tag.rsplit("}", 1)[-1].lower() in _UNSHOWN_TAGS
+
+
+def document_text(source: Path | bytes) -> str:
+    """Every text of an XHTML or HTML document outside its head, scripts, styles and templates, a line per
+    block element and <br>, with each run of whitespace as one space.
+
+    Unlike the section loader, this reads every element: table cells, definition lists, spans, sections
+    and hidden iXBRL facts included. Text nodes join as text_fragments joins them: inside a word they run
+    on, and a field number ("A.1") stays apart from the label after it.
+    """
+    root = parse_html(source).getroot()
+    if root is None:
+        return ""
+    lines: list[str] = []
+    line: list[str] = []
+    # The last character of the line and the text after its last whitespace, for _inside_word.
+    last = word = ""
+    for piece in _text_flow(root, _unshown):
+        if isinstance(piece, str):
+            if not piece:
+                continue
+            joins = bool(last) and not last.isspace() and not piece[0].isspace()
+            if joins and not _inside_word(word, piece):
+                line.append(" ")
+                joins = False
+            line.append(piece)
+            last = piece[-1]
+            tail = "" if last.isspace() else piece.rsplit(None, 1)[-1]
+            word = word + tail if joins and tail == piece else tail
+        elif piece is None or piece is _LINE_BREAK:
+            if text := " ".join("".join(line).split()):
+                lines.append(text)
+            line, last, word = [], "", ""
+    if text := " ".join("".join(line).split()):
+        lines.append(text)
+    return "\n".join(lines)
+
+
 def load_from_xhtml(source: Path | bytes) -> dict[str, str]:
     """Parse an XHTML file, or markup unpacked from one, and extract sections mapped by headings.
 

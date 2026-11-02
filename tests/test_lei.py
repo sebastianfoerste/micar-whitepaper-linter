@@ -328,6 +328,22 @@ def test_both_lei_rules_read_a_200_kb_section_in_linear_time():
     assert findings["COMMON.LEI_CHECK_DIGITS"].status == "review"
 
 
+def test_both_lei_rules_read_a_1_mb_markdown_draft_in_linear_time(tmp_path: Path):
+    # The check-digit rule reads the file text besides the sections, so a document is read about twice.
+    path = tmp_path / "draft.md"
+    path.write_text(
+        f"## Information about the Issuer\n\n{ISSUER_TEXT}\n\n## Information about the Offeror\n\n"
+        + "LEI 1 " * 170_000
+        + f"\n\n### LEI\n\n{OTHER_LEI[:-1]}\n",
+        encoding="utf-8",
+    )
+    start = time.perf_counter()
+    whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    findings = Linter((RULES["COMMON.LEI_CHECK_DIGITS"], RULES["COMMON.LEI_CONSISTENCY"])).lint(whitepaper)
+    assert time.perf_counter() - start < 5
+    assert findings[0].status == "review" and findings[1].status == "pass"
+
+
 def test_a_malformed_lei_without_a_valid_one_keeps_the_no_lei_status():
     # The no-LEI statuses stay as they were; the malformed code is named after the no-LEI message.
     review = _finding("COMMON.LEI_CHECK_DIGITS", {"issuer": f"LEI: {OTHER_LEI[:-1]}."})
@@ -347,7 +363,8 @@ def test_a_malformed_lei_without_a_valid_one_keeps_the_no_lei_status():
         "LEI eligibility: TRUE",
         # The next field of the numbered layout is not the code of a label answered in words.
         "Legal entity identifier: not available\nContact telephone number: +49 69 0000 0000",
-        "Prețul de 10 lei se plătește în contul IBAN RO00SYNTH00000000000000.",
+        # "lei" is a label in any case, here the Romanian currency, but no code follows it.
+        "Prețul de 10 lei se plătește la emitere.",
         f"Its fictional Legal Entity Identifier (LEI), synthetic and not registered, is {OTHER_LEI}.",
         # "No." before a word without a digit is an answer that ends its sentence, not an abbreviation.
         "LEI: No. The national register number is HRB 1234567890.",
@@ -378,6 +395,9 @@ def test_labels_without_a_malformed_code_leave_the_rule_alone(text: str):
         # A run of 18 to 22 letters and digits in a section that names an LEI is read as a code, whatever it
         # is: an IBAN goes to Review too. A false Review is the price of never passing a malformed LEI.
         ("LEI: to be obtained. Account: IBAN DE00 0000 0000 0000 0000 00.", "IBAN DE00 0000 0000 0000 0000 00"),
+        # Round 2 reads one run of 16 to 24 letters and digits, so an IBAN of 23 characters without spaces
+        # goes to Review too; up to Round 1 this was a control that passed.
+        ("Prețul de 10 lei se plătește în contul IBAN RO00SYNTH00000000000000.", "RO00SYNTH00000000000000"),
         ("LEI: XXXXXXXXXXXXXXXXXXXX (to be obtained).", "XXXXXXXXXXXXXXXXXXXX"),
         ("LEI: XXXX XXXX XXXX XXXX XXXX (to be obtained).", "XXXX XXXX XXXX XXXX XXXX"),
         # A code in lower case and in groups: a word joins beside a group of its length with a digit.
@@ -401,11 +421,13 @@ def test_every_lei_like_code_in_a_section_that_names_an_lei_is_read(text: str, c
 @pytest.mark.parametrize(
     "text",
     [
-        # A section that names no LEI label and holds no LEI-shaped code with a letter is not read.
+        # On its own, a text that names no LEI label and holds no LEI-shaped code with a letter does not read
+        # LEIs. The check-digit rule still reads it in a draft that reads LEIs (draft_reads_leis).
         f"Synthetic Offeror GmbH, {OTHER_LEI[:-1]}.",
-        # One group of more than 22 or fewer than 18 letters and digits is not LEI-like.
-        f"LEI: {OTHER_LEI}123.",
-        f"LEI: {OTHER_LEI[:17]}.",
+        # One group of more than 24 or fewer than 16 letters and digits is not LEI-like (Round 1: more than
+        # 22 or fewer than 18).
+        f"LEI: {OTHER_LEI}12345.",
+        f"LEI: {OTHER_LEI[:15]}.",
         # Letters only with a lower-case letter read as a word, alone or between groups of another length.
         "LEI: abcdefghijklmnopqrst.",
         "LEI: 99 synth 0000zzq0263.",
@@ -512,3 +534,320 @@ def test_full_synthetic_examples_carry_a_valid_lei(name):
     assert findings["COMMON.LEI_CHECK_DIGITS"] == "pass"
     assert findings["COMMON.LEI_CONSISTENCY"] == "pass"
     assert "SYNTH" in " ".join(find_leis(path.read_text(encoding="utf-8")))
+
+
+# Round 2 of the follow-up verification: codes that a loader left out of every section, and codes that the
+# reading did not take for LEI-like. Every such code must keep COMMON.LEI_CHECK_DIGITS from passing.
+OTHER_BROKEN = OTHER_LEI[:-1] + f"{(int(OTHER_LEI[-1]) + 1) % 10}"
+ISSUER_TEXT = f"Synthetic Issuer AG, a fictional company. Its LEI is {ISSUER_LEI}."
+
+
+def _write_docx_rows(path: Path, blocks: list[tuple[str, str]]) -> Path:
+    """A DOCX with Heading 1 headings, Normal paragraphs, Word "List Bullet" items and one-row tables whose
+    cells are split by " | "."""
+    import docx
+
+    document = docx.Document()
+    for kind, text in blocks:
+        if kind == "heading":
+            document.add_heading(text, level=1)
+        elif kind == "bullet":
+            document.add_paragraph(text, style="List Bullet")
+        elif kind == "row":
+            cells = text.split(" | ")
+            table = document.add_table(rows=1, cols=len(cells))
+            for cell, cell_text in zip(table.rows[0].cells, cells, strict=True):
+                cell.text = cell_text
+        else:
+            document.add_paragraph(text)
+    document.save(path)
+    return path
+
+
+def _write_xhtml(path: Path, markup: str) -> Path:
+    path.write_text(
+        '<html xmlns="http://www.w3.org/1999/xhtml"><body>'
+        f"<h2>Information about the Issuer</h2><p>{ISSUER_TEXT}</p>"
+        f"<h2>Information about the Offeror</h2><p>Synthetic Offeror GmbH, a fictional company.</p>{markup}"
+        "</body></html>",
+        encoding="utf-8",
+    )
+    return path
+
+
+def _write_draft(path: Path, suffix: str, offeror: list[tuple[str, str]], heading: str) -> Path:
+    blocks = [("heading", "Information about the Issuer"), ("body", ISSUER_TEXT), ("heading", heading), *offeror]
+    if suffix == ".pdf":
+        return _write_pdf(path, blocks)
+    return _write_docx_rows(path, blocks)
+
+
+OFFEROR = "Information about the Offeror"
+# The malformed codes the shapes below are checked with.
+CODES = {
+    "19 characters": OTHER_LEI[:-1],
+    "21 characters": MALFORMED["21 characters"],
+    "22 characters": OTHER_LEI + "7",
+    "letter in a check-digit position": MALFORMED["letter in a check-digit position"],
+    "lower case": MALFORMED["lower case"],
+    "spaced groups": _grouped(OTHER_LEI[:-1], " "),
+    "invalid check digits": OTHER_BROKEN,
+}
+SHORT = ("19 characters", "invalid check digits")
+# Where a loader puts a code in no section, or in a section that names no LEI, with the codes each shape is
+# checked with. {} is the malformed code.
+OUTSIDE_THE_SECTIONS = {
+    # In a DOCX, a paragraph without a lower-case letter is a label heading, so it is not section text.
+    "docx 'LEI: code'": (
+        ".docx",
+        OFFEROR,
+        ["Synthetic Offeror GmbH, a fictional company.", "LEI: {}"],
+        ("19 characters", "21 characters", "letter in a check-digit position", "spaced groups", "invalid check digits"),
+    ),
+    "docx 'LEI code'": (".docx", OFFEROR, ["Synthetic Offeror GmbH, a fictional company.", "LEI {}"], SHORT),
+    "docx 'LEI-NR. code'": (".docx", OFFEROR, ["Synthetic Offeror GmbH, a fictional company.", "LEI-NR. {}"], SHORT),
+    "docx '(code)'": (".docx", OFFEROR, ["Synthetic Offeror GmbH, a fictional company.", "({})"], SHORT),
+    "docx bare code": (
+        ".docx",
+        OFFEROR,
+        ["Synthetic Offeror GmbH, a fictional company.", "{}"],
+        ("19 characters", "spaced groups", "invalid check digits"),
+    ),
+    "docx one code per paragraph": (".docx", OFFEROR, ["LEIs:", OTHER_LEI, "{}"], SHORT),
+    # Word's own bulleted list: each item is a paragraph without a lower-case letter.
+    "docx list bullets": (
+        ".docx",
+        OFFEROR,
+        [
+            "Synthetic Offeror GmbH and Synthetic Exchange SE are fictional companies. Their LEIs are:",
+            ("bullet", OTHER_LEI),
+            ("bullet", "{}"),
+        ],
+        ("19 characters", "spaced groups", "invalid check digits"),
+    ),
+    # A DOCX table cell is not a paragraph of the body.
+    "docx table row": (".docx", OFFEROR, [("row", "Legal entity identifier | {}")], SHORT),
+    # Wrapped at 90 characters after "and", the line that names the offeror reads as a two-line heading.
+    "pdf plural sentence wrapped": (
+        ".pdf",
+        OFFEROR,
+        [f"The LEIs of the offeror and the operator are {{}} and {OTHER_LEI}."],
+        ("21 characters", "22 characters", "letter in a check-digit position", "lower case", "invalid check digits"),
+    ),
+    # A label line that names the party, then bullet lines.
+    "pdf label line naming the offeror": (
+        ".pdf",
+        OFFEROR,
+        ["Legal entity identifier of the offeror", "- {}", "- second item"],
+        SHORT,
+    ),
+    "pdf 'LEI of the offeror'": (".pdf", OFFEROR, ["LEI of the offeror", "- {}", "- second item"], SHORT),
+    "pdf 'Offeror's legal entity identifier'": (
+        ".pdf",
+        OFFEROR,
+        ["Offeror's legal entity identifier", "- {}", "- second item"],
+        SHORT,
+    ),
+    # A role line that names a section is a heading in a PDF.
+    "pdf role lines": (
+        ".pdf",
+        OFFEROR,
+        ["Legal entity identifier (LEI)", "Offeror: {}", f"Operator: {OTHER_LEI}"],
+        SHORT,
+    ),
+    "pdf German role line": (
+        ".pdf",
+        OFFEROR,
+        ["Rechtsträgerkennung (LEI)", "Anbieter: {}"],
+        ("19 characters", "21 characters", "letter in a check-digit position", "lower case", "spaced groups"),
+    ),
+    # A section that is not a party section and names no LEI label.
+    "docx admission section": (
+        ".docx",
+        "Information about the person seeking admission to trading",
+        ["Synthetic Admission GmbH ({})"],
+        ("19 characters",),
+    ),
+}
+OUTSIDE_CASES = [
+    pytest.param(suffix, heading, paragraphs, CODES[code], id=f"{case}-{code}")
+    for case, (suffix, heading, paragraphs, codes) in OUTSIDE_THE_SECTIONS.items()
+    for code in codes
+]
+
+
+def _offeror_blocks(paragraphs: list, code: str) -> list[tuple[str, str]]:
+    return [
+        (item[0], item[1].format(code)) if isinstance(item, tuple) else ("body", item.format(code))
+        for item in paragraphs
+    ]
+
+
+def _check_digits(path: Path, regime: WhitepaperType | None = WhitepaperType.OTHER):
+    findings = {f.rule.rule_id: f for f in lint_whitepaper(load_whitepaper(path, regime)).findings}
+    return findings["COMMON.LEI_CHECK_DIGITS"], findings["COMMON.LEI_CONSISTENCY"]
+
+
+@pytest.mark.parametrize(("suffix", "heading", "paragraphs", "code"), OUTSIDE_CASES)
+def test_a_malformed_lei_that_a_loader_leaves_out_of_the_sections_never_passes(
+    tmp_path: Path, suffix: str, heading: str, paragraphs: list, code: str
+):
+    path = _write_draft(tmp_path / f"draft{suffix}", suffix, _offeror_blocks(paragraphs, code), heading)
+    check_digits, consistency = _check_digits(path)
+    assert check_digits.status == "review"
+    assert any(" ".join(code.split()) in issue for issue in check_digits.issues)
+    # The valid issuer LEI still makes the consistency rule pass: malformed codes stay with the check digits.
+    assert consistency.status == "pass"
+
+
+@pytest.mark.parametrize("code", [OTHER_LEI[:-1], OTHER_BROKEN], ids=["19 characters", "invalid check digits"])
+@pytest.mark.parametrize(
+    "markup",
+    [
+        "<table><tr><td>LEI</td><td>{}</td></tr></table>",
+        "<dl><dt>LEI</dt><dd>{}</dd></dl>",
+        "<span>LEI: {}</span>",
+        "<section>LEI {}</section>",
+        "<p><b>LEI: {}</b></p>",
+        "<h2>LEI {}</h2>",
+    ],
+    ids=["table", "dl", "span", "section", "bold paragraph", "h2"],
+)
+def test_a_malformed_lei_in_xhtml_markup_that_no_section_reads_never_passes(tmp_path: Path, markup: str, code: str):
+    check_digits, _ = _check_digits(_write_xhtml(tmp_path / "draft.xhtml", markup.format(code)))
+    assert check_digits.status == "review"
+    assert any(code in issue for issue in check_digits.issues)
+
+
+@pytest.mark.parametrize("code", [OTHER_LEI[:-1], OTHER_BROKEN], ids=["19 characters", "invalid check digits"])
+@pytest.mark.parametrize("sub_heading", ["### Legal entity identifier", "### LEI"])
+def test_a_malformed_lei_under_a_markdown_sub_heading_never_passes(tmp_path: Path, sub_heading: str, code: str):
+    # The sub-heading names no section, so it ends the offeror section and the code sits in none.
+    path = tmp_path / "draft.md"
+    path.write_text(
+        f"## Information about the Issuer\n\n{ISSUER_TEXT}\n\n## Information about the Offeror\n\n"
+        f"Synthetic Offeror GmbH is a fictional company.\n\n{sub_heading}\n\n{code}\n",
+        encoding="utf-8",
+    )
+    check_digits, _ = _check_digits(path)
+    assert check_digits.status == "review"
+    assert any(code in issue for issue in check_digits.issues)
+
+
+def test_an_lei_outside_the_section_text_is_named_as_such():
+    # A heading, a table cell or text in no section has no section to name.
+    sections = {"issuer": ISSUER_TEXT}
+    document_text = f"Information about the Issuer\n{ISSUER_TEXT}\nLEI: {OTHER_LEI[:-1]}\nLEI: {OTHER_BROKEN}"
+    whitepaper = Whitepaper(
+        title="Synthetic",
+        type=WhitepaperType.OTHER,
+        sections=sections,
+        metadata={"language": "en", "document_text": document_text},
+    )
+    finding = Linter((RULES["COMMON.LEI_CHECK_DIGITS"],)).lint(whitepaper)[0]
+    assert finding.status == "review"
+    assert finding.issues == (
+        f"LEI '{OTHER_BROKEN}' outside the section text (in a heading, a table, a header or footer, or text in "
+        "no section) fails the ISO/IEC 7064 MOD 97-10 check digits.",
+        f"The code '{OTHER_LEI[:-1]}' outside the section text (in a heading, a table, a header or footer, or "
+        "text in no section) is not a well-formed LEI (20 characters: 18 upper-case letters or digits, then two "
+        "check digits).",
+    )
+    german = Whitepaper(
+        title="Synthetic", type=WhitepaperType.OTHER, sections=sections,
+        metadata={"language": "de", "document_text": document_text},
+    )
+    assert "außerhalb der Abschnittstexte" in Linter((RULES["COMMON.LEI_CHECK_DIGITS"],)).lint(german)[0].issues[0]
+
+
+def test_a_json_draft_cannot_set_the_document_text(tmp_path: Path):
+    # The key is reserved: only the document loaders set it.
+    path = tmp_path / "draft.json"
+    draft = {"title": "t", "type": "other", "sections": {"issuer": ISSUER_TEXT}, "document_text": "x"}
+    path.write_text(json.dumps(draft), encoding="utf-8")
+    assert "document_text" not in load_whitepaper(path).metadata
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Synthetic Admission GmbH ({}).",
+        # The label with a decomposed umlaut (a, then U+0308), as text copied from some PDFs holds it.
+        "Rechtstra\u0308gerkennung: {}",
+    ],
+    ids=["code in brackets", "decomposed German label"],
+)
+def test_every_section_of_a_draft_that_reads_leis_is_read(text: str):
+    # A section that is not a party section and names no LEI label is read too, once the draft names an LEI.
+    sections = {"issuer": ISSUER_TEXT, "offer_or_admission": text.format(OTHER_LEI[:-1])}
+    finding = _finding("COMMON.LEI_CHECK_DIGITS", sections)
+    assert finding.status == "review"
+    assert finding.issues == (
+        f"The code '{OTHER_LEI[:-1]}' in section 'offer_or_admission' is not a well-formed LEI "
+        "(20 characters: 18 upper-case letters or digits, then two check digits).",
+    )
+    assert _finding("COMMON.LEI_CONSISTENCY", sections).status == "pass"
+
+
+def _dashed(code: str, dash: str) -> str:
+    return dash.join(code[i : i + 4] for i in range(0, len(code), 4))
+
+
+DASHES = {"en dash": "\u2013", "em dash": "\u2014", "figure dash": "\u2012", "minus sign": "\u2212", "spaced en dash": " \u2013 "}
+DASHED_CODES = {
+    "19 characters": OTHER_LEI[:-1],
+    "21 characters": MALFORMED["21 characters"],
+    "lower case": OTHER_LEI.lower(),
+    "letter in a check-digit position": MALFORMED["letter in a check-digit position"],
+    "invalid check digits": OTHER_BROKEN,
+    "valid code": OTHER_LEI,
+}
+TEXT_GAPS = {
+    # One run of 16, 17, 23 or 24 letters and digits: a code that has lost or gained three or four characters.
+    "16 characters": f"LEI: {OTHER_LEI[:16]}",
+    "17 characters": f"LEI: {OTHER_LEI[:17]}",
+    "23 characters": f"LEI: {OTHER_LEI}123",
+    "24 characters": f"LEI: {OTHER_LEI}1234",
+    "17 characters in a sentence": f"The offeror's LEI is {OTHER_LEI[:17]}.",
+    "23 characters in a sentence": f"The offeror's LEI is {OTHER_LEI}123.",
+    # The label glued to the code makes one run.
+    "label glued to a 21-character code": "LEI" + MALFORMED["21 characters"],
+    "label glued to invalid check digits": "LEI" + OTHER_BROKEN,
+    "label glued to a lower-case code": "LEI" + OTHER_LEI.lower(),
+    "label glued to a 22-character code": "LEI" + OTHER_LEI + "12",
+    # Characters that look like the ASCII ones of an LEI.
+    "Cyrillic S": "LEI: 9999\u0405YNTH0000ZZQ0263",
+    "full-width zero": "LEI: 9999SYNTH\uff10000ZZQ0263",
+    "full-width code": "LEI: " + "".join(chr(ord(char) + 0xFEE0) for char in OTHER_LEI),
+    "combining accent": "LEI: 9999S\u0301YNTH0000ZZQ0263",
+    **{
+        f"{dash_name}, {code_name}": f"LEI: {_dashed(code, dash)}"
+        for dash_name, dash in DASHES.items()
+        for code_name, code in DASHED_CODES.items()
+    },
+}
+
+
+@pytest.mark.parametrize("text", TEXT_GAPS.values(), ids=TEXT_GAPS.keys())
+def test_a_code_the_reading_did_not_take_for_lei_like_never_passes(text: str):
+    sections = {"issuer": ISSUER_TEXT, "offeror": f"Synthetic Offeror GmbH, a fictional company. {text}"}
+    assert len(malformed_leis(sections["offeror"], party=True)) == 1
+    finding = _finding("COMMON.LEI_CHECK_DIGITS", sections)
+    assert finding.status == "review"
+    assert _finding("COMMON.LEI_CONSISTENCY", sections).status == "pass"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        # Words of letters only are words, in capitals too once they hold a letter outside ASCII, and so is
+        # a label written with a decomposed umlaut.
+        "RECHTSTRÄGERKENNUNG UND ZUSTÄNDIGKEITSBEREICHE",
+        "Die Rechtstra\u0308gerkennung und die aufsichtsrechtlichen Anforderungen.",
+        # Dashes between words and numbers of fewer than 16 letters and digits.
+        "Founded in 2019 \u2013 registered in 2020 \u2014 seat in Frankfurt am Main.",
+        "Share capital: EUR 1 000 000 \u2013 paid up in full.",
+    ],
+)
+def test_the_wider_reading_leaves_words_and_short_numbers_alone(text: str):
+    assert malformed_leis(text, party=True) == ()

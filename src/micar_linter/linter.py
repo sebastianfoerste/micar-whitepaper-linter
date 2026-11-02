@@ -12,6 +12,8 @@ from micar_linter.anchors import SourceAnchor, build_source_anchors
 from micar_linter.contact import CONTACT_FIELDS, has_email_address, has_period_in_days, has_telephone_number
 from micar_linter.lei import (
     PARTY_SECTIONS,
+    codes_outside_sections,
+    draft_reads_leis,
     has_valid_check_digits,
     leis_by_section,
     malformed_leis_by_section,
@@ -595,30 +597,72 @@ def _no_lei_finding(rule: Rule, whitepaper: Whitepaper, msg: str) -> Finding:
     return Finding(rule=rule, status="review", word_count=0, issues=(msg, note))
 
 
-def _malformed_lei_issues(whitepaper: Whitepaper) -> list[str]:
-    """One issue per LEI-like code that is not LEI-shaped, in a section that reads LEIs (lei.malformed_leis):
-    a party section, or one that names an LEI label or holds an LEI-shaped code with a letter."""
-    is_de = whitepaper.language == "de"
-    return [
-        f"Der Code '{code}' im Abschnitt '{section}' ist keine korrekt gebildete LEI "
-        "(20 Zeichen: 18 Großbuchstaben oder Ziffern, dann zwei Prüfziffern)."
-        if is_de
-        else f"The code '{code}' in section '{section}' is not a well-formed LEI "
+# Where a code of a document file sits that no section holds.
+_OUTSIDE = (
+    "outside the section text (in a heading, a table, a header or footer, or text in no section)",
+    "außerhalb der Abschnittstexte (in einer Überschrift, einer Tabelle, einer Kopf- oder Fußzeile oder in "
+    "keinem Abschnitt)",
+)
+
+
+def _malformed_lei_issue(code: str, section: str | None, is_de: bool) -> str:
+    if is_de:
+        place = f"im Abschnitt '{section}'" if section is not None else _OUTSIDE[1]
+        return (
+            f"Der Code '{code}' {place} ist keine korrekt gebildete LEI "
+            "(20 Zeichen: 18 Großbuchstaben oder Ziffern, dann zwei Prüfziffern)."
+        )
+    place = f"in section '{section}'" if section is not None else _OUTSIDE[0]
+    return (
+        f"The code '{code}' {place} is not a well-formed LEI "
         "(20 characters: 18 upper-case letters or digits, then two check digits)."
-        for section, codes in malformed_leis_by_section(whitepaper.sections).items()
-        for code in codes
-    ]
+    )
+
+
+def _invalid_lei_issue(code: str, section: str | None, is_de: bool) -> str:
+    if is_de:
+        place = f"im Abschnitt '{section}'" if section is not None else _OUTSIDE[1]
+        return f"LEI '{code}' {place} hat ungültige Prüfziffern (ISO/IEC 7064 MOD 97-10)."
+    place = f"in section '{section}'" if section is not None else _OUTSIDE[0]
+    return f"LEI '{code}' {place} fails the ISO/IEC 7064 MOD 97-10 check digits."
 
 
 def _lei_check_digits_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
-    """Fails closed: a draft without any LEI cannot show valid check digits, and an LEI-like code that is not
-    LEI-shaped (wrong length, lower case, a letter in a check-digit position, split into groups), in a section
-    that reads LEIs, keeps the rule from passing.
+    """Fails closed: a draft without any LEI cannot show valid check digits, and every LEI-like code in a
+    draft that reads LEIs must be an LEI with valid check digits.
+
+    A draft reads LEIs in all its text once it has a party section, or a section or its file text names an
+    LEI label or holds an LEI-shaped code with a letter (lei.draft_reads_leis). Then every section is read,
+    and so is the text of a document file outside its sections (the reserved metadata key document_text,
+    set only by the document loaders: headings, tables, headers and footers, text in no section). An
+    LEI-shaped code there with invalid check digits, and an LEI-like code that is not LEI-shaped (wrong
+    length, lower case, a letter in a check-digit position, a character outside ASCII, split into groups),
+    keeps the rule from passing. Only an LEI-shaped code in a section that reads LEIs on its own counts as
+    found, so a draft whose only LEI sits outside such a section keeps the no-LEI status.
     """
     is_de = whitepaper.language == "de"
-    found = leis_by_section(whitepaper.sections)
-    malformed = _malformed_lei_issues(whitepaper)
-    if not found:
+    sections = whitepaper.sections
+    document_text = str(whitepaper.metadata.get("document_text", ""))
+    everywhere = draft_reads_leis(sections, document_text)
+    outside_leis, outside_malformed = (
+        codes_outside_sections(sections, document_text) if everywhere else ((), ())
+    )
+    issues = [
+        _invalid_lei_issue(code, section, is_de)
+        for section, codes in leis_by_section(sections, everywhere).items()
+        for code in codes
+        if not has_valid_check_digits(code)
+    ]
+    issues.extend(
+        _invalid_lei_issue(code, None, is_de) for code in outside_leis if not has_valid_check_digits(code)
+    )
+    issues.extend(
+        _malformed_lei_issue(code, section, is_de)
+        for section, codes in malformed_leis_by_section(sections, everywhere).items()
+        for code in codes
+    )
+    issues.extend(_malformed_lei_issue(code, None, is_de) for code in outside_malformed)
+    if not leis_by_section(sections):
         msg = (
             "Im Entwurf wurde keine Rechtsträgerkennung (LEI, 20 Zeichen nach ISO 17442) gefunden; "
             "die Prüfziffern konnten nicht geprüft werden."
@@ -627,18 +671,7 @@ def _lei_check_digits_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
             "so its check digits could not be checked."
         )
         finding = _no_lei_finding(rule, whitepaper, msg)
-        return Finding(rule=rule, status=finding.status, word_count=0, issues=(*finding.issues, *malformed))
-    issues = []
-    for section, codes in found.items():
-        for code in codes:
-            if not has_valid_check_digits(code):
-                issues.append(
-                    f"LEI '{code}' im Abschnitt '{section}' hat ungültige Prüfziffern "
-                    "(ISO/IEC 7064 MOD 97-10)."
-                    if is_de
-                    else f"LEI '{code}' in section '{section}' fails the ISO/IEC 7064 MOD 97-10 check digits."
-                )
-    issues.extend(malformed)
+        return Finding(rule=rule, status=finding.status, word_count=0, issues=(*finding.issues, *issues))
     return Finding(rule=rule, status="review" if issues else "pass", word_count=0, issues=tuple(issues))
 
 

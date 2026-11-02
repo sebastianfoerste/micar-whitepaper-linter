@@ -380,17 +380,20 @@ _QUOTES = "\"'\u2018\u2019\u201c\u201d"
 
 @dataclass(frozen=True)
 class DocumentSections:
-    """The section texts of a DOCX or PDF draft and, apart from them, the text of its headings and its
-    whole extracted text.
+    """The section texts of a DOCX or PDF draft and, apart from them, the text of its headings, its
+    extracted text and the whole text of its file.
 
     Heading text is not section body, and some text sits in no section (before the first heading, or
-    after a line that ends a section). Regime inference reads the whole text: a heading such as
-    "Reserve of Assets" may be the only place that names the regime.
+    after a line that ends a section). Regime inference reads the extracted text (text): a heading such
+    as "Reserve of Assets" may be the only place that names the regime. COMMON.LEI_CHECK_DIGITS reads
+    the whole text of the file (document_text): for a PDF that is the extracted text, for a DOCX it adds
+    the paragraphs of tables, text boxes, headers and footers, and tracked insertions.
     """
 
     sections: dict[str, str]
     headings: tuple[str, ...]
     text: str = ""
+    document_text: str = ""
 
 
 def _words(text: str) -> list[str]:
@@ -1083,7 +1086,7 @@ def _line_sections(lines: list[_Line], statement: bool = False) -> DocumentSecti
             for key in current_keys if answer else ():
                 sections.setdefault(key, []).append(answer)
         previous, previous_role, previous_styled = line.text, role, styled[index]
-    return DocumentSections({k: "\n".join(v) for k, v in sections.items()}, tuple(headings), text)
+    return DocumentSections({k: "\n".join(v) for k, v in sections.items()}, tuple(headings), text, text)
 
 
 def sections_from_lines(lines: Iterable[str]) -> dict[str, str]:
@@ -1266,7 +1269,60 @@ def parse_docx(path: Path) -> DocumentSections:
             current_keys, opener, section_level = [], kind, level
             opener_number = _opening_number(number, opener_number)
 
-    return DocumentSections({k: "\n".join(v) for k, v in sections.items()}, tuple(headings), "\n".join(texts))
+    return DocumentSections(
+        {k: "\n".join(v) for k, v in sections.items()},
+        tuple(headings),
+        "\n".join(texts),
+        _docx_document_text(doc),
+    )
+
+
+def _docx_text(element) -> str:
+    """The text Word shows in an element, a paragraph per line: every w:t (tracked insertions, hyperlinks,
+    content controls and the paragraphs of tables and text boxes included), tabs, line breaks and
+    non-breaking hyphens. Deleted text (w:delText) and field codes are not shown."""
+    from docx.oxml.ns import qn
+    from lxml import etree
+
+    text, tab, breaks, hyphen, paragraph = (
+        qn("w:t"),
+        qn("w:tab"),
+        (qn("w:br"), qn("w:cr")),
+        qn("w:noBreakHyphen"),
+        qn("w:p"),
+    )
+    parts: list[str] = []
+    for event, node in etree.iterwalk(element, events=("start", "end")):
+        if event == "end":
+            if node.tag == paragraph:
+                parts.append("\n")
+        elif node.tag == text:
+            parts.append(node.text or "")
+        elif node.tag == tab:
+            parts.append("\t")
+        elif node.tag in breaks:
+            parts.append("\n")
+        elif node.tag == hyphen:
+            parts.append("-")
+    return "".join(parts)
+
+
+def _docx_document_text(doc) -> str:
+    """The whole text of a DOCX: its body, then the headers and footers that each section defines."""
+    texts = [_docx_text(doc.element.body)]
+    for section in doc.sections:
+        for part in (
+            section.header,
+            section.first_page_header,
+            section.even_page_header,
+            section.footer,
+            section.first_page_footer,
+            section.even_page_footer,
+        ):
+            # A part linked to the previous section's has no definition of its own.
+            if not part.is_linked_to_previous:
+                texts.append(_docx_text(part._element))
+    return "\n".join(texts)
 
 
 def load_from_docx(path: Path) -> dict[str, str]:
