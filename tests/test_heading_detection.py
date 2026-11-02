@@ -855,6 +855,39 @@ def test_a_negated_regime_marker_does_not_switch_the_regime(tmp_path: Path, suff
     assert "ANNEX_I.I" in findings and "ANNEX_II.A" not in findings
 
 
+@pytest.mark.parametrize("suffix", sorted(WRITERS))
+def test_a_negation_before_a_heading_does_not_reach_the_heading(tmp_path: Path, suffix: str):
+    # The risk paragraph ends in a negation and no full stop, and the next line is the heading that alone
+    # names the regime. A heading is judged on its own words, so the draft is still read as an ART.
+    write, _ = WRITERS[suffix]
+    blocks = [
+        ("heading", "Information about the Issuer"),
+        ("body", "Synthetic Issuer AG, a fictional company, issues the token."),
+        ("heading", "Risk Factors"),
+        ("body", "Holders should note that the token is not covered by any investor compensation scheme"),
+        ("heading", "Reserve of Assets"),
+        ("body", "The reserve is held in cash and short-term government bonds."),
+    ]
+    path = write(tmp_path / f"synthetic{suffix}", blocks)
+
+    whitepaper = load_whitepaper(path)
+    assert whitepaper.type is WhitepaperType.ART
+    assert sorted(whitepaper.sections) == ["issuer", "reserve_of_assets", "risks"]
+    findings = _findings(path, None)
+    assert "ANNEX_II.G.COMPOSITION_DISCLOSURE" in findings and "ANNEX_I.I" not in findings
+
+
+def test_a_negation_at_the_end_of_a_markdown_section_does_not_reach_the_next(tmp_path: Path):
+    # Markdown headings are not read for the regime, so the reserve section's own text names it.
+    path = tmp_path / "synthetic.md"
+    path.write_text(
+        "# Risk Factors\n\nHolders should note that the token is not covered by any compensation scheme\n\n"
+        "# Reserve of Assets\n\nReserve of assets: cash and short-term government bonds.\n",
+        encoding="utf-8",
+    )
+    assert load_whitepaper(path).type is WhitepaperType.ART
+
+
 @pytest.mark.parametrize(
     "field,answer,key",
     [

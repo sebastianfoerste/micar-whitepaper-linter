@@ -179,8 +179,9 @@ _EMT_MARKERS = ("e-money token", "referenced currency", "safeguarding of funds")
 # "neither an asset-referenced token nor an e-money token", "crypto-assets other than asset-referenced tokens
 # or e-money tokens" (the title of Title II MiCAR), "has no reserve of assets". A marker counts only where no
 # negation stands before it in its clause, at most _NEGATION_REACH words away. A clause ends at a sentence
-# mark, a colon or a word that turns the sentence ("but", "however"), not at a line end, since a PDF wraps
-# its lines inside a sentence.
+# mark, a colon or a word that turns the sentence ("but", "however"), and at the edge of a heading or a
+# paragraph (_regime_pieces), but not at a line end inside a PDF paragraph, since a PDF wraps its lines
+# inside a sentence.
 _NEGATION = re.compile(r"\b(?:not|no|neither|nor|never|without|other than|except|excluding|unlike)\b|n't\b")
 _CLAUSE_END = re.compile(r"[.!?;:](?=\s|$)|\b(?:but|however|whereas|although|though|while)\b")
 _NEGATION_REACH = 8
@@ -196,15 +197,50 @@ def _negated(text: str, start: int) -> bool:
     return bool(negations) and len(clause[negations[-1].end() :].split()) <= _NEGATION_REACH
 
 
-def _names_regime(text: str, markers: tuple[str, ...]) -> bool:
-    """Whether the lower-case text holds one of the markers with no negation before it."""
-    for marker in markers:
-        start = text.find(marker)
-        while start != -1:
-            if not _negated(text, start):
-                return True
-            start = text.find(marker, start + 1)
+def _names_regime(pieces: list[str], markers: tuple[str, ...]) -> bool:
+    """Whether one of the lower-case pieces holds one of the markers with no negation before it."""
+    for text in pieces:
+        for marker in markers:
+            start = text.find(marker)
+            while start != -1:
+                if not _negated(text, start):
+                    return True
+                start = text.find(marker, start + 1)
     return False
+
+
+def _regime_pieces(
+    suffix: str, sections: dict[str, str], extracted: str, headings: tuple[str, ...]
+) -> list[str]:
+    """The pieces of a draft's text, in lower case, that a negation cannot reach across.
+
+    A DOCX gives one paragraph per line of its text, and each line is a piece. A PDF wraps its lines inside
+    a paragraph, so each heading line (or the two or three lines of a wrapped heading) is a piece, and so is
+    each run of lines between two headings. In the other formats each section is a piece. A heading is
+    judged on its own words: a negation at the end of the paragraph before it does not reach it.
+    """
+    if not extracted:
+        return [text.lower() for text in sections.values()]
+    lines = extracted.lower().split("\n")
+    if suffix == ".docx":
+        return lines
+    heading_texts = {" ".join(heading.lower().split()) for heading in headings}
+    pieces: list[str] = []
+    run: list[str] = []
+    index = 0
+    while index < len(lines):
+        size = next(
+            (k for k in (1, 2, 3) if " ".join(" ".join(lines[index : index + k]).split()) in heading_texts), 0
+        )
+        if size:
+            pieces.extend(("\n".join(run), "\n".join(lines[index : index + size])))
+            run = []
+            index += size
+        else:
+            run.append(lines[index])
+            index += 1
+    pieces.append("\n".join(run))
+    return pieces
 
 
 def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | None) -> Whitepaper:
@@ -218,17 +254,18 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
     placeholder_fields: dict[str, tuple[str, ...]] = {}
     numbered_fields: dict[str, str] | None = None
     extracted = ""
+    headings: tuple[str, ...] = ()
     try:
         if suffix == ".pdf":
             from micar_linter.document import parse_pdf
 
             parsed = parse_pdf(path)
-            sections, extracted = parsed.sections, parsed.text
+            sections, extracted, headings = parsed.sections, parsed.text, parsed.headings
         elif suffix == ".docx":
             from micar_linter.document import parse_docx
 
             parsed = parse_docx(path)
-            sections, extracted = parsed.sections, parsed.text
+            sections, extracted, headings = parsed.sections, parsed.text, parsed.headings
         elif suffix == ".md":
             from micar_linter.document import load_from_markdown
 
@@ -277,12 +314,12 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
 
     # The regime of a PDF or DOCX is inferred from its whole text: a heading ("Reserve of Assets"), which is
     # not section body, or text in no section may be all that names it. A negated marker does not count.
-    full_text = (extracted or "\n".join(sections.values())).lower()
+    pieces = _regime_pieces(suffix, sections, extracted, headings)
     if whitepaper_type is not None:
         wp_type = whitepaper_type
-    elif _names_regime(full_text, _ART_MARKERS):
+    elif _names_regime(pieces, _ART_MARKERS):
         wp_type = WhitepaperType.ART
-    elif _names_regime(full_text, _EMT_MARKERS):
+    elif _names_regime(pieces, _EMT_MARKERS):
         wp_type = WhitepaperType.EMT
     else:
         wp_type = WhitepaperType.OTHER
