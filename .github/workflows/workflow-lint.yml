@@ -5,7 +5,7 @@ on:
   push:
     branches: [main]
   schedule:
-    # Weekly, so findings of new zizmor audits and advisories reach code scanning
+    # Weekly, so new advisories against the pinned actions reach code scanning
     # between changes.
     - cron: '17 5 * * 1'
   workflow_dispatch:
