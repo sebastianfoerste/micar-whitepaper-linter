@@ -389,7 +389,8 @@ class DocumentSections:
     after a line that ends a section). Regime inference reads the extracted text (text): a heading such
     as "Reserve of Assets" may be the only place that names the regime. COMMON.LEI_CHECK_DIGITS reads
     the whole text of the file (document_text): for a PDF that is the extracted text, for a DOCX it adds
-    the paragraphs of tables, text boxes, headers and footers, and tracked insertions.
+    the paragraphs of tables, text boxes, headers and footers, tracked insertions and text moved away under
+    tracked changes.
     """
 
     sections: dict[str, str]
@@ -1300,9 +1301,11 @@ def parse_docx(path: Path) -> DocumentSections:
 
 
 def _docx_text(element) -> str:
-    """The text Word shows in an element, a paragraph per line: every w:t (tracked insertions, hyperlinks,
-    content controls and the paragraphs of tables and text boxes included), tabs, line breaks and
-    non-breaking hyphens. Deleted text (w:delText) and field codes are not shown."""
+    """The text of an element, a paragraph per line: every w:t (tracked insertions, hyperlinks, content
+    controls and the paragraphs of tables and text boxes included), tabs, line breaks and non-breaking
+    hyphens. Deleted text as Word writes it (w:delText) and field codes are not read. Text moved away under
+    tracked changes (a w:t inside w:moveFrom) and a w:t inside w:del, which Word does not show as the
+    accepted text, are read too."""
     from docx.oxml.ns import qn
     from lxml import etree
 
