@@ -345,6 +345,8 @@ _SENTENCE_END = re.compile(r"[.!;,]$")
 # A word of four or more letters, a full stop and a capitalised word: "Risks. Holders may lose ...".
 # "A.1 Name", "5.2 Risks" and "Ledger S.A. Risks" have no such word.
 _SENTENCE_BREAK = re.compile(r"([^\W\d_]{4,})[.!?]\s+([^\W\d_])")
+# The same, from the first letter of a word only (see _sentence_breaks).
+_WORD_SENTENCE_BREAK = re.compile(rf"(?<![^\W\d_]){_SENTENCE_BREAK.pattern}")
 # Abbreviations that keep their full stop inside a heading: "5. Risks (incl. Liquidity Risks)",
 # "Quillmoor Corp. Risk Factors", "Risiken bzgl. des Tokens".
 _ABBREVIATIONS = frozenset(
@@ -407,10 +409,30 @@ def _max_words(text: str, marked: bool = False) -> int:
     return _MAX_MARKED_HEADING_WORDS if marked or _NUMBERING.match(text) else _MAX_HEADING_WORDS
 
 
+def _sentence_breaks(text: str) -> list[tuple[str, str]]:
+    """_SENTENCE_BREAK.findall(text), in time linear in the length of text.
+
+    findall tries a match at every letter of a word, and each try reads the word to its end before it
+    fails, so a long run of letters took time in the square of its length (a line of 40 000 letters took
+    18 s). A match runs to the end of the word it starts in, so a later letter of a word can start one only
+    where the word's first letter can: the search starts at the first letter of a word only, except right
+    after a match, which ends with the first letter of the next word, so findall goes on inside that word.
+    """
+    breaks: list[tuple[str, str]] = []
+    position = 0
+    while True:
+        found = (_SENTENCE_BREAK.match(text, position) if position else None) or _WORD_SENTENCE_BREAK.search(
+            text, position
+        )
+        if found is None:
+            return breaks
+        breaks.append((found.group(1), found.group(2)))
+        position = found.end()
+
+
 def _has_sentence_break(text: str) -> bool:
     return any(
-        letter.isupper() and word.lower() not in _ABBREVIATIONS
-        for word, letter in _SENTENCE_BREAK.findall(text)
+        letter.isupper() and word.lower() not in _ABBREVIATIONS for word, letter in _sentence_breaks(text)
     )
 
 

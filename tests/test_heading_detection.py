@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import textwrap
 import threading
+import time
 from html import escape
 from pathlib import Path
 
@@ -22,7 +23,14 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
 from micar_linter.anchors import _xhtml_section_identifiers
-from micar_linter.document import load_from_docx, load_from_markdown, load_from_pdf, match_heading_to_section
+from micar_linter.document import (
+    _SENTENCE_BREAK,
+    _sentence_breaks,
+    load_from_docx,
+    load_from_markdown,
+    load_from_pdf,
+    match_heading_to_section,
+)
 from micar_linter.linter import lint_whitepaper
 from micar_linter.locations import _xhtml_heading_lines
 from micar_linter.rules.base import Finding, Severity
@@ -2332,3 +2340,34 @@ def test_a_line_that_ends_in_a_semicolon_and_a_conjunction_is_an_item_of_the_lis
         ("body", "the reserve of assets may lose value"),
     ]
     assert load_whitepaper(write(tmp_path / f"synthetic{suffix}", blocks)).type is WhitepaperType.ART
+
+
+# Round 5 of the follow-up verification.
+@pytest.mark.parametrize("suffix", sorted(LIST_WRITERS))
+def test_a_long_word_is_read_in_linear_time(tmp_path: Path, suffix: str):
+    # Whether a line is shaped like a title looked for a sentence break with a pattern that read a run of
+    # letters again from each of its letters, so a line of 40 000 letters took 18 s in a DOCX, a PDF (one
+    # line, unwrapped) and, after a list item, in Markdown; it takes a few hundredths of a second now.
+    blocks = [_CRYPTO_ASSET, ("plain", "- a"), ("plain", "a" * 40_000), *_MEADOW_OFFEROR]
+    path = LIST_WRITERS[suffix](tmp_path / f"letters{suffix}", blocks)
+    start = time.perf_counter()
+    load_whitepaper(path)
+    assert time.perf_counter() - start < 3
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Risks. Holders may lose",
+        "Corp. Holders. More risks",
+        "Xcorp. Abc",
+        "abcdefgh. Ijklmno. Pqrs! Tu",
+        "Quillmoor Corp. Risk Factors",
+        "A.1 Name. Risks",
+        "a" * 5_000 + ". Holders",
+        "abcd. " + "a" * 5_000 + ". Bcde",
+    ],
+)
+def test_sentence_breaks_are_those_of_the_pattern(text: str):
+    # The linear reading finds the matches that findall finds, also inside the word after a match.
+    assert _sentence_breaks(text) == _SENTENCE_BREAK.findall(text)
