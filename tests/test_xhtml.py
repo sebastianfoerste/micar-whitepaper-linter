@@ -1,9 +1,21 @@
+import random
+import time
 from pathlib import Path
+
+import pytest
 
 from micar_linter.anchors import _xhtml_section_identifiers
 from micar_linter.locations import _xhtml_heading_lines
+from micar_linter.numbered_fields import extract_numbered_fields
 from micar_linter.whitepaper import WhitepaperType, load_whitepaper
-from micar_linter.xhtml_parser import load_from_xhtml
+from micar_linter.xhtml_parser import (
+    _FIELD_NUMBER,
+    _FIELD_NUMBER_CHARS,
+    _LABEL_START,
+    _inside_word,
+    document_text,
+    load_from_xhtml,
+)
 
 
 def test_load_from_xhtml(tmp_path: Path):
@@ -140,3 +152,57 @@ def test_nested_blocks_are_read_once(tmp_path: Path):
         "Loss of keys.",
         "Loss of value.",
     ]
+
+
+def _inside_word_reading_the_whole_text(text: str, piece: str) -> bool:
+    """_inside_word as it was before round 4: it split the whole text to find its last word."""
+    if not text or text[-1].isspace() or piece[:1].isspace():
+        return False
+    return not (_LABEL_START.match(piece) and _FIELD_NUMBER.fullmatch(text.rsplit(None, 1)[-1]))
+
+
+def test_inside_word_reads_only_the_end_of_the_text_and_answers_as_before():
+    # The longest field number fills _FIELD_NUMBER_CHARS, so a word one character longer is none.
+    assert _FIELD_NUMBER.fullmatch("AB.12.") and len("AB.12.") == _FIELD_NUMBER_CHARS
+    tokens = ["A.1", "A.", "AB.12.", "B.12)", "12", "05:", "1", "QQQQQQQQ12", "ZZA.1", "LEI", "x", " ", "\n", "-"]
+    pieces = ["Name", "name", "1", "-", "\u2013", " Name", "A1", ".", ""]
+    rng = random.Random(4)
+    for _ in range(5000):
+        text = "".join(rng.choice(tokens) for _ in range(rng.randint(0, 6)))
+        piece = rng.choice(pieces)
+        assert _inside_word(text, piece) == _inside_word_reading_the_whole_text(text, piece), (text, piece)
+
+
+@pytest.mark.parametrize(
+    ("markup", "text"),
+    [
+        # A field number stays apart from the label after it, also where its pieces are split by elements.
+        ("<p>x A.<span>1</span><span>Name</span></p>", "x A.1 Name"),
+        ("<p>See<span>AB.12.</span><span>Name</span></p>", "SeeAB.12.Name"),
+        ("<p>See <span>AB.12.</span><span>Name</span></p>", "See AB.12. Name"),
+        # A word that only ends like a field number is no field number, however long the word.
+        ("<p>QQQQQQQQ<span>12</span><span>Name</span></p>", "QQQQQQQQ12Name"),
+        ("<p>LEI " + "<span>LEI</span>" * 50 + "<span>A.1</span><span>Name</span></p>", "LEI " + "LEI" * 50 + "A.1Name"),
+    ],
+    ids=["split field number", "glued field number", "field number", "long word", "long run of spans"],
+)
+def test_document_text_joins_inline_elements_as_before(markup: str, text: str):
+    page = f'<html xmlns="http://www.w3.org/1999/xhtml"><body>{markup}</body></html>'.encode()
+    assert document_text(page) == text
+
+
+@pytest.mark.parametrize(
+    "reader", [document_text, load_from_xhtml, extract_numbered_fields], ids=lambda reader: reader.__name__
+)
+def test_a_long_run_of_inline_elements_is_read_in_linear_time(reader):
+    # Round 4 of the follow-up verification: the text before each piece was split to find its last word, and
+    # document_text also copied that word for every piece, so 80 000 spans in one paragraph (1.3 MB) took
+    # 4.3 to 6.6 s in each reader and the CLI took 48 s on 1.9 MB; 1.6 MB take about 0.3 s in each now.
+    page = (
+        '<html xmlns="http://www.w3.org/1999/xhtml"><body><h2>Information about the Offeror</h2><p>LEI '
+        + "<span>LEI</span>" * 100_000
+        + "</p></body></html>"
+    ).encode()
+    start = time.perf_counter()
+    reader(page)
+    assert time.perf_counter() - start < 3
