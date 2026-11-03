@@ -969,8 +969,8 @@ _SST_ISSUER = [
             ],
             WhitepaperType.EMT,
         ),
-        # A negated lead-in governs every item of the list after it, also where the items end in a
-        # semicolon, and also where a PDF reads the lead-in as a heading.
+        # A negated lead-in governs each dash, bullet or bracket item of the list after it, also where the items
+        # end in a semicolon, and also where a PDF reads the lead-in as a heading that ends in a negation.
         (
             [
                 ("body", "For the purposes of MiCAR the token is not"),
@@ -2210,8 +2210,9 @@ def test_a_given_regime_is_not_inferred(tmp_path: Path, suffix: str, monkeypatch
 @pytest.mark.parametrize("suffix", sorted(LIST_WRITERS))
 def test_a_given_regime_is_not_inferred_from_a_list(tmp_path: Path, suffix: str, monkeypatch: pytest.MonkeyPatch):
     # The list that test_a_given_regime_is_not_inferred used before the list reading was backed out: a DOCX or
-    # PDF reads it as other and Markdown as an EMT (test_the_documented_limits_of_the_regime_reading). A given
-    # regime is not inferred, so the text is not read for it, and it holds where the inference would differ.
+    # PDF reads it as other and Markdown as an EMT (as the "semicolon" case of
+    # test_the_documented_limits_of_the_regime_reading shows with a shorter lead-in). A given regime is not
+    # inferred, so the text is not read for it, and it holds where the inference would differ.
     import micar_linter.whitepaper as whitepaper
 
     blocks = [_CRYPTO_ASSET, *_lines(_LEAD_IN, "- an asset-referenced token;", "- an e-money token."), *_MEADOW_OFFEROR]
@@ -2645,6 +2646,11 @@ def _regimes(docx_and_pdf: WhitepaperType, markup: WhitepaperType) -> dict[str, 
 
 
 ART, EMT, OTHER = WhitepaperType.ART, WhitepaperType.EMT, WhitepaperType.OTHER
+_ART_INTRODUCTION = "The Synthetic Stable Token is an asset-referenced token."
+_STATEMENT = (
+    "This crypto-asset white paper has not been approved by any competent authority in any Member State of the "
+    "European Union."
+)
 
 
 @pytest.mark.parametrize("suffix", sorted(ALL_WRITERS))
@@ -2795,6 +2801,51 @@ ART, EMT, OTHER = WhitepaperType.ART, WhitepaperType.EMT, WhitepaperType.OTHER
             ],
             {**_regimes(ART, ART), ".md": OTHER},
         ),
+        # Before any heading, Markdown and XHTML read no introduction; a DOCX or PDF does, as in 1.2.1.
+        ([("body", _ART_INTRODUCTION), *_SST_ISSUER], _regimes(ART, OTHER)),
+        # In the paragraph of the first-page statement, which now has a section of its own, every format reads
+        # it (1.2.1 read it only from a DOCX or PDF).
+        ([("body", f"{_STATEMENT} {_ART_INTRODUCTION}"), *_SST_ISSUER], _regimes(ART, ART)),
+        # A negation before the phrase in its clause makes the introduction other (in 1.2.1 an ART).
+        (
+            [
+                ("heading", "Summary"),
+                ("body", "The Synthetic Stable Token is not an e-money token and is therefore an asset-referenced token."),
+                *_SST_ISSUER,
+            ],
+            _regimes(OTHER, OTHER),
+        ),
+        # A phrase that a line end splits is not found, in any format, as in 1.2.1.
+        (
+            [
+                ("heading", "Summary"),
+                ("plain", "The Synthetic Stable Token is an asset-"),
+                ("plain", "referenced token."),
+                *_SST_ISSUER,
+            ],
+            _regimes(OTHER, OTHER),
+        ),
+        # A lead-in that the loader reads as a heading and that ends in a negation and a colon governs nothing:
+        # the colon ends its clause. Markdown and XHTML end the clause at a colon at the end of a line.
+        (
+            [
+                _CRYPTO_ASSET,
+                ("bold", "The token is not:"),
+                *_lines("- an asset-referenced token;", "- an e-money token."),
+                *_MEADOW_OFFEROR,
+            ],
+            _regimes(ART, ART),
+        ),
+        # Upper-case list letters are no list items: each starts a new sentence (Markdown and XHTML end the
+        # clause at the semicolon instead).
+        (
+            [
+                _CRYPTO_ASSET,
+                *_lines(_LEAD_IN, "(A) an asset-referenced token; or", "(B) an e-money token."),
+                *_MEADOW_OFFEROR,
+            ],
+            _regimes(ART, EMT),
+        ),
     ],
     ids=[
         "full stop",
@@ -2810,6 +2861,12 @@ ART, EMT, OTHER = WhitepaperType.ART, WhitepaperType.EMT, WhitepaperType.OTHER
         "introduction under no section",
         "introduction in a section",
         "introduction after a section",
+        "introduction before any heading",
+        "introduction with the statement",
+        "negated introduction",
+        "phrase split by a line end",
+        "heading lead-in with a colon",
+        "upper-case list letters",
     ],
 )
 def test_the_documented_limits_of_the_regime_reading(
@@ -2818,3 +2875,41 @@ def test_the_documented_limits_of_the_regime_reading(
     # The CHANGELOG and docs/SETUP.md name these limits; this test keeps the docs and the code in step.
     path = ALL_WRITERS[suffix][0](tmp_path / f"synthetic{suffix}", blocks)
     assert load_whitepaper(path).type is regimes[suffix]
+
+
+@pytest.mark.parametrize(
+    ("placement", "regime"),
+    [("body", ART), ("table", OTHER), ("header", OTHER), ("tracked insertion", OTHER)],
+)
+def test_a_docx_introduction_is_read_for_the_regime_only_in_a_paragraph_of_its_body(
+    tmp_path: Path, placement: str, regime: WhitepaperType
+):
+    # The regime of a DOCX is read from the paragraphs of its body (python-docx's paragraph text), not from its
+    # tables, headers or footers, nor from a run inside a tracked insertion, as in 1.2.1 (CHANGELOG, docs/SETUP.md).
+    from docx.oxml.ns import qn
+
+    document = docx.Document()
+    if placement == "body":
+        document.add_paragraph(_ART_INTRODUCTION)
+    elif placement == "table":
+        document.add_table(rows=1, cols=1).cell(0, 0).text = _ART_INTRODUCTION
+    elif placement == "header":
+        document.sections[0].header.paragraphs[0].text = _ART_INTRODUCTION
+    else:
+        insertion = OxmlElement("w:ins")
+        insertion.set(qn("w:id"), "1")
+        insertion.set(qn("w:author"), "Synthetic Reviewer")
+        run = OxmlElement("w:r")
+        text = OxmlElement("w:t")
+        text.text = _ART_INTRODUCTION
+        run.append(text)
+        insertion.append(run)
+        document.add_paragraph("Note: ")._p.append(insertion)
+    for kind, text in _SST_ISSUER:
+        if kind == "heading":
+            document.add_heading(text, level=1)
+        else:
+            document.add_paragraph(text)
+    path = tmp_path / "introduction.docx"
+    document.save(path)
+    assert load_whitepaper(path).type is regime

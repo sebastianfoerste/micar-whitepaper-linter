@@ -1133,3 +1133,184 @@ def test_200_kb_of_text_with_markup_pieces_or_invisible_characters_is_read_in_li
     malformed_leis(text)
     find_leis(text, shown=True)
     assert time.perf_counter() - start < 2
+
+
+# Hidden text (ADR 0007 and the rule page). The offeror's code is shown with its last character missing, and that
+# character is hidden; ISSUER_TEXT holds a valid LEI, so the rule passes where the hidden text completes the code.
+SHOWN, HIDDEN = OTHER_LEI[:-1], OTHER_LEI[-1]
+
+
+def _docx_hidden(path: Path, placement: str, hiding: str | None) -> Path:
+    """A DOCX whose offeror code is shown malformed, with the missing character in a w:moveFrom, a w:t inside a
+    w:del, a w:delText inside a w:del or a run marked hidden (w:vanish), or nowhere (None)."""
+    import docx
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+
+    def run(text: str, tag: str = "w:t", vanish: bool = False):
+        element = OxmlElement("w:r")
+        if vanish:
+            properties = OxmlElement("w:rPr")
+            properties.append(OxmlElement("w:vanish"))
+            element.append(properties)
+        text_element = OxmlElement(tag)
+        text_element.text = text
+        element.append(text_element)
+        return element
+
+    def tracked(name: str, child):
+        element = OxmlElement(name)
+        element.set(qn("w:id"), "1")
+        element.set(qn("w:author"), "Synthetic Reviewer")
+        element.append(child)
+        return element
+
+    def add_code(paragraph, wrapper: str | None = None) -> None:
+        shown = run(SHOWN)
+        paragraph._p.append(tracked(wrapper, shown) if wrapper else shown)
+        if hiding == "moveFrom":
+            paragraph._p.append(tracked("w:moveFrom", run(HIDDEN)))
+        elif hiding == "del":
+            paragraph._p.append(tracked("w:del", run(HIDDEN)))
+        elif hiding == "delText":
+            paragraph._p.append(tracked("w:del", run(HIDDEN, "w:delText")))
+        elif hiding == "vanish":
+            paragraph._p.append(run(HIDDEN, vanish=True))
+
+    document = docx.Document()
+    document.add_heading("Information about the Issuer", level=1)
+    document.add_paragraph(ISSUER_TEXT)
+    document.add_heading(OFFEROR, level=1)
+    document.add_paragraph("Synthetic Offeror GmbH, a fictional company, offers the token.")
+    if placement == "body paragraph":
+        add_code(document.add_paragraph("The LEI of the offeror is "))
+    elif placement == "tracked insertion":
+        add_code(document.add_paragraph("The LEI of the offeror is "), "w:ins")
+    elif placement == "label paragraph":
+        add_code(document.add_paragraph("LEI: "))
+    elif placement == "table cell":
+        add_code(document.add_table(rows=1, cols=1).cell(0, 0).paragraphs[0])
+    elif placement == "header":
+        add_code(document.sections[0].header.paragraphs[0])
+    document.add_heading("Risk Factors", level=1)
+    document.add_paragraph("Holders may lose the full amount.")
+    document.save(path)
+    return path
+
+
+def _pdf_hidden(path: Path, hiding: str | None) -> Path:
+    """A PDF whose offeror code is shown malformed on one line, with the missing character drawn right after it
+    invisibly (text render mode 3 or 7) or white on white, or not at all (None)."""
+    operators = {
+        None: "",
+        "render mode 3": f"3 Tr ({HIDDEN}) Tj 0 Tr",
+        "render mode 7": f"7 Tr ({HIDDEN}) Tj 0 Tr",
+        "white on white": f"1 1 1 rg ({HIDDEN}) Tj 0 0 0 rg",
+    }[hiding]
+    lines = [
+        ("/F2 14 Tf", "Information about the Issuer", ""),
+        ("/F1 10 Tf", ISSUER_TEXT, ""),
+        ("/F2 14 Tf", OFFEROR, ""),
+        ("/F1 10 Tf", f"The LEI of the offeror is {SHOWN}", operators),
+        ("/F2 14 Tf", "Risk Factors", ""),
+        ("/F1 10 Tf", "Holders may lose the full amount.", ""),
+    ]
+    shown = " ".join(f"{font} ({text}) Tj {after} 0 -13 Td" for font, text, after in lines)
+    content = f"BT 13 TL 50 770 Td {shown} ET".encode("cp1252")
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [5 0 R] /Count 1 >>",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1000 792] "
+        b"/Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 6 0 R >>",
+        b"<< /Length %d >>\nstream\n" % len(content) + content + b"\nendstream",
+    ]
+    pdf = bytearray(b"%PDF-1.4\n")
+    offsets = []
+    for number, body in enumerate(objects, 1):
+        offsets.append(len(pdf))
+        pdf += b"%d 0 obj\n" % number + body + b"\nendobj\n"
+    xref = len(pdf)
+    pdf += b"xref\n0 %d\n0000000000 65535 f \n" % (len(objects) + 1)
+    pdf += b"".join(b"%010d 00000 n \n" % offset for offset in offsets)
+    pdf += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objects) + 1, xref)
+    path.write_bytes(bytes(pdf))
+    return path
+
+
+HIDDEN_DOCX = [
+    # A run marked hidden is section text, so it completes the code wherever it stands.
+    ("body paragraph", "vanish", "pass"),
+    # Moved-away text and a w:t inside a w:del are read only in the text of the file, not in the sections: in a
+    # body paragraph of a section the section still shows the code malformed.
+    ("body paragraph", "moveFrom", "review"),
+    ("body paragraph", "del", "review"),
+    # Outside the section text they complete the code.
+    ("table cell", "moveFrom", "pass"),
+    ("header", "del", "pass"),
+    ("label paragraph", "moveFrom", "pass"),
+    ("tracked insertion", "moveFrom", "pass"),
+    # Deleted text as Word writes it is not read anywhere.
+    ("body paragraph", "delText", "review"),
+    ("table cell", "delText", "review"),
+    ("body paragraph", None, "review"),
+    ("table cell", None, "review"),
+]
+
+
+@pytest.mark.parametrize(
+    ("placement", "hiding", "status"), HIDDEN_DOCX, ids=[f"{p}-{h}" for p, h, _ in HIDDEN_DOCX]
+)
+def test_the_documented_hidden_text_limits_of_a_docx(tmp_path: Path, placement: str, hiding: str | None, status: str):
+    # ADR 0007 and the rule page name these limits; this test keeps the docs and the code in step.
+    check_digits, _ = _check_digits(_docx_hidden(tmp_path / "hidden.docx", placement, hiding))
+    assert check_digits.status == status
+
+
+@pytest.mark.parametrize(
+    ("hiding", "status"),
+    [("render mode 3", "pass"), ("render mode 7", "pass"), ("white on white", "pass"), (None, "review")],
+)
+def test_the_documented_hidden_text_limits_of_a_pdf(tmp_path: Path, hiding: str | None, status: str):
+    check_digits, _ = _check_digits(_pdf_hidden(tmp_path / "hidden.pdf", hiding))
+    assert check_digits.status == status
+
+
+HIDDEN_MARKUP = {
+    # A fragment the text joins to the code completes it.
+    "display:none": (f'<p>The LEI of the offeror is {SHOWN}<span style="display:none">{HIDDEN}</span>.</p>', "pass"),
+    "visibility:hidden": (
+        f'<p>The LEI of the offeror is {SHOWN}<span style="visibility:hidden">{HIDDEN}</span>.</p>',
+        "pass",
+    ),
+    "hidden attribute": (f'<p>The LEI of the offeror is {SHOWN}<span hidden="hidden">{HIDDEN}</span>.</p>', "pass"),
+    "in a table cell": (
+        f'<table><tr><td>LEI</td><td>{SHOWN}<span hidden="hidden">{HIDDEN}</span></td></tr></table>',
+        "pass",
+    ),
+    "shown": (f"<p>The LEI of the offeror is {SHOWN}.</p>", "review"),
+    # A fragment in a block of its own is read apart from the code, as it would be if shown.
+    "in a block of its own": (
+        f'<p>The LEI of the offeror is {SHOWN}.</p><p hidden="hidden">{HIDDEN}</p>',
+        "review",
+    ),
+    # A hidden separator inside the code splits it into groups that are no LEI-like code.
+    "separator inside the code": (
+        f'<p>The LEI of the offeror is {SHOWN[:9]}<span hidden="hidden">/</span>{SHOWN[9:]}.</p>',
+        "pass",
+    ),
+    # A code shown split over two lines is read as one, and a hidden line between its pieces keeps them apart.
+    "wrapped code": (f"<p>The LEI of the offeror is {SHOWN[:12]}<br/>{SHOWN[12:]}.</p>", "review"),
+    "hidden line in a wrapped code": (
+        f'<p>The LEI of the offeror is {SHOWN[:12]}<br/><span hidden="hidden">see below</span><br/>{SHOWN[12:]}.</p>',
+        "pass",
+    ),
+}
+
+
+@pytest.mark.parametrize("suffix", [".xhtml", ".html"])
+@pytest.mark.parametrize(("markup", "status"), HIDDEN_MARKUP.values(), ids=HIDDEN_MARKUP.keys())
+def test_the_documented_hidden_text_limits_of_xhtml_and_html(tmp_path: Path, markup: str, status: str, suffix: str):
+    check_digits, _ = _check_digits(_write_xhtml(tmp_path / f"hidden{suffix}", markup))
+    assert check_digits.status == status

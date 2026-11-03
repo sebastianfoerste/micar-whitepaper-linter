@@ -225,12 +225,14 @@ _NEGATION = re.compile(r"\b(?:not|no|neither|nor|never|without|other than|except
 _CLAUSE_END = re.compile(r"[.!?;:](?=\s|$)|\b(?:but|however|whereas|although|though|while)\b")
 _NEGATION_REACH = 8
 _NEGATION_LOOKBACK = 200
-# A list item: a bullet or dash, or a list letter or number, before its text.
+# A list item: a bullet or dash, or a list number of one or two digits or a lower-case list letter or roman
+# numeral with a full stop or a bracket, before its text.
 _LIST_ITEM = re.compile(
     r"(?:[-*\u2013\u2014\u2022\u2023\u2043\u00b7\u25aa\u25cf]|\(?(?:[a-z]|[ivx]{1,4}|\d{1,2})[.)])\s"
 )
 _FIRST_WORD = re.compile(r"[^\W_]+")
-# A heading that ends in a negation, perhaps with a colon after it, leads into the line after it.
+# A heading that ends in a negation leads into the line after it; a colon after the negation ends the clause
+# there (_CLAUSE_END), so such a heading governs nothing.
 _ENDS_IN_NEGATION = re.compile(rf"(?:{_NEGATION.pattern})\W*$")
 
 
@@ -331,16 +333,17 @@ def _regime_pieces(
 
     In a DOCX or PDF each line is a piece (a heading of two or three PDF lines is one). A heading, and a line
     shaped like a title, is judged on its own words: no clause runs into it, and none runs on from it unless
-    it ends in a negation. A line that starts with a capital letter or a digit, or with a word that holds a
-    capital letter, starts a new sentence (_starts_sentence). A list item continues the lead-in before its
-    list, so a negated lead-in governs each item marked with a bullet, a dash, or a list number or letter
-    with a bracket ("1)", "(a)"), also where the items end in a semicolon; an item that starts a new sentence
+    it ends in a negation with no colon after it. A line that starts with a capital letter or a digit, or with
+    a word that holds a capital letter, starts a new sentence (_starts_sentence). A list item continues the
+    lead-in before its list, so a negated lead-in governs each item marked with a bullet or dash of
+    _LIST_ITEM, or with a list number of one or two digits or a lower-case list letter or roman numeral and a
+    bracket ("1)", "(a)", "(iv)"), also where the items end in a semicolon; an item that starts a new sentence
     does so only after a lead-in that ends in a colon or a negation. The full stop after a list number or
-    letter ("1.", "a.") ends the clause as any full stop does, so a lead-in governs no item marked so. An
-    item continues the lead-in of its list, not the item before it, so the items of a list inside an item
-    continue the outer lead-in. Any other line continues the line before it, as a DOCX may split a sentence
-    over paragraphs ("... is neither" / "an asset-referenced token nor" / ...) and a PDF wraps its lines. In
-    the other formats each section is a piece.
+    letter ("1.", "a.") ends the clause as any full stop does, so a lead-in governs no item marked so. An item
+    continues the lead-in of its list, not the item before it, so the items of a list inside an item continue
+    the outer lead-in. Any other line continues the line before it, as a DOCX may split a sentence over
+    paragraphs ("... is neither" / "an asset-referenced token nor" / ...) and a PDF wraps its lines. In the
+    other formats each section is a piece.
     """
     if not extracted:
         return [(text.lower(), 0) for text in sections.values()]
