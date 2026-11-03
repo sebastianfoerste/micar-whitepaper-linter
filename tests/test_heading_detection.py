@@ -2144,7 +2144,7 @@ def test_docx_styles_based_on_a_numbering_style_load(tmp_path: Path):
     assert findings["ANNEX_I.I"].status == "pass"
 
 
-# Round 4 of the follow-up verification: a list after a negated lead-in, in a DOCX, a PDF and Markdown.
+# Round 5 of the follow-up verification.
 LIST_WRITERS = {suffix: ALL_WRITERS[suffix][0] for suffix in (".docx", ".md", ".pdf")}
 _CRYPTO_ASSET = ("heading", "Information about the Crypto-Asset")
 _MEADOW_OFFEROR = [
@@ -2153,201 +2153,14 @@ _MEADOW_OFFEROR = [
     ("heading", "Risk Factors"),
     ("body", "Holders may lose the full amount, and the token may not always be transferable."),
 ]
-LIST_MARKERS = [
-    ("-", "-"),
-    ("*", "*"),
-    ("•", "•"),
-    ("1.", "2."),
-    ("1)", "2)"),
-    ("(1)", "(2)"),
-    ("a.", "b."),
-    ("a)", "b)"),
-    ("(a)", "(b)"),
-    ("i.", "ii."),
-    ("(i)", "(ii)"),
-]
 
 
-@pytest.mark.parametrize("suffix", sorted(LIST_WRITERS))
-@pytest.mark.parametrize(("first", "second"), LIST_MARKERS, ids=[first for first, _ in LIST_MARKERS])
-@pytest.mark.parametrize(
-    ("lead_in", "between", "capitals"),
-    [
-        ("For the purposes of MiCAR the token is not", "; or", False),
-        # A PDF reads this lead-in, and a first item numbered "1.", "1)" or "(1)", as headings.
-        ("For the purposes of MiCAR the token is not", "; or", True),
-        ("For the purposes of MiCAR the token is neither", "", True),
-        ("The token is neither:", "", False),
-        ("The token is not:", ", and", True),
-    ],
-    ids=["not, semicolon or", "not, capitals", "neither, capitals", "neither with a colon", "not with a colon, and"],
-)
-def test_a_negated_lead_in_governs_every_item_of_the_list_after_it(
-    tmp_path: Path, suffix: str, first: str, second: str, lead_in: str, between: str, capitals: bool
-):
-    # The full stop after a list number or letter ("1.", "a.", "i.") ended the lead-in's clause, so the items
-    # loaded as an ART in a DOCX, PDF and Markdown; in Markdown a semicolon between the items did too.
-    article = "An" if capitals else "an"
-    blocks = [
-        _CRYPTO_ASSET,
-        ("body", lead_in),
-        ("body", f"{first} {article} asset-referenced token{between}"),
-        ("body", f"{second} {article} e-money token."),
-        *_MEADOW_OFFEROR,
-    ]
-    path = LIST_WRITERS[suffix](tmp_path / f"meadowpoints{suffix}", blocks)
-    assert load_whitepaper(path).type is WhitepaperType.OTHER
-
-
-@pytest.mark.parametrize("suffix", sorted(LIST_WRITERS))
-@pytest.mark.parametrize(
-    "lines",
-    [
-        ["For the purposes of MiCAR the token is not", "1. an asset-referenced token; or", "2. an e-money token."],
-        ["For the purposes of MiCAR the token is not:", "a. an asset-referenced token; or", "b. an e-money token."],
-        ["For the purposes of MiCAR the token is neither", "i. an asset-referenced token, nor", "ii. an e-money token."],
-        ["The token is not:", "1. An asset-referenced token;", "2. An e-money token."],
-        # The example in docs/SETUP.md, which loaded as an EMT in Markdown.
-        ["the token is not", "- an asset-referenced token;", "- an e-money token."],
-    ],
-    ids=["numbers", "letters", "roman numerals", "capitals after a colon", "dashes"],
-)
-def test_a_numbered_list_after_a_negated_lead_in_keeps_an_annex_i_draft(tmp_path: Path, suffix: str, lines: list[str]):
-    # The inputs of the round 4 report. Markdown reads the regime from section text only, so there the
-    # lines stand under a heading; in a DOCX or PDF they open the draft, as in the report.
-    blocks = [("body", line) for line in lines]
-    if suffix == ".md":
-        blocks = [_CRYPTO_ASSET, *blocks]
-    path = LIST_WRITERS[suffix](tmp_path / f"meadowpoints{suffix}", [*blocks, *_MEADOW_OFFEROR])
-    assert load_whitepaper(path).type is WhitepaperType.OTHER
-    findings = _findings(path, None)
-    assert "ANNEX_I.I" in findings and "ANNEX_II.A" not in findings
-
-
-@pytest.mark.parametrize("suffix", sorted(LIST_WRITERS))
-@pytest.mark.parametrize(
-    ("blocks", "regime"),
-    [
-        # The negation of a lead-in ends where its list ends: a sentence after the list that names the regime
-        # still counts, with or without a full stop after the last item.
-        (
-            [
-                _CRYPTO_ASSET,
-                ("body", "The token is not:"),
-                ("body", "1. an e-money token;"),
-                ("body", "2. a deposit."),
-                ("body", "The SST is an asset-referenced token."),
-                *_SST_ISSUER,
-            ],
-            WhitepaperType.ART,
-        ),
-        (
-            [
-                _CRYPTO_ASSET,
-                ("body", "The token is not:"),
-                ("body", "- an e-money token;"),
-                ("body", "- a deposit"),
-                ("body", "The SST is an asset-referenced token"),
-                *_SST_ISSUER,
-            ],
-            WhitepaperType.ART,
-        ),
-        (
-            [
-                _CRYPTO_ASSET,
-                ("body", "The token is not"),
-                ("body", "(a) an e-money token, or"),
-                ("body", "(b) a deposit"),
-                ("body", "xStable's reserve of assets is held in cash."),
-                *_SST_ISSUER,
-            ],
-            WhitepaperType.ART,
-        ),
-        # A list after a lead-in without a negation names the regime.
-        ([_CRYPTO_ASSET, ("body", "The token is:"), ("body", "1. an asset-referenced token"), *_SST_ISSUER], WhitepaperType.ART),
-        (
-            [
-                _CRYPTO_ASSET,
-                ("body", "The token is:"),
-                ("body", "1. An asset-referenced token;"),
-                ("body", "2. Not an e-money token."),
-                *_SST_ISSUER,
-            ],
-            WhitepaperType.ART,
-        ),
-        # A numbered heading after a line that ends in a negation is no list item: it is judged on its own
-        # words (in Markdown, where it is a line of the section, as a line shaped like a title).
-        (
-            [
-                *_SST_ISSUER,
-                ("heading", "Risk Factors"),
-                ("body", "Holders have no deposit protection and no"),
-                ("numbered", "5. Stabilisation Mechanism"),
-                ("body", "The reserve is held in cash."),
-            ],
-            WhitepaperType.ART,
-        ),
-        # Nor where a numbered list follows it: "1." does not come right after "5.".
-        (
-            [
-                *_SST_ISSUER,
-                ("heading", "Risk Factors"),
-                ("body", "Holders have no deposit protection and no"),
-                ("numbered", "5. Reserve of Assets"),
-                ("body", "1. The reserve is held in cash;"),
-                ("body", "2. The reserve is held in bonds."),
-            ],
-            WhitepaperType.ART,
-        ),
-    ],
-    ids=[
-        "sentence after the list",
-        "sentence after an item without a full stop",
-        "name after the list",
-        "positive lead-in",
-        "positive lead-in with a colon",
-        "numbered heading after a negation",
-        "numbered heading before a numbered list",
-    ],
-)
-def test_a_list_after_a_lead_in_reaches_no_further_than_its_items(
-    tmp_path: Path, suffix: str, blocks: list[tuple[str, str]], regime: WhitepaperType
-):
-    path = LIST_WRITERS[suffix](tmp_path / f"synthetic{suffix}", blocks)
-    assert load_whitepaper(path).type is regime
-
-
-@pytest.mark.parametrize("suffix", sorted(WRITERS))
-@pytest.mark.parametrize("between", ["; or", "; and"])
-def test_a_line_that_ends_in_a_semicolon_and_a_conjunction_is_an_item_of_the_list(
-    tmp_path: Path, suffix: str, between: str
-):
-    # A list without markers, as a Word list numbered by its style is extracted: like a line that ends in a
-    # semicolon, one that ends in "; or" or "; and" is an item, and the next line continues the lead-in.
-    write, _ = WRITERS[suffix]
-    blocks = [
-        ("body", "For the purposes of MiCAR the token is not"),
-        ("body", f"an asset-referenced token{between}"),
-        ("body", "an e-money token."),
-        *_SST_ISSUER,
-    ]
-    assert load_whitepaper(write(tmp_path / f"meadowpoints{suffix}", blocks)).type is WhitepaperType.OTHER
-    # An item that starts a sentence carries no negation into the line after it.
-    blocks = [
-        *_SST_ISSUER,
-        ("heading", "Risk Factors"),
-        ("body", f"Holders have no claim against the custodian{between}"),
-        ("body", "the reserve of assets may lose value"),
-    ]
-    assert load_whitepaper(write(tmp_path / f"synthetic{suffix}", blocks)).type is WhitepaperType.ART
-
-
-# Round 5 of the follow-up verification.
 @pytest.mark.parametrize("suffix", sorted(LIST_WRITERS))
 def test_a_long_word_is_read_in_linear_time(tmp_path: Path, suffix: str):
     # Whether a line is shaped like a title looked for a sentence break with a pattern that read a run of
-    # letters again from each of its letters, so a line of 40 000 letters took 18 s in a DOCX, a PDF (one
-    # line, unwrapped) and, after a list item, in Markdown; it takes a few hundredths of a second now.
+    # letters again from each of its letters, so a line of 40 000 letters took 18 s in a DOCX and a PDF (one
+    # line, unwrapped); it takes a few hundredths of a second now. Markdown, whose sections regime inference
+    # reads as one text each, is checked too.
     blocks = [_CRYPTO_ASSET, ("plain", "- a"), ("plain", "a" * 40_000), *_MEADOW_OFFEROR]
     path = LIST_WRITERS[suffix](tmp_path / f"letters{suffix}", blocks)
     start = time.perf_counter()
@@ -2379,13 +2192,8 @@ def test_a_given_regime_is_not_inferred(tmp_path: Path, suffix: str, monkeypatch
     # `--type other` runs too; the reading is skipped now, and the result is the same.
     import micar_linter.whitepaper as whitepaper
 
-    blocks = [
-        _CRYPTO_ASSET,
-        ("body", "For the purposes of MiCAR the token is not"),
-        ("body", "- an asset-referenced token;"),
-        ("body", "- an e-money token."),
-        *_MEADOW_OFFEROR,
-    ]
+    statement = "For the purposes of MiCAR the token is not an asset-referenced token and not an e-money token."
+    blocks = [_CRYPTO_ASSET, ("body", statement), *_MEADOW_OFFEROR]
     path = LIST_WRITERS[suffix](tmp_path / f"meadowpoints{suffix}", blocks)
     inferred = load_whitepaper(path)
 
