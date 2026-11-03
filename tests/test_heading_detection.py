@@ -2764,8 +2764,8 @@ ART, EMT, OTHER = WhitepaperType.ART, WhitepaperType.EMT, WhitepaperType.OTHER
             _regimes(OTHER, ART),
         ),
         # An introduction that calls the token an asset-referenced token makes the draft an ART in a DOCX or PDF
-        # wherever it stands; Markdown and XHTML read only section text, so not under a heading that names no
-        # section, as in 1.2.1.
+        # wherever it stands; Markdown and XHTML read only section text, so not under a first heading that names
+        # no section, as in 1.2.1.
         (
             [
                 ("heading", "Introduction"),
@@ -2783,6 +2783,18 @@ ART, EMT, OTHER = WhitepaperType.ART, WhitepaperType.EMT, WhitepaperType.OTHER
             ],
             _regimes(ART, ART),
         ),
+        # After a section, XHTML leaves it open under a heading that names none, so the introduction is read as
+        # its text there; Markdown ends the section at every heading.
+        (
+            [
+                ("heading", "Summary"),
+                ("body", "The Synthetic Stable Token gives holders a claim on the issuer."),
+                ("heading", "Background"),
+                ("body", "The Synthetic Stable Token is an asset-referenced token."),
+                *_SST_ISSUER,
+            ],
+            {**_regimes(ART, ART), ".md": OTHER},
+        ),
     ],
     ids=[
         "full stop",
@@ -2797,6 +2809,7 @@ ART, EMT, OTHER = WhitepaperType.ART, WhitepaperType.EMT, WhitepaperType.OTHER
         "colon lead-in",
         "introduction under no section",
         "introduction in a section",
+        "introduction after a section",
     ],
 )
 def test_the_documented_limits_of_the_regime_reading(
