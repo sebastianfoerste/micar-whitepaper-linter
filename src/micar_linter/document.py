@@ -389,16 +389,13 @@ class DocumentSections:
     after a line that ends a section). Regime inference reads the extracted text (text): a heading such
     as "Reserve of Assets" may be the only place that names the regime. COMMON.LEI_CHECK_DIGITS reads
     the whole text of the file (document_text): for a PDF that is the extracted text, for a DOCX it adds
-    the paragraphs of tables, text boxes, headers and footers, and tracked insertions. In a PDF, the
-    headings set larger or bolder than the body text are also marked_headings; regime inference reads any
-    other heading of a PDF as a list item where its shape and place say so.
+    the paragraphs of tables, text boxes, headers and footers, and tracked insertions.
     """
 
     sections: dict[str, str]
     headings: tuple[str, ...]
     text: str = ""
     document_text: str = ""
-    marked_headings: tuple[str, ...] = ()
 
 
 def _words(text: str) -> list[str]:
@@ -983,7 +980,6 @@ def _line_sections(lines: list[_Line], statement: bool = False) -> DocumentSecti
     following_index = dict(pairwise(content))
     sections: dict[str, list[str]] = {}
     headings: list[str] = []
-    marked_headings: list[str] = []
     current_keys: list[str] = []
     # The template numbering, the outline number and the level of the heading that opened the current
     # section.
@@ -1097,8 +1093,6 @@ def _line_sections(lines: list[_Line], statement: bool = False) -> DocumentSecti
                 sections.setdefault(key, []).append(line.text)
         else:
             headings.append(line.text)
-            if styled[index]:
-                marked_headings.append(line.text)
             below = _below_opener(kind, level, number, opener, section_level, opener_number)
             if role == _HEADING and _within_rights(keys, current_keys, below):
                 current_keys = [*current_keys, *(key for key in keys if key not in current_keys)]
@@ -1114,9 +1108,7 @@ def _line_sections(lines: list[_Line], statement: bool = False) -> DocumentSecti
             for key in current_keys if answer else ():
                 sections.setdefault(key, []).append(answer)
         previous, previous_role, previous_styled = line.text, role, styled[index]
-    return DocumentSections(
-        {k: "\n".join(v) for k, v in sections.items()}, tuple(headings), text, text, tuple(marked_headings)
-    )
+    return DocumentSections({k: "\n".join(v) for k, v in sections.items()}, tuple(headings), text, text)
 
 
 def sections_from_lines(lines: Iterable[str]) -> dict[str, str]:

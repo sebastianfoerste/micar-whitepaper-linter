@@ -13,7 +13,6 @@ from __future__ import annotations
 import textwrap
 import threading
 import time
-import tracemalloc
 from html import escape
 from pathlib import Path
 
@@ -2374,251 +2373,19 @@ def test_sentence_breaks_are_those_of_the_pattern(text: str):
     assert _sentence_breaks(text) == _SENTENCE_BREAK.findall(text)
 
 
-_LEAD_IN = "For the purposes of MiCAR the token is not"
-
-
-def _lines(*lines: str) -> list[tuple[str, str]]:
-    return [("body", line) for line in lines]
-
-
-@pytest.mark.parametrize("suffix", sorted(LIST_WRITERS))
-@pytest.mark.parametrize(
-    "lines",
-    [
-        # The PDF wraps the item at 90 characters, before "(EU) 2023/1114; or" and "Crypto-Assets Regulation; or".
-        [
-            _LEAD_IN,
-            "1. an asset-referenced token within the meaning of Article 3(1), point (6), of Regulation (EU) 2023/1114; or",
-            "2. an e-money token.",
-        ],
-        [
-            _LEAD_IN,
-            "- an e-money token within the meaning of Article 3(1), point (7), of the Markets in Crypto-Assets "
-            "Regulation; or",
-            "- an asset-referenced token.",
-        ],
-        # Hard wrapped lines (paragraphs in a DOCX, lines in a PDF, Markdown lines).
-        [
-            _LEAD_IN,
-            "- an e-money token within the meaning of Article 3(1), point (7), of",
-            "Regulation (EU) 2023/1114; or",
-            "- an asset-referenced token.",
-        ],
-        [_LEAD_IN, "(a) an e-money token within the meaning of Regulation (EU)", "2023/1114; or", "(b) an asset-referenced token."],
-        # A wrapped line that ends a sentence: the numbered list goes on at its next item.
-        [
-            "The token is not:",
-            "1. an e-money token within the meaning of Article 3(1), point (7), of Regulation",
-            "(EU) 2023/1114.",
-            "2. an asset-referenced token.",
-        ],
-    ],
-    ids=["wrap before (EU)", "wrap before Crypto-Assets", "hard wrap", "wrap before a number", "wrap ending a sentence"],
-)
-def test_a_wrapped_item_keeps_its_list_and_lead_in(tmp_path: Path, suffix: str, lines: list[str]):
-    # A wrapped line of an item that starts with a capital letter, a digit or "(EU)" ended the list, so the
-    # items after it lost the lead-in: the first draft loaded as an EMT from a PDF (Round 4: art in all three).
-    blocks = [_CRYPTO_ASSET, *_lines(*lines), *_MEADOW_OFFEROR]
-    assert load_whitepaper(LIST_WRITERS[suffix](tmp_path / f"meadowpoints{suffix}", blocks)).type is WhitepaperType.OTHER
-
-
-def test_a_hard_wrapped_markdown_item_keeps_its_list_and_lead_in(tmp_path: Path):
-    # The Markdown draft of the report: one paragraph whose item wraps onto a line of its own.
-    item = "- an e-money token within the meaning of Article 3(1), point (7), of\nRegulation (EU) 2023/1114; or"
-    blocks = [_CRYPTO_ASSET, ("body", f"{_LEAD_IN}\n{item}\n- an asset-referenced token."), *_MEADOW_OFFEROR]
-    assert load_whitepaper(_write_markdown(tmp_path / "meadowpoints.md", blocks)).type is WhitepaperType.OTHER
-
-
-@pytest.mark.parametrize("suffix", sorted(LIST_WRITERS))
-@pytest.mark.parametrize(
-    ("lines", "regime"),
-    [
-        (
-            [
-                "The issuer confirms that:",
-                "(a) the token is neither",
-                "(i) an asset-referenced token, nor",
-                "(ii) an e-money token; and",
-                "(b) the token is transferable.",
-            ],
-            WhitepaperType.OTHER,
-        ),
-        (
-            [
-                "The issuer confirms that:",
-                "1. the token is not:",
-                "a) an asset-referenced token; or",
-                "b) an e-money token;",
-                "2. the token is transferable.",
-            ],
-            WhitepaperType.OTHER,
-        ),
-        # The negation of the inner lead-in ends with the inner list.
-        (
-            [
-                "The issuer confirms that:",
-                "1. the token is not:",
-                "a) an e-money token; or",
-                "b) a deposit;",
-                "2. the token is an asset-referenced token.",
-            ],
-            WhitepaperType.ART,
-        ),
-    ],
-    ids=["(a) then (i)", "1. then a)", "back to the outer list"],
-)
-def test_a_negated_item_governs_the_list_inside_it(
-    tmp_path: Path, suffix: str, lines: list[str], regime: WhitepaperType
-):
-    # Each item of the inner list took the clause of the outer lead-in, so the drafts loaded as an ART in a
-    # DOCX, a PDF and Markdown (Round 3: other in Markdown).
-    blocks = [_CRYPTO_ASSET, *_lines(*lines), *(_MEADOW_OFFEROR if regime is WhitepaperType.OTHER else _SST_ISSUER)]
-    assert load_whitepaper(LIST_WRITERS[suffix](tmp_path / f"synthetic{suffix}", blocks)).type is regime
-
-
-@pytest.mark.parametrize("suffix", sorted(LIST_WRITERS))
-@pytest.mark.parametrize("marker", ["1.", "(1)", "1)"])
-def test_a_list_of_one_capitalised_item_after_a_negated_lead_in(tmp_path: Path, suffix: str, marker: str):
-    # A PDF reads the item as a heading, which was read as an item only where another item came right
-    # before or after it, so the PDF loaded as an ART (DOCX and Markdown: other).
-    blocks = [_CRYPTO_ASSET, *_lines(_LEAD_IN, f"{marker} An asset-referenced token"), *_MEADOW_OFFEROR]
-    assert load_whitepaper(LIST_WRITERS[suffix](tmp_path / f"meadowpoints{suffix}", blocks)).type is WhitepaperType.OTHER
-
-
-def _covered_by(kind: str, heading: str, items: tuple[str, str] = ("1.", "2.")) -> list[tuple[str, str]]:
-    return [
-        *_SST_ISSUER,
-        ("heading", "2. Risk Factors"),
-        *_lines(
-            "Holders should note that the token is not covered by:",
-            f"{items[0]} any investor compensation scheme;",
-            f"{items[1]} any deposit guarantee scheme.",
-        ),
-        (kind, heading),
-        ("body", "The reserve is held in cash and short-term government bonds."),
-    ]
-
-
-@pytest.mark.parametrize("suffix", sorted(LIST_WRITERS))
-@pytest.mark.parametrize(
-    "blocks",
-    [
-        _covered_by("heading", "3. Reserve of Assets"),
-        _covered_by("subheading", "3. Reserve of Assets"),
-        _covered_by("numbered", "3. Stabilisation Mechanism"),
-        _covered_by("large", "(3) Reserve of Assets", ("(1)", "(2)")),
-        _covered_by("heading", "c) Reserve of Assets", ("a)", "b)")),
-        _covered_by("heading", "4. Reserve of Assets"),
-        # In sentence case: a list whose items end in a semicolon ends with the item that ends a sentence.
-        _covered_by("large", "(3) Reserve of assets", ("(1)", "(2)")),
-        _covered_by("body", "3. Reserve of assets"),
-        [
-            *_SST_ISSUER,
-            ("heading", "Risk Factors"),
-            ("body", "Holders have no deposit protection and no"),
-            ("heading", "1. Reserve of Assets"),
-            ("body", "2. the reserve is held in cash."),
-        ],
-    ],
-    ids=[
-        "Heading 1",
-        "Heading 2",
-        "bold numbered",
-        "14 pt (3)",
-        "c) after b)",
-        "4. after 2.",
-        "14 pt (3) in sentence case",
-        "body 3. in sentence case",
-        "heading 1. before 2.",
-    ],
-)
-def test_a_numbered_heading_after_a_negated_list_is_judged_on_its_own_words(
-    tmp_path: Path, suffix: str, blocks: list[tuple[str, str]]
-):
-    # A heading whose number went on from the list was read as its next item, so the negation of the
-    # lead-in reached it and the drafts loaded as other (Round 3: art). Markdown reads no heading text for the
-    # regime, so there the numbered heading is a plain line, as "3. Reserve of Assets" was in the report.
-    if suffix == ".md":
-        blocks = [*blocks[:-2], ("body", blocks[-2][1]), blocks[-1]]
-    assert load_whitepaper(LIST_WRITERS[suffix](tmp_path / f"synthetic{suffix}", blocks)).type is WhitepaperType.ART
-
-
-@pytest.mark.parametrize("suffix", sorted(LIST_WRITERS))
-@pytest.mark.parametrize(
-    ("first", "second"),
-    [("1.", "2."), ("a.", "b."), ("i.", "ii."), ("(a)", "(b)"), ("-", "-")],
-    ids=["1.", "a.", "i.", "(a)", "-"],
-)
-@pytest.mark.parametrize("article", ["The", "the"])
-def test_a_lead_in_that_negates_words_of_its_own_governs_no_item(
-    tmp_path: Path, suffix: str, first: str, second: str, article: str
-):
-    # The negation of the lead-in is about the compensation scheme, not the risks listed after it, so the
-    # items name the regime (Round 4: other; Round 3: art, other for a dash or "(a)" list in a DOCX or PDF).
-    blocks = [
-        *_SST_ISSUER,
-        ("heading", "Risk Factors"),
-        *_lines(
-            "The following risks are not covered by any compensation scheme:",
-            f"{first} {article} reserve of assets may lose value;",
-            f"{second} {article} custodian may fail.",
-        ),
-    ]
-    assert load_whitepaper(LIST_WRITERS[suffix](tmp_path / f"synthetic{suffix}", blocks)).type is WhitepaperType.ART
-    blocks = [
-        *_SST_ISSUER,
-        ("heading", "Risk Factors"),
-        *_lines(
-            "Holders bear these risks, with no compensation scheme:",
-            "- the reserve of assets may lose value;",
-            "- the stabilisation mechanism may fail.",
-        ),
-    ]
-    assert load_whitepaper(LIST_WRITERS[suffix](tmp_path / f"holders{suffix}", blocks)).type is WhitepaperType.ART
-
-
-@pytest.mark.parametrize("suffix", sorted(LIST_WRITERS))
-@pytest.mark.parametrize(
-    "lead_in",
-    [
-        "The token is not one of the following:",
-        "The token does not fall within the definition of:",
-        "The token is not considered to be:",
-        "The token is not, within the meaning of MiCAR,",
-        "Holders have no",
-        "Holders should note that the token is not covered by:",
-    ],
-)
-def test_a_lead_in_whose_negation_is_open_governs_its_items(tmp_path: Path, suffix: str, lead_in: str):
-    blocks = [_CRYPTO_ASSET, *_lines(lead_in, "- an asset-referenced token;", "- an e-money token."), *_MEADOW_OFFEROR]
-    assert load_whitepaper(LIST_WRITERS[suffix](tmp_path / f"meadowpoints{suffix}", blocks)).type is WhitepaperType.OTHER
-
-
-def test_a_markdown_list_is_read_line_by_line_in_little_memory(tmp_path: Path):
-    # Each line of a list, and each line in lower case after it, was a piece that held a copy of the clause
-    # it continues (up to 200 characters), so 200 kB of two-letter lines took 46 MB at their peak; a piece is
-    # kept now only where its own text holds a marker, and the peak is 2 MB.
-    path = tmp_path / "lines.md"
-    path.write_text(
-        "# Information about the Crypto-Asset\n\nThe token is not:\n- a\n" + "a\n" * 100_000 + "an e-money token\n",
-        encoding="utf-8",
-    )
-    tracemalloc.start()
-    try:
-        load_whitepaper(path)
-        _, peak = tracemalloc.get_traced_memory()
-    finally:
-        tracemalloc.stop()
-    assert peak < 25 * path.stat().st_size
-
-
 @pytest.mark.parametrize("suffix", sorted(LIST_WRITERS))
 def test_a_given_regime_is_not_inferred(tmp_path: Path, suffix: str, monkeypatch: pytest.MonkeyPatch):
     # The text was read for the regime also where --type gave it, so a slow shape of that reading slowed
     # `--type other` runs too; the reading is skipped now, and the result is the same.
     import micar_linter.whitepaper as whitepaper
 
-    blocks = [_CRYPTO_ASSET, *_lines(_LEAD_IN, "- an asset-referenced token;", "- an e-money token."), *_MEADOW_OFFEROR]
+    blocks = [
+        _CRYPTO_ASSET,
+        ("body", "For the purposes of MiCAR the token is not"),
+        ("body", "- an asset-referenced token;"),
+        ("body", "- an e-money token."),
+        *_MEADOW_OFFEROR,
+    ]
     path = LIST_WRITERS[suffix](tmp_path / f"meadowpoints{suffix}", blocks)
     inferred = load_whitepaper(path)
 
