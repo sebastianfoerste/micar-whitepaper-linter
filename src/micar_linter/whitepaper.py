@@ -219,16 +219,21 @@ _EMT_MARKERS = ("e-money token", "referenced currency", "safeguarding of funds")
 # heading or a section. In a DOCX or PDF it also ends at a paragraph or line end before a line that starts a
 # new sentence (with a capital letter or a digit, or with a name such as "xStable"), and after a line shaped
 # like a title ("No Investor Compensation"); it runs on into a line that starts otherwise, since a DOCX may
-# split a sentence over paragraphs and a PDF wraps its lines inside a sentence, and into each item of a list
-# after a lead-in (_regime_pieces).
+# split a sentence over paragraphs and a PDF wraps its lines inside a sentence. In a DOCX, PDF or Markdown
+# draft each item of a list after a lead-in continues the lead-in, and the full stop after a list number or
+# letter ("1.", "a.", "i.") ends no clause (_line_pieces).
 _NEGATION = re.compile(r"\b(?:not|no|neither|nor|never|without|other than|except|excluding|unlike)\b|n't\b")
 _CLAUSE_END = re.compile(r"[.!?;:](?=\s|$)|\b(?:but|however|whereas|although|though|while)\b")
 _NEGATION_REACH = 8
 _NEGATION_LOOKBACK = 200
-# A list item: a bullet or dash, or a list letter or number, before its text.
+# A list item: a bullet or dash, or a list letter or number in lower case, before its text.
 _LIST_ITEM = re.compile(
     r"(?:[-*\u2013\u2014\u2022\u2023\u2043\u00b7\u25aa\u25cf]|\(?(?:[a-z]|[ivx]{1,4}|\d{1,2})[.)])\s"
 )
+# The number or letter of a list marker, so that "(1)" and "(2)" are written alike.
+_LIST_STYLE = re.compile(r"[0-9a-z]+")
+# The end of a line that ends in a semicolon, perhaps with "or", "and" or "nor" after it: an item of a list.
+_ITEM_END = re.compile(r";\s*(?:(?:or|and|nor)\s*)?$")
 _FIRST_WORD = re.compile(r"[^\W_]+")
 # A heading that ends in a negation, perhaps with a colon after it, leads into the line after it.
 _ENDS_IN_NEGATION = re.compile(rf"(?:{_NEGATION.pattern})\W*$")
@@ -309,8 +314,9 @@ def _continued(previous: tuple[str, str, bool] | None) -> str:
 
     A heading is judged on its own words, so nothing continues it unless it ends in a negation ("For the
     purposes of MiCAR the token is not", which a PDF may read as a heading). A line that ends in a
-    semicolon is an item of a list, and the next line continues the clause that it continued. A colon at
-    the end of a line introduces the line after it, so it ends no clause there.
+    semicolon, perhaps with "or", "and" or "nor" after it ("an asset-referenced token; or"), is an item of a
+    list, and the next line continues the clause that it continued. A colon at the end of a line introduces
+    the line after it, so it ends no clause there.
     """
     if previous is None:
         return ""
@@ -318,9 +324,49 @@ def _continued(previous: tuple[str, str, bool] | None) -> str:
     if heading:
         return text[-_NEGATION_LOOKBACK:] if _ENDS_IN_NEGATION.search(text) else ""
     text = text.rstrip()
-    if text.endswith(";"):
+    if _ITEM_END.search(text):
         return clause
     return f"{clause}\n{text.removesuffix(':')}"[-_NEGATION_LOOKBACK:]
+
+
+def _item_values(item: re.Match[str]) -> frozenset[int] | None:
+    """The places in a list that a list item's marker can stand for: a number's value, a letter's place in
+    the alphabet and, for a Roman numeral, its value ("i" is the ninth letter or 1); None for a bullet or
+    dash."""
+    marker = item.group().strip().strip("().")
+    if marker.isdigit():
+        return frozenset({int(marker)})
+    if not marker.isalpha():
+        return None
+    values = {ord(marker) - ord("a") + 1} if len(marker) == 1 else set()
+    if set(marker) <= set("ivx"):
+        # A numeral before a larger one counts against it ("iv" is 4, "ix" 9).
+        numerals = [{"i": 1, "v": 5, "x": 10}[char] for char in marker]
+        values.add(sum(-n if n < max(numerals[i + 1 :], default=0) else n for i, n in enumerate(numerals)))
+    return frozenset(values)
+
+
+def _follows(item: re.Match[str], before: re.Match[str]) -> bool:
+    """Whether a list item's marker comes right after the marker of the item before it in one list: the
+    two are written alike ("(2)" after "(1)", not "2." after "(1)"), and are the same bullet or dash, or the
+    number or letter of the one is one more than that of the other ("b." after "a.", "ii." after "i.")."""
+    if _LIST_STYLE.sub("#", item.group().strip()) != _LIST_STYLE.sub("#", before.group().strip()):
+        return False
+    values, previous = _item_values(item), _item_values(before)
+    return values is None or previous is None or any(value - 1 in previous for value in values)
+
+
+def _item_text(text: str, item: re.Match[str]) -> str:
+    """A list item's line without the full stop after its list letter or number ("1." reads as "1"), which
+    would end the clause of the lead-in as a full stop does."""
+    text = text.lstrip()
+    marker = item.group().rstrip()
+    return marker.removesuffix(".") + text[len(marker) :]
+
+
+def _piece(clause: str, text: str) -> tuple[str, int]:
+    """A piece of lower-case text after the clause it continues, with the offset where its own text starts."""
+    return (f"{clause}\n{text}", len(clause) + 1) if clause else (text, 0)
 
 
 def _regime_pieces(
@@ -329,42 +375,99 @@ def _regime_pieces(
     """The pieces of a draft's text, in lower case, each with the offset where its own text starts after the
     clause it continues.
 
-    In a DOCX or PDF each line is a piece (a heading of two or three PDF lines is one). A heading, and a line
-    shaped like a title, is judged on its own words: no clause runs into it, and none runs on from it unless
-    it ends in a negation. A line that starts with a capital letter or a digit, or with a word that holds a
-    capital letter, starts a new sentence (_starts_sentence). A list item (a bullet, a dash, a list letter or
-    number) continues the lead-in before its list, so a negated lead-in governs every item, also where the
-    items end in a semicolon; an item that starts a new sentence does so only after a lead-in that ends in a
-    colon or a negation. Any other line continues the line before it, as a DOCX may split a sentence over
-    paragraphs ("... is neither" / "an asset-referenced token nor" / ...) and a PDF wraps its lines. In the
-    other formats each section is a piece.
+    In a DOCX or PDF each line is a piece (a heading of two or three PDF lines is one), read as _line_pieces
+    reads it. In Markdown a section that holds a list item is read the same way, its lines outside a list
+    as one piece (_markdown_pieces), and any other section is one piece. In XHTML and HTML each section is a
+    piece.
     """
     if not extracted:
+        if suffix == ".md":
+            return [piece for text in sections.values() for piece in _markdown_pieces(text)]
         return [(text.lower(), 0) for text in sections.values()]
-    pieces: list[tuple[str, int]] = []
+    return [piece for piece, _ in _line_pieces(_line_units(suffix, extracted, headings))]
+
+
+def _line_pieces(units: list[tuple[str, bool]]) -> list[tuple[tuple[str, int], bool]]:
+    """The piece of each line, given with whether it is read as a heading, and whether the line belongs to a
+    list: an item, or a line that continues one.
+
+    A heading, and a line shaped like a title, is judged on its own words: no clause runs into it, and none
+    runs on from it unless it ends in a negation. A line that starts with a capital letter or a digit, or
+    with a word that holds a capital letter, starts a new sentence (_starts_sentence). A list item (a
+    bullet, a dash, a list letter or number in lower case: _LIST_ITEM) continues the lead-in before its
+    list, so a negated lead-in governs every item, whatever its marker ("-", "*", "1.", "1)", "(1)", "a.",
+    "a)", "(a)", "i.", "(i)"; the full stop after a letter or number ends no clause) and whatever stands
+    between the items (";", "; or", ", or", "and", nothing); an item that starts a new sentence does so only
+    after a lead-in that ends in a colon or a negation. An item that the PDF reads as a heading, or that is
+    shaped like a title, is an item where the item before it or after it is its neighbour in one list
+    (_follows): so "(1) An asset-referenced token" before "(2) ..." is an item, and "5. Reserve of Assets"
+    before "1. ..." a heading. The list, and the reach of its lead-in, ends at a heading and at a line
+    that is no item and starts a new sentence. Any other line continues the line before it, as a DOCX may
+    split a sentence over paragraphs ("... is neither" / "an asset-referenced token nor" / ...) and a PDF
+    wraps its lines.
+    """
+    pieces: list[tuple[tuple[str, int], bool]] = []
     previous: tuple[str, str, bool] | None = None
-    # The clause the items of the current list continue, that of their lead-in, and whether the lead-in
-    # ends in a colon or a negation, so that it governs an item that starts with a capital letter too.
+    # The clause the items of the current list continue, that of their lead-in, whether the lead-in ends in
+    # a colon or a negation, so that it governs an item that starts with a capital letter too, and the
+    # marker of the list's last item.
     lead: str | None = None
     lead_opens = False
-    for text, heading in _line_units(suffix, extracted, headings):
+    last: re.Match[str] | None = None
+    for index, (text, heading) in enumerate(units):
         item = _LIST_ITEM.match(text.lstrip())
+        if heading and item:
+            following = _LIST_ITEM.match(units[index + 1][0].lstrip()) if index + 1 < len(units) else None
+            heading = not (
+                (last is not None and _follows(item, last))
+                or (following is not None and _follows(following, item))
+            )
         if heading:
-            clause, lead = "", None
+            clause, lead, last = "", None, None
         elif item:
             if lead is None:
                 lead = _continued(previous)
                 lead_opens = previous is not None and bool(
                     previous[1].rstrip().endswith(":") or _ENDS_IN_NEGATION.search(previous[1])
                 )
+            last = item
             clause = lead if lead_opens or not _starts_sentence(text.lstrip()[item.end() :]) else ""
+            text = _item_text(text, item)
         elif _starts_sentence(text):
-            clause, lead = "", None
+            clause, lead, last = "", None, None
         else:
             clause = _continued(previous)
         low = text.lower()
-        pieces.append((f"{clause}\n{low}", len(clause) + 1) if clause else (low, 0))
+        pieces.append((_piece(clause, low), lead is not None))
         previous = (clause, low, heading)
+    return pieces
+
+
+def _markdown_pieces(section: str) -> list[tuple[str, int]]:
+    """The pieces of a Markdown section's text, in lower case, each with the offset where its own text starts
+    after the clause it continues.
+
+    A section without a list item is one piece, so a clause runs on over its line ends. In a section with
+    one, each line of a list (an item, or a line that continues one) is a piece as _line_pieces reads the
+    lines of a DOCX, a line shaped like a title (_titled) as a heading, so a negated lead-in governs every
+    item and its reach ends where the list ends; the lines outside a list are one piece, as before.
+    """
+    lines = section.split("\n")
+    if not any(_LIST_ITEM.match(line.lstrip()) for line in lines):
+        return [(section.lower(), 0)]
+    pieces: list[tuple[str, int]] = []
+    run: list[str] = []
+    read = _line_pieces([(line, _titled(line)) for line in lines])
+    for line, (piece, listed) in zip(lines, read, strict=True):
+        if not listed:
+            run.append(line)
+            continue
+        if run:
+            pieces.append(("\n".join(run).lower(), 0))
+            run = []
+        pieces.append(piece)
+    if run:
+        pieces.append(("\n".join(run).lower(), 0))
     return pieces
 
 
