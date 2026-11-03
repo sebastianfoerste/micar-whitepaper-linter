@@ -115,7 +115,7 @@ This route keeps the human-review boundary visible while showing the determinist
 
 ## Features
 
-- Deterministic first-pass checks for the disclosures required by MiCAR Annex I, II and III (keywords, minimum length and structure, not legal review).
+- Deterministic first-pass checks of MiCAR Annex I, II and III, one or more for each Part (keywords, minimum length and structure, not legal review).
 - JSON, XHTML or HTML, DOCX, PDF and Markdown parsing.
 - Rules-as-code severity engine.
 - JSON reports for automated checks.
