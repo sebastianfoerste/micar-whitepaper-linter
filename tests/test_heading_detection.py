@@ -13,6 +13,7 @@ from __future__ import annotations
 import textwrap
 import threading
 import time
+import tracemalloc
 from html import escape
 from pathlib import Path
 
@@ -2204,3 +2205,544 @@ def test_a_given_regime_is_not_inferred(tmp_path: Path, suffix: str, monkeypatch
     given = load_whitepaper(path, WhitepaperType.OTHER)
     assert given.type is inferred.type is WhitepaperType.OTHER
     assert given.sections == inferred.sections
+
+
+# The list cases of Rounds 4 and 5 that the regime reading meets without the list reading those rounds
+# added, which was backed out after the verification of the merged changes, and the limits of that reading.
+_LEAD_IN = "For the purposes of MiCAR the token is not"
+
+
+def _lines(*lines: str) -> list[tuple[str, str]]:
+    return [("body", line) for line in lines]
+
+
+# The markers whose items a negated lead-in governs in a DOCX or PDF.
+LIST_MARKERS = [
+    ("-", "-"),
+    ("*", "*"),
+    ("•", "•"),
+    ("1)", "2)"),
+    ("(1)", "(2)"),
+    ("a)", "b)"),
+    ("(a)", "(b)"),
+    ("(i)", "(ii)"),
+]
+NEGATED_LEAD_INS = [
+    ("not, semicolon or", "For the purposes of MiCAR the token is not", "; or", False),
+    # A PDF reads this lead-in, and a first item numbered "1)" or "(1)", as headings.
+    ("not, capitals", "For the purposes of MiCAR the token is not", "; or", True),
+    ("neither, capitals", "For the purposes of MiCAR the token is neither", "", True),
+    ("neither with a colon", "The token is neither:", "", False),
+    ("not with a colon, and", "The token is not:", ", and", True),
+]
+
+
+def _governed(suffix: str, lead: str, first: str) -> bool:
+    """Whether the regime reading governs the items of the list in the marker test below."""
+    if suffix == ".md":
+        return lead == "neither, capitals"
+    if suffix == ".pdf" and first in ("1)", "(1)"):
+        return lead not in ("not, capitals", "neither, capitals")
+    return True
+
+
+@pytest.mark.parametrize(
+    ("suffix", "first", "second", "lead_in", "between", "capitals"),
+    [
+        pytest.param(suffix, first, second, lead_in, between, capitals, id=f"{lead}-{first}-{suffix}")
+        for lead, lead_in, between, capitals in NEGATED_LEAD_INS
+        for first, second in LIST_MARKERS
+        for suffix in sorted(LIST_WRITERS)
+        if _governed(suffix, lead, first)
+    ],
+)
+def test_a_negated_lead_in_governs_every_item_of_the_list_after_it(
+    tmp_path: Path, suffix: str, first: str, second: str, lead_in: str, between: str, capitals: bool
+):
+    # In a DOCX or PDF each item of a list continues the lead-in before it, so a negated lead-in governs
+    # every item whose marker is a bullet or dash or a list number or letter with a bracket, also where the
+    # items end in a semicolon, and where they start with a capital letter after a lead-in that ends in a
+    # colon or a negation. Not checked, as the CHANGELOG states
+    # (test_the_documented_limits_of_the_regime_reading): a list numbered or lettered with a full stop ("1.", "a.", "i."), whose full stop ends the clause as any
+    # full stop does; in a PDF, an item numbered "1)" or "(1)" in capitals after a lead-in without a colon,
+    # which the PDF reads as a heading and judges on its own words; and in Markdown, which reads a section as
+    # one text, a list after a lead-in that ends in a colon or whose first item ends in a semicolon, where
+    # the colon or the semicolon ends the clause. So in Markdown only the "neither" list is checked.
+    article = "An" if capitals else "an"
+    blocks = [
+        _CRYPTO_ASSET,
+        ("body", lead_in),
+        ("body", f"{first} {article} asset-referenced token{between}"),
+        ("body", f"{second} {article} e-money token."),
+        *_MEADOW_OFFEROR,
+    ]
+    path = LIST_WRITERS[suffix](tmp_path / f"meadowpoints{suffix}", blocks)
+    assert load_whitepaper(path).type is WhitepaperType.OTHER
+
+
+@pytest.mark.parametrize("suffix", [".docx", ".pdf"])
+def test_a_dash_list_after_a_negated_lead_in_keeps_an_annex_i_draft(tmp_path: Path, suffix: str):
+    # The example in docs/SETUP.md: in a DOCX or PDF the lead-in governs both items, so the draft is linted
+    # as other and the Annex I rules run. Not checked: Markdown, XHTML and HTML, where the semicolon after
+    # the first item ends the clause and the draft loads as an EMT, and a list numbered with a full stop,
+    # which loads as an ART in every format (test_the_documented_limits_of_the_regime_reading).
+    lines = ["the token is not", "- an asset-referenced token;", "- an e-money token."]
+    blocks = [("body", line) for line in lines]
+    path = LIST_WRITERS[suffix](tmp_path / f"meadowpoints{suffix}", [*blocks, *_MEADOW_OFFEROR])
+    assert load_whitepaper(path).type is WhitepaperType.OTHER
+    findings = _findings(path, None)
+    assert "ANNEX_I.I" in findings and "ANNEX_II.A" not in findings
+
+
+@pytest.mark.parametrize("suffix", sorted(LIST_WRITERS))
+@pytest.mark.parametrize(
+    ("blocks", "regime"),
+    [
+        # A sentence after a negated list that names the regime counts, with or without a full stop after the
+        # last item. In a DOCX or PDF it starts a new sentence (with a capital letter, or with a name that
+        # holds one), which ends the clause; in Markdown, which reads a section as one text, the colon after
+        # the lead-in, a full stop or the reach of eight words ends it.
+        (
+            [
+                _CRYPTO_ASSET,
+                ("body", "The token is not:"),
+                ("body", "1. an e-money token;"),
+                ("body", "2. a deposit."),
+                ("body", "The SST is an asset-referenced token."),
+                *_SST_ISSUER,
+            ],
+            WhitepaperType.ART,
+        ),
+        (
+            [
+                _CRYPTO_ASSET,
+                ("body", "The token is not:"),
+                ("body", "- an e-money token;"),
+                ("body", "- a deposit"),
+                ("body", "The SST is an asset-referenced token"),
+                *_SST_ISSUER,
+            ],
+            WhitepaperType.ART,
+        ),
+        (
+            [
+                _CRYPTO_ASSET,
+                ("body", "The token is not"),
+                ("body", "(a) an e-money token, or"),
+                ("body", "(b) a deposit"),
+                ("body", "xStable's reserve of assets is held in cash."),
+                *_SST_ISSUER,
+            ],
+            WhitepaperType.ART,
+        ),
+        # A list after a lead-in without a negation names the regime.
+        ([_CRYPTO_ASSET, ("body", "The token is:"), ("body", "1. an asset-referenced token"), *_SST_ISSUER], WhitepaperType.ART),
+        (
+            [
+                _CRYPTO_ASSET,
+                ("body", "The token is:"),
+                ("body", "1. An asset-referenced token;"),
+                ("body", "2. Not an e-money token."),
+                *_SST_ISSUER,
+            ],
+            WhitepaperType.ART,
+        ),
+        # A numbered heading after a line that ends in a negation is judged on its own words in a DOCX or PDF,
+        # with or without a numbered list after it; in Markdown, where it is a line of the section, the full
+        # stop after its number ends the clause.
+        (
+            [
+                *_SST_ISSUER,
+                ("heading", "Risk Factors"),
+                ("body", "Holders have no deposit protection and no"),
+                ("numbered", "5. Stabilisation Mechanism"),
+                ("body", "The reserve is held in cash."),
+            ],
+            WhitepaperType.ART,
+        ),
+        (
+            [
+                *_SST_ISSUER,
+                ("heading", "Risk Factors"),
+                ("body", "Holders have no deposit protection and no"),
+                ("numbered", "5. Reserve of Assets"),
+                ("body", "1. The reserve is held in cash;"),
+                ("body", "2. The reserve is held in bonds."),
+            ],
+            WhitepaperType.ART,
+        ),
+    ],
+    ids=[
+        "sentence after the list",
+        "sentence after an item without a full stop",
+        "name after the list",
+        "positive lead-in",
+        "positive lead-in with a colon",
+        "numbered heading after a negation",
+        "numbered heading before a numbered list",
+    ],
+)
+def test_a_list_after_a_lead_in_reaches_no_further_than_its_items(
+    tmp_path: Path, suffix: str, blocks: list[tuple[str, str]], regime: WhitepaperType
+):
+    path = LIST_WRITERS[suffix](tmp_path / f"synthetic{suffix}", blocks)
+    assert load_whitepaper(path).type is regime
+
+
+@pytest.mark.parametrize("suffix", [".docx"])
+def test_a_long_item_keeps_its_lead_in(tmp_path: Path, suffix: str):
+    # A DOCX paragraph is one line however long, so a long item keeps the lead-in. Not checked: a PDF wraps
+    # the item at 90 characters, before "Crypto-Assets Regulation; or", and that line, which starts with a
+    # capital letter, starts a new sentence and ends the list, so the PDF loads as an ART (a sentence that a
+    # PDF wraps before a capitalised word loses its negation, as docs/SETUP.md states); in Markdown the
+    # semicolon ends the clause.
+    lines = [
+        _LEAD_IN,
+        "- an e-money token within the meaning of Article 3(1), point (7), of the Markets in Crypto-Assets "
+        "Regulation; or",
+        "- an asset-referenced token.",
+    ]
+    blocks = [_CRYPTO_ASSET, *_lines(*lines), *_MEADOW_OFFEROR]
+    assert load_whitepaper(LIST_WRITERS[suffix](tmp_path / f"meadowpoints{suffix}", blocks)).type is WhitepaperType.OTHER
+
+
+@pytest.mark.parametrize(
+    ("suffix", "lines", "regime"),
+    [
+        pytest.param(
+            ".md",
+            [
+                "The issuer confirms that:",
+                "(a) the token is neither",
+                "(i) an asset-referenced token, nor",
+                "(ii) an e-money token; and",
+                "(b) the token is transferable.",
+            ],
+            WhitepaperType.OTHER,
+            id="(a) then (i)-.md",
+        ),
+        *(
+            pytest.param(
+                suffix,
+                [
+                    "The issuer confirms that:",
+                    "1. the token is not:",
+                    "a) an e-money token; or",
+                    "b) a deposit;",
+                    "2. the token is an asset-referenced token.",
+                ],
+                WhitepaperType.ART,
+                id=f"back to the outer list-{suffix}",
+            )
+            for suffix in sorted(LIST_WRITERS)
+        ),
+    ],
+)
+def test_a_negated_item_governs_the_list_inside_it(
+    tmp_path: Path, suffix: str, lines: list[str], regime: WhitepaperType
+):
+    # In Markdown, which reads a section as one text, "neither" and "nor" govern the phrases of the inner
+    # list within eight words, so the first draft is other there. An item after the inner list that names
+    # the regime counts in every format. Not checked: in a DOCX or PDF an item leads no list of its own, so
+    # the items of an inner list continue the lead-in of the outer list ("The issuer confirms that:") and
+    # the first draft, and the same list under "1. the token is not:", load as an ART there, as in 1.2.1
+    # (test_the_documented_limits_of_the_regime_reading); in Markdown the colon after "the token is not"
+    # ends the clause.
+    blocks = [_CRYPTO_ASSET, *_lines(*lines), *(_MEADOW_OFFEROR if regime is WhitepaperType.OTHER else _SST_ISSUER)]
+    assert load_whitepaper(LIST_WRITERS[suffix](tmp_path / f"synthetic{suffix}", blocks)).type is regime
+
+
+@pytest.mark.parametrize("suffix", [".docx", ".md"])
+@pytest.mark.parametrize("marker", ["(1)", "1)"])
+def test_a_list_of_one_capitalised_item_after_a_negated_lead_in(tmp_path: Path, suffix: str, marker: str):
+    # A lead-in that ends in a negation governs an item that starts with a capital letter: in a DOCX the item
+    # continues the lead-in, and Markdown reads the section as one text. Not checked: a PDF reads the item as
+    # a heading, which is judged on its own words, and the full stop after "1." ends the clause in every
+    # format, so those drafts load as an ART (test_the_documented_limits_of_the_regime_reading).
+    blocks = [_CRYPTO_ASSET, *_lines(_LEAD_IN, f"{marker} An asset-referenced token"), *_MEADOW_OFFEROR]
+    assert load_whitepaper(LIST_WRITERS[suffix](tmp_path / f"meadowpoints{suffix}", blocks)).type is WhitepaperType.OTHER
+
+
+def _covered_by(kind: str, heading: str, items: tuple[str, str] = ("1.", "2.")) -> list[tuple[str, str]]:
+    return [
+        *_SST_ISSUER,
+        ("heading", "2. Risk Factors"),
+        *_lines(
+            "Holders should note that the token is not covered by:",
+            f"{items[0]} any investor compensation scheme;",
+            f"{items[1]} any deposit guarantee scheme.",
+        ),
+        (kind, heading),
+        ("body", "The reserve is held in cash and short-term government bonds."),
+    ]
+
+
+_NUMBERED_HEADINGS = [
+    ("Heading 1", _covered_by("heading", "3. Reserve of Assets")),
+    ("Heading 2", _covered_by("subheading", "3. Reserve of Assets")),
+    ("bold numbered", _covered_by("numbered", "3. Stabilisation Mechanism")),
+    ("14 pt (3)", _covered_by("large", "(3) Reserve of Assets", ("(1)", "(2)"))),
+    ("c) after b)", _covered_by("heading", "c) Reserve of Assets", ("a)", "b)"))),
+    ("4. after 2.", _covered_by("heading", "4. Reserve of Assets")),
+    ("14 pt (3) in sentence case", _covered_by("large", "(3) Reserve of assets", ("(1)", "(2)"))),
+    ("body 3. in sentence case", _covered_by("body", "3. Reserve of assets")),
+    (
+        "heading 1. before 2.",
+        [
+            *_SST_ISSUER,
+            ("heading", "Risk Factors"),
+            ("body", "Holders have no deposit protection and no"),
+            ("heading", "1. Reserve of Assets"),
+            ("body", "2. the reserve is held in cash."),
+        ],
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    ("suffix", "blocks"),
+    [
+        pytest.param(suffix, blocks, id=f"{name}-{suffix}")
+        for name, blocks in _NUMBERED_HEADINGS
+        for suffix in sorted(LIST_WRITERS)
+        if (name, suffix) != ("c) after b)", ".pdf")
+    ],
+)
+def test_a_numbered_heading_after_a_negated_list_is_judged_on_its_own_words(
+    tmp_path: Path, suffix: str, blocks: list[tuple[str, str]]
+):
+    # In a DOCX or PDF a heading after a negated list is judged on its own words where the loader takes it
+    # for a heading (a DOCX heading or bold numbered title, a PDF line in a heading font or shaped like a
+    # title), and the full stop after "3." ends the clause of a line that is none, so each draft is an ART.
+    # Markdown reads no heading text for the regime, so there the numbered heading is a plain line, and the
+    # colon after the lead-in ends the clause. Not checked: "c) Reserve of Assets" in the body font of a
+    # PDF, which is read as an item of the list (test_the_documented_limits_of_the_regime_reading).
+    if suffix == ".md":
+        blocks = [*blocks[:-2], ("body", blocks[-2][1]), blocks[-1]]
+    assert load_whitepaper(LIST_WRITERS[suffix](tmp_path / f"synthetic{suffix}", blocks)).type is WhitepaperType.ART
+
+
+@pytest.mark.parametrize("suffix", [".md"])
+@pytest.mark.parametrize(
+    ("first", "second"),
+    [("1.", "2."), ("a.", "b."), ("i.", "ii."), ("(a)", "(b)"), ("-", "-")],
+    ids=["1.", "a.", "i.", "(a)", "-"],
+)
+@pytest.mark.parametrize("article", ["The", "the"])
+def test_a_lead_in_that_negates_words_of_its_own_governs_no_item(
+    tmp_path: Path, suffix: str, first: str, second: str, article: str
+):
+    # The negation of the lead-in is about the compensation scheme, not the risks listed after it, so the
+    # items name the regime. Markdown reads a section as one text, where the colon after the lead-in ends
+    # the clause, so there each draft is an ART. Not checked: in a DOCX or PDF a negation at the end of a
+    # lead-in reaches the items of the dash, bullet or bracket list after it whatever it is about, so the
+    # "(a)" and dash lists load as other there (test_the_documented_limits_of_the_regime_reading).
+    blocks = [
+        *_SST_ISSUER,
+        ("heading", "Risk Factors"),
+        *_lines(
+            "The following risks are not covered by any compensation scheme:",
+            f"{first} {article} reserve of assets may lose value;",
+            f"{second} {article} custodian may fail.",
+        ),
+    ]
+    assert load_whitepaper(LIST_WRITERS[suffix](tmp_path / f"synthetic{suffix}", blocks)).type is WhitepaperType.ART
+    blocks = [
+        *_SST_ISSUER,
+        ("heading", "Risk Factors"),
+        *_lines(
+            "Holders bear these risks, with no compensation scheme:",
+            "- the reserve of assets may lose value;",
+            "- the stabilisation mechanism may fail.",
+        ),
+    ]
+    assert load_whitepaper(LIST_WRITERS[suffix](tmp_path / f"holders{suffix}", blocks)).type is WhitepaperType.ART
+
+
+@pytest.mark.parametrize("suffix", [".docx", ".pdf"])
+@pytest.mark.parametrize(
+    "lead_in",
+    [
+        "The token is not one of the following:",
+        "The token does not fall within the definition of:",
+        "The token is not considered to be:",
+        "The token is not, within the meaning of MiCAR,",
+        "Holders have no",
+        "Holders should note that the token is not covered by:",
+    ],
+)
+def test_a_lead_in_whose_negation_is_open_governs_its_items(tmp_path: Path, suffix: str, lead_in: str):
+    # In a DOCX or PDF a negated lead-in governs the dash items after it, also where it ends in a colon, a
+    # comma or a word that needs an object ("Holders have no"), so each draft is other. Not checked:
+    # Markdown, which reads a section as one text, where the colon after the lead-in or the semicolon after
+    # the first item ends the clause, so these drafts load as an ART or an EMT there
+    # (test_the_documented_limits_of_the_regime_reading).
+    blocks = [_CRYPTO_ASSET, *_lines(lead_in, "- an asset-referenced token;", "- an e-money token."), *_MEADOW_OFFEROR]
+    assert load_whitepaper(LIST_WRITERS[suffix](tmp_path / f"meadowpoints{suffix}", blocks)).type is WhitepaperType.OTHER
+
+
+def test_a_long_markdown_list_is_read_in_little_memory(tmp_path: Path):
+    # Markdown reads a section as one text, so 200 kB of two-letter list lines take about 2 MB at their peak
+    # (the line-by-line reading that Round 4 added and Round 5 trimmed took 46 MB, then 2 MB).
+    path = tmp_path / "lines.md"
+    path.write_text(
+        "# Information about the Crypto-Asset\n\nThe token is not:\n- a\n" + "a\n" * 100_000 + "an e-money token\n",
+        encoding="utf-8",
+    )
+    tracemalloc.start()
+    try:
+        load_whitepaper(path)
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+    assert peak < 25 * path.stat().st_size
+
+
+def test_a_long_list_is_read_in_linear_time(tmp_path: Path):
+    # The list reading that the follow-up verification found quadratic kept a stack of open lists, so a
+    # Markdown section of 16 000 lines "1. a:" took about a minute to load; a section is read as one text
+    # again, in a few hundredths of a second.
+    path = tmp_path / "items.md"
+    path.write_text(
+        "# Information about the Crypto-Asset\n\n" + "1. a:\n" * 16_000 + "The token is an e-money token.\n",
+        encoding="utf-8",
+    )
+    start = time.perf_counter()
+    whitepaper = load_whitepaper(path)
+    assert time.perf_counter() - start < 3
+    assert whitepaper.type is WhitepaperType.EMT
+
+
+def _regimes(docx_and_pdf: WhitepaperType, markup: WhitepaperType) -> dict[str, WhitepaperType]:
+    """The regime of a draft from a DOCX and a PDF, and from Markdown and XHTML."""
+    return {".docx": docx_and_pdf, ".pdf": docx_and_pdf, ".md": markup, ".xhtml": markup}
+
+
+ART, EMT, OTHER = WhitepaperType.ART, WhitepaperType.EMT, WhitepaperType.OTHER
+
+
+@pytest.mark.parametrize("suffix", sorted(ALL_WRITERS))
+@pytest.mark.parametrize(
+    ("blocks", "regimes"),
+    [
+        # A list numbered or lettered with a full stop: the full stop ends the clause, as in 1.2.1.
+        (
+            [
+                _CRYPTO_ASSET,
+                *_lines(_LEAD_IN, "1. an asset-referenced token; or", "2. an e-money token."),
+                *_MEADOW_OFFEROR,
+            ],
+            _regimes(ART, ART),
+        ),
+        # The example in docs/SETUP.md. Markdown and XHTML read a section as one text, where the semicolon
+        # ends the clause.
+        (
+            [
+                _CRYPTO_ASSET,
+                *_lines("the token is not", "- an asset-referenced token;", "- an e-money token."),
+                *_MEADOW_OFFEROR,
+            ],
+            _regimes(OTHER, EMT),
+        ),
+        # A line without a marker after one that ends in "; or", as a Word list numbered by its style is
+        # extracted.
+        (
+            [
+                _CRYPTO_ASSET,
+                *_lines(_LEAD_IN, "an asset-referenced token; or", "an e-money token."),
+                *_MEADOW_OFFEROR,
+            ],
+            _regimes(EMT, EMT),
+        ),
+        # A negation that is not about the items governs them in a DOCX or PDF.
+        (
+            [
+                *_SST_ISSUER,
+                ("heading", "Risk Factors"),
+                *_lines(
+                    "The risks include, but are not limited to:",
+                    "- the reserve of assets may lose value;",
+                    "- the custodian may fail.",
+                ),
+            ],
+            _regimes(OTHER, ART),
+        ),
+        # A line after the list that starts with a list letter is read as an item in a DOCX or PDF.
+        (
+            [
+                *_SST_ISSUER,
+                *_lines(
+                    "Holders should note that the token is not covered by:",
+                    "(a) any investor compensation scheme;",
+                    "(b) any deposit guarantee scheme.",
+                ),
+                ("plain", "(c) Reserve of Assets"),
+                ("body", "The reserve is held in cash and short-term government bonds."),
+            ],
+            _regimes(OTHER, ART),
+        ),
+        # A paragraph that ends in a negation and no full stop reaches the next paragraph of its section in
+        # Markdown and XHTML.
+        (
+            [
+                *_SST_ISSUER,
+                ("heading", "Risk Factors"),
+                *_lines(
+                    "Holders have no claim against the custodian",
+                    "The reserve of assets may lose value in a market stress event",
+                ),
+            ],
+            _regimes(ART, OTHER),
+        ),
+        # An item that a PDF reads as a heading is judged on its own words.
+        (
+            [_CRYPTO_ASSET, *_lines(_LEAD_IN, "(1) An asset-referenced token"), *_MEADOW_OFFEROR],
+            {**_regimes(OTHER, OTHER), ".pdf": ART},
+        ),
+        # A sentence that names a regime without calling the token one sets it, as in 1.2.1.
+        (
+            [
+                _CRYPTO_ASSET,
+                *_lines(
+                    "MiCAR distinguishes asset-referenced tokens, e-money tokens and other crypto-assets.",
+                    "MeadowPoints is a crypto-asset of the third kind.",
+                ),
+                *_MEADOW_OFFEROR,
+            ],
+            _regimes(ART, ART),
+        ),
+        # In a DOCX or PDF an item leads no list of its own: the items of the inner list continue the lead-in
+        # of the outer one, as in 1.2.1.
+        (
+            [
+                _CRYPTO_ASSET,
+                *_lines(
+                    "The issuer confirms that:",
+                    "(a) the token is neither",
+                    "(i) an asset-referenced token, nor",
+                    "(ii) an e-money token; and",
+                    "(b) the token is transferable.",
+                ),
+                *_MEADOW_OFFEROR,
+            ],
+            _regimes(ART, OTHER),
+        ),
+    ],
+    ids=[
+        "full stop",
+        "semicolon",
+        "no marker",
+        "risk list",
+        "line after the list",
+        "paragraphs",
+        "item read as a heading",
+        "category",
+        "inner list",
+    ],
+)
+def test_the_documented_limits_of_the_regime_reading(
+    tmp_path: Path, suffix: str, blocks: list[tuple[str, str]], regimes: dict[str, WhitepaperType]
+):
+    # The CHANGELOG and docs/SETUP.md name these limits; this test keeps the docs and the code in step.
+    path = ALL_WRITERS[suffix][0](tmp_path / f"synthetic{suffix}", blocks)
+    assert load_whitepaper(path).type is regimes[suffix]
