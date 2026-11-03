@@ -1,5 +1,5 @@
-import { FORMATS, MAX_BYTES, MAX_XHTML_BYTES, REGIMES, displayCitation, draftFormat, formatDraft, parseDraft, reportIsCurrent,
-  ruleDocHref, sectionSelection, selectFindings, validateDraft } from "./model.mjs";
+import { FORMATS, MAX_BYTES, MAX_XHTML_BYTES, REGIMES, displayCitation, draftFormat, findingScope, formatDraft, inspectableSection,
+  parseDraft, reportIsCurrent, ruleDocHref, sectionSelection, selectFindings, validateDraft } from "./model.mjs";
 
 const $ = id => document.getElementById(id);
 const input = $("input");
@@ -295,7 +295,7 @@ function renderFindings() {
     const issues = node("ul");
     for (const issue of finding.issues) issues.append(node("li", "", issue));
     if (!finding.issues.length) issues.append(node("li", "", "Automated check matched. Verify the disclosure in substance."));
-    body.append(issues, node("p", "finding-meta", `${finding.severity} severity · ${finding.word_count} words · ${finding.section}`));
+    body.append(issues, node("p", "finding-meta", `${finding.severity} severity · ${finding.word_count} words · ${findingScope(finding)}`));
     // A new tab keeps the draft in this one; rule pages are static and load nothing else.
     const rulePage = node("a", "rule-link", `How ${finding.rule_id} is checked `);
     const arrow = node("span", "", "↗");
@@ -305,12 +305,12 @@ function renderFindings() {
     rulePage.target = "_blank";
     rulePage.rel = "noopener";
     body.append(rulePage);
-    // iXBRL is a file-format check; adding a JSON section cannot satisfy it.
-    // Section navigation reads JSON keys; an XHTML draft has none to select.
-    if (finding.rule_id !== "COMMON.IXBRL_TAGGING" && checkedFormat === "json") {
-      const source = node("button", "text-button source-button", `Inspect section: ${finding.section} ↗`);
+    // No button for the format gate, the LEI rules or an XHTML draft (inspectableSection).
+    const section = inspectableSection(finding, checkedFormat);
+    if (section !== null) {
+      const source = node("button", "text-button source-button", `Inspect section: ${section} ↗`);
       source.disabled = !isCurrent();
-      source.onclick = () => locateSection(finding.section);
+      source.onclick = () => locateSection(section);
       body.append(source);
     }
     details.append(summary, body);

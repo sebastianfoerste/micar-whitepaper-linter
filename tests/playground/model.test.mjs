@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { MAX_BYTES, MAX_XHTML_BYTES, displayCitation, draftFormat, validateDraft, formatDraft, parseDraft, reportIsCurrent, ruleDocHref, sectionSelection, selectFindings } from "../../docs/playground/model.mjs";
+import { MAX_BYTES, MAX_XHTML_BYTES, displayCitation, draftFormat, findingScope, inspectableSection, validateDraft, formatDraft, parseDraft, reportIsCurrent, ruleDocHref, sectionSelection, selectFindings } from "../../docs/playground/model.mjs";
 
 const valid = { type: "art", sections: { summary: "A synthetic draft." } };
 const parse = data => parseDraft(JSON.stringify(data));
@@ -74,6 +74,24 @@ test("section navigation works on the draft as written and follows JSON's last-d
   assert.deepEqual(member(text, sectionSelection(text, "1")), { 1: "a" });
   const shadowed = '{"type":"art","sections":{"summary":"ignored"},"sections":{"summary":"used"}}';
   assert.deepEqual(member(shadowed, sectionSelection(shadowed, "summary")), { summary: "used" });
+});
+
+test("LEI findings point to no section, wherever the LEI is", () => {
+  // As the engine reports them for a draft whose only LEI is in "offeror" and that has no "issuer" section:
+  // both LEI rules are anchored to "issuer" with 0 words.
+  const text = JSON.stringify({ type: "other", sections: { offeror: "Synthetic Offeror GmbH. LEI: 9999SYNTH0000ZZQ0166." } });
+  const lei = ["COMMON.LEI_CHECK_DIGITS", "COMMON.LEI_CONSISTENCY"].map(rule_id => ({ rule_id, status: "pass", section: "issuer", word_count: 0 }));
+  assert.equal(sectionSelection(text, "issuer"), null);
+  for (const finding of lei) {
+    assert.equal(inspectableSection(finding, "json"), null);
+    assert.equal(findingScope(finding), "every section");
+  }
+  // Other rules keep their section; the format gate and XHTML drafts have none to select.
+  const summary = { rule_id: "COMMON.SUMMARY", status: "review", section: "summary", word_count: 12 };
+  assert.equal(inspectableSection(summary, "json"), "summary");
+  assert.equal(findingScope(summary), "summary");
+  assert.equal(inspectableSection(summary, "xhtml"), null);
+  assert.equal(inspectableSection({ rule_id: "COMMON.IXBRL_TAGGING", status: "missing", section: "ixbrl_tagging", word_count: 0 }, "json"), null);
 });
 
 test("formatting changes whitespace only", () => {

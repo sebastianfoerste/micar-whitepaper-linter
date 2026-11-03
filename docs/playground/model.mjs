@@ -56,6 +56,26 @@ export function displayCitation(citation) {
   return citation;
 }
 
+// iXBRL is a file-format check; adding a JSON section cannot satisfy it.
+export const FORMAT_GATE_RULES = new Set(["COMMON.IXBRL_TAGGING"]);
+// The LEI rules read every section. The report anchors them to "issuer" for line mapping (ADR 0007),
+// which says nothing about where the LEI is, or whether the draft has an issuer section at all.
+export const ALL_SECTION_RULES = new Set(["COMMON.LEI_CHECK_DIGITS", "COMMON.LEI_CONSISTENCY"]);
+
+// The section key "Inspect section" selects, or null. Section navigation reads JSON keys, which an
+// XHTML draft does not have, and a rule that reads no section or every section points to none.
+export function inspectableSection(finding, format) {
+  if (format !== "json" || FORMAT_GATE_RULES.has(finding.rule_id) || ALL_SECTION_RULES.has(finding.rule_id)) {
+    return null;
+  }
+  return finding.section;
+}
+
+// Where a finding says the rule looked.
+export function findingScope(finding) {
+  return ALL_SECTION_RULES.has(finding.rule_id) ? "every section" : finding.section;
+}
+
 // Rule pages sit beside the playground on the same site: <site>/rules/<RULE_ID>.html.
 export function ruleDocHref(ruleId, pageUrl) {
   return new URL(`../rules/${encodeURIComponent(ruleId)}.html`, pageUrl).href;

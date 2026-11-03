@@ -345,6 +345,8 @@ _SENTENCE_END = re.compile(r"[.!;,]$")
 # A word of four or more letters, a full stop and a capitalised word: "Risks. Holders may lose ...".
 # "A.1 Name", "5.2 Risks" and "Ledger S.A. Risks" have no such word.
 _SENTENCE_BREAK = re.compile(r"([^\W\d_]{4,})[.!?]\s+([^\W\d_])")
+# The same, from the first letter of a word only (see _sentence_breaks).
+_WORD_SENTENCE_BREAK = re.compile(rf"(?<![^\W\d_]){_SENTENCE_BREAK.pattern}")
 # Abbreviations that keep their full stop inside a heading: "5. Risks (incl. Liquidity Risks)",
 # "Quillmoor Corp. Risk Factors", "Risiken bzgl. des Tokens".
 _ABBREVIATIONS = frozenset(
@@ -380,17 +382,23 @@ _QUOTES = "\"'\u2018\u2019\u201c\u201d"
 
 @dataclass(frozen=True)
 class DocumentSections:
-    """The section texts of a DOCX or PDF draft and, apart from them, the text of its headings and its
-    whole extracted text.
+    """The section texts of a DOCX or PDF draft and, apart from them, the text of its headings, its
+    extracted text and the whole text of its file.
 
     Heading text is not section body, and some text sits in no section (before the first heading, or
-    after a line that ends a section). Regime inference reads the whole text: a heading such as
-    "Reserve of Assets" may be the only place that names the regime.
+    after a line that ends a section). Regime inference reads the extracted text (text): a heading such
+    as "Reserve of Assets" may be the only place that names the regime. COMMON.LEI_CHECK_DIGITS reads
+    the whole text of the file (document_text): for a PDF that is the extracted text, for a DOCX it adds
+    the paragraphs of tables, text boxes, headers and footers, and tracked insertions. In a PDF, the
+    headings set larger or bolder than the body text are also marked_headings; regime inference reads any
+    other heading of a PDF as a list item where its shape and place say so.
     """
 
     sections: dict[str, str]
     headings: tuple[str, ...]
     text: str = ""
+    document_text: str = ""
+    marked_headings: tuple[str, ...] = ()
 
 
 def _words(text: str) -> list[str]:
@@ -404,10 +412,30 @@ def _max_words(text: str, marked: bool = False) -> int:
     return _MAX_MARKED_HEADING_WORDS if marked or _NUMBERING.match(text) else _MAX_HEADING_WORDS
 
 
+def _sentence_breaks(text: str) -> list[tuple[str, str]]:
+    """_SENTENCE_BREAK.findall(text), in time linear in the length of text.
+
+    findall tries a match at every letter of a word, and each try reads the word to its end before it
+    fails, so a long run of letters took time in the square of its length (a line of 40 000 letters took
+    18 s). A match runs to the end of the word it starts in, so a later letter of a word can start one only
+    where the word's first letter can: the search starts at the first letter of a word only, except right
+    after a match, which ends with the first letter of the next word, so findall goes on inside that word.
+    """
+    breaks: list[tuple[str, str]] = []
+    position = 0
+    while True:
+        found = (_SENTENCE_BREAK.match(text, position) if position else None) or _WORD_SENTENCE_BREAK.search(
+            text, position
+        )
+        if found is None:
+            return breaks
+        breaks.append((found.group(1), found.group(2)))
+        position = found.end()
+
+
 def _has_sentence_break(text: str) -> bool:
     return any(
-        letter.isupper() and word.lower() not in _ABBREVIATIONS
-        for word, letter in _SENTENCE_BREAK.findall(text)
+        letter.isupper() and word.lower() not in _ABBREVIATIONS for word, letter in _sentence_breaks(text)
     )
 
 
@@ -955,6 +983,7 @@ def _line_sections(lines: list[_Line], statement: bool = False) -> DocumentSecti
     following_index = dict(pairwise(content))
     sections: dict[str, list[str]] = {}
     headings: list[str] = []
+    marked_headings: list[str] = []
     current_keys: list[str] = []
     # The template numbering, the outline number and the level of the heading that opened the current
     # section.
@@ -1068,6 +1097,8 @@ def _line_sections(lines: list[_Line], statement: bool = False) -> DocumentSecti
                 sections.setdefault(key, []).append(line.text)
         else:
             headings.append(line.text)
+            if styled[index]:
+                marked_headings.append(line.text)
             below = _below_opener(kind, level, number, opener, section_level, opener_number)
             if role == _HEADING and _within_rights(keys, current_keys, below):
                 current_keys = [*current_keys, *(key for key in keys if key not in current_keys)]
@@ -1083,7 +1114,9 @@ def _line_sections(lines: list[_Line], statement: bool = False) -> DocumentSecti
             for key in current_keys if answer else ():
                 sections.setdefault(key, []).append(answer)
         previous, previous_role, previous_styled = line.text, role, styled[index]
-    return DocumentSections({k: "\n".join(v) for k, v in sections.items()}, tuple(headings), text)
+    return DocumentSections(
+        {k: "\n".join(v) for k, v in sections.items()}, tuple(headings), text, text, tuple(marked_headings)
+    )
 
 
 def sections_from_lines(lines: Iterable[str]) -> dict[str, str]:
@@ -1266,7 +1299,60 @@ def parse_docx(path: Path) -> DocumentSections:
             current_keys, opener, section_level = [], kind, level
             opener_number = _opening_number(number, opener_number)
 
-    return DocumentSections({k: "\n".join(v) for k, v in sections.items()}, tuple(headings), "\n".join(texts))
+    return DocumentSections(
+        {k: "\n".join(v) for k, v in sections.items()},
+        tuple(headings),
+        "\n".join(texts),
+        _docx_document_text(doc),
+    )
+
+
+def _docx_text(element) -> str:
+    """The text Word shows in an element, a paragraph per line: every w:t (tracked insertions, hyperlinks,
+    content controls and the paragraphs of tables and text boxes included), tabs, line breaks and
+    non-breaking hyphens. Deleted text (w:delText) and field codes are not shown."""
+    from docx.oxml.ns import qn
+    from lxml import etree
+
+    text, tab, breaks, hyphen, paragraph = (
+        qn("w:t"),
+        qn("w:tab"),
+        (qn("w:br"), qn("w:cr")),
+        qn("w:noBreakHyphen"),
+        qn("w:p"),
+    )
+    parts: list[str] = []
+    for event, node in etree.iterwalk(element, events=("start", "end")):
+        if event == "end":
+            if node.tag == paragraph:
+                parts.append("\n")
+        elif node.tag == text:
+            parts.append(node.text or "")
+        elif node.tag == tab:
+            parts.append("\t")
+        elif node.tag in breaks:
+            parts.append("\n")
+        elif node.tag == hyphen:
+            parts.append("-")
+    return "".join(parts)
+
+
+def _docx_document_text(doc) -> str:
+    """The whole text of a DOCX: its body, then the headers and footers that each section defines."""
+    texts = [_docx_text(doc.element.body)]
+    for section in doc.sections:
+        for part in (
+            section.header,
+            section.first_page_header,
+            section.even_page_header,
+            section.footer,
+            section.first_page_footer,
+            section.even_page_footer,
+        ):
+            # A part linked to the previous section's has no definition of its own.
+            if not part.is_linked_to_previous:
+                texts.append(_docx_text(part._element))
+    return "\n".join(texts)
 
 
 def load_from_docx(path: Path) -> dict[str, str]:

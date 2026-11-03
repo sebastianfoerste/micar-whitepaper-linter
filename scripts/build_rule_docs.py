@@ -335,6 +335,35 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
                     "The last two digits do not satisfy ISO/IEC 7064 MOD 97-10, which usually means a typo.",
                 ),
                 Example(
+                    "Malformed LEI next to a valid one",
+                    "review",
+                    {
+                        **base,
+                        "sections": {
+                            "issuer": issuer,
+                            "offeror": f"Synthetic Offeror GmbH. LEI: {OTHER_SYNTHETIC_LEI[:-1]}.",
+                        },
+                    },
+                    "The offeror section names an LEI and gives a code of 19 characters, one short of an LEI, so "
+                    "the code is malformed. The valid issuer LEI does not let the rule pass.",
+                ),
+                Example(
+                    "Malformed LEI in a section that names no LEI",
+                    "review",
+                    {
+                        **base,
+                        "sections": {
+                            "issuer": issuer,
+                            "offer_or_admission": (
+                                f"Synthetic Admission GmbH ({OTHER_SYNTHETIC_LEI[:-1]}) seeks admission to trading."
+                            ),
+                        },
+                    },
+                    "The draft names an LEI, so every section is read, this one too, though it is no party "
+                    "section and names no LEI label. In a PDF, DOCX, Markdown, XHTML or HTML file the text "
+                    "outside the sections is read as well: headings, tables and text in no section.",
+                ),
+                Example(
                     "Check digits match",
                     "pass",
                     {**base, "sections": {"issuer": issuer}},
@@ -692,14 +721,39 @@ def status_logic(rule: Rule) -> str:
         )
     if rule.rule_id == "COMMON.LEI_CHECK_DIGITS":
         return (
-            '<ul class="plain"><li><strong>Missing</strong>: no LEI-shaped code (18 letters or digits and two '
-            "check digits) appears in any section, and no section <code>issuer</code>, <code>offeror</code> or "
-            "<code>trading_platform_operator</code> has text other than a placeholder. A 20-digit number counts "
-            "only next to an LEI label.</li>"
-            "<li><strong>Review</strong>: an LEI-shaped code fails the ISO/IEC 7064 MOD 97-10 check digits; or no "
-            "LEI-shaped code appears while a party section has text, since point 5 allows another identifier "
-            "required pursuant to applicable national law in place of the LEI.</li>"
-            "<li><strong>Pass</strong>: every LEI-shaped code has valid check digits. No registry is asked.</li></ul>"
+            '<ul class="plain"><li><strong>Missing</strong>: no section that reads LEIs on its own (below) holds an '
+            "LEI-shaped code (18 upper-case letters or digits and two check digits) as written, and no section "
+            "<code>issuer</code>, <code>offeror</code> or <code>trading_platform_operator</code> has text other than "
+            "a placeholder. A malformed code, or an LEI-shaped code elsewhere that fails its check digits (below), "
+            "is named in the finding but does not change this status.</li>"
+            "<li><strong>Review</strong>: an LEI-shaped code that is read fails the ISO/IEC 7064 MOD 97-10 check "
+            "digits; an LEI-like code that is read is malformed; or no section that reads LEIs on its own holds an "
+            "LEI-shaped code as written while a party section has text, since point 5 allows another identifier required "
+            "pursuant to applicable national law in place of the LEI. A section reads LEIs on its own if it is "
+            "<code>issuer</code>, <code>offeror</code> or <code>trading_platform_operator</code>, names an LEI label "
+            "(LEI or LEIs, legal entity identifier or ID, Rechtsträgerkennung, in any case, also split by hyphens, "
+            "dashes or line ends) or holds an LEI-shaped code with a letter. A draft with such a section, or whose "
+            "file text names a label or holds such a code, is read in all its text: every section and, for a PDF, "
+            "DOCX, Markdown, XHTML or HTML file, the text outside the sections (headings, tables, text boxes, "
+            "headers and footers, text in no section). Each text is read as written and, where markup or a "
+            "character reference changes it, as a Markdown or HTML renderer shows it (comments, tags, emphasis, "
+            "code and link markup removed, <code>&amp;nbsp;</code> and other references replaced by their "
+            "characters). There every LEI-shaped code, a 20-digit number included, has its check digits checked, "
+            "and every LEI-like code counts, wherever it stands: one run of 16 to 24 letters and digits of any "
+            "script that holds a digit or is in ASCII capitals, or a longer run with a digit that a glued LEI (up to "
+            "28 characters) or a glued word explains; groups joined by one to three spaces, hyphens, dashes or line "
+            "ends, with at most one hyphen or dash and one line end between two groups, and by any number of "
+            "invisible characters (zero-width spaces, bidirectional marks and other format characters), that "
+            "together hold at least 16 and hold a digit or all have one length; or two pieces with letters and "
+            "digits of a code that a table cell wraps from a line that names an LEI label, or the line before one, "
+            "onto the next line. A word of letters only with a lower-case letter or a letter outside ASCII joins "
+            "only beside a group of its length with a digit. An LEI-like code is malformed unless it is one run "
+            "that is LEI-shaped as written. So a code is malformed if it has 16 to 19 or 21 to 24 characters, is in "
+            "lower case, has a letter where a check digit belongs or a character outside ASCII, is glued to LEI or "
+            "to a word, is split into groups, or is wrapped in a table cell.</li>"
+            "<li><strong>Pass</strong>: a section that reads LEIs on its own holds an LEI-shaped code as written, "
+            "every LEI-shaped code that is read, as written or as shown, has valid check digits and no LEI-like code "
+            "is malformed. No registry is asked.</li></ul>"
         )
     if rule.rule_id == "COMMON.LEI_CONSISTENCY":
         return (
@@ -970,6 +1024,39 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             "Does not recognise the other identifiers that point 5 allows in place of the LEI, so a draft "
             "without any LEI goes to review once a party section has text. Once the draft gives one LEI, a "
             "party section without an LEI of its own does not change the result."
+        )
+        limitations.append(
+            "Reads the sections and, for a document file, the text its loader extracts. Text the loaders do not "
+            "extract is not seen: in a DOCX, footnotes, endnotes, comments, deleted text, field codes and text in "
+            "charts, SmartArt or images; in a PDF, text that is not extracted (images, scans, annotations, form "
+            "fields); in XHTML or HTML, the head, scripts, styles and attribute values, and CDATA sections, which "
+            "the HTML parser drops (a code inside <code>&lt;![CDATA[…]]&gt;</code>, or the part of a code inside one, "
+            "is not read); in a JSON draft, anything outside its sections, such as the title. An entity that an XHTML "
+            "or HTML document declares in its own DTD is not expanded, so a code given through one is not read. "
+            "Hidden text is read as if it were shown: a DOCX run marked hidden and XHTML or HTML text that CSS hides "
+            "(<code>display:none</code>), so a hidden fragment that completes a code the document shows malformed "
+            "makes it read as a valid LEI, and the rule passes. Nor is a malformed code that is no LEI-like code in "
+            "the text "
+            "as written or as shown: one run of fewer than 16 letters and digits, or of more than 24 (28 for one "
+            "with a digit after a glued LEI) that no glued word explains, as when a code has lost or gained five or "
+            "more characters or has digits glued to it; groups that together hold fewer than 16; a run of letters "
+            "only with a lower-case letter or a letter outside ASCII, which reads as a word; groups split by any "
+            "other character, such as a full stop, a slash, a comma, a bullet or an underscore that a renderer "
+            "shows, by more than three characters other than invisible ones, or by two hyphens or dashes or two "
+            "line ends (a blank line); a code split into groups where such a word stands beside no group of its "
+            "length with a digit; groups in ASCII capitals without a digit and of different lengths; or a code that "
+            "a table cell wraps where a piece holds no letter or no digit or is split into groups, where neither "
+            "line names an LEI label (as in a PDF party table whose LEI label stands only in its header row, above the "
+            "row in which the code wraps), where other lines stand between its pieces, or where the code wraps over "
+            "more than two lines. Markup inside text that a "
+            "renderer does not show, such as an HTML comment or a link target, is read as written only. Every "
+            "LEI-like code in a draft that reads LEIs counts, wherever it stands, so an IBAN, a long number in "
+            "groups, a placeholder such as XXXXXXXXXXXXXXXXXXXX, a reference number of 16 to 24 letters and "
+            "digits, an address or a heading in capitals with a digit in it, a word of 16 to 24 ASCII capitals in "
+            "a heading or in text, numbers in neighbouring table cells that join, two codes with letters and "
+            "digits on a line that names an LEI label and the next line, or a valid LEI glued to LEI or to a word "
+            "or split into groups (also by markup, as written) gives Review too, which fails safe. A code that the "
+            "file text and a section quote with different neighbours is named twice."
         )
     if rule.rule_id == "COMMON.LEI_CONSISTENCY":
         limitations.append(

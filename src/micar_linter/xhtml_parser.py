@@ -62,6 +62,8 @@ _BLOCK_TAGS = {
 # reads it. A spacer can be the only gap between such a number and its label or the dash before the
 # label, so the number never runs on into a letter or a dash.
 _FIELD_NUMBER = re.compile(r"(?:[A-Z]{1,2}\.\d{1,2}|\d{2})[.:)]?")
+# The most characters _FIELD_NUMBER matches ("AB.12."). A word longer than that is no field number.
+_FIELD_NUMBER_CHARS = 6
 _LABEL_START = re.compile(r"[^\W\d_]|[-\u2013\u2014]")
 # A word broken after its hyphen, such as "crypto-" before a <br>.
 _BROKEN_AFTER_HYPHEN = re.compile(r"[^\W\d_]-\s*$")
@@ -138,10 +140,16 @@ def _text_flow(
 
 
 def _inside_word(text: str, piece: str) -> bool:
-    """Whether the text node ``piece`` continues the word that ``text`` ends with."""
+    """Whether the text node ``piece`` continues the word that ``text`` ends with.
+
+    Only the last _FIELD_NUMBER_CHARS + 1 characters of ``text`` are read: a word that fills them is longer
+    than any field number. So the time does not grow with the length of the word, which a run of inline
+    elements can make as long as the document (`<span>LEI</span>` repeated).
+    """
     if not text or text[-1].isspace() or piece[:1].isspace():
         return False
-    return not (_LABEL_START.match(piece) and _FIELD_NUMBER.fullmatch(text.rsplit(None, 1)[-1]))
+    word = text[-(_FIELD_NUMBER_CHARS + 1) :].rsplit(None, 1)[-1]
+    return not (_LABEL_START.match(piece) and _FIELD_NUMBER.fullmatch(word))
 
 
 def text_fragments(
@@ -291,6 +299,53 @@ def _checked(document: bytes, complete: bool, limit: int) -> bytes | None:
 def _is_markup(document: bytes) -> bool:
     head = document[:65536].lstrip(b"\xef\xbb\xbf \t\r\n").lower()
     return head.startswith(b"<") and (b"<html" in head or b"<!doctype html" in head)
+
+
+# Elements whose text a browser does not show on the page.
+_UNSHOWN_TAGS = {"head", "script", "style", "template"}
+
+
+def _unshown(element: etree._Element) -> bool:
+    return isinstance(element.tag, str) and element.tag.rsplit("}", 1)[-1].lower() in _UNSHOWN_TAGS
+
+
+def document_text(source: Path | bytes) -> str:
+    """Every text of an XHTML or HTML document that the HTML parser keeps, outside its head, scripts, styles
+    and templates, a line per block element and <br>, with each run of whitespace as one space.
+
+    Unlike the section loader, this reads every element: table cells, definition lists, spans, sections
+    and hidden iXBRL facts included, and text that CSS hides. The parser drops CDATA sections and leaves an
+    entity that the document declares in its own DTD unexpanded, so neither is read. Text nodes join as
+    text_fragments joins them: inside a word they run on, and a field number ("A.1") stays apart from the
+    label after it.
+    """
+    root = parse_html(source).getroot()
+    if root is None:
+        return ""
+    lines: list[str] = []
+    line: list[str] = []
+    # The last character of the line and the end of the text after its last whitespace, as far back as
+    # _inside_word reads, so that a long word is not copied for every piece of it.
+    last = word = ""
+    for piece in _text_flow(root, _unshown):
+        if isinstance(piece, str):
+            if not piece:
+                continue
+            joins = bool(last) and not last.isspace() and not piece[0].isspace()
+            if joins and not _inside_word(word, piece):
+                line.append(" ")
+                joins = False
+            line.append(piece)
+            last = piece[-1]
+            tail = "" if last.isspace() else piece.rsplit(None, 1)[-1]
+            word = (word + tail if joins and tail == piece else tail)[-(_FIELD_NUMBER_CHARS + 1) :]
+        elif piece is None or piece is _LINE_BREAK:
+            if text := " ".join("".join(line).split()):
+                lines.append(text)
+            line, last, word = [], "", ""
+    if text := " ".join("".join(line).split()):
+        lines.append(text)
+    return "\n".join(lines)
 
 
 def load_from_xhtml(source: Path | bytes) -> dict[str, str]:
