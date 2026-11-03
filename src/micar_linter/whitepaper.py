@@ -399,9 +399,9 @@ def _settled(lead: str) -> bool:
     risks are not covered by any compensation scheme:").
 
     A lead-in still leads into its items where it ends in a negation or a connective ("..., the token is
-    not covered by:", "... within the definition of:"), names "the following" after its negation ("... is
-    not one of the following:"), or goes on after its negation between commas ("... is not, within the
-    meaning of MiCAR,").
+    not covered by:", "... within the definition of:"), has "following" or "follows" after its negation
+    ("... is not one of the following:"), or a comma right after it ("... is not, within the meaning of
+    MiCAR,").
     """
     from micar_linter.document import _MINOR_WORD
 
@@ -430,7 +430,7 @@ def _lead(previous: tuple[str, str, bool] | None) -> str:
 
 
 @lru_cache(maxsize=1024)
-def _marker(item: str) -> tuple[str, frozenset[int] | None]:
+def _list_marker(item: str) -> tuple[str, frozenset[int] | None]:
     """A list item's marker (_LIST_ITEM) as its style, its number or letter written "#" so that "(1)" and
     "(2)" are written alike, and the places in a list it can stand for: a number's value, a letter's place
     in the alphabet and, for a Roman numeral, its value ("i" is the ninth letter or 1); None for a bullet or
@@ -450,7 +450,7 @@ def _marker(item: str) -> tuple[str, frozenset[int] | None]:
 
 
 def _follows(item: tuple[str, frozenset[int] | None], before: tuple[str, frozenset[int] | None]) -> bool:
-    """Whether a list item's marker (_marker) comes right after the marker of the item before it in one
+    """Whether a list item's marker (_list_marker) comes right after the marker of the item before it in one
     list: the two are written alike ("(2)" after "(1)", not "2." after "(1)"), and are the same bullet or
     dash, or the number or letter of the one is one more than that of the other ("b." after "a.", "ii."
     after "i.")."""
@@ -580,13 +580,13 @@ def _line_pieces(units: Iterable[tuple[str, str]]) -> Iterator[tuple[tuple[str, 
         text, kind = unit
         unit = next(units, None)
         item = _LIST_ITEM.match(text.lstrip())
-        marker = _marker(item.group()) if item else None
+        marker = _list_marker(item.group()) if item else None
         heading = kind != _BODY_LINE
         if heading and marker and kind == _GUESSED:
             following = _LIST_ITEM.match(unit[0].lstrip()) if unit is not None else None
             heading = not (
                 _opens(previous)
-                or (following is not None and _follows(_marker(following.group()), marker))
+                or (following is not None and _follows(_list_marker(following.group()), marker))
                 or (
                     _innermost(marker, lists) is not None
                     and previous is not None
@@ -605,8 +605,8 @@ def _line_pieces(units: Iterable[tuple[str, str]]) -> Iterator[tuple[tuple[str, 
                 opens = _opens(previous)
                 # A numbered or lettered list that a sentence ended goes on at its next item.
                 resumed = None if opens or marker[1] is None else _innermost(marker, ended)
-                fresh = [_List(_lead(previous), opens, marker)]
-                lists, ended = (fresh if resumed is None else ended[: resumed + 1]), []
+                lists = [_List(_lead(previous), opens, marker)] if resumed is None else ended[: resumed + 1]
+                ended = []
             current = lists[-1]
             current.last = marker
             starts = _starts_sentence(text.lstrip()[item.end() :])
