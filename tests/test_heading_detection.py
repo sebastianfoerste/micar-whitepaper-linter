@@ -2207,6 +2207,32 @@ def test_a_given_regime_is_not_inferred(tmp_path: Path, suffix: str, monkeypatch
     assert given.sections == inferred.sections
 
 
+@pytest.mark.parametrize("suffix", sorted(LIST_WRITERS))
+def test_a_given_regime_is_not_inferred_from_a_list(tmp_path: Path, suffix: str, monkeypatch: pytest.MonkeyPatch):
+    # The list that test_a_given_regime_is_not_inferred used before the list reading was backed out: a DOCX or
+    # PDF reads it as other and Markdown as an EMT (test_the_documented_limits_of_the_regime_reading). A given
+    # regime is not inferred, so the text is not read for it, and it holds where the inference would differ.
+    import micar_linter.whitepaper as whitepaper
+
+    blocks = [_CRYPTO_ASSET, *_lines(_LEAD_IN, "- an asset-referenced token;", "- an e-money token."), *_MEADOW_OFFEROR]
+    path = LIST_WRITERS[suffix](tmp_path / f"meadowpoints{suffix}", blocks)
+    inferred = load_whitepaper(path)
+
+    def unread(*args: object) -> list[tuple[str, int]]:
+        raise AssertionError("the regime was inferred although it was given")
+
+    monkeypatch.setattr(whitepaper, "_regime_pieces", unread)
+    given = load_whitepaper(path, WhitepaperType.OTHER)
+    assert given.type is WhitepaperType.OTHER
+    if suffix == ".md":
+        # An EMT draft has no Annex I crypto-asset section; the given regime keeps it.
+        assert inferred.type is WhitepaperType.EMT
+        assert "crypto_asset" in given.sections and "crypto_asset" not in inferred.sections
+    else:
+        assert inferred.type is WhitepaperType.OTHER
+        assert given.sections == inferred.sections
+
+
 # The list cases of Rounds 4 and 5 that the regime reading meets without the list reading those rounds
 # added, which was backed out after the verification of the merged changes, and the limits of that reading.
 _LEAD_IN = "For the purposes of MiCAR the token is not"
@@ -2727,6 +2753,36 @@ ART, EMT, OTHER = WhitepaperType.ART, WhitepaperType.EMT, WhitepaperType.OTHER
             ],
             _regimes(ART, OTHER),
         ),
+        # In Markdown and XHTML a lead-in that ends in a colon ends its clause at the colon, so the list after
+        # it sets the regime there; a DOCX or PDF reads its items as other.
+        (
+            [
+                _CRYPTO_ASSET,
+                *_lines("The token is not:", "- an asset-referenced token", "- an e-money token"),
+                *_MEADOW_OFFEROR,
+            ],
+            _regimes(OTHER, ART),
+        ),
+        # An introduction that calls the token an asset-referenced token makes the draft an ART in a DOCX or PDF
+        # wherever it stands; Markdown and XHTML read only section text, so not under a heading that names no
+        # section, as in 1.2.1.
+        (
+            [
+                ("heading", "Introduction"),
+                ("body", "The Synthetic Stable Token is an asset-referenced token."),
+                *_SST_ISSUER,
+            ],
+            _regimes(ART, OTHER),
+        ),
+        # The same introduction under a heading that names a section is read in every format.
+        (
+            [
+                ("heading", "Summary"),
+                ("body", "The Synthetic Stable Token is an asset-referenced token."),
+                *_SST_ISSUER,
+            ],
+            _regimes(ART, ART),
+        ),
     ],
     ids=[
         "full stop",
@@ -2738,6 +2794,9 @@ ART, EMT, OTHER = WhitepaperType.ART, WhitepaperType.EMT, WhitepaperType.OTHER
         "item read as a heading",
         "category",
         "inner list",
+        "colon lead-in",
+        "introduction under no section",
+        "introduction in a section",
     ],
 )
 def test_the_documented_limits_of_the_regime_reading(
