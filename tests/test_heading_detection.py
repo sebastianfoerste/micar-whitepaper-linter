@@ -2681,6 +2681,21 @@ ART, EMT, OTHER = WhitepaperType.ART, WhitepaperType.EMT, WhitepaperType.OTHER
             ],
             _regimes(OTHER, ART),
         ),
+        # So is a line after the list that starts with a list number in sentence case, in a DOCX paragraph
+        # that is no heading and in the body font of a PDF after items numbered "1)" and "2)".
+        (
+            [
+                *_SST_ISSUER,
+                *_lines(
+                    "Holders should note that the token is not covered by:",
+                    "1) any investor compensation scheme;",
+                    "2) any deposit guarantee scheme.",
+                ),
+                ("plain", "3) Reserve of assets"),
+                ("body", "The reserve is held in cash and short-term government bonds."),
+            ],
+            _regimes(OTHER, ART),
+        ),
         # A paragraph that ends in a negation and no full stop reaches the next paragraph of its section in
         # Markdown and XHTML.
         (
@@ -2691,6 +2706,15 @@ ART, EMT, OTHER = WhitepaperType.ART, WhitepaperType.EMT, WhitepaperType.OTHER
                     "Holders have no claim against the custodian",
                     "The reserve of assets may lose value in a market stress event",
                 ),
+            ],
+            _regimes(ART, OTHER),
+        ),
+        # There a negation also reaches over a list item into the paragraph after it.
+        (
+            [
+                _CRYPTO_ASSET,
+                *_lines("MeadowPoints is not", "(1) an asset-referenced token", "xStable's reserve of assets is held in cash."),
+                *_MEADOW_OFFEROR,
             ],
             _regimes(ART, OTHER),
         ),
@@ -2734,7 +2758,9 @@ ART, EMT, OTHER = WhitepaperType.ART, WhitepaperType.EMT, WhitepaperType.OTHER
         "no marker",
         "risk list",
         "line after the list",
+        "numbered line after the list",
         "paragraphs",
+        "over a list item",
         "item read as a heading",
         "category",
         "inner list",
