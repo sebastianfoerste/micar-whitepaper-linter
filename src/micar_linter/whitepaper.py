@@ -749,16 +749,18 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
         raise SystemExit(f"Error reading document {path}: {exc}") from exc
 
     # The regime of a PDF or DOCX is inferred from its whole text: a heading ("Reserve of Assets"), which is
-    # not section body, or text in no section may be all that names it. A negated marker does not count.
-    pieces = _regime_pieces(suffix, sections, extracted, headings, marked_headings)
+    # not section body, or text in no section may be all that names it. A negated marker does not count. A
+    # given regime is not inferred, so the text is not read for it.
     if whitepaper_type is not None:
         wp_type = whitepaper_type
-    elif _names_regime(pieces, _ART_MARKERS):
-        wp_type = WhitepaperType.ART
-    elif _names_regime(pieces, _EMT_MARKERS):
-        wp_type = WhitepaperType.EMT
     else:
-        wp_type = WhitepaperType.OTHER
+        pieces = _regime_pieces(suffix, sections, extracted, headings, marked_headings)
+        if _names_regime(pieces, _ART_MARKERS):
+            wp_type = WhitepaperType.ART
+        elif _names_regime(pieces, _EMT_MARKERS):
+            wp_type = WhitepaperType.EMT
+        else:
+            wp_type = WhitepaperType.OTHER
 
     if wp_type is WhitepaperType.ART:
         sections.pop("emt", None)

@@ -2610,3 +2610,22 @@ def test_a_markdown_list_is_read_line_by_line_in_little_memory(tmp_path: Path):
     finally:
         tracemalloc.stop()
     assert peak < 25 * path.stat().st_size
+
+
+@pytest.mark.parametrize("suffix", sorted(LIST_WRITERS))
+def test_a_given_regime_is_not_inferred(tmp_path: Path, suffix: str, monkeypatch: pytest.MonkeyPatch):
+    # The text was read for the regime also where --type gave it, so a slow shape of that reading slowed
+    # `--type other` runs too; the reading is skipped now, and the result is the same.
+    import micar_linter.whitepaper as whitepaper
+
+    blocks = [_CRYPTO_ASSET, *_lines(_LEAD_IN, "- an asset-referenced token;", "- an e-money token."), *_MEADOW_OFFEROR]
+    path = LIST_WRITERS[suffix](tmp_path / f"meadowpoints{suffix}", blocks)
+    inferred = load_whitepaper(path)
+
+    def unread(*args: object) -> list[tuple[str, int]]:
+        raise AssertionError("the regime was inferred although it was given")
+
+    monkeypatch.setattr(whitepaper, "_regime_pieces", unread)
+    given = load_whitepaper(path, WhitepaperType.OTHER)
+    assert given.type is inferred.type is WhitepaperType.OTHER
+    assert given.sections == inferred.sections
