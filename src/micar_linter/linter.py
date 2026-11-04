@@ -631,10 +631,11 @@ def _lei_check_digits_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     """Fails closed: a draft without any LEI cannot show valid check digits, and every LEI-like code in a
     draft that reads LEIs must be an LEI with valid check digits.
 
-    A draft reads LEIs in all its text once it has a party section, or a section or its file text names an
-    LEI label or holds an LEI-shaped code with a letter (lei.draft_reads_leis). Then every section is read,
-    and so is the text of a document file outside its sections (the reserved metadata key document_text,
-    set only by the document loaders: headings, tables, headers and footers, text in no section). Each text
+    A draft reads LEIs in all its text once it has a party section, or a section or its file text names an LEI
+    label or holds an LEI-shaped code with a letter (lei.draft_reads_leis). Then every section is read, and so
+    is the text of a document file outside its sections (the reserved metadata key document_text, set only by
+    the document loaders: headings, tables, headers and footers, text in no section, and the text of each
+    section that the regime drops, so no regime makes a code that a section shows malformed pass). Each text
     is read as written and, where markup or a character reference changes it, as shown. An LEI-shaped code
     there with invalid check digits, and an LEI-like code that is not LEI-shaped (wrong length, lower case, a
     letter in a check-digit position, a character outside ASCII, glued to a word, split into groups), keeps

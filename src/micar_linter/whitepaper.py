@@ -90,7 +90,8 @@ _RESERVED_METADATA_KEYS = (
     "placeholder_fields",
     "numbered_fields",
     # Set by the document loaders: the whole text of the file, headings, tables and text in no section
-    # included, which COMMON.LEI_CHECK_DIGITS reads besides the sections.
+    # included, and the text of each section the regime drops, which COMMON.LEI_CHECK_DIGITS reads besides
+    # the sections.
     "document_text",
     "reserve_characterisation_reviewed_by",
     "reserve_characterisation_reviewed_on",
@@ -425,6 +426,14 @@ def _heading_shaped(text: str) -> bool:
     return heading_shaped(text.strip())
 
 
+# The sections of the other regimes, which the document loader drops once the regime is known.
+_DROPPED_SECTIONS = {
+    WhitepaperType.ART: ("emt", "crypto_asset", "not_approved_statement"),
+    WhitepaperType.EMT: ("art", "crypto_asset"),
+    WhitepaperType.OTHER: ("art", "emt"),
+}
+
+
 def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | None) -> Whitepaper:
     if not path.exists():
         raise SystemExit(f"File not found: {path}")
@@ -437,7 +446,8 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
     numbered_fields: dict[str, str] | None = None
     extracted = ""
     headings: tuple[str, ...] = ()
-    # The whole text of the file, which COMMON.LEI_CHECK_DIGITS reads besides the sections.
+    # The whole text of the file (and below, the text of the sections the regime drops), which
+    # COMMON.LEI_CHECK_DIGITS reads besides the sections.
     document_text = ""
     try:
         if suffix == ".pdf":
@@ -516,17 +526,14 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
         else:
             wp_type = WhitepaperType.OTHER
 
-    if wp_type is WhitepaperType.ART:
-        sections.pop("emt", None)
-        sections.pop("crypto_asset", None)
-        # Art. 19 MiCAR prescribes no first-page statement, so no ART rule reads one.
-        sections.pop("not_approved_statement", None)
-    elif wp_type is WhitepaperType.EMT:
-        sections.pop("art", None)
-        sections.pop("crypto_asset", None)
-    else:
-        sections.pop("art", None)
-        sections.pop("emt", None)
+    # The sections of the other regimes are dropped. Art. 19 MiCAR prescribes no first-page statement, so
+    # no ART rule reads one. COMMON.LEI_CHECK_DIGITS still reads the text of each dropped section, after
+    # the text of the file and a blank line apart from it: the text of the file holds text moved away,
+    # deleted or hidden that can complete a code the section shows malformed, so a code that only a dropped
+    # section shows malformed would pass, and a change of the regime could make such a draft pass.
+    dropped = [str(sections.pop(key)) for key in _DROPPED_SECTIONS[wp_type] if key in sections]
+    if dropped:
+        document_text = "\n\n".join((document_text, *dropped))
 
     title = path.stem.replace("-", " ").replace("_", " ").title()
     metadata = {
