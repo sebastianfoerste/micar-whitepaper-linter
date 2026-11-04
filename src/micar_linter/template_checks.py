@@ -617,6 +617,66 @@ def field_type_issues(
     return issues, present
 
 
+# --- Conditions of the point rules (point_fields.py) --------------------------------------------------------
+
+
+# The form column glosses true and false as Yes and No; a draft that writes the gloss gives the same value.
+_YES = re.compile(r"^(?:yes|ja)\b", re.I)
+_NO = re.compile(r"^(?:no|nein)\b", re.I)
+_NTAV = re.compile(r"^ntav\b", re.I)
+
+
+def _own_lines(number: str, answer: str, regime: WhitepaperType) -> list[str]:
+    """The lines of a field's answer without its English or German template name, blank and N/A lines left
+    out."""
+    field = FIELD_TYPES[regime].get(number)
+    own = (FIELD_NAMES[regime].get(number), field.name_de if field else None)
+    names = tuple(name for name in own if name)
+    lines = [strip_name(line, names) for line in answer.split("\n")]
+    return [line for line in lines if not _blank(line) and not is_not_applicable(line)]
+
+
+def field_holds(number: str, kind: str, answer: str, regime: WhitepaperType) -> bool:
+    """True if the field gives a code of the kind (LEI or DTI) that passes its format check, with valid check
+    digits for an LEI: a template field filled in "only if an LEI [a DTI] is not provided" then does not
+    apply."""
+    field = FieldType(kind, "")
+    return any(type_issue(field, line) is None for line in _own_lines(number, answer, regime))
+
+
+def field_flag(number: str, answer: str, regime: WhitepaperType) -> bool | None:
+    """The value of a true/false field, or None when it gives neither. Field 05 of Table 2 reads true with the
+    utility-token statement and false when marked not applicable ("'false' - Not applicable"); NTAV, the code
+    for not applicable of C.5 of Table 3, reads false. Yes and No, the form column's glosses, read as true and
+    false."""
+    if number == UTILITY_FIELD and regime is WhitepaperType.OTHER:
+        text = answer.strip()
+        if _blank(text):
+            return None
+        if _is_flag(text, _TRUE) or _text_issue(number, text, UTILITY_STATEMENT, True, regime, False) is None:
+            return True
+        if _is_flag(text, _FALSE) or is_not_applicable(text):
+            return False
+        return None
+    for line in _own_lines(number, answer, regime):
+        if _is_flag(line, _TRUE) or _is_flag(line, _YES):
+            return True
+        if _is_flag(line, _FALSE) or _is_flag(line, _NO) or _is_flag(line, _NTAV):
+            return False
+    return None
+
+
+def field_codes(number: str, answer: str, regime: WhitepaperType) -> set[str]:
+    """The codes of the field's closed list that its answer opens with, in capitals."""
+    allowed = {code.upper() for code in FIELD_TYPES[regime][number].codes}
+    return {
+        item.upper()
+        for line in _own_lines(number, answer, regime)
+        for item in _code_head(line)
+        if item.upper() in allowed
+    }
+
+
 # --- Sustainability indicators (Delegated Regulation (EU) 2025/422) ----------------------------------------
 
 _KWH_UNITS = {
@@ -827,6 +887,9 @@ def typed_fields(regime: WhitepaperType, code_lists: bool) -> dict[str, FieldTyp
 
 __all__ = [
     "CODES",
+    "field_codes",
+    "field_flag",
+    "field_holds",
     "ENERGY_KWH",
     "energy_kwh",
     "field_type_issues",

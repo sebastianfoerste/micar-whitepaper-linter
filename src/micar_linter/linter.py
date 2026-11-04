@@ -22,8 +22,10 @@ from micar_linter.lei import (
     reads_leis,
 )
 from micar_linter.placeholders import is_not_applicable, is_placeholder
+from micar_linter.point_fields import ANNEX_REGIMES, POINTS_BY_RULE, fields_text, fields_text_de, point_issues
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Finding, Rule, Severity
+from micar_linter.rules.points import POINT_RULE_IDS
 from micar_linter.template_checks import (
     field_type_issues,
     is_iso_date,
@@ -107,6 +109,9 @@ class Linter:
 
         if rule.rule_id in TEMPLATE_RULE_CHECKS:
             return TEMPLATE_RULE_CHECKS[rule.rule_id](rule, whitepaper)
+
+        if rule.rule_id in POINT_RULE_IDS:
+            return _point_finding(rule, whitepaper)
 
         is_de = whitepaper.language == "de"
 
@@ -1205,3 +1210,30 @@ TEMPLATE_RULE_CHECKS: dict[str, Callable[[Rule, Whitepaper], Finding]] = {
     "ITS.CODE_LISTS": _field_types_finding,
     "RTS.SUSTAINABILITY_INDICATORS": _sustainability_finding,
 }
+
+
+def _point_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """A point rule (rules/points.py): the template fields that carry the Annex point, under the template's
+    conditions (point_fields.py). A draft without field numbers is Missing where the rule's section is absent
+    and Review otherwise, with the note that the point check needs the numbered-field layout."""
+    point = POINTS_BY_RULE[rule.rule_id]
+    regime = ANNEX_REGIMES[point.annex]
+    is_de = whitepaper.language == "de"
+    numbered = _numbered(whitepaper)
+    if numbered is None:
+        text = whitepaper.section(rule.section)
+        if absent := _absent(text, is_de):
+            return Finding(rule=rule, status="missing", word_count=0, issues=(absent,))
+        name = f"Anhang {point.annex} Teil {point.part} Nr. {point.number}"
+        note = (
+            _NO_FIELDS[1].format(what=f"von {name} ({fields_text_de(point, regime)})")
+            if is_de
+            else _NO_FIELDS[0].format(
+                what=f"Annex {point.annex} Part {point.part} point {point.number} "
+                f"({fields_text(point, regime)})"
+            )
+        )
+        return Finding(rule=rule, status="review", word_count=_count_words(text), issues=(note,))
+    answers, _ = numbered
+    status, issues, words = point_issues(point, answers, regime, is_de)
+    return Finding(rule=rule, status=status, word_count=words, issues=issues)

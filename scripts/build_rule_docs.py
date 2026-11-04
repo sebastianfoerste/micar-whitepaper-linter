@@ -28,10 +28,40 @@ from micar_linter.linter import (
     TEMPLATE_RULE_CHECKS,
     Linter,
 )
+from micar_linter.point_fields import (
+    ANNEX_REGIMES,
+    CODE,
+    FLAG,
+    NO_DTI,
+    NO_LEI,
+    POINTS_BY_RULE,
+    Alternative,
+    Condition,
+    Point,
+    PointField,
+    fields_text,
+)
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Rule
+from micar_linter.rules.points import POINT_RULE_IDS
 from micar_linter.template_fields import FIELD_NAMES
-from micar_linter.template_types import CODE_LIST_KINDS, FIELD_TYPES, TABLE_NUMBERS
+from micar_linter.template_types import (
+    AMOUNT,
+    CODE_LIST_KINDS,
+    CODES,
+    CURRENCY,
+    CURRENCY_OR_DTI,
+    DATE,
+    DECIMAL,
+    DTI,
+    DURATION,
+    FIELD_TYPES,
+    INTEGER,
+    LEI,
+    MEMBER_STATES,
+    MIC,
+    TABLE_NUMBERS,
+)
 from micar_linter.whitepaper import _RESERVED_METADATA_KEYS, Whitepaper, WhitepaperType
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -207,6 +237,8 @@ def verification_note(rule_id: str) -> str:
     """Which reading of the Regulation the rule's citation rests on."""
     if rule_id in OJ_CHECKED:
         return OJ_CHECKED[rule_id]
+    if rule_id in POINT_RULE_IDS:
+        return _point_verification(POINTS_BY_RULE[rule_id])
     if rule_id in TEMPLATE_VERIFICATION:
         return TEMPLATE_VERIFICATION[rule_id]
     if rule_id in NOT_APPROVED_STATEMENT_RULE_IDS:
@@ -316,6 +348,8 @@ def _responsibility(person: str) -> str:
 
 
 def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
+    if rule.rule_id in POINT_RULE_IDS:
+        return _point_examples(rule, regime)
     if rule.rule_id in TEMPLATE_RULES:
         return _template_examples(rule, regime)
     if rule.rule_id == "COMMON.IXBRL_TAGGING":
@@ -1150,8 +1184,10 @@ def _template_limitations(rule: Rule) -> list[str]:
             "Up to 20 letters and digits besides the text pass, to allow a label that the loader could not split "
             "off; a short addition may therefore go unnoticed. It cannot see whether the statements stand on the "
             "first page, and it cannot tell which wording of field 02 fits the person who drew up the white paper.",
-            "Does not check the reimbursement notice (field E.15 of Table 2, C.10 of Table 3), which the template also "
-            "predefines, nor field 09 of Table 2, which applies only where field 05 is true.",
+            "Does not check the wording of the reimbursement notice (field E.15 of Table 2, C.10 of Table 3), which the "
+            "template also predefines, nor field 09 of Table 2, which applies only where field 05 is true; "
+            '<a href="ANNEX_I.E.P7.html">ANNEX_I.E.P7</a>, <a href="ANNEX_II.C.P5.html">ANNEX_II.C.P5</a> and '
+            '<a href="ANNEX_I.G.P4.html">ANNEX_I.G.P4</a> check that these fields are filled.',
         ]
     if rule.rule_id in ("ITS.FIELD_FORMATS", "ITS.CODE_LISTS"):
         items.append(
@@ -1190,6 +1226,299 @@ def _template_limitations(rule: Rule) -> list[str]:
             "refer to.",
             "S.8 of exactly 500 000 kWh does not exceed the threshold of Art. 4(2).",
         ]
+    return items
+
+
+# --- The point rules (rules/points.py, point_fields.py) ---------------------------------------------------------
+
+_POINT_OJ = (
+    "Checked against the OJ on 2026-11-04: the point against the English and German Official Journal text of "
+    "Regulation (EU) 2023/1114 (OJ L 150, 9.6.2023), and {fields}, {their} names and conditions against the English "
+    "and German Official Journal text of Implementing Regulation (EU) 2024/2984 (OJ L, 2024/2984, 3.12.2024), both as "
+    "the Publications Office Cellar served them. No amendment or corrigendum was searched for."
+)
+# Synthetic values for typed fields: a DTI is nine letters or digits; SYNTH marks it as fictitious.
+SYNTHETIC_DTI = "SYNTH0001"
+
+
+def _point(rule: Rule) -> tuple[Point, WhitepaperType]:
+    point = POINTS_BY_RULE[rule.rule_id]
+    return point, ANNEX_REGIMES[point.annex]
+
+
+def _point_verification(point: Point) -> str:
+    regime = ANNEX_REGIMES[point.annex]
+    return _POINT_OJ.format(fields=fields_text(point, regime), their="its" if len(point.fields) == 1 else "their")
+
+
+def _typed_value(number: str, regime: WhitepaperType) -> str:
+    """A synthetic answer of the field's type, or a sentence for a free-text field."""
+    field = FIELD_TYPES[regime].get(number)
+    kind = field.kind if field else ""
+    values = {
+        LEI: SYNTHETIC_LEI,
+        DTI: SYNTHETIC_DTI,
+        DATE: "2026-03-02",
+        FLAG: "true",
+        MEMBER_STATES: "DE",
+        CURRENCY: "EUR",
+        CURRENCY_OR_DTI: "EUR",
+        MIC: "XSYN",
+        DURATION: "5",
+        AMOUNT: "1000000",
+        INTEGER: "1000000",
+        DECIMAL: "1000000",
+    }
+    if kind == CODES and field is not None:
+        return field.codes[0]
+    return values.get(kind, f"Synthetic answer for field {number}.")
+
+
+def _holding_value(condition: Condition) -> str | None:
+    """A value of the controlling field under which the condition holds; None leaves the field out."""
+    if condition.kind in (NO_LEI, NO_DTI):
+        return None
+    if condition.kind in (FLAG, CODE):
+        return condition.value
+    return f"Synthetic answer for field {condition.field}."
+
+
+def _relieving_value(condition: Condition, regime: WhitepaperType) -> str:
+    """A value of the controlling field under which the condition relieves its fields."""
+    if condition.kind == NO_LEI:
+        return SYNTHETIC_LEI
+    if condition.kind == NO_DTI:
+        return SYNTHETIC_DTI
+    if condition.kind == FLAG:
+        return "false" if condition.value == "true" else "true"
+    if condition.kind == CODE:
+        return next(code for code in FIELD_TYPES[regime][condition.field].codes if code != condition.value)
+    return "N/A"
+
+
+def _point_rows(point: Point, regime: WhitepaperType, answers: dict[str, str | None]) -> tuple[tuple[str, str, str], ...]:
+    """The fields of an example, controlling fields outside the point first; None leaves a field out."""
+    names = FIELD_NAMES[regime]
+    return tuple((number, names.get(number, ""), answer) for number, answer in answers.items() if answer is not None)
+
+
+def _point_answers(point: Point, regime: WhitepaperType) -> dict[str, str | None]:
+    """Every field of the point answered, and the conditions on them holding."""
+    own = {field.number for field in point.fields}
+    answers: dict[str, str | None] = {}
+    for field in point.fields:
+        for condition in field.conditions:
+            if condition.field not in own and condition.field not in answers:
+                answers[condition.field] = _holding_value(condition)
+    for field in point.fields:
+        answers[field.number] = _typed_value(field.number, regime)
+    return answers
+
+
+def _point_examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
+    point, regime = _point(rule)
+    fields = fields_text(point, regime)
+    name = f"Annex {point.annex} Part {point.part} point {point.number}"
+    answers = _point_answers(point, regime)
+    blank = {**answers, **{field.number: "TBD" for field in point.fields}}
+    result = [
+        Example(
+            "Draft without field numbers, section absent",
+            "missing",
+            {"title": "Synthetic rule example", "type": regime.value, "sections": {}},
+            f"A JSON, PDF, DOCX, Markdown or heading-based XHTML draft without section {rule.section} is missing.",
+        ),
+        Example(
+            "Draft without field numbers",
+            "review",
+            _draft(rule, regime, "Synthetic section text of a draft without field numbers."),
+            f"The draft has no field numbers, so {fields} cannot be read; the finding says so and stays open until "
+            "the white paper is checked in the numbered-field layout. Such a draft never passes.",
+        ),
+        _numbered_example(
+            "Fields hold only placeholders",
+            "missing",
+            regime,
+            _point_rows(point, regime, blank),
+            f"Every field that carries {name} holds only a placeholder, so the point counts as missing.",
+        ),
+        _numbered_example(
+            "Every field answered",
+            "pass",
+            regime,
+            _point_rows(point, regime, answers),
+            "Each field that applies holds an answer. A pass shows only that the fields are filled, not that the "
+            "answers are correct or complete.",
+        ),
+    ]
+    conditional = next((field for field in point.fields if field.conditions), None)
+    if conditional is not None:
+        condition = conditional.conditions[0]
+        relieved = {**answers, condition.field: _relieving_value(condition, regime)}
+        for field in point.fields:
+            if condition in field.conditions:
+                relieved[field.number] = None
+        source = "the Annex point" if condition.annex else "the template"
+        result.append(
+            _numbered_example(
+                "Field not required under its condition",
+                "pass",
+                regime,
+                _point_rows(point, regime, relieved),
+                f"Field {conditional.number} applies only if {_condition_words(condition)} ({source}). Here it does "
+                "not apply, so the field is not reported although the draft leaves it out; the finding names the "
+                "condition.",
+            )
+        )
+    standalone = next(
+        (item for item in point.items if isinstance(item, PointField) and not item.optional), None
+    )
+    alternative = next((item for item in point.items if isinstance(item, Alternative)), None)
+    if standalone is not None:
+        marked = {**answers, standalone.number: "N/A"}
+        why = (
+            "the template sets no condition on it"
+            if not standalone.conditions
+            else "its condition holds, so it applies"
+        )
+        result.append(
+            _numbered_example(
+                "Field marked not applicable",
+                "review",
+                regime,
+                _point_rows(point, regime, marked),
+                f"Field {standalone.number} reads N/A, but {why}; a reviewer checks it.",
+            )
+        )
+    elif alternative is not None:
+        marked = {**answers, **{field.number: "N/A" for field in alternative.fields}}
+        numbers = " and ".join(field.number for field in alternative.fields)
+        result.append(
+            _numbered_example(
+                "No field of the alternative answered",
+                "review",
+                regime,
+                _point_rows(point, regime, marked),
+                f"The point is answered by one of fields {numbers}; both read N/A.",
+            )
+        )
+    else:
+        marked = {**answers, **{field.number: "N/A" for field in point.fields}}
+        result.append(
+            _numbered_example(
+                "Fields marked not applicable",
+                "pass",
+                regime,
+                _point_rows(point, regime, marked),
+                "The template asks for these fields where applicable, so N/A is an answer.",
+            )
+        )
+    return result
+
+
+def _condition_words(condition: Condition) -> str:
+    field, value = condition.field, condition.value
+    if condition.kind == NO_LEI:
+        return f"field {field} gives no LEI"
+    if condition.kind == NO_DTI:
+        return f"field {field} gives no DTI"
+    if condition.kind == FLAG:
+        return f"field {field} is {value}"
+    if condition.kind == CODE:
+        return f"field {field} gives {value}"
+    return f"field {field} holds an answer other than “not applicable”"
+
+
+def _field_line(field: PointField, regime: WhitepaperType) -> str:
+    name = FIELD_NAMES[regime].get(field.number)
+    parts = [f"<code>{_e(field.number)}</code>" + (f" ({_e(name)})" if name else "")]
+    if field.conditions:
+        parts.append(
+            ": only if "
+            + " and ".join(
+                _e(_condition_words(c)) + (" (from the Annex point)" if c.annex else "") for c in field.conditions
+            )
+        )
+    if field.optional:
+        parts.append("; “not applicable” is an answer")
+    return "".join(parts)
+
+
+def _point_status_logic(rule: Rule) -> str:
+    point, regime = _point(rule)
+    section = f"<code>{_e(rule.section)}</code>"
+    items = []
+    for item in point.items:
+        if isinstance(item, Alternative):
+            members = " or ".join(_field_line(field, regime) for field in item.fields)
+            items.append(f"<li>One of {members}</li>")
+        else:
+            items.append(f"<li>{_field_line(item, regime)}</li>")
+    return (
+        '<ul class="plain"><li><strong>Missing</strong>: in a numbered-field XHTML draft, every field below that '
+        "applies is empty, absent or holds only a placeholder such as TBD; in any other draft, section "
+        f"{section} is absent or empty, or holds only a placeholder.</li>"
+        "<li><strong>Review</strong>: in a numbered-field draft, a field that applies is empty, absent or holds only a "
+        "placeholder; a field that applies is marked not applicable (N/A, none, a dash) where the template does not "
+        "ask for it “where applicable” or “if any”; or no field of an alternative holds an answer. A field that "
+        "applies only under a condition is checked as applying when the draft does not show the condition (a flag "
+        "that is neither true nor false, a code field without a template code). The finding names each field by its "
+        "number and, in English, the template's name. In any other draft: always, with a note that the point check "
+        "needs the numbered-field layout.</li>"
+        "<li><strong>Pass</strong>: every field that applies holds an answer. A field that does not apply under its "
+        "condition is not reported; the finding names the condition. An LEI counts as given only with valid check "
+        "digits, a DTI as nine letters or digits; true and false count also as richtig and falsch, yes and no, ja "
+        "and nein.</li></ul>"
+        f"<p>The fields of Table {TABLE_NUMBERS[regime]} of Implementing Regulation (EU) 2024/2984 that carry the "
+        f'point:</p><ul class="plain">{"".join(items)}</ul>'
+    )
+
+
+# Notes on single fields, read in the Official Journal text.
+_POINT_FIELD_NOTES = {
+    (WhitepaperType.EMT, "E.1"): (
+        "Field E.1 of Table 4 applies “only if a DTI is not provided in field B.13” in the English and the German "
+        "text, although B.13 holds the functionally fungible group DTI and B.1 and B.2 refer to B.12, the DTI. The "
+        "check follows the Official Journal and reads B.13."
+    ),
+}
+_ALTERNATIVE_NOTE = (
+    "The financial condition is checked as an alternative of two fields. The template's flag between them is "
+    "named “Newly established” but asks “whether [the person] has been established for the past three years”, "
+    "so true reads both ways; the check does not choose a field by it."
+)
+
+
+def _point_limitations(rule: Rule) -> list[str]:
+    point, regime = _point(rule)
+    numbers = {field.number for field in point.fields}
+    items = [
+        f"Reads the fields of a numbered-field XHTML draft by their numbers, {fields_text(point, regime)} and the "
+        "fields their conditions name; text elsewhere is not considered. In a draft without field numbers it reads "
+        f"section <code>{_e(rule.section)}</code> only to tell whether it is absent; finding the point's items in "
+        "free text is not built.",
+        "Checks whether each field holds an answer, not what it says: an answer to another question passes. "
+        "<code>ITS.FIELD_FORMATS</code> and <code>ITS.CODE_LISTS</code> check the formats and codes of the typed "
+        "fields.",
+        "Does not check a field's label, so a draft that numbers its fields otherwise is read in the wrong fields.",
+    ]
+    annex = [field.number for field in point.fields if any(c.annex for c in field.conditions)]
+    if annex:
+        items.append(
+            (f"The conditions on fields {', '.join(annex[:-1])} and {annex[-1]} come" if len(annex) > 1 else
+             f"The condition on field {annex[0]} comes")
+            + " from the wording of the Annex point, not from the template, which sets none there."
+        )
+    for (note_regime, number), note in _POINT_FIELD_NOTES.items():
+        if note_regime is regime and number in numbers:
+            items.append(note)
+    if any(isinstance(item, Alternative) for item in point.items) and point.number != 5:
+        items.append(_ALTERNATIVE_NOTE if point.part == "A" else (
+            "Fields E.8 (issue price) and E.11 (offer price determination method) are checked as alternatives, "
+            "as the point asks for the price “or” the method."
+        ))
+    if rule.rule_id.split(".")[0] not in UNTESTED_REGIMES:
+        items.append("The point rules have not yet been run against a real notified white paper.")
     return items
 
 
@@ -1265,6 +1594,8 @@ def _terms(terms: tuple[str, ...], patterns: tuple[str, ...] = ()) -> str:
 
 
 def status_logic(rule: Rule) -> str:
+    if rule.rule_id in POINT_RULE_IDS:
+        return _point_status_logic(rule)
     if rule.rule_id in TEMPLATE_RULES:
         return _template_status_logic(rule)
     if rule.rule_id == "COMMON.IXBRL_TAGGING":
@@ -1583,6 +1914,8 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
     ]
     if rule.rule_id in TEMPLATE_RULES:
         limitations = [*_template_limitations(rule), limitations[-1]]
+    if rule.rule_id in POINT_RULE_IDS:
+        limitations = [*_point_limitations(rule), limitations[-1]]
     if family in UNTESTED_REGIMES:
         limitations.append(UNTESTED_REGIMES[family])
     if rule.rule_id == "COMMON.LEI_CHECK_DIGITS":
@@ -1828,11 +2161,11 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
 <dt>Runs for</dt><dd>{_e("; ".join(REGIME_NAMES[r] for r in regimes))}</dd>
 <dt>Severity if open</dt><dd>{_e(rule.severity.label)}</dd>
 <dt>Section key</dt><dd>{"none: checks the file format" if rule.rule_id in FORMAT_GATE else "all sections; anchored to <code>issuer</code>" if rule.rule_id in LEI_RULES else f"<code>{_e(rule.section)}</code>"}</dd>
-<dt>Minimum words</dt><dd>{f"none: checks for {ANSWER_CHECKS[rule.rule_id]}" if rule.rule_id in ANSWER_CHECKS else f"none: checks for {TEMPLATE_ANSWERS[rule.rule_id]}" if rule.rule_id in TEMPLATE_RULES else by_regime(lambda r: str(r.min_words))}</dd>
+<dt>Minimum words</dt><dd>{f"none: checks for {ANSWER_CHECKS[rule.rule_id]}" if rule.rule_id in ANSWER_CHECKS else f"none: checks for {TEMPLATE_ANSWERS[rule.rule_id]}" if rule.rule_id in TEMPLATE_RULES else "none: checks whether the template fields that carry the point hold an answer" if rule.rule_id in POINT_RULE_IDS else by_regime(lambda r: str(r.min_words))}</dd>
 <dt>Listed terms (English)</dt><dd>{by_regime(lambda r: _terms(r.required_terms, r.required_patterns))}</dd>
 <dt>Listed terms (German)</dt><dd lang="de">{by_regime(lambda r: _terms(r.required_terms_de, r.required_patterns_de))}</dd>
 {prohibited}<dt>Package version</dt><dd>{_e(__version__)}, built from source that may include unreleased changes</dd>
-<dt>Source</dt><dd><a href="{REPO}/blob/main/src/micar_linter/rules/{SOURCE_MODULES[family]}">rules/{SOURCE_MODULES[family]}</a></dd>
+<dt>Source</dt><dd>{source_links(rule)}</dd>
 </dl></div>
 <h2>How the status is set</h2>
 {status_logic(rule)}{variant_note}
@@ -1848,6 +2181,17 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
 <p class="small muted">Disagree with this rule, or missing one? <a href="{REPO}/issues/new?template=rule-proposal.yml">Propose a rule change</a>.</p>
 """
     return _page(f"{rule.rule_id}: MiCAR Whitepaper Linter rule", f"{rule.label}. {citation_en}.", body)
+
+
+def source_links(rule: Rule) -> str:
+    """The module that defines the rule; for a point rule also the module that maps its fields."""
+    if rule.rule_id in POINT_RULE_IDS:
+        return (
+            f'<a href="{REPO}/blob/main/src/micar_linter/rules/points.py">rules/points.py</a> and '
+            f'<a href="{REPO}/blob/main/src/micar_linter/point_fields.py">point_fields.py</a>'
+        )
+    module = SOURCE_MODULES[rule.rule_id.split(".")[0]]
+    return f'<a href="{REPO}/blob/main/src/micar_linter/rules/{module}">rules/{module}</a>'
 
 
 def index_page(rules: list[Rule], regimes: dict[str, list[WhitepaperType]]) -> str:

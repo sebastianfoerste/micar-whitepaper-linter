@@ -4,9 +4,9 @@
   "whitepaper_type": "art",
   "status": "BLOCKED",
   "summary": {
-    "open_items": 7,
-    "blockers": 6,
-    "review_items": 6,
+    "open_items": 72,
+    "blockers": 71,
+    "review_items": 71,
     "missing_sections": 1
   },
   "items": [
@@ -28,6 +28,1206 @@
         "parser_source_type": "json",
         "stable_anchor_id": "json:ixbrl_tagging:6320a902d08da530",
         "section_length": 0
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.A.P1",
+      "citation": "Anhang II Teil A Nr. 1 MiCAR",
+      "section": "issuer",
+      "label": "Name of the issuer of the asset-referenced token",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part A point 1 (fields A.1 and A.2 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:5b8d86d449c01772",
+        "section_length": 738
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.A.P2",
+      "citation": "Anhang II Teil A Nr. 2 MiCAR",
+      "section": "issuer",
+      "label": "Legal form of the issuer",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part A point 2 (field A.3 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:7137c856c494d189",
+        "section_length": 738
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.A.P3",
+      "citation": "Anhang II Teil A Nr. 3 MiCAR",
+      "section": "issuer",
+      "label": "Registered address and head office, where different, of the issuer",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part A point 3 (fields A.4 and A.5 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:e011dcb8dec7f8e9",
+        "section_length": 738
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.A.P4",
+      "citation": "Anhang II Teil A Nr. 4 MiCAR",
+      "section": "issuer",
+      "label": "Date of registration of the issuer",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part A point 4 (field A.6 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:5a99845d03a43dec",
+        "section_length": 738
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.A.P5",
+      "citation": "Anhang II Teil A Nr. 5 MiCAR",
+      "section": "issuer",
+      "label": "Legal entity identifier or another identifier required by national law of the issuer",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part A point 5 (fields A.7 and A.8 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:0b3b075054617694",
+        "section_length": 738
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.A.P6",
+      "citation": "Anhang II Teil A Nr. 6 MiCAR",
+      "section": "issuer",
+      "label": "Identity of the parent company, where applicable",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part A point 6 (field A.9 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:2111d91408624519",
+        "section_length": 738
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.A.P7",
+      "citation": "Anhang II Teil A Nr. 7 MiCAR",
+      "section": "issuer",
+      "label": "Identity, business addresses and functions of the members of the issuer's management body",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part A point 7 (field A.10 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:429d34269adaecce",
+        "section_length": 738
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.A.P8",
+      "citation": "Anhang II Teil A Nr. 8 MiCAR",
+      "section": "issuer",
+      "label": "Business or professional activity of the issuer and, where applicable, of its parent company",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part A point 8 (fields A.11 and A.12 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:c44d7631498b2dd8",
+        "section_length": 738
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.A.P9",
+      "citation": "Anhang II Teil A Nr. 9 MiCAR",
+      "section": "issuer",
+      "label": "Financial condition of the issuer over the past three years or since its registration",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part A point 9 (fields A.13, A.14 and A.15 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:217da113bf68a7a1",
+        "section_length": 738
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.A.P10",
+      "citation": "Anhang II Teil A Nr. 10 MiCAR",
+      "section": "issuer",
+      "label": "Detailed description of the issuer's governance arrangements",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part A point 10 (field A.16 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:f7f7c3ee69fbeefc",
+        "section_length": 738
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.A.P11",
+      "citation": "Anhang II Teil A Nr. 11 MiCAR",
+      "section": "issuer",
+      "label": "Authorisation as an issuer of an asset-referenced token and the competent authority, unless exempted under Article 17",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part A point 11 (fields A.17, A.18, A.19 and A.20 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:307178ab36c3267b",
+        "section_length": 738
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.A.P12",
+      "citation": "Anhang II Teil A Nr. 12 MiCAR",
+      "section": "issuer",
+      "label": "Other crypto-assets the issuer issues or other activities related to them, and any connection with the entity running the distributed ledger",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part A point 12 (fields A.21, A.22, A.23 and A.24 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:8fdc5295c0db403c",
+        "section_length": 738
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.B.P1",
+      "citation": "Anhang II Teil B Nr. 1 MiCAR",
+      "section": "art",
+      "label": "Name and abbreviation or ticker handler of the asset-referenced token",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part B point 1 (fields B.1 and B.2 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "art",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:art:7965f990e70fe1ef",
+        "section_length": 912
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.B.P2",
+      "citation": "Anhang II Teil B Nr. 2 MiCAR",
+      "section": "art",
+      "label": "Characteristics of the asset-referenced token, including the data for classifying the white paper in the register",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part B point 2 (fields B.7, B.8, B.9, B.10, B.11, B.12, B.13, B.14, B.15, B.16, B.17, B.18, B.19 and B.20 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "art",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:art:0840cbfb00090c65",
+        "section_length": 912
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.B.P3",
+      "citation": "Anhang II Teil B Nr. 3 MiCAR",
+      "section": "art",
+      "label": "Details of the natural or legal persons involved in the operationalisation of the token",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part B point 3 (field B.3 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "art",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:art:db386809a66317ae",
+        "section_length": 912
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.B.P4",
+      "citation": "Anhang II Teil B Nr. 4 MiCAR",
+      "section": "art",
+      "label": "Role, responsibilities and accountability of third-party entities under Article 34(5)(h)",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part B point 4 (field B.4 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "art",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:art:8156a51a91468eef",
+        "section_length": 912
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.B.P5",
+      "citation": "Anhang II Teil B Nr. 5 MiCAR",
+      "section": "art",
+      "label": "Plans for the asset-referenced token, including past and future milestones and resources already allocated",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part B point 5 (fields B.5 and B.6 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "art",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:art:26f60caf24167e20",
+        "section_length": 912
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P1",
+      "citation": "Anhang II Teil C Nr. 1 MiCAR",
+      "section": "offer_or_admission",
+      "label": "Whether the white paper concerns an offer to the public or an admission to trading",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 1 (field C.1 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:559bcf4a85d0396b",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P2",
+      "citation": "Anhang II Teil C Nr. 2 MiCAR",
+      "section": "offer_or_admission",
+      "label": "Amount to be raised, minimum and maximum subscription goals, and whether and how oversubscriptions are accepted and allocated",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 2 (fields C.2, C.3, C.4, C.5 and C.6 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:c1c47fded201b1c7",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P3",
+      "citation": "Anhang II Teil C Nr. 3 MiCAR",
+      "section": "offer_or_admission",
+      "label": "Total number of units to be offered or admitted to trading, where applicable",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 3 (field C.7 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:7ee5ca21b12d54a1",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P4",
+      "citation": "Anhang II Teil C Nr. 4 MiCAR",
+      "section": "offer_or_admission",
+      "label": "Prospective holders targeted and any restriction on the type of holders",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 4 (fields C.8 and C.9 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:2c1852748aa3b7b2",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P5",
+      "citation": "Anhang II Teil C Nr. 5 MiCAR",
+      "section": "offer_or_admission",
+      "label": "Notice of reimbursement, expected timeline of refunds and consequences of exceeding the maximum subscription goal",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 5 (fields C.10, C.11 and C.12 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:f3ce8c18eb5ba38d",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P6",
+      "citation": "Anhang II Teil C Nr. 6 MiCAR",
+      "section": "offer_or_admission",
+      "label": "Phases of the offer and any discounted purchase price for early purchasers",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 6 (fields C.13 and C.14 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:b413f7efc69d0023",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P7",
+      "citation": "Anhang II Teil C Nr. 7 MiCAR",
+      "section": "offer_or_admission",
+      "label": "Subscription period of a time-limited offer",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 7 (fields C.15, C.16 and C.17 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:97989b1826377e78",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P8",
+      "citation": "Anhang II Teil C Nr. 8 MiCAR",
+      "section": "offer_or_admission",
+      "label": "Methods of payment to purchase and to redeem the asset-referenced token",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 8 (field C.18 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:8c51e1a0a7fcd535",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P9",
+      "citation": "Anhang II Teil C Nr. 9 MiCAR",
+      "section": "offer_or_admission",
+      "label": "Method and time schedule of transferring the purchased token to the holders",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 9 (field C.19 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:becefc8994fa1f00",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P10",
+      "citation": "Anhang II Teil C Nr. 10 MiCAR",
+      "section": "offer_or_admission",
+      "label": "Technical requirements the purchaser must fulfil to hold the token",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 10 (field C.20 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:25aaad7da3486815",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P11",
+      "citation": "Anhang II Teil C Nr. 11 MiCAR",
+      "section": "offer_or_admission",
+      "label": "Crypto-asset service provider placing the tokens and the form of placement, where applicable",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 11 (fields C.21 and C.23 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:5c92a1b7658e0a2e",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P12",
+      "citation": "Anhang II Teil C Nr. 12 MiCAR",
+      "section": "offer_or_admission",
+      "label": "Trading platform where admission is sought, how investors access it and the costs involved, where applicable",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 12 (fields C.24, C.26 and C.27 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:acd29f22f500878b",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P13",
+      "citation": "Anhang II Teil C Nr. 13 MiCAR",
+      "section": "offer_or_admission",
+      "label": "Expenses related to the offer to the public",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 13 (field C.28 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:4c658947703c353d",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P14",
+      "citation": "Anhang II Teil C Nr. 14 MiCAR",
+      "section": "offer_or_admission",
+      "label": "Potential conflicts of interest of the persons involved in the offer or admission",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 14 (field C.29 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:f2d19688c9fe02ef",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P15",
+      "citation": "Anhang II Teil C Nr. 15 MiCAR",
+      "section": "offer_or_admission",
+      "label": "Law applicable to the offer to the public and the competent court",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 15 (fields C.30 and C.31 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:2d6628cde4588740",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P1",
+      "citation": "Anhang II Teil D Nr. 1 MiCAR",
+      "section": "rights_and_obligations",
+      "label": "Characteristics and functionality of the token and when the functionalities are planned to apply",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 1 (fields D.1 and D.2 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:6e2208b4ffbc4c52",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P2",
+      "citation": "Anhang II Teil D Nr. 2 MiCAR",
+      "section": "rights_and_obligations",
+      "label": "Rights and obligations of the purchaser and the procedure and conditions for exercising them",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 2 (fields D.3 and D.4 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:8326c93696e7937e",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P3",
+      "citation": "Anhang II Teil D Nr. 3 MiCAR",
+      "section": "rights_and_obligations",
+      "label": "Conditions under which the rights and obligations may be modified",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 3 (field D.5 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:c35bfeed2314c70c",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P4",
+      "citation": "Anhang II Teil D Nr. 4 MiCAR",
+      "section": "rights_and_obligations",
+      "label": "Future offers of the token by the issuer and the number of units it retains, where applicable",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 4 (fields D.6 and D.7 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:1b0483353518f37e",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P5",
+      "citation": "Anhang II Teil D Nr. 5 MiCAR",
+      "section": "rights_and_obligations",
+      "label": "How and where the token can be bought or sold after the offer, where admission to trading is not sought",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 5 (fields D.8 and D.9 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:8c6cec9cf3b1ff93",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P6",
+      "citation": "Anhang II Teil D Nr. 6 MiCAR",
+      "section": "rights_and_obligations",
+      "label": "Restrictions on the transferability of the token",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 6 (field D.10 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:44773db38f28ceb5",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P7",
+      "citation": "Anhang II Teil D Nr. 7 MiCAR",
+      "section": "rights_and_obligations",
+      "label": "Functioning of protocols that increase or decrease the supply in response to demand",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 7 (fields D.11 and D.12 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:a8fbf4fa9e6392f0",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P8",
+      "citation": "Anhang II Teil D Nr. 8 MiCAR",
+      "section": "rights_and_obligations",
+      "label": "Protection schemes protecting the value of the token and compensation schemes, where applicable",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 8 (fields D.13, D.14, D.15 and D.16 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:7e32edab914a7b07",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P9",
+      "citation": "Anhang II Teil D Nr. 9 MiCAR",
+      "section": "rights_and_obligations",
+      "label": "Nature and enforceability of rights, including permanent rights of redemption and claims against the issuer",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 9 (field D.17 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:a0f7fa5bc152f840",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P10",
+      "citation": "Anhang II Teil D Nr. 10 MiCAR",
+      "section": "rights_and_obligations",
+      "label": "Claim the token represents: referenced assets and proportions, relation to the reserve and valuation of the claim",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 10 (fields D.18, D.19, D.20, D.21 and D.22 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:a05800e9a673aa40",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P11",
+      "citation": "Anhang II Teil D Nr. 11 MiCAR",
+      "section": "rights_and_obligations",
+      "label": "Arrangements to ensure the liquidity of the token and the entities in charge, where applicable",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 11 (fields D.23 and D.24 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:ce3dbf8b313ddc68",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P12",
+      "citation": "Anhang II Teil D Nr. 12 MiCAR",
+      "section": "rights_and_obligations",
+      "label": "Contact details for complaints, complaints-handling procedures and any dispute resolution mechanism",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 12 (fields D.25, D.26 and D.27 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:1f02a6910dbe5299",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P13",
+      "citation": "Anhang II Teil D Nr. 13 MiCAR",
+      "section": "rights_and_obligations",
+      "label": "Rights of the holders when the issuer cannot fulfil its obligations, including in insolvency",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 13 (field D.28 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:91bfeb83c7133036",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P14",
+      "citation": "Anhang II Teil D Nr. 14 MiCAR",
+      "section": "rights_and_obligations",
+      "label": "Rights in the implementation of the recovery plan",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 14 (field D.29 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:95a0d18d38690ed6",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P15",
+      "citation": "Anhang II Teil D Nr. 15 MiCAR",
+      "section": "rights_and_obligations",
+      "label": "Rights in the implementation of the redemption plan",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 15 (field D.30 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:f032a1b9d37d0619",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P16",
+      "citation": "Anhang II Teil D Nr. 16 MiCAR",
+      "section": "rights_and_obligations",
+      "label": "How the token is redeemed, and whether the holder can choose the form of redemption, the form of transference or the currency",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 16 (fields D.31, D.32, D.33, D.34 and D.35 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:299b298620078a91",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P17",
+      "citation": "Anhang II Teil D Nr. 17 MiCAR",
+      "section": "rights_and_obligations",
+      "label": "Law applicable to the asset-referenced token and the competent court",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 17 (fields D.36 and D.37 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:55c9e9e951476cd4",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.E.P1",
+      "citation": "Anhang II Teil E Nr. 1 MiCAR",
+      "section": "technology",
+      "label": "Technology used, including the distributed ledger technology, protocols and technical standards",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part E point 1 (fields E.1, E.2 and E.3 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "technology",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:technology:41408539aebd880d",
+        "section_length": 602
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.E.P2",
+      "citation": "Anhang II Teil E Nr. 2 MiCAR",
+      "section": "technology",
+      "label": "Consensus mechanism, where applicable",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part E point 2 (field E.4 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "technology",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:technology:87d70fb59f119cb5",
+        "section_length": 602
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.E.P3",
+      "citation": "Anhang II Teil E Nr. 3 MiCAR",
+      "section": "technology",
+      "label": "Incentive mechanisms to secure transactions and any fees applicable",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part E point 3 (field E.5 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "technology",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:technology:30679e57064ea3b1",
+        "section_length": 602
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.E.P4",
+      "citation": "Anhang II Teil E Nr. 4 MiCAR",
+      "section": "technology",
+      "label": "Functioning of a distributed ledger operated by the issuer or a third party on its behalf",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part E point 4 (fields E.6 and E.7 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "technology",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:technology:f7baca54521f0d37",
+        "section_length": 602
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.E.P5",
+      "citation": "Anhang II Teil E Nr. 5 MiCAR",
+      "section": "technology",
+      "label": "Outcome of an audit of the technology used, if one was conducted",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part E point 5 (fields E.8 and E.9 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "technology",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:technology:e92a5c43416e1f44",
+        "section_length": 602
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.F.P1",
+      "citation": "Anhang II Teil F Nr. 1 MiCAR",
+      "section": "risks",
+      "label": "Risks related to the reserve of assets when the issuer cannot fulfil its obligations",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part F point 1 (field F.1 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "risks",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:risks:a38fb8aac0b8d93e",
+        "section_length": 1234
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.F.P2",
+      "citation": "Anhang II Teil F Nr. 2 MiCAR",
+      "section": "risks",
+      "label": "Risks associated with the issuer",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part F point 2 (field F.2 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "risks",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:risks:373b01a05071f4b8",
+        "section_length": 1234
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.F.P3",
+      "citation": "Anhang II Teil F Nr. 3 MiCAR",
+      "section": "risks",
+      "label": "Risks associated with the offer to the public or the admission to trading",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part F point 3 (field F.3 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "risks",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:risks:a7f979ee4b6a78cc",
+        "section_length": 1234
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.F.P4",
+      "citation": "Anhang II Teil F Nr. 4 MiCAR",
+      "section": "risks",
+      "label": "Risks associated with the token, in particular with regard to the assets referenced",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part F point 4 (field F.4 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "risks",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:risks:1b81b858077a862f",
+        "section_length": 1234
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.F.P5",
+      "citation": "Anhang II Teil F Nr. 5 MiCAR",
+      "section": "risks",
+      "label": "Risks associated with the operationalisation of the token project",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part F point 5 (field F.5 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "risks",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:risks:571e2e9275aef68a",
+        "section_length": 1234
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.F.P6",
+      "citation": "Anhang II Teil F Nr. 6 MiCAR",
+      "section": "risks",
+      "label": "Risks associated with the technology used and any mitigation measures",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part F point 6 (fields F.6 and F.7 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "risks",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:risks:136c8ae305df76c4",
+        "section_length": 1234
       }
     },
     {
@@ -67,6 +1267,106 @@
         "section_key": "reserve_of_assets",
         "parser_source_type": "json",
         "stable_anchor_id": "json:reserve_of_assets:201e6345d45fb626",
+        "section_length": 1411
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.G.P1",
+      "citation": "Anhang II Teil G Nr. 1 MiCAR",
+      "section": "reserve_of_assets",
+      "label": "Mechanism aligning the value of the reserve of assets with the claim",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part G point 1 (field G.1 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "reserve_of_assets",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:reserve_of_assets:249263eeb4a8ba5e",
+        "section_length": 1411
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.G.P2",
+      "citation": "Anhang II Teil G Nr. 2 MiCAR",
+      "section": "reserve_of_assets",
+      "label": "Reserve of assets and its composition",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part G point 2 (field G.2 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "reserve_of_assets",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:reserve_of_assets:379ca0c30b414c82",
+        "section_length": 1411
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.G.P3",
+      "citation": "Anhang II Teil G Nr. 3 MiCAR",
+      "section": "reserve_of_assets",
+      "label": "Mechanisms through which the tokens are issued and redeemed",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part G point 3 (field G.3 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "reserve_of_assets",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:reserve_of_assets:8e1e1f3cb5bb52bf",
+        "section_length": 1411
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.G.P4",
+      "citation": "Anhang II Teil G Nr. 4 MiCAR",
+      "section": "reserve_of_assets",
+      "label": "Whether part of the reserve assets is invested and, where applicable, the investment policy",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part G point 4 (fields G.4 and G.5 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "reserve_of_assets",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:reserve_of_assets:ab63cb07f6995d22",
+        "section_length": 1411
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.G.P5",
+      "citation": "Anhang II Teil G Nr. 5 MiCAR",
+      "section": "reserve_of_assets",
+      "label": "Custody arrangements for the reserve assets, including segregation, and the custodians",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part G point 5 (fields G.6 and G.7 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "reserve_of_assets",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:reserve_of_assets:95206b7445da016b",
         "section_length": 1411
       }
     },
