@@ -450,9 +450,10 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
     except Exception as exc:
         raise SystemExit(f"Error reading document {path}: {exc}") from exc
 
-    # The regime of a PDF or DOCX is inferred from its whole text: a heading ("Reserve of Assets"), which is
-    # not section body, or text in no section may be all that names it. A negated marker does not count. A
-    # given regime is not inferred, so the text is not read for it.
+    # The regime of a PDF or DOCX is inferred from its extracted text (for a DOCX the runs and hyperlinks
+    # directly in the paragraphs of its body): a heading ("Reserve of Assets"), which is not section body, or
+    # text in no section may be all that names it. A negated marker does not count. A given regime is not
+    # inferred, so the text is not read for it.
     if whitepaper_type is not None:
         wp_type = whitepaper_type
     else:

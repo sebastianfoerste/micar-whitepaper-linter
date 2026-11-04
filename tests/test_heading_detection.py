@@ -2794,8 +2794,8 @@ _STATEMENT = (
             _regimes(OTHER, ART),
         ),
         # An introduction that calls the token an asset-referenced token makes the draft an ART in a DOCX or PDF
-        # wherever it stands; Markdown and XHTML read only section text, so not under a first heading that names
-        # no section, as in 1.2.1.
+        # wherever the inference reads it (in a DOCX a paragraph of its body); Markdown and XHTML read only section
+        # text, so not under a first heading that names no section, as in 1.2.1.
         (
             [
                 ("heading", "Introduction"),
@@ -2827,9 +2827,12 @@ _STATEMENT = (
         ),
         # Before any heading, Markdown and XHTML read no introduction; a DOCX or PDF does, as in 1.2.1.
         ([("body", _ART_INTRODUCTION), *_SST_ISSUER], _regimes(ART, OTHER)),
-        # In the paragraph of the first-page statement, which now has a section of its own, every format reads
-        # it (1.2.1 read it only from a DOCX or PDF).
+        # After the first-page statement in the paragraph that the statement opens, which now joins the
+        # statement's own section, every format reads it (1.2.1 read it only from a DOCX or PDF).
         ([("body", f"{_STATEMENT} {_ART_INTRODUCTION}"), *_SST_ISSUER], _regimes(ART, ART)),
+        # Before the statement in its paragraph, which the statement then does not open, Markdown and XHTML do
+        # not read it, as in 1.2.1.
+        ([("body", f"{_ART_INTRODUCTION} {_STATEMENT}"), *_SST_ISSUER], _regimes(ART, OTHER)),
         # A negation before the phrase in its clause makes the introduction other (in 1.2.1 an ART).
         (
             [
@@ -2839,7 +2842,8 @@ _STATEMENT = (
             ],
             _regimes(OTHER, OTHER),
         ),
-        # A phrase that a line end splits is not found, in any format, as in 1.2.1.
+        # A phrase split over two paragraphs (in a PDF two lines) is not found in any format, as in 1.2.1;
+        # test_a_phrase_that_a_line_end_splits_inside_a_paragraph reads one paragraph.
         (
             [
                 ("heading", "Summary"),
@@ -2859,6 +2863,17 @@ _STATEMENT = (
                 *_MEADOW_OFFEROR,
             ],
             _regimes(ART, ART),
+        ),
+        # Without the colon, such a lead-in governs the items after it in a DOCX or PDF (docs/SETUP.md); Markdown
+        # and XHTML end the clause at the first item's semicolon.
+        (
+            [
+                _CRYPTO_ASSET,
+                ("bold", "The token is not"),
+                *_lines("- an asset-referenced token;", "- an e-money token."),
+                *_MEADOW_OFFEROR,
+            ],
+            _regimes(OTHER, EMT),
         ),
         # Upper-case list letters are no list items: each starts a new sentence (Markdown and XHTML end the
         # clause at the semicolon instead).
@@ -2889,9 +2904,11 @@ _STATEMENT = (
         "introduction after a section",
         "introduction before any heading",
         "introduction with the statement",
+        "introduction before the statement",
         "negated introduction",
-        "phrase split by a line end",
+        "phrase split over two paragraphs",
         "heading lead-in with a colon",
+        "heading lead-in without a colon",
         "upper-case list letters",
     ],
 )
@@ -2903,16 +2920,45 @@ def test_the_documented_limits_of_the_regime_reading(
     assert load_whitepaper(path).type is regimes[suffix]
 
 
+_INTRODUCTION_RUN = f'<w:r><w:t xml:space="preserve">{_ART_INTRODUCTION}</w:t></w:r>'
+_REVISION = 'w:id="1" w:author="Synthetic Reviewer"'
+# The introduction inside a body paragraph ("Note: ..."), as a run of its own or inside another element.
+_INLINE_INTRODUCTIONS = {
+    "hyperlink": f'<w:hyperlink w:anchor="introduction">{_INTRODUCTION_RUN}</w:hyperlink>',
+    "run marked hidden": f'<w:r><w:rPr><w:vanish/></w:rPr><w:t xml:space="preserve">{_ART_INTRODUCTION}</w:t></w:r>',
+    "tracked insertion": f"<w:ins {_REVISION}>{_INTRODUCTION_RUN}</w:ins>",
+    "moved here": f"<w:moveTo {_REVISION}>{_INTRODUCTION_RUN}</w:moveTo>",
+    "content control": f"<w:sdt><w:sdtPr/><w:sdtContent>{_INTRODUCTION_RUN}</w:sdtContent></w:sdt>",
+    "smart tag": f'<w:smartTag w:uri="urn:synthetic" w:element="note">{_INTRODUCTION_RUN}</w:smartTag>',
+    "simple field": f'<w:fldSimple w:instr=" DOCPROPERTY Introduction ">{_INTRODUCTION_RUN}</w:fldSimple>',
+}
+
+
 @pytest.mark.parametrize(
     ("placement", "regime"),
-    [("body", ART), ("table", OTHER), ("header", OTHER), ("tracked insertion", OTHER)],
+    [
+        ("body", ART),
+        ("table", OTHER),
+        ("header", OTHER),
+        ("tracked insertion", OTHER),
+        ("hyperlink", ART),
+        ("run marked hidden", ART),
+        ("footer", OTHER),
+        ("moved here", OTHER),
+        ("content control", OTHER),
+        ("smart tag", OTHER),
+        ("simple field", OTHER),
+    ],
 )
 def test_a_docx_introduction_is_read_for_the_regime_only_in_a_paragraph_of_its_body(
     tmp_path: Path, placement: str, regime: WhitepaperType
 ):
-    # The regime of a DOCX is read from the paragraphs of its body (python-docx's paragraph text), not from its
-    # tables, headers or footers, nor from a run inside a tracked insertion, as in 1.2.1 (CHANGELOG, docs/SETUP.md).
-    from docx.oxml.ns import qn
+    # The regime of a DOCX is read from the runs and hyperlinks that stand directly in the paragraphs of its body
+    # (python-docx's paragraph text), runs marked hidden included, not from its tables, headers or footers, nor from
+    # text inside a tracked insertion or move, a content control, a smart tag or a simple field, as in 1.2.1
+    # (CHANGELOG, docs/SETUP.md).
+    from docx.oxml import parse_xml
+    from docx.oxml.ns import nsdecls
 
     document = docx.Document()
     if placement == "body":
@@ -2921,16 +2967,12 @@ def test_a_docx_introduction_is_read_for_the_regime_only_in_a_paragraph_of_its_b
         document.add_table(rows=1, cols=1).cell(0, 0).text = _ART_INTRODUCTION
     elif placement == "header":
         document.sections[0].header.paragraphs[0].text = _ART_INTRODUCTION
+    elif placement == "footer":
+        document.sections[0].footer.paragraphs[0].text = _ART_INTRODUCTION
     else:
-        insertion = OxmlElement("w:ins")
-        insertion.set(qn("w:id"), "1")
-        insertion.set(qn("w:author"), "Synthetic Reviewer")
-        run = OxmlElement("w:r")
-        text = OxmlElement("w:t")
-        text.text = _ART_INTRODUCTION
-        run.append(text)
-        insertion.append(run)
-        document.add_paragraph("Note: ")._p.append(insertion)
+        paragraph = document.add_paragraph("Note: ")
+        for element in parse_xml(f"<w:x {nsdecls('w')}>{_INLINE_INTRODUCTIONS[placement]}</w:x>"):
+            paragraph._p.append(element)
     for kind, text in _SST_ISSUER:
         if kind == "heading":
             document.add_heading(text, level=1)
@@ -2938,4 +2980,43 @@ def test_a_docx_introduction_is_read_for_the_regime_only_in_a_paragraph_of_its_b
             document.add_paragraph(text)
     path = tmp_path / "introduction.docx"
     document.save(path)
+    assert load_whitepaper(path).type is regime
+
+
+@pytest.mark.parametrize(
+    ("first", "second"),
+    [
+        ("The Synthetic Stable Token is an asset-", "referenced token."),
+        ("The Synthetic Stable Token is backed by a reserve of", "assets held in cash."),
+    ],
+    ids=["after a hyphen", "between words"],
+)
+@pytest.mark.parametrize(
+    ("suffix", "regime"), [(".docx", OTHER), (".md", OTHER), (".xhtml", ART), (".html", ART)]
+)
+def test_a_phrase_that_a_line_end_splits_inside_a_paragraph(
+    tmp_path: Path, first: str, second: str, suffix: str, regime: WhitepaperType
+):
+    # A line break inside a DOCX paragraph and a line end inside a Markdown paragraph keep the two parts of a phrase
+    # apart, as in 1.2.1; a <br> inside an XHTML or HTML paragraph reads as a space, or joins a word broken after its
+    # hyphen, so the phrase is found there (1.2.1 found it only after a hyphen) (CHANGELOG).
+    path = tmp_path / f"split{suffix}"
+    issuer = _SST_ISSUER[1][1]
+    if suffix == ".docx":
+        document = docx.Document()
+        document.add_heading("Summary", level=1)
+        run = document.add_paragraph().add_run(first)
+        run.add_break()
+        run.add_text(second)
+        document.add_heading("Information about the Issuer", level=1)
+        document.add_paragraph(issuer)
+        document.save(path)
+    elif suffix == ".md":
+        path.write_text(f"## Summary\n\n{first}\n{second}\n\n## Information about the Issuer\n\n{issuer}\n", encoding="utf-8")
+    else:
+        path.write_text(
+            f"<html><body><h2>Summary</h2><p>{first}<br/>{second}</p>"
+            f"<h2>Information about the Issuer</h2><p>{issuer}</p></body></html>",
+            encoding="utf-8",
+        )
     assert load_whitepaper(path).type is regime

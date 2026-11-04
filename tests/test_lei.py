@@ -1290,9 +1290,15 @@ HIDDEN_MARKUP = {
         "pass",
     ),
     "shown": (f"<p>The LEI of the offeror is {SHOWN}.</p>", "review"),
-    # A fragment in a block of its own is read apart from the code, as it would be if shown.
+    # A fragment in a block of its own is read apart from the code, as it would be if shown. No full stop follows
+    # the code, so a reading that ran the two blocks together would complete it: in a paragraph, both the section
+    # text and the text of the file would have to; in a table row, which no section reads, the text of the file.
     "in a block of its own": (
-        f'<p>The LEI of the offeror is {SHOWN}.</p><p hidden="hidden">{HIDDEN}</p>',
+        f'<p>The LEI of the offeror is {SHOWN}</p><p hidden="hidden">{HIDDEN}</p>',
+        "review",
+    ),
+    "in a table row of its own": (
+        f'<table><tr><td>The LEI of the offeror is {SHOWN}</td></tr><tr><td hidden="hidden">{HIDDEN}</td></tr></table>',
         "review",
     ),
     # A hidden separator inside the code splits it into groups that are no LEI-like code.
