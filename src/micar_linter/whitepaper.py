@@ -593,8 +593,9 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
 
     # The sections of the other regimes are dropped. Art. 19 MiCAR prescribes no first-page statement, so
     # no ART rule reads one. COMMON.LEI_CHECK_DIGITS still reads the text of each dropped section, after
-    # the text of the file and a blank line apart from it, so it reads a code there as in a section the regime
-    # keeps and a change of the regime cannot make a draft pass: the text of the file holds text moved away or
+    # the text of the file and a blank line apart from it, so it checks a code there as in a section the
+    # regime keeps (a valid code there never counts as found) and a change of the regime cannot make a draft
+    # pass: the text of the file holds text moved away or
     # deleted that can complete a code the section shows malformed, which the text as a reader sees it
     # (shown_text) leaves out only where that reading does not fail, and it joins to the code a tracked
     # insertion, a content control, a field result or a smart tag that the section text leaves out.
