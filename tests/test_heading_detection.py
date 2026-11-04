@@ -3430,8 +3430,10 @@ _NESTED_RISKS = (
         ),
         # In a DOCX or PDF the lead-in that decides whether a pseudo-negation is the only negation word stops at a
         # line that starts a clause (a capital letter, a digit or a name: "MiCAR", where a PDF wraps the paragraph
-        # or a DOCX splits it) and after a line that ends in a full stop, semicolon, question or exclamation mark or
-        # colon ("(i.e.", "defines;"), also inside a sentence. So "does not qualify" on the earlier line is not seen,
+        # or a DOCX splits it) and after a line that ends in a full stop ("(i.e."), also inside a sentence; a line
+        # that ends in a semicolon ("defines;") is passed over, the next line continuing the clause that line
+        # continued, and a line that ends in a colon carries its clause on unless its own lead-in holds only
+        # pseudo-negations. So "does not qualify" on the earlier line is not seen,
         # and the list reads as if only the pseudo-negation negated it, which governs no item: the draft for
         # another crypto-asset is an ART, as in 1.2.1 (before #96 the pseudo-negation's own "not" governed the
         # items, so it was other). The same paragraph in one DOCX paragraph is other. Markdown and XHTML end the

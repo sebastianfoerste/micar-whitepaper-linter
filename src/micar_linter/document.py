@@ -2034,7 +2034,7 @@ class _PdfInk:
     space other than those is not told apart. An operator whose operands this cannot read (a number too large
     for a float among them) changes nothing here; where pypdf itself cannot read it, pypdf stops the
     extraction. A form XObject is drawn with the state saved and restored after it, also where its entries
-    cannot be read (a /Matrix without six numbers leaves the matrix as it was), so nothing its content sets
+    cannot be read (a /Matrix that is not an array of six numbers leaves the matrix as it was), so nothing its content sets
     outlasts it. The visitors never raise: anything else that goes wrong sets failed, and from then on they do
     nothing, so pypdf's own reading goes on as without them. With hide, the text of each text-showing operator
     that cannot be seen is replaced by a _GAP before pypdf reads it (pypdf calls the visitor with the operands
@@ -2167,8 +2167,8 @@ class _PdfInk:
         it the state is restored whatever its content set, also where its entries cannot be read (an image
         draws no content, and leaves the state as it was). A form's content draws with its own resources and
         matrix, and is not shown where its optional content is not. An entry that cannot be read changes
-        nothing for its content: resources that cannot be read are those of the content around it, and a
-        matrix without six numbers leaves the matrix as it was."""
+        nothing for its content: resources that cannot be read (not a dictionary, or empty) are those of the content
+        around it, and a matrix that is not an array of six numbers leaves the matrix as it was."""
         self._forms.append((self._state, self._saved, self._marked, self._off))
         self._saved = []
         self._marked = []
@@ -2176,15 +2176,21 @@ class _PdfInk:
         self._resources.append(outer)
         resources = _resolved(outer) or {}
         xobject = _resolved(_resolved(resources.get("/XObject")).get(name))
-        self._resources[-1] = xobject.get("/Resources") or outer
+        own = _resolved(xobject.get("/Resources"))
+        # Resources that cannot be read (not a dictionary, or empty) are those of the content around it.
+        self._resources[-1] = own if isinstance(own, dict) and own else outer
         off = xobject.get("/OC") is not None and not self._optional.shown(xobject.raw_get("/OC"))
         self._marked = [off]
         self._off += off
         matrix = _resolved(xobject.get("/Matrix")) or _IDENTITY
-        # A matrix without six numbers cannot be read, and is not read any further.
-        if len(matrix) != len(_IDENTITY):
-            raise ValueError("a form matrix holds six numbers")
-        self._state = self._state._replace(ctm=_multiply(tuple(map(float, matrix)), self._state.ctm))
+        # A matrix that is not an array of six numbers (a string of six digits is none) cannot be read, and is
+        # not read any further.
+        if not isinstance(matrix, (list, tuple)) or len(matrix) != len(_IDENTITY):
+            raise ValueError("a form matrix is an array of six numbers")
+        numbers = [_resolved(value) for value in matrix]
+        if not all(isinstance(value, (int, float)) and not isinstance(value, bool) for value in numbers):
+            raise ValueError("a form matrix is an array of six numbers")
+        self._state = self._state._replace(ctm=_multiply(tuple(map(float, numbers)), self._state.ctm))
 
     def _unseen(self, tm) -> bool:
         state = self._state

@@ -2087,6 +2087,78 @@ def test_the_state_is_restored_after_a_pdf_form_whose_entries_cannot_be_read(
     assert any(SHOWN in issue for issue in check_digits.issues)
 
 
+@pytest.mark.parametrize(
+    ("matrix", "status"),
+    [
+        ("(900900)", "review"),
+        ("<393030393030>", "review"),
+        ("[1 0 0 1 0 0]", "review"),
+        ("[9 0 0 9 0 0]", "pass"),
+    ],
+    ids=["string of six digits", "hex string of six digits", "identity array", "array scaling by nine"],
+)
+def test_a_pdf_form_matrix_that_is_no_array_of_numbers_is_not_read(tmp_path: Path, matrix: str, status: str):
+    # A form draws the code line and its last character in a 0.5 pt font, which a reader cannot see, so the page shows
+    # the code malformed. Before, a /Matrix given as a string of six digits was read character by character, as
+    # [9 0 0 9 0 0], so the last character counted as 4.5 pt and as shown, and the rule passed. A matrix that is not
+    # an array of six numbers is not read; an array that does scale the form by nine makes the character readable.
+    head = (
+        f"BT 13 TL 50 770 Td /F2 14 Tf (Information about the Issuer) Tj 0 -13 Td /F1 10 Tf ({ISSUER_TEXT}) Tj "
+        f"0 -13 Td /F2 14 Tf ({OFFEROR}) Tj ET /Fm1 Do BT 50 600 Td /F2 14 Tf (Risk Factors) Tj ET"
+    )
+    form = f"BT /F1 10 Tf 1 0 0 1 50 {_CODE_BASELINE} Tm ({_CODE_LINE}) Tj /F1 0.5 Tf ({HIDDEN}) Tj ET"
+    path = _pdf_objects(
+        tmp_path / "matrix.pdf",
+        [
+            b"<< /Type /Catalog /Pages 2 0 R >>",
+            b"<< /Type /Pages /Kids [5 0 R] /Count 1 >>",
+            *_HELVETICA,
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1000 792] /Resources << " + _FONTS
+            + b" /XObject << /Fm1 7 0 R >> >> /Contents 6 0 R >>",
+            _stream(head),
+            _stream(
+                form,
+                f"/Type /XObject /Subtype /Form /BBox [0 0 1000 792] /Matrix {matrix} /Resources << {_FONTS.decode()} >>",
+            ),
+        ],
+    )
+    check_digits, _ = _check_digits(path)
+    assert check_digits.status == status
+
+
+@pytest.mark.parametrize(
+    "resources",
+    [None, "[1]", "[]", "null", "99 0 R", "(synthetic)"],
+    ids=["absent", "array", "empty array", "null", "dangling reference", "string"],
+)
+def test_a_pdf_form_whose_resources_cannot_be_read_uses_those_around_it(tmp_path: Path, resources: str | None):
+    # The form marks its text with optional content that is off; the name /x is in the page's resources only. A form
+    # whose /Resources are not a dictionary (or are empty) uses those of the content around it, as one without
+    # /Resources does, so the marked text is hidden. Before, only a missing or empty /Resources fell back, and the
+    # marked text counted as shown.
+    from micar_linter.document import parse_pdf
+
+    form = "/Type /XObject /Subtype /Form /BBox [0 0 612 792]" + ("" if resources is None else f" /Resources {resources}")
+    path = _pdf_objects(
+        tmp_path / "resources.pdf",
+        [
+            b"<< /Type /Catalog /Pages 2 0 R /OCProperties << /OCGs [7 0 R] /D << /OFF [7 0 R] >> >> >>",
+            b"<< /Type /Pages /Kids [5 0 R] /Count 1 >>",
+            *_HELVETICA,
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << " + _FONTS
+            + b" /XObject << /Fm1 8 0 R >> /Properties << /x 7 0 R >> >> /Contents 6 0 R >>",
+            _stream("BT 50 770 Td /F1 10 Tf (Synthetic layer test) Tj ET /Fm1 Do"),
+            _OCG.encode(),
+            _stream("/OC /x BDC BT /F1 10 Tf 1 0 0 1 50 700 Tm (Synthetic hidden layer) Tj ET EMC", form),
+        ],
+    )
+    parsed = parse_pdf(path)
+    # pypdf finds no font for the form's text (the form's own resources hold none), so the page's text holds it as
+    # characters it cannot map; the text as shown leaves all of it out.
+    assert parsed.shown_text is not None
+    assert parsed.shown_text.splitlines() == ["Synthetic layer test"]
+
+
 # A hidden separator inside a valid code: hidden text still takes up its room on the page (the text position moves
 # past it as past text that is shown), so the page shows the code split into groups, and so does the text as shown.
 PDF_GAPS = {
