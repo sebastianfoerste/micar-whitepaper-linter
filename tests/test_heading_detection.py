@@ -2827,11 +2827,12 @@ _STATEMENT = (
         ),
         # Before any heading, Markdown and XHTML read no introduction; a DOCX or PDF does, as in 1.2.1.
         ([("body", _ART_INTRODUCTION), *_SST_ISSUER], _regimes(ART, OTHER)),
-        # After the first-page statement in the paragraph that the statement opens, which now joins the
-        # statement's own section, every format reads it (1.2.1 read it only from a DOCX or PDF).
+        # After the first-page statement in the line (Markdown) or paragraph (XHTML) where the statement ends,
+        # which now joins the statement's own section, every format reads it (1.2.1 read it only from a DOCX or
+        # PDF); test_the_text_after_the_statement_is_read_only_where_the_statement_ends reads the next line.
         ([("body", f"{_STATEMENT} {_ART_INTRODUCTION}"), *_SST_ISSUER], _regimes(ART, ART)),
-        # Before the statement in its paragraph, which the statement then does not open, Markdown and XHTML do
-        # not read it, as in 1.2.1.
+        # Before the statement in its line or paragraph, which the statement then does not open, Markdown and
+        # XHTML do not read it, as in 1.2.1.
         ([("body", f"{_ART_INTRODUCTION} {_STATEMENT}"), *_SST_ISSUER], _regimes(ART, OTHER)),
         # A negation before the phrase in its clause makes the introduction other (in 1.2.1 an ART).
         (
@@ -2999,7 +3000,9 @@ def test_a_phrase_that_a_line_end_splits_inside_a_paragraph(
 ):
     # A line break inside a DOCX paragraph and a line end inside a Markdown paragraph keep the two parts of a phrase
     # apart, as in 1.2.1; a <br> inside an XHTML or HTML paragraph reads as a space, or joins a word broken after its
-    # hyphen, so the phrase is found there (1.2.1 found it only after a hyphen) (CHANGELOG).
+    # hyphen, so the phrase is found there (CHANGELOG). 1.2.1 ran the text on either side of the <br> together with
+    # nothing between them: with this markup it found only "asset-" / "referenced token";
+    # test_a_phrase_that_a_br_splits_is_found_whatever_the_whitespace_beside_it varies the whitespace.
     path = tmp_path / f"split{suffix}"
     issuer = _SST_ISSUER[1][1]
     if suffix == ".docx":
@@ -3018,5 +3021,86 @@ def test_a_phrase_that_a_line_end_splits_inside_a_paragraph(
             f"<html><body><h2>Summary</h2><p>{first}<br/>{second}</p>"
             f"<h2>Information about the Issuer</h2><p>{issuer}</p></body></html>",
             encoding="utf-8",
+        )
+    assert load_whitepaper(path).type is regime
+
+
+@pytest.mark.parametrize(
+    ("first", "second"),
+    [
+        ("The Synthetic Stable Token is an asset-", "referenced token."),
+        ("The Synthetic Stable Token is backed by a reserve of", "assets held in cash."),
+    ],
+    ids=["after a hyphen", "between words"],
+)
+@pytest.mark.parametrize(
+    "shape",
+    ["{}<br/>{}", "{}<br/>\n{}", "{} <br/>{}", "{}\n<br/>{}"],
+    ids=["none", "line end after", "space before", "line end before"],
+)
+@pytest.mark.parametrize("suffix", [".xhtml", ".html"])
+def test_a_phrase_that_a_br_splits_is_found_whatever_the_whitespace_beside_it(
+    tmp_path: Path, first: str, second: str, shape: str, suffix: str
+):
+    # The phrase is found with or without a space or line end beside the <br> (CHANGELOG). 1.2.1 ran the text on
+    # either side of the <br> together with nothing between them, so it found "reserve of" / "assets" only with
+    # whitespace beside the <br> and "asset-" / "referenced token" only with none.
+    path = tmp_path / f"split{suffix}"
+    path.write_text(
+        f"<html><body><h2>Summary</h2><p>{shape.format(first, second)}</p>"
+        f"<h2>Information about the Issuer</h2><p>{_SST_ISSUER[1][1]}</p></body></html>",
+        encoding="utf-8",
+    )
+    assert load_whitepaper(path).type is ART
+
+
+_STATEMENT_FIRST_LINE = "This crypto-asset white paper has not been approved by any competent authority in any Member State"
+_STATEMENT_LAST_LINE = "of the European Union."
+
+
+@pytest.mark.parametrize(
+    ("suffix", "statement", "regime"),
+    [
+        # Markdown reads the text after the statement in the line where the statement ends, also where the
+        # statement wraps over lines, and not the next line of the same paragraph.
+        (".md", f"{_STATEMENT} {_ART_INTRODUCTION}", ART),
+        (".md", f"{_STATEMENT_FIRST_LINE}\n{_STATEMENT_LAST_LINE} {_ART_INTRODUCTION}", ART),
+        (".md", f"{_STATEMENT}\n{_ART_INTRODUCTION}", OTHER),
+        (".md", f"{_STATEMENT_FIRST_LINE}\n{_STATEMENT_LAST_LINE}\n{_ART_INTRODUCTION}", OTHER),
+        # XHTML and HTML read it in the paragraph where the statement ends, after a <br> too, and not in the next
+        # paragraph.
+        (".xhtml", f"<p>{_STATEMENT} {_ART_INTRODUCTION}</p>", ART),
+        (".xhtml", f"<p>{_STATEMENT}<br/>{_ART_INTRODUCTION}</p>", ART),
+        (".xhtml", f"<p>{_STATEMENT_FIRST_LINE}</p><p>{_STATEMENT_LAST_LINE} {_ART_INTRODUCTION}</p>", ART),
+        (".xhtml", f"<p>{_STATEMENT}</p><p>{_ART_INTRODUCTION}</p>", OTHER),
+        (".html", f"<p>{_STATEMENT}<br/>{_ART_INTRODUCTION}</p>", ART),
+        (".html", f"<p>{_STATEMENT}</p><p>{_ART_INTRODUCTION}</p>", OTHER),
+    ],
+    ids=[
+        "markdown same line",
+        "markdown wrapped statement, its last line",
+        "markdown next line",
+        "markdown wrapped statement, next line",
+        "xhtml same paragraph",
+        "xhtml after a br",
+        "xhtml statement over two paragraphs, its last paragraph",
+        "xhtml next paragraph",
+        "html after a br",
+        "html next paragraph",
+    ],
+)
+def test_the_text_after_the_statement_is_read_only_where_the_statement_ends(
+    tmp_path: Path, suffix: str, statement: str, regime: WhitepaperType
+):
+    # Before any heading, Markdown, XHTML and HTML read an introduction only after the first-page statement in its
+    # last line (Markdown) or paragraph (XHTML, HTML), which joins the statement's own section (CHANGELOG); in
+    # 1.2.1 all of these were other.
+    path = tmp_path / f"statement{suffix}"
+    issuer_heading, issuer = _SST_ISSUER[0][1], _SST_ISSUER[1][1]
+    if suffix == ".md":
+        path.write_text(f"{statement}\n\n## {issuer_heading}\n\n{issuer}\n", encoding="utf-8")
+    else:
+        path.write_text(
+            f"<html><body>{statement}<h2>{issuer_heading}</h2><p>{issuer}</p></body></html>", encoding="utf-8"
         )
     assert load_whitepaper(path).type is regime
