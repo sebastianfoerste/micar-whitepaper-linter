@@ -1991,12 +1991,14 @@ class _PdfInk:
 
     Text that is transparent, under other content, clipped away, off the page, in a pattern or in a colour
     space other than those is not told apart. An operator whose operands this cannot read (a number too large
-    for a float among them, a form XObject /Matrix without six numbers) changes nothing here; where pypdf
-    itself cannot read it, pypdf stops the extraction. The visitors never raise: anything else that goes wrong
-    sets failed, and from then on they do nothing, so pypdf's own reading goes on as without them. With hide,
-    the text of each text-showing operator that cannot be seen is replaced by a _GAP before pypdf reads it
-    (pypdf calls the visitor with the operands it then reads, and builds them afresh for each extraction), so
-    the page's text leaves it out but keeps a gap where it takes up its room on the page."""
+    for a float among them) changes nothing here; where pypdf itself cannot read it, pypdf stops the
+    extraction. A form XObject is drawn with the state saved and restored after it, also where its entries
+    cannot be read (a /Matrix without six numbers leaves the matrix as it was), so nothing its content sets
+    outlasts it. The visitors never raise: anything else that goes wrong sets failed, and from then on they do
+    nothing, so pypdf's own reading goes on as without them. With hide, the text of each text-showing operator
+    that cannot be seen is replaced by a _GAP before pypdf reads it (pypdf calls the visitor with the operands
+    it then reads, and builds them afresh for each extraction), so the page's text leaves it out but keeps a
+    gap where it takes up its room on the page."""
 
     def __init__(self, resources, hide: bool, optional: _OptionalContent) -> None:
         self.hide = hide
@@ -2010,9 +2012,9 @@ class _PdfInk:
         # that is not shown, and how many of them are not shown.
         self._marked: list[bool] = []
         self._off = 0
-        # For each form XObject being drawn: the state, the stack, the marked content and the count of
-        # sequences not shown to restore after it (None for an image).
-        self._forms: list[tuple[_Ink, list[_Ink], list[bool], int] | None] = []
+        # For each XObject being drawn: the state, the stack, the marked content and the count of sequences
+        # not shown to restore after it.
+        self._forms: list[tuple[_Ink, list[_Ink], list[bool], int]] = []
 
     def before(self, operator: bytes, operands: list, cm, tm) -> None:
         if not self.failed:
@@ -2086,15 +2088,14 @@ class _PdfInk:
                 self._enter_form(operands[0])
         except Exception:
             # An operand this cannot read (a number too large for a float, a missing resource) leaves the state
-            # as it was: each branch changes it only once it has read all it needs.
+            # as it was: each branch changes it only once it has read all it needs (Do saves the state first,
+            # so that it is restored after the XObject, _enter_form).
             pass
 
     def _after(self, operator: bytes) -> None:
         if operator == b"Do" and self._forms:
-            saved = self._forms.pop()
-            if saved is not None:
-                self._state, self._saved, self._marked, self._off = saved
-                self._resources.pop()
+            self._state, self._saved, self._marked, self._off = self._forms.pop()
+            self._resources.pop()
 
     def _marked_content(self, properties):
         """The optional content a BDC names: its property list, inline or named in the /Properties resources."""
@@ -2121,27 +2122,28 @@ class _PdfInk:
             self._state = self._state._replace(stroke_space=space, stroke=components)
 
     def _enter_form(self, name) -> None:
-        """Before a form XObject: its content draws with the state saved and its own matrix and resources, and
-        is not shown where its optional content is not. All is read before the state changes, so a form whose
-        matrix or entries cannot be read leaves it as it was (and None on the stack for after)."""
-        self._forms.append(None)
-        resources = _resolved(self._resources[-1]) or {}
+        """Before an XObject: the state is saved first, before anything of the XObject is read, so that after
+        it the state is restored whatever its content set, also where its entries cannot be read (an image
+        draws no content, and leaves the state as it was). A form's content draws with its own resources and
+        matrix, and is not shown where its optional content is not. An entry that cannot be read changes
+        nothing for its content: resources that cannot be read are those of the content around it, and a
+        matrix without six numbers leaves the matrix as it was."""
+        self._forms.append((self._state, self._saved, self._marked, self._off))
+        self._saved = []
+        self._marked = []
+        outer = self._resources[-1]
+        self._resources.append(outer)
+        resources = _resolved(outer) or {}
         xobject = _resolved(_resolved(resources.get("/XObject")).get(name))
-        if xobject.get("/Subtype") != "/Form":
-            return
+        self._resources[-1] = xobject.get("/Resources") or outer
+        off = xobject.get("/OC") is not None and not self._optional.shown(xobject.raw_get("/OC"))
+        self._marked = [off]
+        self._off += off
         matrix = _resolved(xobject.get("/Matrix")) or _IDENTITY
         # A matrix without six numbers cannot be read, and is not read any further.
         if len(matrix) != len(_IDENTITY):
             raise ValueError("a form matrix holds six numbers")
-        ctm = _multiply(tuple(map(float, matrix)), self._state.ctm)
-        off = xobject.get("/OC") is not None and not self._optional.shown(xobject.raw_get("/OC"))
-        form_resources = xobject.get("/Resources") or resources
-        self._forms[-1] = (self._state, self._saved, self._marked, self._off)
-        self._saved = []
-        self._marked = [off]
-        self._off += off
-        self._state = self._state._replace(ctm=ctm)
-        self._resources.append(form_resources)
+        self._state = self._state._replace(ctm=_multiply(tuple(map(float, matrix)), self._state.ctm))
 
     def _unseen(self, tm) -> bool:
         state = self._state

@@ -2012,6 +2012,52 @@ def test_nested_pdf_forms_whose_matrix_cannot_be_read_do_not_stop_the_reading(tm
     assert any(SHOWN in issue for issue in check_digits.issues)
 
 
+@pytest.mark.parametrize(("hides", "shows"), [("1 g", "0 g"), ("3 Tr", "0 Tr")], ids=["white fill", "render mode 3"])
+@pytest.mark.parametrize(
+    ("subtype", "matrix"),
+    [
+        ("/Form", "1 0 0 1"),
+        ("/Form", "1 0 0 1 0 0 0"),
+        ("/Form", "/a /b /c /d /e /f"),
+        ("/PS", "1 0 0 1 0 0"),
+        ("/Form", "1 0 0 1 0 0"),
+    ],
+    ids=["four numbers", "seven numbers", "names", "PostScript XObject", "readable matrix"],
+)
+def test_the_state_is_restored_after_a_pdf_form_whose_entries_cannot_be_read(
+    tmp_path: Path, hides: str, shows: str, subtype: str, matrix: str
+):
+    # The page hides what it draws (white fill or render mode 3), draws /FmA, whose content shows (black or render
+    # mode 0), then draws the code line shown in q/Q and its last character after it in the page's own state, so a
+    # viewer shows the code malformed. Before, a form whose /Matrix did not hold six numbers, and an XObject that
+    # pypdf reads as a form though its /Subtype is not /Form, were drawn without saving the state, so the state the
+    # form's content set outlasted it and the last character was read as shown: the rule passed.
+    code = (
+        f"{hides} /FmA Do q {shows} BT /F1 10 Tf 1 0 0 1 50 {_CODE_BASELINE} Tm ({_CODE_LINE}) Tj ET Q "
+        f"BT /F1 10 Tf 1 0 0 1 {_CODE_END:.2f} {_CODE_BASELINE} Tm ({HIDDEN}) Tj ET {shows}"
+    )
+    content = (
+        f"BT 13 TL 50 770 Td /F2 14 Tf (Information about the Issuer) Tj 0 -13 Td /F1 10 Tf ({ISSUER_TEXT}) Tj "
+        f"0 -13 Td /F2 14 Tf ({OFFEROR}) Tj ET {code} BT 50 600 Td /F2 14 Tf (Risk Factors) Tj ET"
+    )
+    form = f"/Type /XObject /Subtype {subtype} /BBox [0 0 1000 792] /Matrix [{matrix}] /Resources << >>"
+    path = _pdf_objects(
+        tmp_path / "form.pdf",
+        [
+            b"<< /Type /Catalog /Pages 2 0 R >>",
+            b"<< /Type /Pages /Kids [5 0 R] /Count 1 >>",
+            *_HELVETICA,
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1000 792] /Resources << " + _FONTS
+            + b" /XObject << /FmA 7 0 R >> >> /Contents 6 0 R >>",
+            _stream(content),
+            _stream(shows, form),
+        ],
+    )
+    check_digits, _ = _check_digits(path)
+    assert check_digits.status == "review"
+    assert any(SHOWN in issue for issue in check_digits.issues)
+
+
 # A hidden separator inside a valid code: hidden text still takes up its room on the page (the text position moves
 # past it as past text that is shown), so the page shows the code split into groups, and so does the text as shown.
 PDF_GAPS = {
