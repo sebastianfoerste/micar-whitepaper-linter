@@ -100,6 +100,7 @@ This markdown table is a local review artifact. It does not approve filing, publ
 | ITS.FIELD_FORMATS | Anhang Tabellen 1 bis 4 VO (EU) 2024/2984 | review | yes | remediation_required | yes |
 | ITS.CODE_LISTS | Anhang Tabellen 2 bis 4 VO (EU) 2024/2984 | review | no | lawyer_review_required | yes |
 | RTS.SUSTAINABILITY_INDICATORS | Art. 4 Abs. 1 und 2 i.V.m. Anhang Tabellen 2 und 3 VO (EU) 2025/422 | review | yes | remediation_required | yes |
+| RTS.CLASSIFICATION_DATA | Art. 2 und 3 i.V.m. Anhang VO (EU) 2025/421 | review | yes | remediation_required | yes |
 
 ## Review Gate
 

@@ -30,7 +30,7 @@ The linter was run on `examples/art-stablecoin.json` with the default English ci
 MiCAR Whitepaper Linter - Synthetic EuroStable ART White Paper
 Whitepaper type: ART
 ==============================================================================
-Pass: 18  |  Review: 71  |  Missing: 1  |  Blockers: 71
+Pass: 18  |  Review: 72  |  Missing: 1  |  Blockers: 72
 
 [PASS  ] [BLOCKER] COMMON.SUMMARY  Plain-language summary
            Cite:  Art. 6(7), Art. 19(6), Art. 51(6) MiCAR
@@ -556,6 +556,12 @@ Pass: 18  |  Review: 71  |  Missing: 1  |  Blockers: 71
            Section: 'environmental_impact'  (104 words)
            -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of the sustainability indicators of Delegated Regulation (EU) 2025/422 did not run. It runs on a white paper in the numbered-field layout (XHTML).
 
+[REVIEW] [BLOCKER] RTS.CLASSIFICATION_DATA  Data for classifying the white paper in the ESMA register, with the LEI and DTI conditions of Delegated Regulation (EU) 2025/421
+           Cite:  Art. 2 and 3 in conjunction with Annex to Regulation (EU) 2025/421
+           Text:  https://eur-lex.europa.eu/eli/reg_del/2025/421/oj/eng
+           Section: 'art'  (143 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of the register classification data of Delegated Regulation (EU) 2025/421 did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
 ==============================================================================
 First-pass screening only. The draft is not package-ready. The white paper notification or submission for approval (Art. 8(1), Art. 16(2), second subparagraph, Art. 17(1), point (a), Art. 18(2), point (k), Art. 51(11) MiCAR) should not enter an external review or filing workflow until BLOCKER items are cured and a lawyer has signed off.
 This tool is not legal advice.
@@ -565,11 +571,11 @@ This tool is not legal advice.
 
 ## Coverage Statistics
 
-- **Total Checked Rules**: 90
+- **Total Checked Rules**: 91
 - **Passed Rules**: 18
-- **Rules Requiring Review**: 71 (the fact-dependent deposit floor, custody under Annex II, Part G, the four template rules that need the numbered-field layout: `ITS.PREDEFINED_TEXT`, `ITS.FIELD_FORMATS`, `ITS.CODE_LISTS`, `RTS.SUSTAINABILITY_INDICATORS`, and the 65 point rules `ANNEX_II.A.P1` to `ANNEX_II.G.P5`, which also need it)
+- **Rules Requiring Review**: 72 (the fact-dependent deposit floor, custody under Annex II, Part G, the five template rules that need the numbered-field layout: `ITS.PREDEFINED_TEXT`, `ITS.FIELD_FORMATS`, `ITS.CODE_LISTS`, `RTS.SUSTAINABILITY_INDICATORS`, `RTS.CLASSIFICATION_DATA`, and the 65 point rules `ANNEX_II.A.P1` to `ANNEX_II.G.P5`, which also need it)
 - **Missing Sections**: 1 (format: a JSON draft cannot satisfy the XHTML/iXBRL notification format)
-- **Open Blockers**: 71 (`COMMON.IXBRL_TAGGING`, the 65 point rules, `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW`, `ANNEX_II.G.CUSTODY`, `ITS.PREDEFINED_TEXT`, `ITS.FIELD_FORMATS`, `RTS.SUSTAINABILITY_INDICATORS`)
+- **Open Blockers**: 72 (`COMMON.IXBRL_TAGGING`, the 65 point rules, `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW`, `ANNEX_II.G.CUSTODY`, `ITS.PREDEFINED_TEXT`, `ITS.FIELD_FORMATS`, `RTS.SUSTAINABILITY_INDICATORS`, `RTS.CLASSIFICATION_DATA`)
 
 ---
 

@@ -18,6 +18,7 @@ import re
 ACT_URLS: dict[str, str] = {
     "MiCAR": "https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng",
     "VO (EU) 2024/2984": "https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng",
+    "VO (EU) 2025/421": "https://eur-lex.europa.eu/eli/reg_del/2025/421/oj/eng",
     "VO (EU) 2025/422": "https://eur-lex.europa.eu/eli/reg_del/2025/422/oj/eng",
     "Richtlinie 2009/110/EG": "https://eur-lex.europa.eu/eli/dir/2009/110/oj/eng",
 }
@@ -65,6 +66,8 @@ def to_english(citation: str) -> str:
     # Felder 02 bis 07 -> , fields 02 to 07; Feld I.01 -> , field I.01
     text = re.sub(r" Felder ([\w.]+) bis ([\w.]+)", r", fields \1 to \2", text)
     text = re.sub(r" Feld ([\w.]+)", r", field \1", text)
+    # Anhang VO (EU) 2025/421 -> Annex to Regulation (EU) 2025/421 (an act with one unnumbered Annex)
+    text = re.sub(r"\bAnhang (?=VO \(EU\))", "Annex to ", text)
     text = re.sub(r"Anhang ([IVX]+)", r"Annex \1", text)
     text = re.sub(r",? Teil ([A-Z])", r", Part \1", text)
     text = text.replace(" i.V.m. ", " in conjunction with ")

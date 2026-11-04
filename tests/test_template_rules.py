@@ -259,7 +259,9 @@ def test_every_regime_runs_the_template_rules_with_stable_ids():
 
 def test_the_template_rule_ids_do_not_collide_with_other_rules():
     for regime in WhitepaperType:
-        others = [rule.rule_id for rule in RULESETS[regime] if rule.rule_id not in TEMPLATE_RULE_IDS]
+        # RTS.CLASSIFICATION_DATA has its own tests (test_classification_data.py).
+        own = (*TEMPLATE_RULE_IDS, "RTS.CLASSIFICATION_DATA")
+        others = [rule.rule_id for rule in RULESETS[regime] if rule.rule_id not in own]
         assert not any(rule_id.startswith(("ITS.", "RTS.")) for rule_id in others)
 
 

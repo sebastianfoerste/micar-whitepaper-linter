@@ -9,6 +9,7 @@ from datetime import date
 from functools import partial
 
 from micar_linter.anchors import SourceAnchor, build_source_anchors
+from micar_linter.classification_data import classification_issues
 from micar_linter.contact import CONTACT_FIELDS, has_email_address, has_period_in_days, has_telephone_number
 from micar_linter.lei import (
     PARTY_SECTIONS,
@@ -1089,6 +1090,10 @@ _WHAT = {
         "the sustainability indicators of Delegated Regulation (EU) 2025/422",
         "der Nachhaltigkeitsindikatoren der Delegierten Verordnung (EU) 2025/422",
     ),
+    "RTS.CLASSIFICATION_DATA": (
+        "the register classification data of Delegated Regulation (EU) 2025/421",
+        "der Daten zur Einstufung im Register nach der Delegierten Verordnung (EU) 2025/421",
+    ),
 }
 # The sections that hold the predefined texts in a draft without field numbers.
 _PREDEFINED_SECTIONS = ("not_approved_statement", "management_statement", "risk_warning", "summary")
@@ -1203,12 +1208,25 @@ def _sustainability_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     return Finding(rule=rule, status=status, word_count=0, issues=tuple(issues))
 
 
+def _classification_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """The register data of Delegated Regulation (EU) 2025/421 in the fields of the regime's table
+    (classification_data.py): presence and the conditions of Art. 2 and 3; formats and codes are left to
+    ITS.FIELD_FORMATS and ITS.CODE_LISTS."""
+    numbered = _numbered(whitepaper)
+    if numbered is None:
+        return _without_fields(rule, whitepaper, (rule.section,))
+    answers, _ = numbered
+    status, issues = classification_issues(answers, whitepaper.type, whitepaper.language == "de")
+    return Finding(rule=rule, status=status, word_count=0, issues=issues)
+
+
 TEMPLATE_RULE_CHECKS: dict[str, Callable[[Rule, Whitepaper], Finding]] = {
     "ITS.NOTIFICATION_DATE_FORMAT": _notification_date_format_finding,
     "ITS.PREDEFINED_TEXT": _predefined_text_finding,
     "ITS.FIELD_FORMATS": _field_types_finding,
     "ITS.CODE_LISTS": _field_types_finding,
     "RTS.SUSTAINABILITY_INDICATORS": _sustainability_finding,
+    "RTS.CLASSIFICATION_DATA": _classification_finding,
 }
 
 

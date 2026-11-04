@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from micar_linter import __version__, citations
+from micar_linter.classification_data import AUTHORITY_ITEMS, ITEMS, LAYOUTS, UNMAPPED_FIELDS
 from micar_linter.contact import CONTACT_FIELDS
 from micar_linter.lei import check_digits_for
 from micar_linter.linter import (
@@ -258,7 +259,10 @@ UNTESTED_REGIMES = {
         "The template checks have not yet been run against a real notified white paper; for Tables 3 and 4 they "
         "follow the Official Journal text only."
     ),
-    "RTS": "The sustainability indicator check has not yet been run against a real notified white paper.",
+    "RTS": (
+        "The checks of the Delegated Regulations (sustainability indicators, register classification data) have not "
+        "yet been run against a real notified white paper."
+    ),
 }
 # Why a rule runs with other terms or another minimum for some regimes. The build stops when a rule
 # ID has more than one Rule in RULESETS and no note here.
@@ -271,6 +275,11 @@ VARIANT_NOTES = {
         "those, and only wording that turns them around sends an EMT warning to review. The utility-token "
         "statement of Art. 6(5)(d) applies to utility tokens only and is not checked here; in a numbered-field "
         "draft, ITS.PREDEFINED_TEXT checks it in field 05 of Table 2."
+    ),
+    "RTS.CLASSIFICATION_DATA": (
+        "The register data sit in another Part of each template (Part F of Table 2, Part B of Tables 3 and 4), so "
+        "the rule anchors a draft without field numbers to the section of that Part: crypto_asset, art or emt. The "
+        "check itself is the same; it reads the fields of the regime's table."
     ),
 }
 
@@ -730,6 +739,13 @@ TEMPLATE_VERIFICATION = {
         "2025/422 (OJ L, 2025/422, 31.3.2025) as the Publications Office Cellar served it: Art. 4(1) and (2) and "
         "Tables 1 to 3 of its Annex. No amendment or corrigendum was searched for."
     ),
+    "RTS.CLASSIFICATION_DATA": (
+        "Checked against the OJ on 2026-11-04: Art. 1 to 4 and items 1 to 29 of the Annex against the English and "
+        "German Official Journal text of Delegated Regulation (EU) 2025/421 (OJ L, 2025/421, 24.3.2025), and the "
+        "fields that carry them against the English and German Official Journal text of Implementing Regulation (EU) "
+        "2024/2984 (OJ L, 2024/2984, 3.12.2024), both as the Publications Office Cellar served them. No amendment or "
+        "corrigendum was searched for."
+    ),
 }
 TEMPLATE_ANSWERS = {
     "ITS.NOTIFICATION_DATE_FORMAT": "a date written YYYY-MM-DD",
@@ -737,6 +753,7 @@ TEMPLATE_ANSWERS = {
     "ITS.FIELD_FORMATS": "the template's data types",
     "ITS.CODE_LISTS": "codes of the template's closed lists",
     "RTS.SUSTAINABILITY_INDICATORS": "the indicators and their formats",
+    "RTS.CLASSIFICATION_DATA": "the register data and the identifier conditions",
 }
 _KIND_NAMES = {
     "date": "a date YYYY-MM-DD",
@@ -1033,6 +1050,8 @@ def _template_examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
                 "A code may be followed by its description. A Member State counts by name or two-letter code.",
             ),
         ]
+    if rule.rule_id == "RTS.CLASSIFICATION_DATA":
+        return _classification_examples(regime, absent, no_fields)
     return [
         absent,
         no_fields,
@@ -1067,6 +1086,119 @@ def _template_examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
             "number in kWh below 500 000. The check does not test how the figure was calculated.",
         ),
     ]
+
+
+SYNTHETIC_FFG = "SYNTH0FG2"
+SYNTHETIC_WEBSITE = "https://synthetic-issuer.example"
+
+
+def _classification_rows(regime: WhitepaperType) -> tuple[tuple[str, str, str], ...]:
+    """A complete register block of the regime's table, with the issuer's LEI, for the examples."""
+    layout = LAYOUTS[regime]
+    names = FIELD_NAMES[regime]
+    values = {
+        1: {WhitepaperType.OTHER: "OTHR", WhitepaperType.ART: "ARTW", WhitepaperType.EMT: "EMTW"}[regime],
+        25: "NEWT",
+        13: SYNTHETIC_WEBSITE,
+        16: "2026-04-01",
+        20: "2026-03-20",
+        22: "English",
+        29: "false",
+        14: "DE",
+        15: "AT",
+    }
+    rows = [
+        (layout.issuer.name, names[layout.issuer.name], "Synthetic Issuer GmbH, a fictional company"),
+        (layout.issuer.lei, names[layout.issuer.lei], SYNTHETIC_LEI),
+        (layout.offer_field, names[layout.offer_field], "OTPC"),
+    ]
+    if layout.other_issuer is not None:
+        rows.append(("B.1", names["B.1"], "false"))
+    rows += [(field, names[field], values[item]) for item, field in layout.fields]
+    rows += [
+        (layout.dti_field, names[layout.dti_field], SYNTHETIC_DTI),
+        (layout.ffg_field, names[layout.ffg_field], SYNTHETIC_FFG),
+    ]
+    return tuple(rows)
+
+
+def _classification_examples(regime: WhitepaperType, absent: Example, no_fields: Example) -> list[Example]:
+    layout = LAYOUTS[regime]
+    rows = _classification_rows(regime)
+    first = layout.fields[0][1]
+    return [
+        absent,
+        no_fields,
+        _numbered_example(
+            "Register block not answered",
+            "missing",
+            regime,
+            tuple((number, label, "TBD") for number, label, _ in rows),
+            "Every field that carries an item of the Annex without “where available” holds only a placeholder.",
+        ),
+        _numbered_example(
+            "DTI without the group identifier",
+            "review",
+            regime,
+            _replaced(rows, layout.ffg_field, "N/A"),
+            f"Field {layout.dti_field} gives a DTI, so Art. 3(1) asks for the identifier of type 3 of the group in "
+            f"field {layout.ffg_field} as well.",
+        ),
+        _numbered_example(
+            "No DTI at all",
+            "review",
+            regime,
+            _replaced(_replaced(rows, layout.dti_field, "N/A"), layout.ffg_field, "N/A"),
+            "Without an ISO 24165 DTI, Art. 3(3) asks for an identifier approved by ESMA at Union level; the template "
+            "has no field for it, so a reviewer confirms how the white paper identifies the crypto-assets.",
+        ),
+        _numbered_example(
+            "Admission to trading without a MIC",
+            "review",
+            regime,
+            _replaced(rows, layout.offer_field, "ATTR"),
+            f"Field {layout.offer_field} seeks admission to trading, so item 8 asks for the market identifier code "
+            f"of the trading platform in field {layout.mic_field}.",
+        ),
+        _numbered_example(
+            "Mandatory field marked not applicable",
+            "review",
+            regime,
+            _replaced(rows, first, "N/A"),
+            f"Field {first} carries an item that the Annex lists without “where available”.",
+        ),
+        _numbered_example(
+            "Register block answered",
+            "pass",
+            regime,
+            rows,
+            "Every item the Annex lists without “where available” is answered; the LEI carries the legal form and "
+            "the address, and both identifiers are given. The finding notes that the LEI's inclusion in the GLEIF "
+            "database (Art. 2(b)) is not checked.",
+        ),
+    ]
+
+
+def _classification_table() -> str:
+    """The items of the Annex to Delegated Regulation (EU) 2025/421 and the fields that carry them."""
+    head = "".join(f"<th>Table {TABLE_NUMBERS[regime]}</th>" for regime in TABLE_NUMBERS)
+    rows = []
+    for item in ITEMS:
+        if item.number in AUTHORITY_ITEMS:
+            cells = '<td colspan="3">not carried: the sending competent authority assigns it</td>'
+        else:
+            cells = "".join(f"<td>{_e(item.carried[regime]) or 'no field'}</td>" for regime in TABLE_NUMBERS)
+        rows.append(f"<tr><td>{item.number}</td><td>{_e(item.name)}</td>{cells}</tr>")
+    unmapped = "; ".join(
+        f"Table {TABLE_NUMBERS[regime]}: {', '.join(fields)}" for regime, fields in UNMAPPED_FIELDS.items()
+    )
+    return (
+        f'<table><thead><tr><th>Item</th><th>Data of the Annex</th>{head}</tr></thead><tbody>{"".join(rows)}'
+        f"</tbody></table><p>Fields of the register block without an item of the Annex: {_e(unmapped)} (the "
+        "characteristics, the voluntary data flag of Table 2 and the LEI eligibility). Items given “where "
+        "available” or “where applicable” (4 to 7, 9, 11, 12, 17 to 19, 27 and 28) are not required; item 15 and "
+        "item 8 are.</p>"
+    )
 
 
 def _typed_fields_html(code_lists: bool) -> str:
@@ -1143,6 +1275,34 @@ def _template_status_logic(rule: Rule) -> str:
             f"{no_fields}<li><strong>Pass</strong>: every such field the draft carries holds its type.</li></ul>"
             f"<p>The fields {what}, from the form column of each table:</p>{_typed_fields_html(code_lists)}"
         )
+    if rule.rule_id == "RTS.CLASSIFICATION_DATA":
+        return (
+            '<ul class="plain"><li><strong>Missing</strong>: in a numbered-field XHTML draft, every field that carries '
+            "an item the Annex lists without “where available” is empty, absent or holds only a placeholder.</li>"
+            "<li><strong>Review</strong>: one of those fields is empty, absent, holds only a placeholder or is marked "
+            "not applicable: the type of white paper, the type of submission, the website, the starting date, the "
+            "publication date, the languages, the personal data flag and the home and host Member States, the "
+            "issuer's name, and its legal form and registered address unless its LEI field gives an LEI with valid "
+            "check digits. In Table 2 the issuer is read from Part B where field B.1 is true (or, where B.1 says "
+            "neither, where B.2 names one), otherwise from Part A. Also: the offer field gives ATTR and the market "
+            "identifier code field is not answered (item 8); the DTI field is answered and the group DTI field is "
+            "not (Art. 3(1)), or the other way round (Art. 3(2)); both give the same code; or neither gives a DTI, "
+            "where Art. 3(3) asks for an identifier approved by ESMA, which the template has no field for. The "
+            "finding names the field and the item, never the answer.</li>"
+            "<li>In a draft without field numbers (JSON, PDF, DOCX, Markdown, heading-based XHTML): "
+            "<strong>Missing</strong> where the section of the Part that carries the register data "
+            "(<code>crypto_asset</code>, <code>art</code> or <code>emt</code>) is absent, empty or holds only a "
+            "placeholder, otherwise <strong>Review</strong> with a note that the field-level check needs the "
+            "numbered-field layout. Such a draft never passes.</li>"
+            "<li><strong>Pass</strong>: none of the above. Where a field gives an LEI, the finding "
+            "notes that Art. 2 also asks for its inclusion in the GLEIF database, which the linter does not check.</li>"
+            "</ul><p>The forms of these fields (dates, LEI, DTI, MIC, true or false) are checked by "
+            '<a href="ITS.FIELD_FORMATS.html">ITS.FIELD_FORMATS</a> and their codes (white paper type, submission '
+            'type, Member States) by <a href="ITS.CODE_LISTS.html">ITS.CODE_LISTS</a>; '
+            '<a href="COMMON.LANGUAGE.html">COMMON.LANGUAGE</a> looks for an official EU language. This rule does not '
+            "report those defects again. The items of the Annex and the fields that carry them:</p>"
+            f"{_classification_table()}"
+        )
     return (
         '<ul class="plain"><li><strong>Missing</strong>: in a numbered-field XHTML draft, none of fields S.1 to S.9 '
         "holds an answer other than a placeholder.</li>"
@@ -1159,6 +1319,35 @@ def _template_status_logic(rule: Rule) -> str:
 
 
 def _template_limitations(rule: Rule) -> list[str]:
+    if rule.rule_id == "RTS.CLASSIFICATION_DATA":
+        return [
+            "Reads the fields of a numbered-field XHTML draft by their numbers; text elsewhere is not considered. In a "
+            "draft without field numbers it reads the section of the Part that carries the register data "
+            "(<code>crypto_asset</code>, <code>art</code> or <code>emt</code>) only to tell whether it is absent; "
+            "finding the items in free text is not built.",
+            "Checks whether each field holds an answer, not what it says or whether it is correct; it does not "
+            "check a field's label, so a draft that numbers its fields otherwise is read in the wrong fields.",
+            "Art. 2 asks for each LEI to be valid and included in the GLEIF database. The check works offline and "
+            "queries no registry: <code>ITS.FIELD_FORMATS</code> checks the LEI's form and ISO 17442 check digits, and "
+            "the finding asks a reviewer to confirm that the LEI is listed and current.",
+            "Does not check a DTI's check character, its type (an identifier of type 3 for the group) or the DTI "
+            "registry, and cannot tell whether an identifier given in free text is one ESMA approved under Art. 3(3).",
+            "Items 23, 24 and 26 are assigned by the competent authority and items 18 and 19 have no field, so they "
+            "are not checked. Item 21 asks for the date and time of the latest notification in UTC; the template "
+            "carries a date in field 01 (I.01), which <code>ITS.NOTIFICATION_DATE_FORMAT</code> checks, and Art. 1(3) "
+            "lets the data be given in the white paper's own format. The legal form is not checked against the ISO "
+            "20275 list of entity legal forms.",
+            "The optional items (4 to 7, 9, 11, 12, 17, 27 and 28) are not required; the template's own conditions on "
+            "fields such as F.7 (commercial name where no DTI is given) are checked by the point rules "
+            '(<a href="ANNEX_I.F.P2.html">ANNEX_I.F.P2</a>, <a href="ANNEX_II.B.P2.html">ANNEX_II.B.P2</a>, '
+            '<a href="ANNEX_III.B.P2.html">ANNEX_III.B.P2</a>), which also report a blank field of the register '
+            "block under the Annex point.",
+            "A host Member State field marked not applicable goes to review, as the Annex lists item 15 without "
+            "“where available”; where the crypto-asset is offered in no host Member State, a reviewer confirms that.",
+            "The English text gives item 20 (publication date) without a condition and item 17 “where applicable”; "
+            "the German text reads “gegebenenfalls” and “sofern verfügbar”. The check follows the English text and "
+            "the template.",
+        ]
     reads = (
         "Reads the fields of a numbered-field XHTML draft by their numbers; text elsewhere is not considered. "
         f"In a draft without field numbers it reads section <code>{_e(rule.section)}</code>"
@@ -2160,7 +2349,7 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
 <dt>Canonical form</dt><dd lang="de">{_e(rule.citation)}</dd>
 <dt>Runs for</dt><dd>{_e("; ".join(REGIME_NAMES[r] for r in regimes))}</dd>
 <dt>Severity if open</dt><dd>{_e(rule.severity.label)}</dd>
-<dt>Section key</dt><dd>{"none: checks the file format" if rule.rule_id in FORMAT_GATE else "all sections; anchored to <code>issuer</code>" if rule.rule_id in LEI_RULES else f"<code>{_e(rule.section)}</code>"}</dd>
+<dt>Section key</dt><dd>{"none: checks the file format" if rule.rule_id in FORMAT_GATE else "all sections; anchored to <code>issuer</code>" if rule.rule_id in LEI_RULES else by_regime(lambda r: f"<code>{_e(r.section)}</code>")}</dd>
 <dt>Minimum words</dt><dd>{f"none: checks for {ANSWER_CHECKS[rule.rule_id]}" if rule.rule_id in ANSWER_CHECKS else f"none: checks for {TEMPLATE_ANSWERS[rule.rule_id]}" if rule.rule_id in TEMPLATE_RULES else "none: checks whether the template fields that carry the point hold an answer" if rule.rule_id in POINT_RULE_IDS else by_regime(lambda r: str(r.min_words))}</dd>
 <dt>Listed terms (English)</dt><dd>{by_regime(lambda r: _terms(r.required_terms, r.required_patterns))}</dd>
 <dt>Listed terms (German)</dt><dd lang="de">{by_regime(lambda r: _terms(r.required_terms_de, r.required_patterns_de))}</dd>
@@ -2189,6 +2378,11 @@ def source_links(rule: Rule) -> str:
         return (
             f'<a href="{REPO}/blob/main/src/micar_linter/rules/points.py">rules/points.py</a> and '
             f'<a href="{REPO}/blob/main/src/micar_linter/point_fields.py">point_fields.py</a>'
+        )
+    if rule.rule_id == "RTS.CLASSIFICATION_DATA":
+        return (
+            f'<a href="{REPO}/blob/main/src/micar_linter/rules/templates.py">rules/templates.py</a> and '
+            f'<a href="{REPO}/blob/main/src/micar_linter/classification_data.py">classification_data.py</a>'
         )
     module = SOURCE_MODULES[rule.rule_id.split(".")[0]]
     return f'<a href="{REPO}/blob/main/src/micar_linter/rules/{module}">rules/{module}</a>'

@@ -6,15 +6,19 @@ import re
 import pytest
 
 from micar_linter import citations
-from micar_linter.rules import annex_i, annex_ii, annex_iii, common, templates
+from micar_linter.rules import RULESETS, annex_i, annex_ii, annex_iii, common, templates
 
 
 def _all_citations() -> set[str]:
     found = set()
     for module in (annex_i, annex_ii, annex_iii, common, templates):
         for value in vars(module).values():
+            if isinstance(value, dict):
+                value = tuple(value.values())
             if isinstance(value, (list, tuple)):
                 found.update(r.citation for r in value if hasattr(r, "citation"))
+    # The rule sets also hold the point rules and the per-regime rules (rules/points.py, CLASSIFICATION_RULES).
+    found.update(rule.citation for rules in RULESETS.values() for rule in rules)
     return found
 
 
@@ -61,13 +65,31 @@ def _all_citations() -> set[str]:
             "Art. 4 Abs. 1 und 2 i.V.m. Anhang Tabellen 2 und 3 VO (EU) 2025/422",
             "Art. 4(1) and (2) in conjunction with Annex, Tables 2 and 3 Regulation (EU) 2025/422",
         ),
+        (
+            "Art. 2 und 3 i.V.m. Anhang VO (EU) 2025/421",
+            "Art. 2 and 3 in conjunction with Annex to Regulation (EU) 2025/421",
+        ),
     ],
 )
 def test_known_conversions(german: str, english: str) -> None:
     assert citations.to_english(german) == english
 
 
+def test_delegated_regulation_2025_421_links_to_its_own_act() -> None:
+    citation = _rule_citation("RTS.CLASSIFICATION_DATA")
+    assert citation in _all_citations()
+    url = "https://eur-lex.europa.eu/eli/reg_del/2025/421/oj/eng"
+    assert citations.ACT_URLS["VO (EU) 2025/421"] == url
+    assert citations.source_urls(citation) == [url]
+    # "Anhang VO" is the Annex to the act, not Annex V.
+    assert "Annex V" not in citations.to_english(citation)
+
+
 def _rule_citation(rule_id: str) -> str:
+    for rules in RULESETS.values():
+        for rule in rules:
+            if rule.rule_id == rule_id:
+                return rule.citation
     for module in (annex_i, annex_ii, annex_iii, common, templates):
         for value in vars(module).values():
             if isinstance(value, (list, tuple)):

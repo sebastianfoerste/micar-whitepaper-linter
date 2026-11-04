@@ -4,7 +4,7 @@
 - **Regime/Type**: ART
 - **Source File**: examples/art-stablecoin.json
 - **SHA-256 Checksum**: `eb1fa481e730137719b20c81986c85a1a5343fc350f8e149ef1c55402df01024`
-- **Review Timestamp**: 2026-11-04 13:46:55
+- **Review Timestamp**: 2026-11-04 14:01:45
 
 ## Rule Compliance Checklist
 
@@ -100,13 +100,14 @@
 | `ITS.FIELD_FORMATS` | Anhang Tabellen 1 bis 4 VO (EU) 2024/2984 | Data formats of the template's typed fields (dates, LEI, DTI, currency and market codes, numbers, days, true or false) | BLOCKER | **REVIEW** | [ ] |
 | `ITS.CODE_LISTS` | Anhang Tabellen 2 bis 4 VO (EU) 2024/2984 | Codes of the template's closed lists (offer or admission, holders, placement, white paper and submission type, exemption, Member States) | MAJOR | **REVIEW** | [ ] |
 | `RTS.SUSTAINABILITY_INDICATORS` | Art. 4 Abs. 1 und 2 i.V.m. Anhang Tabellen 2 und 3 VO (EU) 2025/422 | Sustainability indicators S.1 to S.9, and S.10 to S.16 above 500 000 kWh, in the format of Delegated Regulation (EU) 2025/422 | BLOCKER | **REVIEW** | [ ] |
+| `RTS.CLASSIFICATION_DATA` | Art. 2 und 3 i.V.m. Anhang VO (EU) 2025/421 | Data for classifying the white paper in the ESMA register, with the LEI and DTI conditions of Delegated Regulation (EU) 2025/421 | BLOCKER | **REVIEW** | [ ] |
 
 ## Summary of Findings
 
 - **Passed Checks**: 18
-- **Under Review**: 71
+- **Under Review**: 72
 - **Missing Sections**: 1
-- **BLOCKER Issues**: 71
+- **BLOCKER Issues**: 72
 
 > [!WARNING]
 > **BLOCKER issues are currently open.** The draft is not package-ready for an external review or filing workflow until the gaps are cured and a lawyer has signed off.

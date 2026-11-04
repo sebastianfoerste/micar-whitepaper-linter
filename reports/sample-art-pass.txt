@@ -1,7 +1,7 @@
 MiCAR Whitepaper Linter - Synthetic EuroStable ART White Paper
 Whitepaper type: ART
 ==============================================================================
-Pass: 18  |  Review: 71  |  Missing: 1  |  Blockers: 71
+Pass: 18  |  Review: 72  |  Missing: 1  |  Blockers: 72
 
 [PASS  ] [BLOCKER] COMMON.SUMMARY  Plain-language summary
            Cite:  Art. 6(7), Art. 19(6), Art. 51(6) MiCAR
@@ -526,6 +526,12 @@ Pass: 18  |  Review: 71  |  Missing: 1  |  Blockers: 71
            Text:  https://eur-lex.europa.eu/eli/reg_del/2025/422/oj/eng
            Section: 'environmental_impact'  (104 words)
            -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of the sustainability indicators of Delegated Regulation (EU) 2025/422 did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] RTS.CLASSIFICATION_DATA  Data for classifying the white paper in the ESMA register, with the LEI and DTI conditions of Delegated Regulation (EU) 2025/421
+           Cite:  Art. 2 and 3 in conjunction with Annex to Regulation (EU) 2025/421
+           Text:  https://eur-lex.europa.eu/eli/reg_del/2025/421/oj/eng
+           Section: 'art'  (143 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of the register classification data of Delegated Regulation (EU) 2025/421 did not run. It runs on a white paper in the numbered-field layout (XHTML).
 
 ==============================================================================
 First-pass screening only. The draft is not package-ready. The white paper notification or submission for approval (Art. 8(1), Art. 16(2), second subparagraph, Art. 17(1), point (a), Art. 18(2), point (k), Art. 51(11) MiCAR) should not enter an external review or filing workflow until BLOCKER items are cured and a lawyer has signed off.

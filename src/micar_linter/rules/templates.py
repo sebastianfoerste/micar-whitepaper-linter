@@ -10,13 +10,18 @@ follows from the regime.
 A draft without field numbers (JSON, PDF, DOCX, Markdown and heading-based XHTML) cannot show the fields, so
 these rules report Missing where the section they are anchored to is absent and Review otherwise, with a note
 that the field-level check needs the numbered-field layout; ITS.NOTIFICATION_DATE_FORMAT instead reads the
-notification_date section for a date written YYYY-MM-DD. linter.py dispatches all five by rule ID; the field
-data sit in template_types.py and predefined_texts.py, the checks in template_checks.py.
+notification_date section for a date written YYYY-MM-DD. linter.py dispatches all of them by rule ID; the
+field data sit in template_types.py and predefined_texts.py, the checks in template_checks.py.
+
+RTS.CLASSIFICATION_DATA checks the register data of Delegated Regulation (EU) 2025/421
+(classification_data.py). Its section differs by regime (the Part that carries the data), so it is one Rule
+per regime with the same ID (CLASSIFICATION_RULES), placed after TEMPLATE_RULES.
 """
 
 from __future__ import annotations
 
 from micar_linter.rules.base import Rule, Severity
+from micar_linter.whitepaper import WhitepaperType
 
 TEMPLATE_RULES: tuple[Rule, ...] = (
     # Since 23 December 2025 the date of notification is reported as YYYY-MM-DD (form column of field 01 of
@@ -82,3 +87,27 @@ TEMPLATE_RULES: tuple[Rule, ...] = (
         severity=Severity.BLOCKER,
     ),
 )
+
+
+# Delegated Regulation (EU) 2025/421: the items of its Annex that the template carries, with the conditions of
+# Art. 2 (LEI) and Art. 3 (DTI). Presence and those conditions only: the forms are ITS.FIELD_FORMATS', the
+# codes ITS.CODE_LISTS'. The data sit in Part F of Table 2 and Part B of Tables 3 and 4, the sections below.
+_CLASSIFICATION_SECTIONS = {
+    WhitepaperType.OTHER: "crypto_asset",
+    WhitepaperType.ART: "art",
+    WhitepaperType.EMT: "emt",
+}
+CLASSIFICATION_RULES: dict[WhitepaperType, Rule] = {
+    regime: Rule(
+        rule_id="RTS.CLASSIFICATION_DATA",
+        citation="Art. 2 und 3 i.V.m. Anhang VO (EU) 2025/421",
+        section=section,
+        label=(
+            "Data for classifying the white paper in the ESMA register, with the LEI and DTI conditions of "
+            "Delegated Regulation (EU) 2025/421"
+        ),
+        min_words=0,
+        severity=Severity.BLOCKER,
+    )
+    for regime, section in _CLASSIFICATION_SECTIONS.items()
+}

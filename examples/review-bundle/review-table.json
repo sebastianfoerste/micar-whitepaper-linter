@@ -1,6 +1,6 @@
 {
   "schema": "micar-whitepaper-linter.review-table",
-  "generated_at": "2026-11-04T13:46:55.867226+00:00",
+  "generated_at": "2026-11-04T14:01:45.662579+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "source": {
@@ -8,11 +8,11 @@
     "sha256": "eb1fa481e730137719b20c81986c85a1a5343fc350f8e149ef1c55402df01024"
   },
   "summary": {
-    "total": 90,
+    "total": 91,
     "pass": 18,
-    "review": 71,
+    "review": 72,
     "missing": 1,
-    "blockers": 71,
+    "blockers": 72,
     "export_gate": "blocked"
   },
   "delivery_block": {
@@ -89,7 +89,8 @@
       "ANNEX_II.G.P5",
       "ITS.PREDEFINED_TEXT",
       "ITS.FIELD_FORMATS",
-      "RTS.SUSTAINABILITY_INDICATORS"
+      "RTS.SUSTAINABILITY_INDICATORS",
+      "RTS.CLASSIFICATION_DATA"
     ],
     "external_action_allowed": false,
     "review_gate": "External filing, publication and notification are blocked until a qualified lawyer signs off and the deterministic CLI has been rerun against the remediated local draft."
@@ -97,8 +98,8 @@
   "editor_draft_package": {
     "schema": "micar-whitepaper-linter.editor-draft-package.v1",
     "status": "draft_only",
-    "suggested_edit_count": 72,
-    "blocker_count": 71,
+    "suggested_edit_count": 73,
+    "blocker_count": 72,
     "formats": [
       "json",
       "markdown"
@@ -108,9 +109,9 @@
   },
   "review_table_economics": {
     "schema": "micar-whitepaper-linter.review-table-economics.v1",
-    "row_count": 90,
+    "row_count": 91,
     "column_count": 12,
-    "estimated_cell_tasks": 1080,
+    "estimated_cell_tasks": 1092,
     "route": "deterministic_cli",
     "max_vault_documents": 100000,
     "reset_strategy": "Each rule row and generated review column is evaluated from deterministic parser output and the local rule catalog.",
@@ -121,7 +122,7 @@
     "mode": "deterministic_cli",
     "external_action_allowed": false,
     "route_summary": "Rule evaluation, coverage, remediation and review-table export are deterministic. No LLM route or external delivery route is present.",
-    "context_window_strategy": "90 rule row(s), each evaluated against deterministic parser output and the local rule catalog.",
+    "context_window_strategy": "91 rule row(s), each evaluated against deterministic parser output and the local rule catalog.",
     "source_connectors": [
       {
         "key": "draft-whitepaper",
@@ -134,14 +135,14 @@
         "key": "rule-catalog",
         "label": "MiCAR rule catalog",
         "status": "enabled",
-        "scope": "90 rule row(s) across art.",
+        "scope": "91 rule row(s) across art.",
         "gate": "Rules are deterministic and versioned in source control."
       },
       {
         "key": "source-anchors",
         "label": "Source anchors",
         "status": "enabled",
-        "scope": "90/90 row(s) include source anchors.",
+        "scope": "91/91 row(s) include source anchors.",
         "gate": "Citation and source anchor coverage must be checked by the reviewer."
       },
       {
@@ -214,7 +215,7 @@
       "Do not mark a blocker cured before the deterministic linter is rerun.",
       "Do not describe a notification, publication or exchange submission as approved."
     ],
-    "suggested_prompt": "Role: MiCAR white paper reviewer.\nObjective: remediate deterministic findings for Synthetic EuroStable ART White Paper.\nWhite paper type: art.\nOpen blockers: COMMON.IXBRL_TAGGING, ANNEX_II.A.P1, ANNEX_II.A.P2, ANNEX_II.A.P3, ANNEX_II.A.P4, ANNEX_II.A.P5.\nMissing rules: COMMON.IXBRL_TAGGING.\nSource anchors: 90/90 rule row(s).\nOutput: remediation by rule id, source anchor to verify, reviewer decision and filing gate.\nReview gate: draft only. Rerun the deterministic CLI before relying on any cure."
+    "suggested_prompt": "Role: MiCAR white paper reviewer.\nObjective: remediate deterministic findings for Synthetic EuroStable ART White Paper.\nWhite paper type: art.\nOpen blockers: COMMON.IXBRL_TAGGING, ANNEX_II.A.P1, ANNEX_II.A.P2, ANNEX_II.A.P3, ANNEX_II.A.P4, ANNEX_II.A.P5.\nMissing rules: COMMON.IXBRL_TAGGING.\nSource anchors: 91/91 rule row(s).\nOutput: remediation by rule id, source anchor to verify, reviewer decision and filing gate.\nReview gate: draft only. Rerun the deterministic CLI before relying on any cure."
   },
   "rows": [
     {
@@ -13590,9 +13591,158 @@
           "external_action_allowed": false
         }
       ]
+    },
+    {
+      "row_id": "review-row-48c706170580ff03",
+      "rule_id": "RTS.CLASSIFICATION_DATA",
+      "citation": "Art. 2 und 3 i.V.m. Anhang VO (EU) 2025/421",
+      "section": "art",
+      "label": "Data for classifying the white paper in the ESMA register, with the LEI and DTI conditions of Delegated Regulation (EU) 2025/421",
+      "severity": "BLOCKER",
+      "status": "review",
+      "blocker": true,
+      "word_count": 143,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of the register classification data of Delegated Regulation (EU) 2025/421 did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "remediation": "Cure blocker before any notification workflow continues.",
+      "reviewer_decision": "remediation_required",
+      "verification_state": "needs_verification",
+      "source_anchor": {
+        "section_key": "art",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:art:4376fe48af3e41f9",
+        "section_length": 912
+      },
+      "anchor_verified": true,
+      "citation_coverage": "anchor_and_citation",
+      "export_gate": "blocked",
+      "playbook": {
+        "id": "art-art",
+        "skill": "rule-review-playbook",
+        "rule_scope": [
+          "RTS.CLASSIFICATION_DATA"
+        ],
+        "citation": "Art. 2 und 3 i.V.m. Anhang VO (EU) 2025/421",
+        "severity": "BLOCKER",
+        "review_gate": "Qualified lawyer review required before external use.",
+        "priority": "blocker",
+        "external_action_allowed": false
+      },
+      "word_suggested_edit": {
+        "schema": "micar-whitepaper-linter.word-suggested-edit.v1",
+        "action": "insert_required_disclosure",
+        "instruction": "Cure blocker before any notification workflow continues.",
+        "target_section": "art",
+        "draft_only": true,
+        "external_action_allowed": false
+      },
+      "delivery_block": {
+        "status": "blocked",
+        "external_action_allowed": false,
+        "review_gate": "Lawyer sign-off and deterministic rerun required before external filing or publication."
+      },
+      "review_cells": [
+        {
+          "column_id": "rule_id",
+          "label": "Rule ID",
+          "value": "RTS.CLASSIFICATION_DATA",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation",
+          "label": "Citation",
+          "value": "Art. 2 und 3 i.V.m. Anhang VO (EU) 2025/421",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "section",
+          "label": "Section",
+          "value": "art",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "status",
+          "label": "Status",
+          "value": "review",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "blocker",
+          "label": "Blocker",
+          "value": "true",
+          "status": "blocked",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "word_count",
+          "label": "Word count",
+          "value": "143",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "remediation",
+          "label": "Remediation",
+          "value": "Cure blocker before any notification workflow continues.",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "reviewer_decision",
+          "label": "Reviewer decision",
+          "value": "remediation_required",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "verification_state",
+          "label": "Verification",
+          "value": "needs_verification",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "source_anchor",
+          "label": "Source anchor",
+          "value": "json:art:4376fe48af3e41f9",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "citation_coverage",
+          "label": "Citation coverage",
+          "value": "anchor_and_citation",
+          "status": "needs_review",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        },
+        {
+          "column_id": "export_gate",
+          "label": "Export gate",
+          "value": "blocked",
+          "status": "blocked",
+          "review_gate": "Qualified lawyer review required before external use.",
+          "external_action_allowed": false
+        }
+      ]
     }
   ],
   "warnings": [],
   "review_notice": "Review table rows are deterministic linter outputs. Reviewer decisions remain pending until a qualified lawyer signs off.",
-  "digest": "d402fdec4fb6f3f63528c65662e1c09e0788c264c42dd904c6448d8569bff592"
+  "digest": "aec30ffb5856863fbb77a4243b8ebd4a5cc941e05c2450f4b5a32b41e45a1338"
 }

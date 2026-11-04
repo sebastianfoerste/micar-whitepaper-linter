@@ -4,9 +4,9 @@
   "whitepaper_type": "art",
   "status": "BLOCKED",
   "summary": {
-    "open_items": 72,
-    "blockers": 71,
-    "review_items": 71,
+    "open_items": 73,
+    "blockers": 72,
+    "review_items": 72,
     "missing_sections": 1
   },
   "items": [
@@ -1448,6 +1448,26 @@
         "parser_source_type": "json",
         "stable_anchor_id": "json:environmental_impact:e26b3cb7ef593c8d",
         "section_length": 742
+      }
+    },
+    {
+      "rule_id": "RTS.CLASSIFICATION_DATA",
+      "citation": "Art. 2 und 3 i.V.m. Anhang VO (EU) 2025/421",
+      "section": "art",
+      "label": "Data for classifying the white paper in the ESMA register, with the LEI and DTI conditions of Delegated Regulation (EU) 2025/421",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of the register classification data of Delegated Regulation (EU) 2025/421 did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "art",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:art:4376fe48af3e41f9",
+        "section_length": 912
       }
     }
   ],
