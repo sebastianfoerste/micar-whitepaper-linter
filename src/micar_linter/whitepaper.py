@@ -226,19 +226,23 @@ _NEGATION = re.compile(r"\b(?:not|no|neither|nor|never|without|other than|except
 _CLAUSE_END = re.compile(r"[.!?;:](?=\s|$)|\b(?:but|however|whereas|although|though|while)\b")
 _NEGATION_REACH = 8
 _NEGATION_LOOKBACK = 200
-# A phrase that holds a negation word but negates nothing (a pseudo-negation, as NegEx and pyConTextNLP list
-# "not only" and "not necessarily"): "not limited to" ("The risks include, but are not limited to:"), "not
-# restricted to", "not exhaustive", "not exclusively" and "without limitation". The negation word inside one
-# does not count, so it governs neither the phrase after it nor the items of a list it leads into.
+# A phrase that holds a negation word but does not negate what follows it (a pseudo-negation, as NegEx and
+# pyConTextNLP list "not only" and "not necessarily"): "not limited to", "not be limited to", "not restricted
+# to", "not be restricted to", "not exhaustive", "not exclusively", "not only", "not necessarily" (each also
+# with "n't") and "without limitation". Matched where a negation word starts. It governs no item of a list
+# after it ("The risks include, but are not limited to:"), where it is the only kind of negation in its
+# clause (_negated, _continued); elsewhere its negation word negates as any other does.
 _PSEUDO_NEGATION = re.compile(
-    r"(?:\bnot|n't)\s+(?:(?:be\s+)?(?:limited|restricted)\s+to|exhaustive|exclusively|only|necessarily)\b"
-    r"|\bwithout\s+limitation\b"
+    r"(?:not|n't)\s+(?:(?:be\s+)?(?:limited|restricted)\s+to|exhaustive|exclusively|only|necessarily)\b"
+    r"|without\s+limitation\b"
 )
 # A list item: a bullet or dash, or a list number of one or two digits or a lower-case list letter or roman
 # numeral with a full stop or a bracket, before its text.
 _LIST_ITEM = re.compile(
     r"(?:[-*\u2013\u2014\u2022\u2023\u2043\u00b7\u25aa\u25cf]|\(?(?:[a-z]|[ivx]{1,4}|\d{1,2})[.)])\s"
 )
+# The start of a line that is a list item.
+_ITEM_LINE = re.compile(rf"\n[ \t]*(?:{_LIST_ITEM.pattern})")
 _FIRST_WORD = re.compile(r"[^\W_]+")
 # A heading that ends in a negation leads into the line after it; a colon after the negation ends the clause
 # there (_CLAUSE_END), so such a heading governs nothing.
@@ -246,18 +250,30 @@ _ENDS_IN_NEGATION = re.compile(rf"(?:{_NEGATION.pattern})\W*$")
 
 
 def _negated(text: str, start: int) -> bool:
-    """Whether a negation governs the marker at start of the lower-case text. A negation word inside a
-    pseudo-negation ("not limited to") is none."""
+    """Whether a negation governs the marker at start of the lower-case text.
+
+    A pseudo-negation ("not limited to") governs no list item after it: where the marker stands in or after a
+    line that starts with a list marker (_LIST_ITEM) after the end of the pseudo-negation, its negation word
+    is none. That holds only where every negation word of the clause stands in a pseudo-negation that ends
+    before such a line. Otherwise each negation word counts, as before #96: beside another one ("The token is
+    not, among other things and not limited to these,") and in the marker's own sentence ("including but not
+    limited to e-money tokens"), also where a line end splits that sentence."""
     before = text[max(0, start - _NEGATION_LOOKBACK) : start]
     ends = list(_CLAUSE_END.finditer(before))
     clause = before[ends[-1].end() :] if ends else before
-    pseudo = [match.span() for match in _PSEUDO_NEGATION.finditer(clause)]
-    negations = [
-        match
-        for match in _NEGATION.finditer(clause)
-        if not any(first <= match.start() < end for first, end in pseudo)
-    ]
-    return bool(negations) and len(clause[negations[-1].end() :].split()) <= _NEGATION_REACH
+    negations = list(_NEGATION.finditer(clause))
+    if not negations:
+        return False
+    if _PSEUDO_NEGATION.match(clause, negations[-1].start()):
+        # The start of the last list item line of the clause; a pseudo-negation that ends before it governs
+        # nothing, where the clause holds no other negation word.
+        item = max((match.start() for match in _ITEM_LINE.finditer(clause)), default=-1)
+        if all(
+            (pseudo := _PSEUDO_NEGATION.match(clause, match.start())) and pseudo.end() <= item
+            for match in negations
+        ):
+            return False
+    return len(clause[negations[-1].end() :].split()) <= _NEGATION_REACH
 
 
 def _names_regime(pieces: list[tuple[str, int]], markers: tuple[str, ...]) -> bool:
@@ -327,7 +343,9 @@ def _continued(previous: tuple[str, str, bool] | None) -> str:
     A heading is judged on its own words, so nothing continues it unless it ends in a negation ("For the
     purposes of MiCAR the token is not", which a PDF may read as a heading). A line that ends in a
     semicolon is an item of a list, and the next line continues the clause that it continued. A colon at
-    the end of a line introduces the line after it, so it ends no clause there.
+    the end of a line introduces the line after it, so it ends no clause there, unless each negation word of
+    that clause stands in a pseudo-negation: such a lead-in governs no line of its list, whether or not the
+    line has a list marker (a Word list style shows one that the text does not hold).
     """
     if previous is None:
         return ""
@@ -337,7 +355,18 @@ def _continued(previous: tuple[str, str, bool] | None) -> str:
     text = text.rstrip()
     if text.endswith(";"):
         return clause
-    return f"{clause}\n{text.removesuffix(':')}"[-_NEGATION_LOOKBACK:]
+    continued = f"{clause}\n{text.removesuffix(':')}"[-_NEGATION_LOOKBACK:]
+    if text.endswith(":") and _only_pseudo_negations(continued):
+        return ""
+    return continued
+
+
+def _only_pseudo_negations(text: str) -> bool:
+    """Whether the last clause of the lower-case text holds a negation word and each stands in a
+    pseudo-negation."""
+    ends = list(_CLAUSE_END.finditer(text))
+    negations = list(_NEGATION.finditer(text, ends[-1].end() if ends else 0))
+    return bool(negations) and all(_PSEUDO_NEGATION.match(text, match.start()) for match in negations)
 
 
 def _regime_pieces(

@@ -90,6 +90,9 @@ def _write_docx(path: Path, blocks: list[tuple[str, str]]) -> Path:
             doc.add_heading(text, level=1)
         elif kind == "subheading":
             doc.add_heading(text, level=2)
+        elif kind == "list bullet":
+            # Word shows the bullet; the text of the paragraph does not hold it.
+            doc.add_paragraph(text, style="List Bullet")
         elif kind in ("bold", "bold body"):
             doc.add_paragraph().add_run(text).bold = True
         elif kind == "outline":
@@ -2656,23 +2659,71 @@ def test_a_pseudo_negation_governs_no_item_of_the_list_after_it(
     assert load_whitepaper(EVERY_WRITER[suffix](tmp_path / f"synthetic{suffix}", blocks)).type is WhitepaperType.ART
 
 
+# Drafts for another crypto-asset that name a regime phrase after a pseudo-negation in a sentence of their own.
+_PSEUDO_NEGATION_SENTENCES = {
+    "including but not limited to": "The platform lists crypto-assets including but not limited to e-money tokens.",
+    "not necessarily": "MeadowPoints is not necessarily an e-money token.",
+    "without limitation after a negation": (
+        "The token is not an asset-referenced token within the meaning of MiCAR or, without limitation, an e-money "
+        "token."
+    ),
+    "not exclusively or partly": "MeadowPoints does not exclusively or partly reference a reserve of assets.",
+    "not be restricted to": "Its use shall not be restricted to holders of the e-money token.",
+    "not be limited to": "Its use shall not be limited to holders of an asset-referenced token.",
+    "not only": "MeadowPoints is not only no asset-referenced token but also no e-money token.",
+}
+
+
 @pytest.mark.parametrize("suffix", sorted(EVERY_WRITER))
 @pytest.mark.parametrize(
-    ("sentence", "regime"),
-    [
-        ("The issuer holds, without limitation, a reserve of assets in cash and bonds.", WhitepaperType.ART),
-        ("The token is not only an asset-referenced token: it also gives access to a loyalty scheme.", WhitepaperType.ART),
-        ("Holders are not necessarily repaid from the reserve of assets in full.", WhitepaperType.ART),
-        ("Its use is not restricted to holders of the e-money token.", WhitepaperType.EMT),
-    ],
-    ids=["without limitation", "not only", "not necessarily", "not restricted to"],
+    "sentence", list(_PSEUDO_NEGATION_SENTENCES.values()), ids=list(_PSEUDO_NEGATION_SENTENCES)
 )
-def test_a_pseudo_negation_does_not_negate_the_phrase_after_it(
-    tmp_path: Path, suffix: str, sentence: str, regime: WhitepaperType
+def test_a_pseudo_negation_negates_a_phrase_outside_a_list_as_any_negation_does(
+    tmp_path: Path, suffix: str, sentence: str
 ):
-    # Before, the negation word inside the pseudo-negation governed the phrase at most eight words after it.
-    blocks = [*_SST_ISSUER, ("heading", "Risk Factors"), ("body", sentence)]
-    assert load_whitepaper(EVERY_WRITER[suffix](tmp_path / f"synthetic{suffix}", blocks)).type is regime
+    # A pseudo-negation governs no item of a list after it, but in a sentence its negation word governs the phrase
+    # at most eight words after it as any negation word does, as before #96, so each Annex I draft is other. At
+    # 0e24058 the negation word inside a pseudo-negation was none anywhere, and these drafts were an EMT or ART.
+    blocks = [_CRYPTO_ASSET, ("body", sentence), *_MEADOW_OFFEROR]
+    assert load_whitepaper(EVERY_WRITER[suffix](tmp_path / f"meadowpoints{suffix}", blocks)).type is WhitepaperType.OTHER
+
+
+# A sentence that a DOCX splits over two paragraphs, a PDF over two lines and Markdown over two paragraphs.
+_SPLIT_PSEUDO_NEGATION_SENTENCES = [
+    ("The platform supports crypto-assets including, but not limited", "to, Bitcoin and e-money tokens."),
+    ("Rewards may be paid in, without limitation,", "asset-referenced tokens held by the offeror."),
+    ("MeadowPoints can be exchanged for crypto-assets, including but not limited to", "e-money tokens and Ether."),
+]
+
+
+@pytest.mark.parametrize("suffix", sorted(EVERY_WRITER))
+@pytest.mark.parametrize(
+    "lines", _SPLIT_PSEUDO_NEGATION_SENTENCES, ids=[first.split(",")[0] for first, _ in _SPLIT_PSEUDO_NEGATION_SENTENCES]
+)
+def test_a_pseudo_negation_negates_the_rest_of_a_sentence_split_over_lines(
+    tmp_path: Path, suffix: str, lines: tuple[str, str]
+):
+    # The line after the pseudo-negation is no list item, so the sentence reads as it did before #96.
+    blocks = [_CRYPTO_ASSET, *_lines(*lines), *_MEADOW_OFFEROR]
+    assert load_whitepaper(EVERY_WRITER[suffix](tmp_path / f"meadowpoints{suffix}", blocks)).type is WhitepaperType.OTHER
+
+
+@pytest.mark.parametrize("suffix", sorted(WRITERS))
+@pytest.mark.parametrize("lead_in", _PSEUDO_NEGATION_LEAD_INS)
+@pytest.mark.parametrize("kind", ["list bullet", "body"], ids=["Word list style", "no marker"])
+def test_a_pseudo_negation_lead_in_with_a_colon_governs_no_item_without_a_marker(
+    tmp_path: Path, suffix: str, lead_in: str, kind: str
+):
+    # Word's list styles show a marker that the text of the paragraph does not hold, and a PDF may set its items
+    # without one; after a lead-in that ends in a colon (each of these does) such items are read on their own too.
+    blocks = [
+        *_SST_ISSUER,
+        ("heading", "Risk Factors"),
+        ("body", lead_in),
+        (kind, "the reserve of assets may lose value;"),
+        (kind, "the custodian may fail."),
+    ]
+    assert load_whitepaper(WRITERS[suffix][0](tmp_path / f"synthetic{suffix}", blocks)).type is WhitepaperType.ART
 
 
 _BESIDE_PSEUDO_NEGATIONS = {
@@ -2684,6 +2735,13 @@ _BESIDE_PSEUDO_NEGATIONS = {
         "The token is not only a loyalty token and is not an asset-referenced token or an e-money token."
     ],
     "lead-in": ["The token is not, without limitation,", "- an asset-referenced token;", "- an e-money token."],
+    # The "not" of "not limited to" counts here, as the first "not" is more than eight words before the phrase.
+    "lead-in, far": [
+        "The token is not, among other things and not limited to these,",
+        "- an asset-referenced token;",
+        "- an e-money token.",
+    ],
+    "colon lead-in": ["There is no guarantee and no limit, not limited to these:", "the reserve of assets;", "a deposit."],
 }
 
 
@@ -2693,7 +2751,7 @@ _BESIDE_PSEUDO_NEGATIONS = {
         pytest.param(suffix, lines, id=f"{name}-{suffix}")
         for name, lines in _BESIDE_PSEUDO_NEGATIONS.items()
         for suffix in sorted(EVERY_WRITER)
-        if name != "lead-in" or suffix in (".docx", ".pdf")
+        if not name.startswith(("lead-in", "colon")) or suffix in (".docx", ".pdf")
     ],
 )
 def test_a_negation_beside_a_pseudo_negation_still_negates(tmp_path: Path, suffix: str, lines: list[str]):
@@ -2990,13 +3048,38 @@ _STATEMENT = (
             ],
             _regimes(ART, ART),
         ),
-        # A phrase after a pseudo-negation counts as one without it does, so a draft for another crypto-asset
-        # that lists e-money tokens so is an EMT, as in 1.2.1.
+        # Outside a list a pseudo-negation negates the phrase after it as any negation word does, so a draft for
+        # another crypto-asset that lists e-money tokens so is other, as before #96, and so is an ART draft that
+        # names its reserve so (in 1.2.1 both name their regime).
         (
             [
                 _CRYPTO_ASSET,
                 *_lines("The platform lists crypto-assets including but not limited to e-money tokens."),
                 *_MEADOW_OFFEROR,
+            ],
+            _regimes(OTHER, OTHER),
+        ),
+        (
+            [
+                *_SST_ISSUER,
+                ("heading", "Risk Factors"),
+                ("body", "The issuer holds, without limitation, a reserve of assets in cash and bonds."),
+            ],
+            _regimes(OTHER, OTHER),
+        ),
+        # A list item after a pseudo-negation is read on its own, so a draft for another crypto-asset whose risk
+        # list names a regime phrase is an EMT, as in 1.2.1 (a Markdown or XHTML clause ends at the colon).
+        (
+            [
+                _CRYPTO_ASSET,
+                ("body", "MeadowPoints is a utility token."),
+                ("heading", "Risk Factors"),
+                *_lines(
+                    "The risks include, but are not limited to:",
+                    "- reclassification as an e-money token;",
+                    "- loss of the private key.",
+                ),
+                *_MEADOW_OFFEROR[:2],
             ],
             _regimes(EMT, EMT),
         ),
@@ -3134,6 +3217,8 @@ _STATEMENT = (
         "item read as a heading",
         "category",
         "phrase after a pseudo-negation",
+        "reserve after a pseudo-negation",
+        "item after a pseudo-negation",
         "inner list",
         "colon lead-in",
         "introduction under no section",
