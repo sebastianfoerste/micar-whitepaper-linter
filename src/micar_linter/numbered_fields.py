@@ -545,3 +545,18 @@ def field_answers(fields: list[NumberedField], whitepaper_type: WhitepaperType) 
 def _printed_number(field_id: str, whitepaper_type: WhitepaperType) -> str:
     """The field number as its table prints it: Tables 3 and 4 number the leading fields I.00 to I.08."""
     return f"I.{field_id}" if whitepaper_type is not WhitepaperType.OTHER and field_id.isdigit() else field_id
+
+
+def field_labels(fields: list[NumberedField], whitepaper_type: WhitepaperType) -> dict[str, str]:
+    """The label of each field by its number as the table prints it, with the template's name split off as in
+    field_answers; "" where the field has no label. The first label of a field that occurs twice counts.
+
+    The checks of the template's data types read a field only where its label is the template's name for its
+    number, or where it has none, so a draft that numbers its fields otherwise is not checked against the
+    wrong type.
+    """
+    labels: dict[str, str] = {}
+    for field in map(_with_template_label, fields):
+        labels.setdefault(_printed_number(field.field_id, whitepaper_type), field.label.strip())
+    return labels
+

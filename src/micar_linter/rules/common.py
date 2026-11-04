@@ -83,7 +83,8 @@ COMMON_RULES: tuple[Rule, ...] = (
     # transferable and may not be liquid, and investor compensation and deposit guarantee schemes do not
     # cover it. The terms come from the Regulation's wording of each statement; in German, "wert" would
     # match every "Kryptowert". The utility-token statement of Art. 6 Abs. 5 Buchst. d applies to
-    # utility tokens only and is not checked. In German the statements fit in about 25 words.
+    # utility tokens only and is not checked here (ITS.PREDEFINED_TEXT checks field 05 of a numbered-field
+    # draft). In German the statements fit in about 25 words.
     Rule(
         rule_id="COMMON.RISK_WARNING",
         citation="Art. 6 Abs. 5, Art. 19 Abs. 4, Art. 51 Abs. 4 MiCAR",
@@ -126,6 +127,7 @@ COMMON_RULES: tuple[Rule, ...] = (
     # Regulation (EU) 2024/2984 has the white paper report the date as YYYY-MM-DD and each language from a
     # closed list of EU languages. A correct answer can be a single word, so linter.py checks for a calendar
     # date and for a language name instead of listed terms and a minimum length.
+    # ITS.NOTIFICATION_DATE_FORMAT (rules/templates.py) checks that the date is written YYYY-MM-DD.
     Rule(
         rule_id="COMMON.NOTIFICATION_DATE",
         citation="Art. 6 Abs. 8, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR",

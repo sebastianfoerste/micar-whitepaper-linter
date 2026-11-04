@@ -4,11 +4,12 @@ Reference: Anhang I VO (EU) 2023/1114 i.V.m. Art. 6 MiCAR.
 
 Annex I is structured as Parts A through I. Each Part bundles point-level
 disclosure requirements. The rules below are scaffolded at the Part level.
-ANNEX_I.A.P6, for the contact details of Part A point 6, is the first point
-rule (ADR 0005); other point-level granularity (e.g. Annex I, Part D,
-point 5) is left as a deliberate extension point - those interpretive calls
-are the practising lawyer's contribution and are tracked in the project
-issues.
+ANNEX_I.A.P6, for the contact details of Part A point 6, has its own check
+(ADR 0005); the point rules for the other points that a field of Table 2 of
+Implementing Regulation (EU) 2024/2984 carries are built in rules/points.py
+from point_fields.py and placed after their Part rule in RULESETS. They check
+whether the fields are filled; whether the content meets a point remains the
+practising lawyer's call.
 
 ANNEX_I.J covers the sustainability disclosure under Art. 6(1), first
 subparagraph, point (j) MiCAR, which the template in Implementing Regulation

@@ -1,14 +1,14 @@
 {
   "schema": "micar-whitepaper-linter.coverage-matrix.v1",
-  "generated_at": "2026-10-29T06:57:48.094210+00:00",
+  "generated_at": "2026-11-04T14:01:45.662579+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "summary": {
-    "total": 20,
-    "pass": 17,
-    "review": 2,
+    "total": 91,
+    "pass": 18,
+    "review": 72,
     "missing": 1,
-    "blockers": 3
+    "blockers": 72
   },
   "coverage": [
     {
@@ -69,14 +69,14 @@
       "citation": "Art. 6 Abs. 8, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR",
       "severity": "MAJOR",
       "status": "pass",
-      "word_count": 17,
+      "word_count": 15,
       "blocker": false,
       "next_action": "Keep disclosure under lawyer review before external use.",
       "source_anchor": {
         "section_key": "notification_date",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:notification_date:d015fb69bd078a74",
-        "section_length": 109
+        "stable_anchor_id": "json:notification_date:1797439646d525bf",
+        "section_length": 107
       }
     },
     {
@@ -165,6 +165,210 @@
       }
     },
     {
+      "rule_id": "ANNEX_II.A.P1",
+      "annex": "ANNEX_II",
+      "section": "issuer",
+      "citation": "Anhang II Teil A Nr. 1 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 106,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:5b8d86d449c01772",
+        "section_length": 738
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.A.P2",
+      "annex": "ANNEX_II",
+      "section": "issuer",
+      "citation": "Anhang II Teil A Nr. 2 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 106,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:7137c856c494d189",
+        "section_length": 738
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.A.P3",
+      "annex": "ANNEX_II",
+      "section": "issuer",
+      "citation": "Anhang II Teil A Nr. 3 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 106,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:e011dcb8dec7f8e9",
+        "section_length": 738
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.A.P4",
+      "annex": "ANNEX_II",
+      "section": "issuer",
+      "citation": "Anhang II Teil A Nr. 4 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 106,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:5a99845d03a43dec",
+        "section_length": 738
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.A.P5",
+      "annex": "ANNEX_II",
+      "section": "issuer",
+      "citation": "Anhang II Teil A Nr. 5 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 106,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:0b3b075054617694",
+        "section_length": 738
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.A.P6",
+      "annex": "ANNEX_II",
+      "section": "issuer",
+      "citation": "Anhang II Teil A Nr. 6 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 106,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:2111d91408624519",
+        "section_length": 738
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.A.P7",
+      "annex": "ANNEX_II",
+      "section": "issuer",
+      "citation": "Anhang II Teil A Nr. 7 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 106,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:429d34269adaecce",
+        "section_length": 738
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.A.P8",
+      "annex": "ANNEX_II",
+      "section": "issuer",
+      "citation": "Anhang II Teil A Nr. 8 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 106,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:c44d7631498b2dd8",
+        "section_length": 738
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.A.P9",
+      "annex": "ANNEX_II",
+      "section": "issuer",
+      "citation": "Anhang II Teil A Nr. 9 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 106,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:217da113bf68a7a1",
+        "section_length": 738
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.A.P10",
+      "annex": "ANNEX_II",
+      "section": "issuer",
+      "citation": "Anhang II Teil A Nr. 10 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 106,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:f7f7c3ee69fbeefc",
+        "section_length": 738
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.A.P11",
+      "annex": "ANNEX_II",
+      "section": "issuer",
+      "citation": "Anhang II Teil A Nr. 11 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 106,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:307178ab36c3267b",
+        "section_length": 738
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.A.P12",
+      "annex": "ANNEX_II",
+      "section": "issuer",
+      "citation": "Anhang II Teil A Nr. 12 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 106,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "issuer",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:issuer:8fdc5295c0db403c",
+        "section_length": 738
+      }
+    },
+    {
       "rule_id": "ANNEX_II.B",
       "annex": "ANNEX_II",
       "section": "art",
@@ -178,6 +382,91 @@
         "section_key": "art",
         "parser_source_type": "json",
         "stable_anchor_id": "json:art:bdc5432d4f1fa7c5",
+        "section_length": 912
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.B.P1",
+      "annex": "ANNEX_II",
+      "section": "art",
+      "citation": "Anhang II Teil B Nr. 1 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 143,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "art",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:art:7965f990e70fe1ef",
+        "section_length": 912
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.B.P2",
+      "annex": "ANNEX_II",
+      "section": "art",
+      "citation": "Anhang II Teil B Nr. 2 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 143,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "art",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:art:0840cbfb00090c65",
+        "section_length": 912
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.B.P3",
+      "annex": "ANNEX_II",
+      "section": "art",
+      "citation": "Anhang II Teil B Nr. 3 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 143,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "art",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:art:db386809a66317ae",
+        "section_length": 912
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.B.P4",
+      "annex": "ANNEX_II",
+      "section": "art",
+      "citation": "Anhang II Teil B Nr. 4 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 143,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "art",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:art:8156a51a91468eef",
+        "section_length": 912
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.B.P5",
+      "annex": "ANNEX_II",
+      "section": "art",
+      "citation": "Anhang II Teil B Nr. 5 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 143,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "art",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:art:26f60caf24167e20",
         "section_length": 912
       }
     },
@@ -199,6 +488,261 @@
       }
     },
     {
+      "rule_id": "ANNEX_II.C.P1",
+      "annex": "ANNEX_II",
+      "section": "offer_or_admission",
+      "citation": "Anhang II Teil C Nr. 1 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 80,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:559bcf4a85d0396b",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P2",
+      "annex": "ANNEX_II",
+      "section": "offer_or_admission",
+      "citation": "Anhang II Teil C Nr. 2 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 80,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:c1c47fded201b1c7",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P3",
+      "annex": "ANNEX_II",
+      "section": "offer_or_admission",
+      "citation": "Anhang II Teil C Nr. 3 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 80,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:7ee5ca21b12d54a1",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P4",
+      "annex": "ANNEX_II",
+      "section": "offer_or_admission",
+      "citation": "Anhang II Teil C Nr. 4 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 80,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:2c1852748aa3b7b2",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P5",
+      "annex": "ANNEX_II",
+      "section": "offer_or_admission",
+      "citation": "Anhang II Teil C Nr. 5 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 80,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:f3ce8c18eb5ba38d",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P6",
+      "annex": "ANNEX_II",
+      "section": "offer_or_admission",
+      "citation": "Anhang II Teil C Nr. 6 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 80,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:b413f7efc69d0023",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P7",
+      "annex": "ANNEX_II",
+      "section": "offer_or_admission",
+      "citation": "Anhang II Teil C Nr. 7 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 80,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:97989b1826377e78",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P8",
+      "annex": "ANNEX_II",
+      "section": "offer_or_admission",
+      "citation": "Anhang II Teil C Nr. 8 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 80,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:8c51e1a0a7fcd535",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P9",
+      "annex": "ANNEX_II",
+      "section": "offer_or_admission",
+      "citation": "Anhang II Teil C Nr. 9 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 80,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:becefc8994fa1f00",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P10",
+      "annex": "ANNEX_II",
+      "section": "offer_or_admission",
+      "citation": "Anhang II Teil C Nr. 10 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 80,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:25aaad7da3486815",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P11",
+      "annex": "ANNEX_II",
+      "section": "offer_or_admission",
+      "citation": "Anhang II Teil C Nr. 11 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 80,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:5c92a1b7658e0a2e",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P12",
+      "annex": "ANNEX_II",
+      "section": "offer_or_admission",
+      "citation": "Anhang II Teil C Nr. 12 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 80,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:acd29f22f500878b",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P13",
+      "annex": "ANNEX_II",
+      "section": "offer_or_admission",
+      "citation": "Anhang II Teil C Nr. 13 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 80,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:4c658947703c353d",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P14",
+      "annex": "ANNEX_II",
+      "section": "offer_or_admission",
+      "citation": "Anhang II Teil C Nr. 14 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 80,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:f2d19688c9fe02ef",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.C.P15",
+      "annex": "ANNEX_II",
+      "section": "offer_or_admission",
+      "citation": "Anhang II Teil C Nr. 15 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 80,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:2d6628cde4588740",
+        "section_length": 501
+      }
+    },
+    {
       "rule_id": "ANNEX_II.D",
       "annex": "ANNEX_II",
       "section": "rights_and_obligations",
@@ -212,6 +756,295 @@
         "section_key": "rights_and_obligations",
         "parser_source_type": "json",
         "stable_anchor_id": "json:rights_and_obligations:b2d25c72533c2410",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P1",
+      "annex": "ANNEX_II",
+      "section": "rights_and_obligations",
+      "citation": "Anhang II Teil D Nr. 1 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 175,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:6e2208b4ffbc4c52",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P2",
+      "annex": "ANNEX_II",
+      "section": "rights_and_obligations",
+      "citation": "Anhang II Teil D Nr. 2 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 175,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:8326c93696e7937e",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P3",
+      "annex": "ANNEX_II",
+      "section": "rights_and_obligations",
+      "citation": "Anhang II Teil D Nr. 3 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 175,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:c35bfeed2314c70c",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P4",
+      "annex": "ANNEX_II",
+      "section": "rights_and_obligations",
+      "citation": "Anhang II Teil D Nr. 4 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 175,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:1b0483353518f37e",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P5",
+      "annex": "ANNEX_II",
+      "section": "rights_and_obligations",
+      "citation": "Anhang II Teil D Nr. 5 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 175,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:8c6cec9cf3b1ff93",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P6",
+      "annex": "ANNEX_II",
+      "section": "rights_and_obligations",
+      "citation": "Anhang II Teil D Nr. 6 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 175,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:44773db38f28ceb5",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P7",
+      "annex": "ANNEX_II",
+      "section": "rights_and_obligations",
+      "citation": "Anhang II Teil D Nr. 7 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 175,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:a8fbf4fa9e6392f0",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P8",
+      "annex": "ANNEX_II",
+      "section": "rights_and_obligations",
+      "citation": "Anhang II Teil D Nr. 8 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 175,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:7e32edab914a7b07",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P9",
+      "annex": "ANNEX_II",
+      "section": "rights_and_obligations",
+      "citation": "Anhang II Teil D Nr. 9 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 175,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:a0f7fa5bc152f840",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P10",
+      "annex": "ANNEX_II",
+      "section": "rights_and_obligations",
+      "citation": "Anhang II Teil D Nr. 10 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 175,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:a05800e9a673aa40",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P11",
+      "annex": "ANNEX_II",
+      "section": "rights_and_obligations",
+      "citation": "Anhang II Teil D Nr. 11 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 175,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:ce3dbf8b313ddc68",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P12",
+      "annex": "ANNEX_II",
+      "section": "rights_and_obligations",
+      "citation": "Anhang II Teil D Nr. 12 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 175,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:1f02a6910dbe5299",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P13",
+      "annex": "ANNEX_II",
+      "section": "rights_and_obligations",
+      "citation": "Anhang II Teil D Nr. 13 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 175,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:91bfeb83c7133036",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P14",
+      "annex": "ANNEX_II",
+      "section": "rights_and_obligations",
+      "citation": "Anhang II Teil D Nr. 14 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 175,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:95a0d18d38690ed6",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P15",
+      "annex": "ANNEX_II",
+      "section": "rights_and_obligations",
+      "citation": "Anhang II Teil D Nr. 15 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 175,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:f032a1b9d37d0619",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P16",
+      "annex": "ANNEX_II",
+      "section": "rights_and_obligations",
+      "citation": "Anhang II Teil D Nr. 16 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 175,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:299b298620078a91",
+        "section_length": 1127
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.D.P17",
+      "annex": "ANNEX_II",
+      "section": "rights_and_obligations",
+      "citation": "Anhang II Teil D Nr. 17 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 175,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "rights_and_obligations",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:rights_and_obligations:55c9e9e951476cd4",
         "section_length": 1127
       }
     },
@@ -233,6 +1066,91 @@
       }
     },
     {
+      "rule_id": "ANNEX_II.E.P1",
+      "annex": "ANNEX_II",
+      "section": "technology",
+      "citation": "Anhang II Teil E Nr. 1 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 87,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "technology",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:technology:41408539aebd880d",
+        "section_length": 602
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.E.P2",
+      "annex": "ANNEX_II",
+      "section": "technology",
+      "citation": "Anhang II Teil E Nr. 2 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 87,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "technology",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:technology:87d70fb59f119cb5",
+        "section_length": 602
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.E.P3",
+      "annex": "ANNEX_II",
+      "section": "technology",
+      "citation": "Anhang II Teil E Nr. 3 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 87,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "technology",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:technology:30679e57064ea3b1",
+        "section_length": 602
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.E.P4",
+      "annex": "ANNEX_II",
+      "section": "technology",
+      "citation": "Anhang II Teil E Nr. 4 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 87,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "technology",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:technology:f7baca54521f0d37",
+        "section_length": 602
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.E.P5",
+      "annex": "ANNEX_II",
+      "section": "technology",
+      "citation": "Anhang II Teil E Nr. 5 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 87,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "technology",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:technology:e92a5c43416e1f44",
+        "section_length": 602
+      }
+    },
+    {
       "rule_id": "ANNEX_II.F",
       "annex": "ANNEX_II",
       "section": "risks",
@@ -246,6 +1164,108 @@
         "section_key": "risks",
         "parser_source_type": "json",
         "stable_anchor_id": "json:risks:e2513801fcb5b070",
+        "section_length": 1234
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.F.P1",
+      "annex": "ANNEX_II",
+      "section": "risks",
+      "citation": "Anhang II Teil F Nr. 1 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 183,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "risks",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:risks:a38fb8aac0b8d93e",
+        "section_length": 1234
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.F.P2",
+      "annex": "ANNEX_II",
+      "section": "risks",
+      "citation": "Anhang II Teil F Nr. 2 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 183,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "risks",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:risks:373b01a05071f4b8",
+        "section_length": 1234
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.F.P3",
+      "annex": "ANNEX_II",
+      "section": "risks",
+      "citation": "Anhang II Teil F Nr. 3 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 183,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "risks",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:risks:a7f979ee4b6a78cc",
+        "section_length": 1234
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.F.P4",
+      "annex": "ANNEX_II",
+      "section": "risks",
+      "citation": "Anhang II Teil F Nr. 4 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 183,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "risks",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:risks:1b81b858077a862f",
+        "section_length": 1234
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.F.P5",
+      "annex": "ANNEX_II",
+      "section": "risks",
+      "citation": "Anhang II Teil F Nr. 5 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 183,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "risks",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:risks:571e2e9275aef68a",
+        "section_length": 1234
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.F.P6",
+      "annex": "ANNEX_II",
+      "section": "risks",
+      "citation": "Anhang II Teil F Nr. 6 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 183,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "risks",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:risks:136c8ae305df76c4",
         "section_length": 1234
       }
     },
@@ -318,6 +1338,91 @@
       }
     },
     {
+      "rule_id": "ANNEX_II.G.P1",
+      "annex": "ANNEX_II",
+      "section": "reserve_of_assets",
+      "citation": "Anhang II Teil G Nr. 1 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 222,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "reserve_of_assets",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:reserve_of_assets:249263eeb4a8ba5e",
+        "section_length": 1411
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.G.P2",
+      "annex": "ANNEX_II",
+      "section": "reserve_of_assets",
+      "citation": "Anhang II Teil G Nr. 2 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 222,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "reserve_of_assets",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:reserve_of_assets:379ca0c30b414c82",
+        "section_length": 1411
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.G.P3",
+      "annex": "ANNEX_II",
+      "section": "reserve_of_assets",
+      "citation": "Anhang II Teil G Nr. 3 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 222,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "reserve_of_assets",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:reserve_of_assets:8e1e1f3cb5bb52bf",
+        "section_length": 1411
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.G.P4",
+      "annex": "ANNEX_II",
+      "section": "reserve_of_assets",
+      "citation": "Anhang II Teil G Nr. 4 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 222,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "reserve_of_assets",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:reserve_of_assets:ab63cb07f6995d22",
+        "section_length": 1411
+      }
+    },
+    {
+      "rule_id": "ANNEX_II.G.P5",
+      "annex": "ANNEX_II",
+      "section": "reserve_of_assets",
+      "citation": "Anhang II Teil G Nr. 5 MiCAR",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 222,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "reserve_of_assets",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:reserve_of_assets:95206b7445da016b",
+        "section_length": 1411
+      }
+    },
+    {
       "rule_id": "ANNEX_II.H",
       "annex": "ANNEX_II",
       "section": "environmental_impact",
@@ -350,14 +1455,185 @@
         "stable_anchor_id": "json:redemption:f30c1426e8222ca8",
         "section_length": 892
       }
+    },
+    {
+      "rule_id": "ITS.NOTIFICATION_DATE_FORMAT",
+      "annex": "ITS",
+      "section": "notification_date",
+      "citation": "Anhang Tabelle 2 Feld 01, Tabelle 3 Feld I.01, Tabelle 4 Feld I.01 VO (EU) 2024/2984",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "word_count": 15,
+      "blocker": false,
+      "next_action": "Keep disclosure under lawyer review before external use.",
+      "source_anchor": {
+        "section_key": "notification_date",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:notification_date:3bbdc9d8be42de60",
+        "section_length": 107
+      }
+    },
+    {
+      "rule_id": "ITS.PREDEFINED_TEXT",
+      "annex": "ITS",
+      "section": "management_statement",
+      "citation": "Anhang Tabelle 2 Felder 02 bis 07, Tabelle 3 Felder I.02 bis I.04 und I.06, Tabelle 4 Felder I.02 bis I.05 und I.07 VO (EU) 2024/2984",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 236,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "management_statement",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:management_statement:4f05e63e3b9f4215",
+        "section_length": 393
+      }
+    },
+    {
+      "rule_id": "ITS.FIELD_FORMATS",
+      "annex": "ITS",
+      "section": "offer_or_admission",
+      "citation": "Anhang Tabellen 1 bis 4 VO (EU) 2024/2984",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 80,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:443c655b530f03ef",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ITS.CODE_LISTS",
+      "annex": "ITS",
+      "section": "offer_or_admission",
+      "citation": "Anhang Tabellen 2 bis 4 VO (EU) 2024/2984",
+      "severity": "MAJOR",
+      "status": "review",
+      "word_count": 80,
+      "blocker": false,
+      "next_action": "Strengthen the disclosure before sign-off.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:a2e468f0284fc19d",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "RTS.SUSTAINABILITY_INDICATORS",
+      "annex": "RTS",
+      "section": "environmental_impact",
+      "citation": "Art. 4 Abs. 1 und 2 i.V.m. Anhang Tabellen 2 und 3 VO (EU) 2025/422",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 104,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "environmental_impact",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:environmental_impact:e26b3cb7ef593c8d",
+        "section_length": 742
+      }
+    },
+    {
+      "rule_id": "RTS.CLASSIFICATION_DATA",
+      "annex": "RTS",
+      "section": "art",
+      "citation": "Art. 2 und 3 i.V.m. Anhang VO (EU) 2025/421",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 143,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "art",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:art:4376fe48af3e41f9",
+        "section_length": 912
+      }
     }
   ],
   "blockers": [
     "COMMON.IXBRL_TAGGING",
+    "ANNEX_II.A.P1",
+    "ANNEX_II.A.P2",
+    "ANNEX_II.A.P3",
+    "ANNEX_II.A.P4",
+    "ANNEX_II.A.P5",
+    "ANNEX_II.A.P6",
+    "ANNEX_II.A.P7",
+    "ANNEX_II.A.P8",
+    "ANNEX_II.A.P9",
+    "ANNEX_II.A.P10",
+    "ANNEX_II.A.P11",
+    "ANNEX_II.A.P12",
+    "ANNEX_II.B.P1",
+    "ANNEX_II.B.P2",
+    "ANNEX_II.B.P3",
+    "ANNEX_II.B.P4",
+    "ANNEX_II.B.P5",
+    "ANNEX_II.C.P1",
+    "ANNEX_II.C.P2",
+    "ANNEX_II.C.P3",
+    "ANNEX_II.C.P4",
+    "ANNEX_II.C.P5",
+    "ANNEX_II.C.P6",
+    "ANNEX_II.C.P7",
+    "ANNEX_II.C.P8",
+    "ANNEX_II.C.P9",
+    "ANNEX_II.C.P10",
+    "ANNEX_II.C.P11",
+    "ANNEX_II.C.P12",
+    "ANNEX_II.C.P13",
+    "ANNEX_II.C.P14",
+    "ANNEX_II.C.P15",
+    "ANNEX_II.D.P1",
+    "ANNEX_II.D.P2",
+    "ANNEX_II.D.P3",
+    "ANNEX_II.D.P4",
+    "ANNEX_II.D.P5",
+    "ANNEX_II.D.P6",
+    "ANNEX_II.D.P7",
+    "ANNEX_II.D.P8",
+    "ANNEX_II.D.P9",
+    "ANNEX_II.D.P10",
+    "ANNEX_II.D.P11",
+    "ANNEX_II.D.P12",
+    "ANNEX_II.D.P13",
+    "ANNEX_II.D.P14",
+    "ANNEX_II.D.P15",
+    "ANNEX_II.D.P16",
+    "ANNEX_II.D.P17",
+    "ANNEX_II.E.P1",
+    "ANNEX_II.E.P2",
+    "ANNEX_II.E.P3",
+    "ANNEX_II.E.P4",
+    "ANNEX_II.E.P5",
+    "ANNEX_II.F.P1",
+    "ANNEX_II.F.P2",
+    "ANNEX_II.F.P3",
+    "ANNEX_II.F.P4",
+    "ANNEX_II.F.P5",
+    "ANNEX_II.F.P6",
     "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
-    "ANNEX_II.G.CUSTODY"
+    "ANNEX_II.G.CUSTODY",
+    "ANNEX_II.G.P1",
+    "ANNEX_II.G.P2",
+    "ANNEX_II.G.P3",
+    "ANNEX_II.G.P4",
+    "ANNEX_II.G.P5",
+    "ITS.PREDEFINED_TEXT",
+    "ITS.FIELD_FORMATS",
+    "RTS.SUSTAINABILITY_INDICATORS",
+    "RTS.CLASSIFICATION_DATA"
   ],
   "warnings": [],
   "review_notice": "Coverage matrix is a deterministic disclosure checklist. It is not legal advice, a signature, a notification, or filing approval.",
-  "digest": "a8dc5245ffa31917b9ebd8cd3dc986ddc9a6a64a3e7985cdadd1d6f5f3d6508e"
+  "digest": "937a9d63fa2f8154a41ef783d86f19483e63facd6af687572ff414c05f8aa0c9"
 }

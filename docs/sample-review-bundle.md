@@ -30,7 +30,7 @@ The linter was run on `examples/art-stablecoin.json` with the default English ci
 MiCAR Whitepaper Linter - Synthetic EuroStable ART White Paper
 Whitepaper type: ART
 ==============================================================================
-Pass: 17  |  Review: 2  |  Missing: 1  |  Blockers: 3
+Pass: 18  |  Review: 72  |  Missing: 1  |  Blockers: 72
 
 [PASS  ] [BLOCKER] COMMON.SUMMARY  Plain-language summary
            Cite:  Art. 6(7), Art. 19(6), Art. 51(6) MiCAR
@@ -50,7 +50,7 @@ Pass: 17  |  Review: 2  |  Missing: 1  |  Blockers: 3
 [PASS  ] [MAJOR  ] COMMON.NOTIFICATION_DATE  Date of notification to the competent authority
            Cite:  Art. 6(8), Art. 19(7), Art. 51(7) MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'notification_date'  (17 words)
+           Section: 'notification_date'  (15 words)
 
 [PASS  ] [MAJOR  ] COMMON.LANGUAGE  Language of the white paper (home Member State official language or customary in international finance)
            Cite:  Art. 6(9), Art. 19(8), Art. 51(8) MiCAR
@@ -78,30 +78,390 @@ Pass: 17  |  Review: 2  |  Missing: 1  |  Blockers: 3
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'issuer'  (106 words)
 
+[REVIEW] [BLOCKER] ANNEX_II.A.P1  Name of the issuer of the asset-referenced token
+           Cite:  Annex II, Part A, point 1 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'issuer'  (106 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part A point 1 (fields A.1 and A.2 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.A.P2  Legal form of the issuer
+           Cite:  Annex II, Part A, point 2 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'issuer'  (106 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part A point 2 (field A.3 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.A.P3  Registered address and head office, where different, of the issuer
+           Cite:  Annex II, Part A, point 3 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'issuer'  (106 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part A point 3 (fields A.4 and A.5 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.A.P4  Date of registration of the issuer
+           Cite:  Annex II, Part A, point 4 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'issuer'  (106 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part A point 4 (field A.6 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.A.P5  Legal entity identifier or another identifier required by national law of the issuer
+           Cite:  Annex II, Part A, point 5 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'issuer'  (106 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part A point 5 (fields A.7 and A.8 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.A.P6  Identity of the parent company, where applicable
+           Cite:  Annex II, Part A, point 6 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'issuer'  (106 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part A point 6 (field A.9 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.A.P7  Identity, business addresses and functions of the members of the issuer's management body
+           Cite:  Annex II, Part A, point 7 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'issuer'  (106 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part A point 7 (field A.10 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.A.P8  Business or professional activity of the issuer and, where applicable, of its parent company
+           Cite:  Annex II, Part A, point 8 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'issuer'  (106 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part A point 8 (fields A.11 and A.12 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.A.P9  Financial condition of the issuer over the past three years or since its registration
+           Cite:  Annex II, Part A, point 9 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'issuer'  (106 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part A point 9 (fields A.13, A.14 and A.15 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.A.P10  Detailed description of the issuer's governance arrangements
+           Cite:  Annex II, Part A, point 10 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'issuer'  (106 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part A point 10 (field A.16 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.A.P11  Authorisation as an issuer of an asset-referenced token and the competent authority, unless exempted under Article 17
+           Cite:  Annex II, Part A, point 11 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'issuer'  (106 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part A point 11 (fields A.17, A.18, A.19 and A.20 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.A.P12  Other crypto-assets the issuer issues or other activities related to them, and any connection with the entity running the distributed ledger
+           Cite:  Annex II, Part A, point 12 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'issuer'  (106 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part A point 12 (fields A.21, A.22, A.23 and A.24 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
 [PASS  ] [BLOCKER] ANNEX_II.B  Information about the asset-referenced token (characteristics, plans and milestones)
            Cite:  Annex II, Part B MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'art'  (143 words)
+
+[REVIEW] [BLOCKER] ANNEX_II.B.P1  Name and abbreviation or ticker handler of the asset-referenced token
+           Cite:  Annex II, Part B, point 1 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'art'  (143 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part B point 1 (fields B.1 and B.2 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.B.P2  Characteristics of the asset-referenced token, including the data for classifying the white paper in the register
+           Cite:  Annex II, Part B, point 2 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'art'  (143 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part B point 2 (fields B.7, B.8, B.9, B.10, B.11, B.12, B.13, B.14, B.15, B.16, B.17, B.18, B.19 and B.20 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.B.P3  Details of the natural or legal persons involved in the operationalisation of the token
+           Cite:  Annex II, Part B, point 3 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'art'  (143 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part B point 3 (field B.3 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.B.P4  Role, responsibilities and accountability of third-party entities under Article 34(5)(h)
+           Cite:  Annex II, Part B, point 4 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'art'  (143 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part B point 4 (field B.4 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.B.P5  Plans for the asset-referenced token, including past and future milestones and resources already allocated
+           Cite:  Annex II, Part B, point 5 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'art'  (143 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part B point 5 (fields B.5 and B.6 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
 
 [PASS  ] [BLOCKER] ANNEX_II.C  Information about the offer to the public of the ART or its admission to trading
            Cite:  Annex II, Part C MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'offer_or_admission'  (80 words)
 
+[REVIEW] [BLOCKER] ANNEX_II.C.P1  Whether the white paper concerns an offer to the public or an admission to trading
+           Cite:  Annex II, Part C, point 1 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'offer_or_admission'  (80 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 1 (field C.1 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.C.P2  Amount to be raised, minimum and maximum subscription goals, and whether and how oversubscriptions are accepted and allocated
+           Cite:  Annex II, Part C, point 2 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'offer_or_admission'  (80 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 2 (fields C.2, C.3, C.4, C.5 and C.6 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.C.P3  Total number of units to be offered or admitted to trading, where applicable
+           Cite:  Annex II, Part C, point 3 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'offer_or_admission'  (80 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 3 (field C.7 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.C.P4  Prospective holders targeted and any restriction on the type of holders
+           Cite:  Annex II, Part C, point 4 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'offer_or_admission'  (80 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 4 (fields C.8 and C.9 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.C.P5  Notice of reimbursement, expected timeline of refunds and consequences of exceeding the maximum subscription goal
+           Cite:  Annex II, Part C, point 5 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'offer_or_admission'  (80 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 5 (fields C.10, C.11 and C.12 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.C.P6  Phases of the offer and any discounted purchase price for early purchasers
+           Cite:  Annex II, Part C, point 6 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'offer_or_admission'  (80 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 6 (fields C.13 and C.14 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.C.P7  Subscription period of a time-limited offer
+           Cite:  Annex II, Part C, point 7 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'offer_or_admission'  (80 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 7 (fields C.15, C.16 and C.17 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.C.P8  Methods of payment to purchase and to redeem the asset-referenced token
+           Cite:  Annex II, Part C, point 8 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'offer_or_admission'  (80 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 8 (field C.18 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.C.P9  Method and time schedule of transferring the purchased token to the holders
+           Cite:  Annex II, Part C, point 9 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'offer_or_admission'  (80 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 9 (field C.19 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.C.P10  Technical requirements the purchaser must fulfil to hold the token
+           Cite:  Annex II, Part C, point 10 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'offer_or_admission'  (80 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 10 (field C.20 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.C.P11  Crypto-asset service provider placing the tokens and the form of placement, where applicable
+           Cite:  Annex II, Part C, point 11 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'offer_or_admission'  (80 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 11 (fields C.21 and C.23 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.C.P12  Trading platform where admission is sought, how investors access it and the costs involved, where applicable
+           Cite:  Annex II, Part C, point 12 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'offer_or_admission'  (80 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 12 (fields C.24, C.26 and C.27 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.C.P13  Expenses related to the offer to the public
+           Cite:  Annex II, Part C, point 13 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'offer_or_admission'  (80 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 13 (field C.28 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.C.P14  Potential conflicts of interest of the persons involved in the offer or admission
+           Cite:  Annex II, Part C, point 14 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'offer_or_admission'  (80 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 14 (field C.29 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.C.P15  Law applicable to the offer to the public and the competent court
+           Cite:  Annex II, Part C, point 15 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'offer_or_admission'  (80 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part C point 15 (fields C.30 and C.31 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
 [PASS  ] [BLOCKER] ANNEX_II.D  Rights and obligations of holders (permanent right of redemption, complaints handling)
            Cite:  Annex II, Part D in conjunction with Art. 39 MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'rights_and_obligations'  (175 words)
+
+[REVIEW] [BLOCKER] ANNEX_II.D.P1  Characteristics and functionality of the token and when the functionalities are planned to apply
+           Cite:  Annex II, Part D, point 1 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'rights_and_obligations'  (175 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 1 (fields D.1 and D.2 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.D.P2  Rights and obligations of the purchaser and the procedure and conditions for exercising them
+           Cite:  Annex II, Part D, point 2 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'rights_and_obligations'  (175 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 2 (fields D.3 and D.4 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.D.P3  Conditions under which the rights and obligations may be modified
+           Cite:  Annex II, Part D, point 3 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'rights_and_obligations'  (175 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 3 (field D.5 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.D.P4  Future offers of the token by the issuer and the number of units it retains, where applicable
+           Cite:  Annex II, Part D, point 4 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'rights_and_obligations'  (175 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 4 (fields D.6 and D.7 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.D.P5  How and where the token can be bought or sold after the offer, where admission to trading is not sought
+           Cite:  Annex II, Part D, point 5 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'rights_and_obligations'  (175 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 5 (fields D.8 and D.9 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.D.P6  Restrictions on the transferability of the token
+           Cite:  Annex II, Part D, point 6 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'rights_and_obligations'  (175 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 6 (field D.10 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.D.P7  Functioning of protocols that increase or decrease the supply in response to demand
+           Cite:  Annex II, Part D, point 7 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'rights_and_obligations'  (175 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 7 (fields D.11 and D.12 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.D.P8  Protection schemes protecting the value of the token and compensation schemes, where applicable
+           Cite:  Annex II, Part D, point 8 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'rights_and_obligations'  (175 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 8 (fields D.13, D.14, D.15 and D.16 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.D.P9  Nature and enforceability of rights, including permanent rights of redemption and claims against the issuer
+           Cite:  Annex II, Part D, point 9 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'rights_and_obligations'  (175 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 9 (field D.17 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.D.P10  Claim the token represents: referenced assets and proportions, relation to the reserve and valuation of the claim
+           Cite:  Annex II, Part D, point 10 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'rights_and_obligations'  (175 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 10 (fields D.18, D.19, D.20, D.21 and D.22 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.D.P11  Arrangements to ensure the liquidity of the token and the entities in charge, where applicable
+           Cite:  Annex II, Part D, point 11 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'rights_and_obligations'  (175 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 11 (fields D.23 and D.24 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.D.P12  Contact details for complaints, complaints-handling procedures and any dispute resolution mechanism
+           Cite:  Annex II, Part D, point 12 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'rights_and_obligations'  (175 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 12 (fields D.25, D.26 and D.27 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.D.P13  Rights of the holders when the issuer cannot fulfil its obligations, including in insolvency
+           Cite:  Annex II, Part D, point 13 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'rights_and_obligations'  (175 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 13 (field D.28 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.D.P14  Rights in the implementation of the recovery plan
+           Cite:  Annex II, Part D, point 14 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'rights_and_obligations'  (175 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 14 (field D.29 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.D.P15  Rights in the implementation of the redemption plan
+           Cite:  Annex II, Part D, point 15 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'rights_and_obligations'  (175 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 15 (field D.30 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.D.P16  How the token is redeemed, and whether the holder can choose the form of redemption, the form of transference or the currency
+           Cite:  Annex II, Part D, point 16 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'rights_and_obligations'  (175 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 16 (fields D.31, D.32, D.33, D.34 and D.35 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.D.P17  Law applicable to the asset-referenced token and the competent court
+           Cite:  Annex II, Part D, point 17 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'rights_and_obligations'  (175 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part D point 17 (fields D.36 and D.37 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
 
 [PASS  ] [BLOCKER] ANNEX_II.E  Information on the underlying technology (DLT, protocols, consensus mechanism, audit outcome)
            Cite:  Annex II, Part E MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'technology'  (87 words)
 
+[REVIEW] [BLOCKER] ANNEX_II.E.P1  Technology used, including the distributed ledger technology, protocols and technical standards
+           Cite:  Annex II, Part E, point 1 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'technology'  (87 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part E point 1 (fields E.1, E.2 and E.3 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.E.P2  Consensus mechanism, where applicable
+           Cite:  Annex II, Part E, point 2 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'technology'  (87 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part E point 2 (field E.4 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.E.P3  Incentive mechanisms to secure transactions and any fees applicable
+           Cite:  Annex II, Part E, point 3 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'technology'  (87 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part E point 3 (field E.5 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.E.P4  Functioning of a distributed ledger operated by the issuer or a third party on its behalf
+           Cite:  Annex II, Part E, point 4 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'technology'  (87 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part E point 4 (fields E.6 and E.7 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.E.P5  Outcome of an audit of the technology used, if one was conducted
+           Cite:  Annex II, Part E, point 5 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'technology'  (87 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part E point 5 (fields E.8 and E.9 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
 [PASS  ] [BLOCKER] ANNEX_II.F  Risk factors specific to ARTs (reserve of assets, issuer, offer or admission to trading, token, operationalisation, technology and any mitigation measures)
            Cite:  Annex II, Part F MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'risks'  (183 words)
+
+[REVIEW] [BLOCKER] ANNEX_II.F.P1  Risks related to the reserve of assets when the issuer cannot fulfil its obligations
+           Cite:  Annex II, Part F, point 1 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'risks'  (183 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part F point 1 (field F.1 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.F.P2  Risks associated with the issuer
+           Cite:  Annex II, Part F, point 2 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'risks'  (183 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part F point 2 (field F.2 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.F.P3  Risks associated with the offer to the public or the admission to trading
+           Cite:  Annex II, Part F, point 3 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'risks'  (183 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part F point 3 (field F.3 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.F.P4  Risks associated with the token, in particular with regard to the assets referenced
+           Cite:  Annex II, Part F, point 4 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'risks'  (183 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part F point 4 (field F.4 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.F.P5  Risks associated with the operationalisation of the token project
+           Cite:  Annex II, Part F, point 5 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'risks'  (183 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part F point 5 (field F.5 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.F.P6  Risks associated with the technology used and any mitigation measures
+           Cite:  Annex II, Part F, point 6 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'risks'  (183 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part F point 6 (fields F.6 and F.7 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
 
 [PASS  ] [BLOCKER] ANNEX_II.G.COMPOSITION_DISCLOSURE  Reserve composition and value alignment mechanism (Annex II Part G Nos. 1 and 2 MiCAR)
            Cite:  Annex II, Part G, points 1 and 2 MiCAR
@@ -125,6 +485,36 @@ Pass: 17  |  Review: 2  |  Missing: 1  |  Blockers: 3
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'rights_and_obligations'  (175 words)
 
+[REVIEW] [BLOCKER] ANNEX_II.G.P1  Mechanism aligning the value of the reserve of assets with the claim
+           Cite:  Annex II, Part G, point 1 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'reserve_of_assets'  (222 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part G point 1 (field G.1 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.G.P2  Reserve of assets and its composition
+           Cite:  Annex II, Part G, point 2 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'reserve_of_assets'  (222 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part G point 2 (field G.2 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.G.P3  Mechanisms through which the tokens are issued and redeemed
+           Cite:  Annex II, Part G, point 3 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'reserve_of_assets'  (222 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part G point 3 (field G.3 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.G.P4  Whether part of the reserve assets is invested and, where applicable, the investment policy
+           Cite:  Annex II, Part G, point 4 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'reserve_of_assets'  (222 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part G point 4 (fields G.4 and G.5 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ANNEX_II.G.P5  Custody arrangements for the reserve assets, including segregation, and the custodians
+           Cite:  Annex II, Part G, point 5 MiCAR
+           Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
+           Section: 'reserve_of_assets'  (222 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of Annex II Part G point 5 (fields G.6 and G.7 of Table 3) did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
 [PASS  ] [MAJOR  ] ANNEX_II.H  Principal adverse environmental and climate-related impact of the consensus mechanism
            Cite:  Art. 19(1), first subparagraph, point (h) MiCAR in conjunction with Art. 4 Regulation (EU) 2025/422; Annex, Table 3, Part H Regulation (EU) 2024/2984
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
@@ -137,6 +527,41 @@ Pass: 17  |  Review: 2  |  Missing: 1  |  Blockers: 3
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'redemption'  (139 words)
 
+[PASS  ] [BLOCKER] ITS.NOTIFICATION_DATE_FORMAT  Date of notification written as YYYY-MM-DD, the template's format
+           Cite:  Annex, Table 2, field 01, Table 3, field I.01, Table 4, field I.01 Regulation (EU) 2024/2984
+           Text:  https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng
+           Section: 'notification_date'  (15 words)
+
+[REVIEW] [BLOCKER] ITS.PREDEFINED_TEXT  Predefined texts of the template (statements, warnings, right of redemption) in the template's English or German wording
+           Cite:  Annex, Table 2, fields 02 to 07, Table 3, fields I.02 to I.04 and I.06, Table 4, fields I.02 to I.05 and I.07 Regulation (EU) 2024/2984
+           Text:  https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng
+           Section: 'management_statement'  (236 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of the predefined texts did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] ITS.FIELD_FORMATS  Data formats of the template's typed fields (dates, LEI, DTI, currency and market codes, numbers, days, true or false)
+           Cite:  Annex, Tables 1 to 4 Regulation (EU) 2024/2984
+           Text:  https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng
+           Section: 'offer_or_admission'  (80 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of the data formats did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [MAJOR  ] ITS.CODE_LISTS  Codes of the template's closed lists (offer or admission, holders, placement, white paper and submission type, exemption, Member States)
+           Cite:  Annex, Tables 2 to 4 Regulation (EU) 2024/2984
+           Text:  https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng
+           Section: 'offer_or_admission'  (80 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of the code lists did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] RTS.SUSTAINABILITY_INDICATORS  Sustainability indicators S.1 to S.9, and S.10 to S.16 above 500 000 kWh, in the format of Delegated Regulation (EU) 2025/422
+           Cite:  Art. 4(1) and (2) in conjunction with Annex, Tables 2 and 3 Regulation (EU) 2025/422
+           Text:  https://eur-lex.europa.eu/eli/reg_del/2025/422/oj/eng
+           Section: 'environmental_impact'  (104 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of the sustainability indicators of Delegated Regulation (EU) 2025/422 did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[REVIEW] [BLOCKER] RTS.CLASSIFICATION_DATA  Data for classifying the white paper in the ESMA register, with the LEI and DTI conditions of Delegated Regulation (EU) 2025/421
+           Cite:  Art. 2 and 3 in conjunction with Annex to Regulation (EU) 2025/421
+           Text:  https://eur-lex.europa.eu/eli/reg_del/2025/421/oj/eng
+           Section: 'art'  (143 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of the register classification data of Delegated Regulation (EU) 2025/421 did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
 ==============================================================================
 First-pass screening only. The draft is not package-ready. The white paper notification or submission for approval (Art. 8(1), Art. 16(2), second subparagraph, Art. 17(1), point (a), Art. 18(2), point (k), Art. 51(11) MiCAR) should not enter an external review or filing workflow until BLOCKER items are cured and a lawyer has signed off.
 This tool is not legal advice.
@@ -146,11 +571,11 @@ This tool is not legal advice.
 
 ## Coverage Statistics
 
-- **Total Checked Rules**: 20
-- **Passed Rules**: 17
-- **Rules Requiring Review**: 2 (the fact-dependent deposit floor, and custody under Annex II, Part G)
+- **Total Checked Rules**: 91
+- **Passed Rules**: 18
+- **Rules Requiring Review**: 72 (the fact-dependent deposit floor, custody under Annex II, Part G, the five template rules that need the numbered-field layout: `ITS.PREDEFINED_TEXT`, `ITS.FIELD_FORMATS`, `ITS.CODE_LISTS`, `RTS.SUSTAINABILITY_INDICATORS`, `RTS.CLASSIFICATION_DATA`, and the 65 point rules `ANNEX_II.A.P1` to `ANNEX_II.G.P5`, which also need it)
 - **Missing Sections**: 1 (format: a JSON draft cannot satisfy the XHTML/iXBRL notification format)
-- **Open Blockers**: 3 (`COMMON.IXBRL_TAGGING`, `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW`, `ANNEX_II.G.CUSTODY`)
+- **Open Blockers**: 72 (`COMMON.IXBRL_TAGGING`, the 65 point rules, `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW`, `ANNEX_II.G.CUSTODY`, `ITS.PREDEFINED_TEXT`, `ITS.FIELD_FORMATS`, `RTS.SUSTAINABILITY_INDICATORS`, `RTS.CLASSIFICATION_DATA`)
 
 ---
 
