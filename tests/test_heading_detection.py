@@ -2782,10 +2782,10 @@ _CLOSED_LIST_MARKERS = [
 def test_a_heading_after_a_list_that_a_full_stop_closes_keeps_its_own_reading(
     tmp_path: Path, suffix: str, kind: str, markers: tuple[str, str, str], closing: str, title: str
 ):
-    # A list whose items end in a semicolon ends at the item that ends in a full stop, so a line after it whose
-    # text is shaped like a heading is judged on its own words, in any font and with the next marker of the
-    # list. Before, a DOCX or PDF read "(c) Reserve of Assets" as the next item, which the negated lead-in
-    # governed, and the ART draft as other.
+    # After a list whose items end in a semicolon and whose last item ends in a full stop, a line with the next
+    # marker of the list whose text reads as a heading is judged on its own words, in each of these fonts (a PDF
+    # line that pypdf runs into the next is a documented limit). Before, a DOCX or PDF read "(c) Reserve of
+    # Assets" as the next item, which the negated lead-in governed, and the ART draft as other.
     first, second, third = markers
     blocks = [
         *_SST_ISSUER,
@@ -2842,6 +2842,79 @@ def test_a_negated_lead_in_still_governs_the_items_of_a_list_that_goes_on(
     tmp_path: Path, suffix: str, lines: list[str]
 ):
     blocks = [_CRYPTO_ASSET, *_lines(*lines), *_MEADOW_OFFEROR]
+    assert load_whitepaper(WRITERS[suffix][0](tmp_path / f"meadowpoints{suffix}", blocks)).type is WhitepaperType.OTHER
+
+
+# Lists that are not closed: the last item does not end in a full stop, or the list has one item, or an item
+# before the last does not end in a semicolon. Each line after them stays an item that the lead-in governs.
+_LISTS_NOT_CLOSED = {
+    "last item without a full stop": [_NOT_QUALIFIED, "(a) a financial instrument;", "(b) a deposit", "(c) E-money token"],
+    "one item": [_NOT_QUALIFIED, "(a) a deposit.", "(b) E-money token"],
+    "items with full stops": [_NOT_QUALIFIED, "(a) a financial instrument.", "(b) a deposit.", "(c) E-money token"],
+}
+
+
+@pytest.mark.parametrize("suffix", sorted(WRITERS))
+@pytest.mark.parametrize("lines", list(_LISTS_NOT_CLOSED.values()), ids=list(_LISTS_NOT_CLOSED))
+def test_a_list_is_closed_only_by_a_full_stop_after_two_or_more_items_ending_in_a_semicolon(
+    tmp_path: Path, suffix: str, lines: list[str]
+):
+    # Each condition of a closed list: two or more items, each item before the last ending in a semicolon, and
+    # the last in a full stop. Without one of them "(c) E-money token" is the next item, and the draft is other.
+    blocks = [_CRYPTO_ASSET, *_lines(*lines), *_MEADOW_OFFEROR]
+    assert load_whitepaper(WRITERS[suffix][0](tmp_path / f"meadowpoints{suffix}", blocks)).type is WhitepaperType.OTHER
+
+
+# Lines after a closed list that do not read as a heading: the text after the marker starts with "A" or "An",
+# with no capital letter (a digit, an outline number, a quotation mark), or ends in a colon.
+_ITEMS_AFTER_A_CLOSED_LIST = {
+    "an": ["(c) An e-money token"],
+    "a": ["(c) A Reserve of Assets"],
+    "digit": ["(c) 2024 Reserve of Assets"],
+    "outline number": ["(c) 3.1 Reserve of Assets"],
+    "quotation mark": ["(c) \u201cReserve of Assets\u201d"],
+    "colon": ["(c) E-money tokens, namely:", "(i) those issued by a credit institution."],
+}
+
+
+@pytest.mark.parametrize("suffix", sorted(WRITERS))
+@pytest.mark.parametrize("tail", list(_ITEMS_AFTER_A_CLOSED_LIST.values()), ids=list(_ITEMS_AFTER_A_CLOSED_LIST))
+def test_a_line_after_a_closed_list_that_reads_as_an_item_stays_governed(
+    tmp_path: Path, suffix: str, tail: list[str]
+):
+    # At 0e24058 each of these lines counted as shaped like a heading (document._heading_shaped needs only the
+    # first letter after any numbering to be a capital, and allows 20 words after an outline number), so it was
+    # judged on its own words and the Annex I draft was an EMT or an ART.
+    blocks = [
+        _CRYPTO_ASSET,
+        *_lines(_NOT_QUALIFIED, "(a) a financial instrument;", "(b) a deposit.", *tail),
+        *_MEADOW_OFFEROR,
+    ]
+    assert load_whitepaper(WRITERS[suffix][0](tmp_path / f"meadowpoints{suffix}", blocks)).type is WhitepaperType.OTHER
+
+
+# A line that reads as a heading after a closed list, then more items of the list.
+_ITEMS_AFTER_A_HEADING = {
+    "list-intro": ["(c) Any Other Category", "(i) an e-money token;", "(ii) an asset-referenced token."],
+    "next letter": ["(c) Other Instruments", "(d) an e-money token."],
+    "next letter, art": ["(c) Other Instruments", "(d) an asset-referenced token;", "(e) a deposit."],
+}
+
+
+@pytest.mark.parametrize("suffix", sorted(WRITERS))
+@pytest.mark.parametrize("lead_in", [_NOT_QUALIFIED, "The token is not:"])
+@pytest.mark.parametrize("tail", list(_ITEMS_AFTER_A_HEADING.values()), ids=list(_ITEMS_AFTER_A_HEADING))
+def test_the_items_after_a_heading_in_a_closed_list_still_follow_the_lead_in(
+    tmp_path: Path, suffix: str, lead_in: str, tail: list[str]
+):
+    # The line that reads as a heading is judged on its own words; the items after it still continue the lead-in,
+    # as before #96. At 0e24058 the heading ended the list, and the lower-case items after it were read on their
+    # own, so the Annex I draft was an EMT or an ART.
+    blocks = [
+        _CRYPTO_ASSET,
+        *_lines(lead_in, "(a) a financial instrument;", "(b) a deposit.", *tail),
+        *_MEADOW_OFFEROR,
+    ]
     assert load_whitepaper(WRITERS[suffix][0](tmp_path / f"meadowpoints{suffix}", blocks)).type is WhitepaperType.OTHER
 
 
@@ -2999,15 +3072,31 @@ _STATEMENT = (
             ],
             _regimes(ART, ART),
         ),
-        # So is one more item shaped like a heading after such a list, whose last item but one ends in a full
-        # stop: the lead-in governs it no more in a DOCX or PDF.
+        # So is one more item that reads as a heading after such a list, whose last item but one ends in a full
+        # stop: the lead-in does not govern that line in a DOCX or PDF. "(c) An e-money token" reads as an item
+        # (test_a_line_after_a_closed_list_that_reads_as_an_item_stays_governed).
         (
             [
                 _CRYPTO_ASSET,
-                *_lines(_NOT_QUALIFIED, "(a) a financial instrument;", "(b) a deposit.", "(c) An e-money token"),
+                *_lines(_NOT_QUALIFIED, "(a) a financial instrument;", "(b) a deposit.", "(c) E-money token"),
                 *_MEADOW_OFFEROR,
             ],
             _regimes(EMT, EMT),
+        ),
+        # In a PDF, pypdf runs a line set in 20 pt only 13 pt above the next line into that line ("(c) Reserve of
+        # AssetsThe reserve is held ..."), which is then no label and is read as the next item of the list.
+        (
+            [
+                *_SST_ISSUER,
+                *_lines(
+                    "Holders should note that the token is not covered by:",
+                    "(a) any investor compensation scheme;",
+                    "(b) any deposit guarantee scheme.",
+                ),
+                ("title", "(c) Reserve of Assets"),
+                ("body", "The reserve is held in cash and short-term government bonds."),
+            ],
+            {".docx": ART, ".pdf": OTHER, ".md": ART, ".xhtml": ART},
         ),
         # A paragraph that ends in a negation and no full stop reaches the next paragraph of its section in
         # Markdown and XHTML.
@@ -3212,6 +3301,7 @@ _STATEMENT = (
         "numbered line after the list",
         "line after a closed list",
         "item after a closed list",
+        "line run together after a closed list",
         "paragraphs",
         "over a list item",
         "item read as a heading",

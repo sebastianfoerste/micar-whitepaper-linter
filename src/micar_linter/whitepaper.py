@@ -221,7 +221,7 @@ _EMT_MARKERS = ("e-money token", "referenced currency", "safeguarding of funds")
 # new sentence (with a capital letter or a digit, or with a name such as "xStable"), and after a line shaped
 # like a title ("No Investor Compensation"); it runs on into a line that starts otherwise, since a DOCX may
 # split a sentence over paragraphs and a PDF wraps its lines inside a sentence, and into each item of a list
-# after a lead-in, up to the item that closes a list whose items end in a semicolon (_regime_pieces).
+# after a lead-in, other than a line after a closed list that reads as a heading (_regime_pieces).
 _NEGATION = re.compile(r"\b(?:not|no|neither|nor|never|without|other than|except|excluding|unlike)\b|n't\b")
 _CLAUSE_END = re.compile(r"[.!?;:](?=\s|$)|\b(?:but|however|whereas|although|though|while)\b")
 _NEGATION_REACH = 8
@@ -385,12 +385,13 @@ def _regime_pieces(
     does so only after a lead-in that ends in a colon or a negation. The full stop after a list number or
     letter ("1.", "a.") ends the clause as any full stop does, so a lead-in governs no item marked so. An item
     continues the lead-in of its list, not the item before it, so the items of a list inside an item continue
-    the outer lead-in. A list whose items end in a semicolon ("; and" and "; or" included) ends at the item
-    that ends in a full stop: after it, a line with a list marker whose text is shaped like a heading
-    (document._heading_shaped: a short label that starts with a capital letter, such as "(c) Reserve of
-    assets") is read as a heading, so the lead-in governs it no more. Any other line continues the line before
-    it, as a DOCX may split a sentence over paragraphs ("... is neither" / "an asset-referenced token nor" /
-    ...) and a PDF wraps its lines. In the other formats each section is a piece.
+    the outer lead-in. A list is closed by an item that ends in a full stop after one or more items that each
+    end in a semicolon ("; and" and "; or" included). After a closed list, a line with a list marker whose
+    text reads as a heading (_heading_item, such as "(c) Reserve of assets") is judged on its own words, as a
+    heading is; the list does not end there, so the lead-in still governs the items after it. Any other line
+    continues the line before it, as a DOCX may split a sentence over paragraphs ("... is neither" / "an
+    asset-referenced token nor" / ...) and a PDF wraps its lines. In the other formats each section is a
+    piece.
     """
     if not extracted:
         return [(text.lower(), 0) for text in sections.values()]
@@ -406,10 +407,12 @@ def _regime_pieces(
     for text, heading in _line_units(suffix, extracted, headings):
         item = _LIST_ITEM.match(text.lstrip())
         closed = items >= 2 and semicolons and ending == "full stop"
-        if item and lead is not None and closed and _heading_shaped(text.lstrip()[item.end() :]):
-            heading = True
+        as_heading = bool(item) and lead is not None and closed and _heading_item(text.lstrip()[item.end() :])
         if heading:
             clause, lead = "", None
+        elif as_heading:
+            # Judged on its own words, as a heading is; the items after it still continue the lead-in.
+            clause = ""
         elif item:
             if lead is None:
                 lead = _continued(previous)
@@ -423,7 +426,7 @@ def _regime_pieces(
             clause = _continued(previous)
         low = text.lower()
         pieces.append((f"{clause}\n{low}", len(clause) + 1) if clause else (low, 0))
-        previous = (clause, low, heading)
+        previous = (clause, low, heading or as_heading)
         if lead is None:
             ending, items, semicolons = "", 0, True
         elif item:
@@ -447,12 +450,20 @@ def _ending(text: str) -> str:
     return "full stop" if text.endswith(".") else ""
 
 
-def _heading_shaped(text: str) -> bool:
-    """Whether the text of a list item after its marker is shaped like a heading (document._heading_shaped:
-    a short label that starts with a capital letter)."""
-    from micar_linter.document import _heading_shaped as heading_shaped
+def _heading_item(text: str) -> bool:
+    """Whether the text of a list item after its marker reads as a heading ("Reserve of assets"): its first
+    character is a capital letter, its first word is not "A" or "An" ("An e-money token" reads as an item), it
+    does not end in a colon, and it is a short label (document._is_label: at most twelve words, with no full
+    stop, exclamation mark, semicolon or comma at its end and no sentence break inside)."""
+    from micar_linter.document import _is_label
 
-    return heading_shaped(text.strip())
+    text = text.strip()
+    return (
+        text[:1].isupper()
+        and text.split(maxsplit=1)[0] not in ("A", "An")
+        and not text.endswith(":")
+        and _is_label(text)
+    )
 
 
 # The sections of the other regimes, which the document loader drops once the regime is known.
