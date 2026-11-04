@@ -35,7 +35,13 @@ from micar_linter.document import (
 from micar_linter.linter import lint_whitepaper
 from micar_linter.locations import _xhtml_heading_lines
 from micar_linter.rules.base import Finding, Severity
-from micar_linter.whitepaper import WhitepaperType, load_whitepaper
+from micar_linter.whitepaper import (
+    _ART_MARKERS,
+    WhitepaperType,
+    _names_regime,
+    _regime_pieces,
+    load_whitepaper,
+)
 from micar_linter.xhtml_parser import load_from_xhtml
 
 # An invented issuer. None of the body text below matches a section pattern except the note.
@@ -2698,6 +2704,105 @@ def test_a_negation_beside_a_pseudo_negation_still_negates(tmp_path: Path, suffi
     assert load_whitepaper(EVERY_WRITER[suffix](tmp_path / f"meadowpoints{suffix}", blocks)).type is WhitepaperType.OTHER
 
 
+# The markers of a list closed by a full stop and of the heading after it, which takes the next marker.
+_CLOSED_LIST_MARKERS = [
+    ("(a)", "(b)", "(c)"),
+    ("a)", "b)", "c)"),
+    ("-", "-", "-"),
+    ("•", "•", "•"),
+    ("1)", "2)", "3)"),
+    ("(1)", "(2)", "(3)"),
+    ("(i)", "(ii)", "(iii)"),
+]
+
+
+@pytest.mark.parametrize("suffix", sorted(WRITERS))
+@pytest.mark.parametrize("kind", ["plain", "bold", "large"])
+@pytest.mark.parametrize("markers", _CLOSED_LIST_MARKERS, ids=[markers[0] for markers in _CLOSED_LIST_MARKERS])
+@pytest.mark.parametrize("closing", [";", "; and"])
+@pytest.mark.parametrize("title", ["Reserve of Assets", "Reserve of assets", "Stabilisation mechanism of the token"])
+def test_a_heading_after_a_list_that_a_full_stop_closes_keeps_its_own_reading(
+    tmp_path: Path, suffix: str, kind: str, markers: tuple[str, str, str], closing: str, title: str
+):
+    # A list whose items end in a semicolon ends at the item that ends in a full stop, so a line after it whose
+    # text is shaped like a heading is judged on its own words, in any font and with the next marker of the
+    # list. Before, a DOCX or PDF read "(c) Reserve of Assets" as the next item, which the negated lead-in
+    # governed, and the ART draft as other.
+    first, second, third = markers
+    blocks = [
+        *_SST_ISSUER,
+        *_lines(
+            "Holders should note that the token is not covered by:",
+            f"{first} any investor compensation scheme{closing}",
+            f"{second} any deposit guarantee scheme.",
+        ),
+        (kind, f"{third} {title}"),
+        ("body", "The reserve is held in cash and short-term government bonds."),
+    ]
+    assert load_whitepaper(WRITERS[suffix][0](tmp_path / f"synthetic{suffix}", blocks)).type is WhitepaperType.ART
+
+
+_NOT_QUALIFIED = "The token does not qualify as:"
+# Lists that no full stop closes as above, or a line after the closing item that is no heading, so the lead-in
+# governs each item: each Annex I draft is other in a DOCX or PDF.
+_LISTS_THAT_GO_ON = {
+    "items without a semicolon": [_NOT_QUALIFIED, "(a) A financial instrument", "(b) A deposit", "(c) An E-Money Token"],
+    "inner list closed": [
+        _NOT_QUALIFIED,
+        "(a) a financial instrument, in particular:",
+        "(i) a transferable security;",
+        "(ii) a unit in a collective investment undertaking.",
+        "(b) An E-Money Token",
+    ],
+    "lower-case item after the closing item": [
+        _NOT_QUALIFIED,
+        "(a) a financial instrument;",
+        "(b) a deposit.",
+        "(c) an e-money token",
+    ],
+    "sentence after the closing item": [
+        _NOT_QUALIFIED,
+        "(a) a financial instrument;",
+        "(b) a deposit.",
+        "(c) An e-money token within the meaning of MiCAR.",
+    ],
+    "closing item": [_NOT_QUALIFIED, "(a) a financial instrument;", "(b) a deposit; or", "(c) An E-Money Token."],
+    "new lead-in": [
+        _NOT_QUALIFIED,
+        "(a) a financial instrument;",
+        "(b) a deposit.",
+        "It is also not:",
+        "(a) An E-Money Token",
+        "(b) A Structured Deposit",
+    ],
+}
+
+
+@pytest.mark.parametrize("suffix", sorted(WRITERS))
+@pytest.mark.parametrize("lines", list(_LISTS_THAT_GO_ON.values()), ids=list(_LISTS_THAT_GO_ON))
+def test_a_negated_lead_in_still_governs_the_items_of_a_list_that_goes_on(
+    tmp_path: Path, suffix: str, lines: list[str]
+):
+    blocks = [_CRYPTO_ASSET, *_lines(*lines), *_MEADOW_OFFEROR]
+    assert load_whitepaper(WRITERS[suffix][0](tmp_path / f"meadowpoints{suffix}", blocks)).type is WhitepaperType.OTHER
+
+
+def test_a_list_closed_by_a_full_stop_is_read_in_linear_time():
+    # The reading of a DOCX's or PDF's lines keeps only how the last item of a list ends and whether each item
+    # before it ends in a semicolon, so 5,000 closed lists with a heading after each and one list of 20,000
+    # items take a fraction of a second; a reading that went over the earlier items again at each item took
+    # time in the square of the list's length.
+    lines: list[str] = []
+    for _ in range(5000):
+        lines += ["The token is not covered by:", "(a) any compensation scheme;", "(b) any insurance.", "(c) Reserve of Assets"]
+    lines += ["The token is not covered by:", *("- a scheme;" for _ in range(20_000)), "- a deposit."]
+    start = time.perf_counter()
+    pieces = _regime_pieces(".pdf", {}, "\n".join(lines), ())
+    assert time.perf_counter() - start < 3
+    assert len(pieces) == len(lines)
+    assert _names_regime(pieces, _ART_MARKERS)
+
+
 def test_a_long_markdown_list_is_read_in_little_memory(tmp_path: Path):
     # Markdown reads a section as one text, so 200 kB of two-letter list lines take about 2 MB at their peak
     # (the line-by-line reading that Round 4 added and Round 5 trimmed took 46 MB, then 2 MB).
@@ -2790,14 +2895,15 @@ _STATEMENT = (
             ],
             _regimes(OTHER, ART),
         ),
-        # A line after the list that starts with a list letter is read as an item in a DOCX or PDF.
+        # A line after the list that starts with a list letter is read as an item in a DOCX or PDF, where no
+        # item ends the list with a full stop after items that end in a semicolon.
         (
             [
                 *_SST_ISSUER,
                 *_lines(
                     "Holders should note that the token is not covered by:",
                     "(a) any investor compensation scheme;",
-                    "(b) any deposit guarantee scheme.",
+                    "(b) any deposit guarantee scheme;",
                 ),
                 ("plain", "(c) Reserve of Assets"),
                 ("body", "The reserve is held in cash and short-term government bonds."),
@@ -2812,12 +2918,38 @@ _STATEMENT = (
                 *_lines(
                     "Holders should note that the token is not covered by:",
                     "1) any investor compensation scheme;",
-                    "2) any deposit guarantee scheme.",
+                    "2) any deposit guarantee scheme;",
                 ),
                 ("plain", "3) Reserve of assets"),
                 ("body", "The reserve is held in cash and short-term government bonds."),
             ],
             _regimes(OTHER, ART),
+        ),
+        # After a list whose items end in a semicolon and whose last item ends in a full stop, such a line
+        # shaped like a heading is judged on its own words
+        # (test_a_heading_after_a_list_that_a_full_stop_closes_keeps_its_own_reading).
+        (
+            [
+                *_SST_ISSUER,
+                *_lines(
+                    "Holders should note that the token is not covered by:",
+                    "(a) any investor compensation scheme;",
+                    "(b) any deposit guarantee scheme.",
+                ),
+                ("plain", "(c) Reserve of Assets"),
+                ("body", "The reserve is held in cash and short-term government bonds."),
+            ],
+            _regimes(ART, ART),
+        ),
+        # So is one more item shaped like a heading after such a list, whose last item but one ends in a full
+        # stop: the lead-in governs it no more in a DOCX or PDF.
+        (
+            [
+                _CRYPTO_ASSET,
+                *_lines(_NOT_QUALIFIED, "(a) a financial instrument;", "(b) a deposit.", "(c) An e-money token"),
+                *_MEADOW_OFFEROR,
+            ],
+            _regimes(EMT, EMT),
         ),
         # A paragraph that ends in a negation and no full stop reaches the next paragraph of its section in
         # Markdown and XHTML.
@@ -2995,6 +3127,8 @@ _STATEMENT = (
         "risk list",
         "line after the list",
         "numbered line after the list",
+        "line after a closed list",
+        "item after a closed list",
         "paragraphs",
         "over a list item",
         "item read as a heading",
