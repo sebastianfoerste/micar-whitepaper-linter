@@ -2,6 +2,7 @@
 
 import json
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -1141,6 +1142,9 @@ def test_200_kb_of_text_with_markup_pieces_or_invisible_characters_is_read_in_li
 # malformed sends the rule to review; before, the rule passed wherever the reading it had joined the hidden text to
 # the code. Where the completion is shown, the code is valid as shown and the rule passes.
 SHOWN, HIDDEN = OTHER_LEI[:-1], OTHER_LEI[-1]
+# What hidden text that still takes up its room on the page leaves in the text as a reader sees it (document._GAP):
+# a zero-width space, so that the groups on either side read as a code split into groups.
+_GAP = "\u200b"
 _W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
 _VML = 'xmlns:v="urn:schemas-microsoft-com:vml"'
 _REVISION = 'w:id="1" w:author="Synthetic Reviewer" w:date="2026-01-01T00:00:00Z"'
@@ -1415,6 +1419,8 @@ def _table(content: str, table_style: str = "", cell: str = "") -> str:
 
 _DARK_FILL = '<w:shd w:val="clear" w:color="auto" w:fill="000000" w:themeFill="text1"/>'
 _NO_FILL = '<w:shd w:val="clear" w:color="auto" w:fill="auto"/>'
+_WHITE_FILL = '<w:shd w:val="clear" w:color="auto" w:fill="FFFFFF"/>'
+_NIL_FILL = '<w:shd w:val="nil"/>'
 _TABLE_STYLES = {
     "hidden": _style("table", "SyntheticHiddenTable", "<w:vanish/>"),
     "white": _style("table", "SyntheticWhiteTable", '<w:color w:val="FFFFFF"/>'),
@@ -1432,10 +1438,11 @@ _TABLE_STYLES = {
 @pytest.mark.parametrize(
     ("xml", "styles", "shown"),
     [
-        # A table style's run properties apply to the runs of its tables, also through a style based on it.
+        # A table style's run properties apply to the runs of its tables, also through a style based on it. A run
+        # left out of the page (w:vanish) leaves nothing; one laid out but not seen (white, under 1 pt) leaves a gap.
         (_table(f"<w:p>{_run('A')}</w:p>", "SyntheticHiddenTable"), ("hidden",), ""),
-        (_table(f"<w:p>{_run('A')}</w:p>", "SyntheticWhiteTable"), ("white",), ""),
-        (_table(f"<w:p>{_run('A')}</w:p>", "SyntheticTinyTable"), ("tiny",), ""),
+        (_table(f"<w:p>{_run('A')}</w:p>", "SyntheticWhiteTable"), ("white",), _GAP),
+        (_table(f"<w:p>{_run('A')}</w:p>", "SyntheticTinyTable"), ("tiny",), _GAP),
         (_table(f"<w:p>{_run('A')}</w:p>", "SyntheticNoteTable"), ("hidden", "based on hidden"), ""),
         # A table without a style of its own takes the default table style.
         (_table(f"<w:p>{_run('A')}</w:p>"), ("default hidden",), ""),
@@ -1445,17 +1452,28 @@ _TABLE_STYLES = {
         (
             _table(f'<w:p><w:pPr><w:pStyle w:val="SyntheticLargeParagraph"/></w:pPr>{_run("A")}</w:p>', "SyntheticTinyTable"),
             ("tiny", "large paragraph"),
-            "",
+            _GAP,
         ),
         # White text on the cell shading of its table style, or of its cell, is shown; shading that the cell clears
-        # is not there, and a nested table's cell without shading shows the shading of the cell it stands in.
+        # is not there. A nested table's cell that sets no shading (no w:shd of its own or in its table style) shows
+        # the shading of the cell it stands in; one that sets its own, white or nil, shows that.
         (_table(f"<w:p>{_run('A')}</w:p>", "SyntheticDarkTable"), ("dark",), "A"),
         (_table(f"<w:p>{_run('A', '<w:color w:val="FFFFFF"/>')}</w:p>", cell=_DARK_FILL), (), "A"),
-        (_table(f"<w:p>{_run('A')}</w:p>", "SyntheticDarkTable", _NO_FILL), ("dark",), ""),
+        (_table(f"<w:p>{_run('A')}</w:p>", "SyntheticDarkTable", _NO_FILL), ("dark",), _GAP),
         (
             _table(_table(f"<w:p>{_run('A', '<w:color w:val="FFFFFF"/>')}</w:p>"), cell=_DARK_FILL),
             (),
             "A",
+        ),
+        (
+            _table(_table(f"<w:p>{_run('A', '<w:color w:val="FFFFFF"/>')}</w:p>", cell=_WHITE_FILL), cell=_DARK_FILL),
+            (),
+            _GAP,
+        ),
+        (
+            _table(_table(f"<w:p>{_run('A', '<w:color w:val="FFFFFF"/>')}</w:p>", cell=_NIL_FILL), cell=_DARK_FILL),
+            (),
+            _GAP,
         ),
         # w:vanish is a toggle: in a style, off leaves it as the styles before set it; only the run's own w:vanish
         # sets it absolutely.
@@ -1481,6 +1499,8 @@ _TABLE_STYLES = {
         "white on cell shading",
         "cell clears the shading",
         "nested table on shading",
+        "nested white cell on shading",
+        "nested nil cell on shading",
         "vanish toggle",
         "theme colour shade",
     ],
@@ -1513,6 +1533,102 @@ def test_a_table_style_that_hides_text_cannot_complete_a_code(tmp_path: Path, pr
     check_digits, _ = _check_digits(tmp_path / "styled.docx")
     assert check_digits.status == "review"
     assert any(SHOWN in issue for issue in check_digits.issues)
+
+
+def _docx_offeror(path: Path, xml: str, theme: Callable[[bytes], bytes] | None = None) -> Path:
+    """A DOCX with the issuer section, then the offeror section holding the body XML (paragraphs and tables), with
+    the theme part changed by theme where it is given."""
+    import docx
+    from docx.opc.constants import RELATIONSHIP_TYPE
+    from docx.oxml import parse_xml
+
+    document = docx.Document()
+    document.add_heading("Information about the Issuer", level=1)
+    document.add_paragraph(ISSUER_TEXT)
+    document.add_heading(OFFEROR, level=1)
+    body = document.element.body
+    for element in parse_xml(f"<w:body {_W}>{xml}</w:body>"):
+        body.insert(len(body) - 1, element)
+    document.add_heading("Risk Factors", level=1)
+    document.add_paragraph("Holders may lose the full amount.")
+    if theme is not None:
+        part = document.part.part_related_by(RELATIONSHIP_TYPE.THEME)
+        part._blob = theme(part.blob)
+    document.save(path)
+    return path
+
+
+def test_white_text_in_a_white_nested_cell_inside_a_dark_cell_cannot_complete_a_code(tmp_path: Path):
+    # The nested cell's own white fill is its background, so the white run on it is not seen, whatever the dark cell
+    # around it; before, the dark cell counted and the hidden character completed the code.
+    white = _run(HIDDEN, '<w:color w:val="FFFFFF"/>')
+    nested = _table(f"<w:p>{_run(SHOWN)}{white}</w:p>", cell=_WHITE_FILL)
+    path = _docx_offeror(tmp_path / "nested.docx", _table(nested, cell=_DARK_FILL))
+    check_digits, _ = _check_digits(path)
+    assert check_digits.status == "review"
+    assert any(SHOWN in issue for issue in check_digits.issues)
+
+
+# A comment or a processing instruction in the theme's colour scheme, where a slot or a colour would stand.
+THEME_NOISE = {
+    "comment for a slot": (b"<a:dk1>", b"<!-- synthetic note --><a:dk1>"),
+    "comment for a colour": (b"<a:lt1>", b"<a:lt1><!-- synthetic note -->"),
+    "processing instruction": (b"<a:dk1>", b"<?synthetic note?><a:dk1>"),
+}
+
+
+@pytest.mark.parametrize(("old", "new"), THEME_NOISE.values(), ids=THEME_NOISE.keys())
+def test_a_comment_in_the_docx_theme_does_not_stop_the_reading(tmp_path: Path, old: bytes, new: bytes):
+    # Before, the reading took the comment for a colour and the file could not be read at all. The theme is still
+    # read: its light colour makes the run white, so the hidden character cannot complete the code.
+    def noisy(blob: bytes) -> bytes:
+        assert old in blob
+        return blob.replace(old, new, 1)
+
+    completion = _run(HIDDEN, '<w:color w:val="000000" w:themeColor="background1"/>')
+    path = _docx_offeror(tmp_path / "theme.docx", f"<w:p>{_run('The LEI of the offeror is ')}{_run(SHOWN)}{completion}</w:p>", noisy)
+    check_digits, _ = _check_digits(path)
+    assert check_digits.status == "review"
+    assert any(SHOWN in issue for issue in check_digits.issues)
+
+
+# A hidden separator inside a valid code: hidden text that Word lays out but does not show (white, under 1 pt) still
+# takes up its room on the line, so the page shows the code split into groups, and so does the text as shown; text
+# that Word leaves out of the page (w:vanish, a deletion or a move away) leaves the code whole.
+DOCX_GAPS = {
+    "white": "review",
+    "half-point font": "review",
+    "theme background colour": "review",
+    "vanish": "pass",
+    "vanish in a character style": "pass",
+    "del": "pass",
+    "moveFrom": "pass",
+}
+
+
+@pytest.mark.parametrize(("hiding", "status"), DOCX_GAPS.items(), ids=DOCX_GAPS.keys())
+def test_a_hidden_separator_with_room_on_the_page_splits_a_docx_code(tmp_path: Path, hiding: str, status: str):
+    import docx
+    from docx.oxml import parse_xml
+
+    separator = DOCX_HIDINGS[hiding].replace(f">{HIDDEN}</w:", ">/</w:")
+    code = f"{_run('The LEI of the offeror is ')}{_run(OTHER_LEI[:9])}{separator}{_run(OTHER_LEI[9:] + '.')}"
+    document = docx.Document()
+    for style in _HIDING_STYLES:
+        document.styles.element.append(parse_xml(style))
+    document.add_heading("Information about the Issuer", level=1)
+    document.add_paragraph(ISSUER_TEXT)
+    document.add_heading(OFFEROR, level=1)
+    paragraph = document.add_paragraph()
+    for element in parse_xml(f"<w:x {_W}>{code}</w:x>"):
+        paragraph._p.append(element)
+    document.add_heading("Risk Factors", level=1)
+    document.add_paragraph("Holders may lose the full amount.")
+    document.save(tmp_path / "split.docx")
+    check_digits, _ = _check_digits(tmp_path / "split.docx")
+    assert check_digits.status == status
+    if status == "review":
+        assert any(f"{OTHER_LEI[:9]} {OTHER_LEI[9:]}" in issue for issue in check_digits.issues)
 
 
 def _pdf_file(
@@ -1575,14 +1691,14 @@ _CODE_END = 50 + sum(_WIDTHS[char] for char in _CODE_LINE) / 100
 _CODE_BASELINE = 770 - 3 * 13
 
 
-def _pdf_hidden(path: Path, hiding: str | None, operators: str | None = None) -> Path:
-    """A PDF whose offeror code is shown malformed on one line, with the missing character drawn right after it as
-    PDF_HIDINGS gives it, or with the operators after it."""
+def _pdf_hidden(path: Path, hiding: str | None, operators: str | None = None, line: str = _CODE_LINE) -> Path:
+    """A PDF whose offeror code is shown malformed on one line (or with the line given), with the missing character
+    drawn right after it as PDF_HIDINGS gives it, or with the operators after it."""
     lines = [
         ("/F2 14 Tf", "Information about the Issuer", ""),
         ("/F1 10 Tf", ISSUER_TEXT, ""),
         ("/F2 14 Tf", OFFEROR, ""),
-        ("/F1 10 Tf", _CODE_LINE, PDF_HIDINGS[hiding] if operators is None else operators),
+        ("/F1 10 Tf", line, PDF_HIDINGS[hiding] if operators is None else operators),
         ("/F2 14 Tf", "Risk Factors", ""),
         ("/F1 10 Tf", "Holders may lose the full amount.", ""),
     ]
@@ -1795,8 +1911,9 @@ _HUGE = "9" * 400
     ],
 )
 def test_a_number_too_large_for_a_float_does_not_stop_reading_a_pdf(tmp_path: Path, operators: str):
-    # The operator is passed over as pypdf passes it over, and the code shown malformed still keeps the rule from
-    # passing.
+    # pypdf reads on past each of these operators, and the reading as shown passes over it too, leaving its state as it
+    # was, so the code shown malformed still keeps the rule from passing. (pypdf itself stops at such a number for Tz,
+    # Tw, TL, Td or Tm, as on main.)
     check_digits, _ = _check_digits(_pdf_hidden(tmp_path / "huge.pdf", None, operators))
     assert check_digits.status == "review"
     assert any(SHOWN in issue for issue in check_digits.issues)
@@ -1812,6 +1929,121 @@ def test_a_form_xobject_matrix_too_large_for_a_float_does_not_stop_reading_a_pdf
     check_digits, _ = _check_digits(_pdf_file(tmp_path / "form.pdf", content, form))
     assert check_digits.status == "review"
     assert any(SHOWN in issue for issue in check_digits.issues)
+
+
+def _pdf_objects(path: Path, objects: list[bytes]) -> Path:
+    """A PDF of the objects, numbered from 1, with the catalog first."""
+    pdf = bytearray(b"%PDF-1.4\n")
+    offsets = []
+    for number, body in enumerate(objects, 1):
+        offsets.append(len(pdf))
+        pdf += b"%d 0 obj\n" % number + body + b"\nendobj\n"
+    xref = len(pdf)
+    pdf += b"xref\n0 %d\n0000000000 65535 f \n" % (len(objects) + 1)
+    pdf += b"".join(b"%010d 00000 n \n" % offset for offset in offsets)
+    pdf += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objects) + 1, xref)
+    path.write_bytes(bytes(pdf))
+    return path
+
+
+def _stream(content: str, entries: str = "") -> bytes:
+    data = content.encode("cp1252")
+    return b"<< %s /Length %d >>\nstream\n" % (entries.encode(), len(data)) + data + b"\nendstream"
+
+
+# The offeror code shown malformed, with its missing character drawn in render mode 3.
+_HIDDEN_CODE = (
+    f"BT 13 TL 50 770 Td /F2 14 Tf (Information about the Issuer) Tj 0 -13 Td /F1 10 Tf ({ISSUER_TEXT}) Tj "
+    f"0 -13 Td /F2 14 Tf ({OFFEROR}) Tj 0 -13 Td /F1 10 Tf ({_CODE_LINE}) Tj 3 Tr ({HIDDEN}) Tj 0 Tr "
+    "0 -13 Td /F2 14 Tf (Risk Factors) Tj 0 -13 Td /F1 10 Tf (Holders may lose the full amount.) Tj ET"
+)
+_FONTS = b"/Font << /F1 3 0 R /F2 4 0 R >>"
+_HELVETICA = (
+    b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>",
+)
+
+
+@pytest.mark.parametrize("parent", ["5", "/Synthetic", "(synthetic)", "[1 2]"])
+def test_a_pdf_page_whose_parent_is_no_dictionary_does_not_stop_the_reading(tmp_path: Path, parent: str):
+    # The second page has no resources of its own, and its /Parent, where they would be inherited from, is no
+    # dictionary. Before, the reading of the text as shown looked into it and the file could not be read at all; the
+    # first page's hidden character still cannot complete the code.
+    path = _pdf_objects(
+        tmp_path / "parent.pdf",
+        [
+            b"<< /Type /Catalog /Pages 2 0 R >>",
+            b"<< /Type /Pages /Kids [5 0 R 6 0 R] /Count 2 >>",
+            *_HELVETICA,
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1000 792] /Resources << " + _FONTS + b" >> /Contents 7 0 R >>",
+            b"<< /Type /Page /Parent " + parent.encode() + b" /MediaBox [0 0 1000 792] /Contents 8 0 R >>",
+            _stream(_HIDDEN_CODE),
+            _stream("BT /F1 10 Tf 50 700 Td (Synthetic second page) Tj ET"),
+        ],
+    )
+    check_digits, _ = _check_digits(path)
+    assert check_digits.status == "review"
+    assert any(SHOWN in issue for issue in check_digits.issues)
+
+
+@pytest.mark.parametrize("matrix", ["1 0 0 1", "1 0 0 1 0 0 0"])
+def test_nested_pdf_forms_whose_matrix_cannot_be_read_do_not_stop_the_reading(tmp_path: Path, matrix: str):
+    # The page draws /FmA, which draws /FmB, and its resources name both; neither /Matrix holds six numbers. Before, a
+    # form whose matrix could not be read was taken as entered with nothing to leave, and the file could not be read
+    # at all. Such a form is read in the state around it, and the page's hidden character still cannot complete the
+    # code.
+    form = f"<< /Type /XObject /Subtype /Form /BBox [0 0 1000 792] /Matrix [{matrix}] /Resources << %s >>"
+    path = _pdf_objects(
+        tmp_path / "forms.pdf",
+        [
+            b"<< /Type /Catalog /Pages 2 0 R >>",
+            b"<< /Type /Pages /Kids [5 0 R] /Count 1 >>",
+            *_HELVETICA,
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1000 792] /Resources << " + _FONTS
+            + b" /XObject << /FmA 7 0 R /FmB 8 0 R >> >> /Contents 6 0 R >>",
+            _stream(_HIDDEN_CODE + " /FmA Do"),
+            _stream("/FmB Do", (form % "/XObject << /FmB 8 0 R >>")[2:]),
+            _stream("BT /F1 10 Tf 50 500 Td (Synthetic note) Tj ET", (form % "/Font << /F1 3 0 R >>")[2:]),
+        ],
+    )
+    check_digits, _ = _check_digits(path)
+    assert check_digits.status == "review"
+    assert any(SHOWN in issue for issue in check_digits.issues)
+
+
+# A hidden separator inside a valid code: hidden text still takes up its room on the page (the text position moves
+# past it as past text that is shown), so the page shows the code split into groups, and so does the text as shown.
+PDF_GAPS = {
+    **dict.fromkeys(
+        (
+            "render mode 3",
+            "render mode 7",
+            "white g",
+            "white TJ",
+            "0.1 pt font",
+            "1 % horizontal scaling",
+            "optional content off",
+        ),
+        "review",
+    ),
+    "shown": "pass",
+    None: "pass",
+}
+
+
+@pytest.mark.parametrize(("hiding", "status"), PDF_GAPS.items(), ids=map(str, PDF_GAPS))
+def test_a_hidden_separator_splits_a_pdf_code(tmp_path: Path, hiding: str | None, status: str):
+    separator = PDF_HIDINGS[hiding].replace(f"({HIDDEN})", "(/)")
+    path = _pdf_hidden(
+        tmp_path / "split.pdf",
+        hiding,
+        f"{separator} ({OTHER_LEI[9:]}.) Tj",
+        f"The LEI of the offeror is {OTHER_LEI[:9]}",
+    )
+    check_digits, _ = _check_digits(path)
+    assert check_digits.status == status
+    if status == "review":
+        assert any(f"{OTHER_LEI[:9]} {OTHER_LEI[9:]}" in issue for issue in check_digits.issues)
 
 
 HIDDEN_MARKUP = {
@@ -1897,9 +2129,12 @@ HIDDEN_MARKUP = {
         f'<p>The LEI of the offeror is {OTHER_LEI[:9]}<span hidden="hidden">/</span>{OTHER_LEI[9:]}.</p>',
         "pass",
     ),
-    # What the browser hides by its own rules: elements its style sheet sets to display:none (a closed <dialog>
-    # among them) unless the style attribute sets a display, <noscript>, the fallback content of a replaced element,
-    # all but the summary of a closed <details>, and what an SVG drawing does not render.
+    # What the reading leaves out by the browser's own rules: elements its style sheet sets to display:none (a closed
+    # <dialog> among them) unless the style attribute sets a display, all but the summary of a closed <details>, and
+    # what an SVG drawing does not render; and <noscript> and the content of a replaced element, which a browser shows
+    # only as fallback content. Where it does show it, as for this <object> without a resource, a <noscript> or a
+    # <canvas> with scripts off, or a <video> or <audio> the browser cannot play, the Review is a false one, which
+    # fails safe (ADR 0007).
     **{
         f"<{tag}>": (f"<p>The LEI of the offeror is {SHOWN}<{tag}>{HIDDEN}</{tag}>.</p>", "review")
         for tag in (
@@ -2105,10 +2340,54 @@ def test_a_file_without_hidden_text_keeps_no_shown_text(tmp_path: Path, suffix: 
     assert "shown_text" not in load_whitepaper(path, WhitepaperType.OTHER).metadata
 
 
+def _fail(*args, **kwargs):
+    raise RuntimeError("synthetic failure")
+
+
+# Where the reading of the text as shown fails, and the file it reads, which hides the character that completes the
+# code: the DOCX look, the PDF visitors and resources, and the XHTML walk.
+FAILURES = {
+    "DOCX look": ("micar_linter.document._DocxLook.__init__", ".docx"),
+    "DOCX run": ("micar_linter.document._DocxLook.run_hidden", ".docx"),
+    "PDF visitor": ("micar_linter.document._PdfInk._after", ".pdf"),
+    "PDF resources": ("micar_linter.document._page_resources", ".pdf"),
+    "PDF lines": ("micar_linter.document._shown_lines", ".pdf"),
+    "XHTML walk": ("micar_linter.xhtml_parser._shown_flow", ".xhtml"),
+    "HTML walk": ("micar_linter.xhtml_parser._shown_flow", ".html"),
+}
+
+
+@pytest.mark.parametrize(("target", "suffix"), FAILURES.values(), ids=FAILURES.keys())
+def test_a_reading_as_shown_that_fails_leaves_the_file_read_as_without_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, target: str, suffix: str
+):
+    # The text as a reader sees it only ever adds issues, so where reading it fails for any reason the file is read as
+    # without it: no shown_text, the same text and sections, and the rule passes on the code all the text completes,
+    # as it did before that reading.
+    if suffix == ".docx":
+        path = _docx_hidden(tmp_path / "draft.docx", "body paragraph", "vanish")
+    elif suffix == ".pdf":
+        path = _pdf_hidden(tmp_path / "draft.pdf", "render mode 3")
+    else:
+        markup = f'<p>The LEI of the offeror is {SHOWN}<span style="display:none">{HIDDEN}</span>.</p>'
+        path = _write_xhtml(tmp_path / f"draft{suffix}", markup)
+    read = load_whitepaper(path, WhitepaperType.OTHER)
+    assert "shown_text" in read.metadata
+    monkeypatch.setattr(target, _fail)
+    failed = load_whitepaper(path, WhitepaperType.OTHER)
+    assert "shown_text" not in failed.metadata
+    assert failed.metadata["document_text"] == read.metadata["document_text"]
+    assert failed.sections == read.sections
+    findings = {finding.rule.rule_id: finding for finding in lint_whitepaper(failed).findings}
+    assert findings["COMMON.LEI_CHECK_DIGITS"].status == "pass"
+
+
 def test_reading_hidden_text_takes_linear_time(tmp_path: Path):
-    # The DOCX loader reads the text as shown in the same walk as all of it, the XHTML and HTML loader parses the file
-    # once and walks it twice and reads each style attribute once, and the PDF loader extracts a page with hidden
-    # text twice, so the time grows linearly. A quadratic reading of these inputs would take minutes.
+    # The DOCX loader reads the text as shown in the same walk as all of it and resolves each style once, however
+    # long its w:basedOn chain; document_texts parses an XHTML or HTML file once for its two readings, walks it twice
+    # and reads each style attribute once; and the PDF loader extracts a page with hidden text twice and reads each
+    # optional content group, membership dictionary, /OCGs array and /VE expression once, however often the page
+    # names it. So the time grows linearly. A quadratic reading of these inputs would take minutes.
     import docx
     from docx.oxml import parse_xml
 
@@ -2132,6 +2411,27 @@ def test_reading_hidden_text_takes_linear_time(tmp_path: Path):
     assert time.perf_counter() - start < 2
     assert len(text) > 200_000 and len(shown) < len(text)
 
+    # 8,000 character styles, each based on the one before, and a run in each; the first style hides its runs.
+    document = docx.Document()
+    styles = document.styles.element
+    for number in range(8_000):
+        based_on = f'<w:basedOn w:val="SyntheticChain{number - 1}"/>' if number else ""
+        hidden = "<w:rPr><w:vanish/></w:rPr>" if not number else ""
+        styles.append(
+            parse_xml(
+                f'<w:style {_W} w:type="character" w:styleId="SyntheticChain{number}"><w:name w:val="Chain {number}"/>'
+                f"{based_on}{hidden}</w:style>"
+            )
+        )
+    chain = "".join(_run("x", f'<w:rStyle w:val="SyntheticChain{number}"/>') for number in range(8_000))
+    body = document.element.body
+    for element in parse_xml(f"<w:body {_W}><w:p>{_run('LEI A1B2 ')}{chain}</w:p></w:body>"):
+        body.insert(len(body) - 1, element)
+    start = time.perf_counter()
+    text, shown = _docx_document_texts(document)
+    assert time.perf_counter() - start < 2
+    assert text.strip() == "LEI A1B2 " + "x" * 8_000 and shown.strip() == "LEI A1B2"
+
     page = (
         "<html><body><p>"
         + '<span style="visibility:hidden">LEI <span style="visibility:visible">A1</span></span><span hidden>B2</span> '
@@ -2152,27 +2452,43 @@ def test_reading_hidden_text_takes_linear_time(tmp_path: Path):
         assert len(page) > 200_000
 
     operators = " ".join(f"{3 if i % 2 else 0} Tr (A1B2 ) Tj" + (" T*" if i % 10 == 9 else "") for i in range(8_000))
-    content = f"BT /F1 10 Tf 50 770 Td 12 TL {operators} ET".encode()
+    page = b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> %s >> "
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
         b"<< /Type /Pages /Kids [4 0 R] /Count 1 >>",
         b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> "
-        b"/Contents 5 0 R >>",
-        b"<< /Length %d >>\nstream\n" % len(content) + content + b"\nendstream",
+        page % b"" + b"/Contents 5 0 R >>",
+        _stream(f"BT /F1 10 Tf 50 770 Td 12 TL {operators} ET"),
     ]
-    pdf = bytearray(b"%PDF-1.4\n")
-    offsets = []
-    for number, body_bytes in enumerate(objects, 1):
-        offsets.append(len(pdf))
-        pdf += b"%d 0 obj\n" % number + body_bytes + b"\nendobj\n"
-    xref = len(pdf)
-    pdf += b"xref\n0 %d\n0000000000 65535 f \n" % (len(objects) + 1)
-    pdf += b"".join(b"%010d 00000 n \n" % offset for offset in offsets)
-    pdf += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objects) + 1, xref)
-    path = tmp_path / "many.pdf"
-    path.write_bytes(bytes(pdf))
+    path = _pdf_objects(tmp_path / "many.pdf", objects)
     start = time.perf_counter()
     parsed = parse_pdf(path)
     assert time.perf_counter() - start < 3
     assert parsed.shown_text and len(parsed.shown_text) < len(parsed.document_text)
+
+    # 8,000 marked content sequences each naming optional content of 8,000 groups: one membership dictionary given
+    # directly in the /Properties resources, or 8,000 such dictionaries that share an /OCGs array or a /VE
+    # expression. The group is on, so all the text is shown.
+    groups = " ".join(["6 0 R"] * 8_000)
+    shapes = {
+        "one direct dictionary": (b"/oc0 << /Type /OCMD /OCGs [%s] /P /AllOn >>" % groups.encode(), 1, b"<< >>"),
+        "shared /OCGs": (b"/oc%d << /Type /OCMD /OCGs 7 0 R /P /AllOn >>", 8_000, b"[%s]" % groups.encode()),
+        "shared /VE": (b"/oc%d << /Type /OCMD /VE 7 0 R >>", 8_000, b"[/And %s]" % groups.encode()),
+    }
+    for name, (entry, count, shared) in shapes.items():
+        properties = b" ".join(entry % number if count > 1 else entry for number in range(count))
+        marks = " ".join(f"/OC /oc{number % count} BDC EMC" for number in range(8_000))
+        objects = [
+            b"<< /Type /Catalog /Pages 2 0 R /OCProperties << /OCGs [6 0 R] /D << /ON [6 0 R] >> >> >>",
+            b"<< /Type /Pages /Kids [4 0 R] /Count 1 >>",
+            b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+            page % (b"/Properties << " + properties + b" >>") + b"/Contents 5 0 R >>",
+            _stream(f"BT /F1 10 Tf 50 770 Td (LEI A1B2) Tj ET {marks}"),
+            b"<< /Type /OCG /Name (Synthetic layer) >>",
+            shared,
+        ]
+        path = _pdf_objects(tmp_path / "layers.pdf", objects)
+        start = time.perf_counter()
+        parsed = parse_pdf(path)
+        assert time.perf_counter() - start < 3, name
+        assert parsed.document_text == "LEI A1B2" and not parsed.shown_text

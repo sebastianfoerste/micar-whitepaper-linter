@@ -324,12 +324,18 @@ def document_text(source: Path | bytes) -> str:
 
 def document_texts(source: Path | bytes) -> tuple[str, str]:
     """document_text, and the same text as a browser shows it (_shown_flow), or "" where the two are the
-    same. The document is parsed once and walked twice."""
+    same. The document is parsed once for the two and walked twice.
+
+    The text as shown only ever adds issues. Where reading it fails for any reason, it is "", so the file is
+    read as it would be without it."""
     root = parse_html(source).getroot()
     if root is None:
         return "", ""
     text = _flow_lines(_text_flow(root, _unshown))
-    shown = _flow_lines(_shown_flow(root, False))
+    try:
+        shown = _flow_lines(_shown_flow(root, False))
+    except Exception:
+        return text, ""
     return text, shown if shown != text else ""
 
 
@@ -403,7 +409,8 @@ def _declarations(style: str) -> dict[str, str]:
     """The display, visibility and content-visibility that a style attribute sets, as a browser reads it:
     a declaration whose value is invalid is dropped, the last valid one counts, and one marked !important
     wins over those without the mark. Comments, strings and escapes are read as CSS reads them: an escape
-    stands for its character, which then is no delimiter."""
+    stands for its character, which then is no delimiter. Unlike a browser, this also drops a value that
+    holds a function, so a custom property given through var() is not applied (a limit, ADR 0007)."""
     found: dict[str, tuple[str, bool]] = {}
     declaration: list[tuple[str, str]] = []
     depth = 0
@@ -471,8 +478,10 @@ def _inline_style(element: etree._Element) -> dict[str, str]:
 _UA_HIDDEN_TAGS = {
     "area", "base", "basefont", "datalist", "link", "meta", "noembed", "noframes", "param", "rp", "title",
 }
-# Elements whose content a browser does not render, whatever their style: <noscript>, which the user agent
-# style sheet hides with !important where scripts run, and the fallback content of replaced elements.
+# Elements whose content the reading leaves out, whatever their style: <noscript>, which the user agent
+# style sheet hides with !important where scripts run, and the content of replaced elements, which a browser
+# shows only as fallback content (an <object> without a resource it can show, a <canvas> where scripts are
+# off); there it is a false Review, which fails safe.
 _UNRENDERED_CONTENT_TAGS = {"noscript", "iframe", "canvas", "object", "video", "audio", "embed"}
 # SVG elements that are not rendered where they stand, in lower case as the HTML parser reads them.
 _SVG_UNRENDERED_TAGS = {
