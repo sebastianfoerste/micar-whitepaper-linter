@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Date of notification written as YYYY-MM-DD, the template&#x27;s format. Annex, Table 2, field 01, Table 3, field I.01, Table 4, field I.01 Regulation (EU) 2024/2984.">
+<title>ITS.NOTIFICATION_DATE_FORMAT: MiCAR Whitepaper Linter rule</title>
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <a class="brand" href="../"><span class="brand-mark" aria-hidden="true">M</span><span>MiCAR <strong>Whitepaper Linter</strong></span></a>
+  <nav aria-label="Site"><a href="../">Overview</a><a href="../rules/">Rules</a><a href="../playground/">Playground</a><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter">Source</a></nav>
+</header>
+<main id="main">
+<p class="eyebrow">Rule · BLOCKER</p>
+<h1>ITS.NOTIFICATION_DATE_FORMAT</h1>
+<p class="lede">Date of notification written as YYYY-MM-DD, the template&#x27;s format</p>
+<div class="panel"><dl class="facts">
+<dt>Citation</dt><dd>Annex, Table 2, field 01, Table 3, field I.01, Table 4, field I.01 Regulation (EU) 2024/2984</dd>
+<dt>Canonical form</dt><dd lang="de">Anhang Tabelle 2 Feld 01, Tabelle 3 Feld I.01, Tabelle 4 Feld I.01 VO (EU) 2024/2984</dd>
+<dt>Runs for</dt><dd>Annex I · other crypto-assets; Annex II · asset-referenced tokens; Annex III · e-money tokens</dd>
+<dt>Severity if open</dt><dd>BLOCKER</dd>
+<dt>Section key</dt><dd><code>notification_date</code></dd>
+<dt>Minimum words</dt><dd>none: checks for a date written YYYY-MM-DD</dd>
+<dt>Listed terms (English)</dt><dd>none</dd>
+<dt>Listed terms (German)</dt><dd lang="de">none</dd>
+<dt>Package version</dt><dd>1.2.1, built from source that may include unreleased changes</dd>
+<dt>Source</dt><dd><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/rules/templates.py">rules/templates.py</a></dd>
+</dl></div>
+<h2>How the status is set</h2>
+<ul class="plain"><li><strong>Missing</strong>: in a numbered-field XHTML draft, field 01 of Table 2 (I.01 of Tables 3 and 4) is empty, absent or holds only a placeholder; in any other draft, section <code>notification_date</code> is absent or empty or holds only a placeholder.</li><li><strong>Review</strong>: the field holds anything but one valid calendar date written YYYY-MM-DD, such as <code>02.03.2026</code>, <code>2 March 2026</code>, <code>2026-02-30</code>, N/A or a date with words around it; in any other draft, the section holds no valid date written YYYY-MM-DD.</li><li><strong>Pass</strong>: the field holds exactly such a date (quotation marks and a final full stop aside, and the template's field name where it runs into the answer), or the section of a draft without field numbers holds one anywhere. <code>COMMON.NOTIFICATION_DATE</code> checks that a date is given at all; this rule checks its form.</li></ul>
+<h2>Legal basis</h2>
+<p>Annex, Table 2, field 01, Table 3, field I.01, Table 4, field I.01 Regulation (EU) 2024/2984</p>
+<ul class="plain"><li><a href="https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng">https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng</a></li></ul>
+<p class="callout">Checked on 2026-11-04 against the English and German Official Journal text of Implementing Regulation (EU) 2024/2984 (OJ L, 2024/2984, 3.12.2024) as the Publications Office Cellar served it: the form column of field 01 of Table 2 and I.01 of Tables 3 and 4. No amendment or corrigendum was searched for.</p>
+<h2>Synthetic examples</h2>
+<p class="small muted">Each example is linted when this page is generated. The build fails if a result differs.</p>
+<div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>Draft without field numbers, section absent</strong></div><p class="small muted">A JSON, PDF, DOCX, Markdown or heading-based XHTML draft without section notification_date is missing, as on the other rules.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;sections&quot;: {}
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>Date in another form</strong></div><p class="small muted">COMMON.NOTIFICATION_DATE passes this date; the template asks for YYYY-MM-DD.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;sections&quot;: {
+    &quot;notification_date&quot;: &quot;Date of notification: 2 March 2026&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>Date in the template&#x27;s form</strong></div><p class="small muted">A draft without field numbers passes once its section holds a valid date written YYYY-MM-DD.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;sections&quot;: {
+    &quot;notification_date&quot;: &quot;Date of notification: 2026-03-02&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>Field 01 in another form</strong></div><p class="small muted">In a numbered-field draft the field must hold the date and nothing else.</p><pre><code>Numbered-field XHTML draft (Table 2), as the loader reads its fields:
+01 | Date of notification | 02.03.2026</code></pre></div><div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>Field 01 empty</strong></div><p class="small muted">A placeholder is no answer.</p><pre><code>Numbered-field XHTML draft (Table 2), as the loader reads its fields:
+01 | Date of notification | TBD</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>Field 01 as YYYY-MM-DD</strong></div><p class="small muted">The field holds one valid date in the template&#x27;s form. The check does not confirm that it is the date of notification.</p><pre><code>Numbered-field XHTML draft (Table 2), as the loader reads its fields:
+01 | Date of notification | 2026-03-02</code></pre></div>
+<h2>Limitations</h2>
+<ul class="plain"><li>Reads the fields of a numbered-field XHTML draft by their numbers; text elsewhere is not considered. In a draft without field numbers it reads section <code>notification_date</code> for a date.</li><li>Reads the text a reader sees. An Inline XBRL document can show a tagged value in another form than the value it reports, through a transformation; the check does not read the tags, so a reviewer confirms the tagged value of each field it reports.</li><li>Checks the form only. It does not confirm that the date is the date of notification.</li><li>Status and severity are fixed by the rule. A draft cannot waive or downgrade them.</li><li>The template checks have not yet been run against a real notified white paper; for Tables 3 and 4 they follow the Official Journal text only.</li></ul>
+<p class="small muted">Disagree with this rule, or missing one? <a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/issues/new?template=rule-proposal.yml">Propose a rule change</a>.</p>
+
+</main>
+<footer><span>MiCAR Whitepaper Linter 1.2.1 · MIT licence · First-pass screening, not legal advice.</span><span>Generated from the rule set by <code>scripts/build_rule_docs.py</code>.</span></footer>
+</body>
+</html>

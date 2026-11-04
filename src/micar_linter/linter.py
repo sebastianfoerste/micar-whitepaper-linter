@@ -24,7 +24,16 @@ from micar_linter.lei import (
 from micar_linter.placeholders import is_not_applicable, is_placeholder
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Finding, Rule, Severity
+from micar_linter.template_checks import (
+    field_type_issues,
+    is_iso_date,
+    iso_dates_in,
+    predefined_text_issues,
+    strip_name,
+    sustainability_issues,
+)
 from micar_linter.template_fields import FIELD_NAMES
+from micar_linter.template_types import NOTIFICATION_DATE_FIELDS, NOTIFICATION_DATE_NAMES
 from micar_linter.whitepaper import Whitepaper, WhitepaperType
 
 
@@ -95,6 +104,9 @@ class Linter:
 
         if rule.rule_id in CONTACT_POINT_RULE_IDS:
             return _contact_point_finding(rule, whitepaper)
+
+        if rule.rule_id in TEMPLATE_RULE_CHECKS:
+            return TEMPLATE_RULE_CHECKS[rule.rule_id](rule, whitepaper)
 
         is_de = whitepaper.language == "de"
 
@@ -1054,3 +1066,142 @@ def _summary_words(text: str, whitepaper: Whitepaper) -> int:
                 start = text.rfind("\n", 0, index) + 1
                 text = text[:start] + text[index + len(part) :]
     return _count_words(_SUMMARY_WARNING.sub(" ", _collapse_whitespace(text)))
+
+
+# The template rules (rules/templates.py). A numbered-field draft carries the answer and the label of every
+# field (metadata keys numbered_fields and numbered_field_labels); any other draft has no field numbers.
+_NO_FIELDS = (
+    "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of "
+    "{what} did not run. It runs on a white paper in the numbered-field layout (XHTML).",
+    "Dieser Entwurf hat keine Feldnummern der Durchführungsverordnung (EU) 2024/2984, daher lief die Prüfung "
+    "{what} auf Feldebene nicht. Sie läuft bei einem Whitepaper im Layout mit nummerierten Feldern (XHTML).",
+)
+_WHAT = {
+    "ITS.PREDEFINED_TEXT": ("the predefined texts", "der vorgegebenen Texte"),
+    "ITS.FIELD_FORMATS": ("the data formats", "der Datenformate"),
+    "ITS.CODE_LISTS": ("the code lists", "der Codelisten"),
+    "RTS.SUSTAINABILITY_INDICATORS": (
+        "the sustainability indicators of Delegated Regulation (EU) 2025/422",
+        "der Nachhaltigkeitsindikatoren der Delegierten Verordnung (EU) 2025/422",
+    ),
+}
+# The sections that hold the predefined texts in a draft without field numbers.
+_PREDEFINED_SECTIONS = ("not_approved_statement", "management_statement", "risk_warning", "summary")
+
+
+def _numbered(whitepaper: Whitepaper) -> tuple[dict[str, str], dict[str, str]] | None:
+    """The answers and labels of a numbered-field draft, or None for a draft without field numbers."""
+    answers = whitepaper.metadata.get("numbered_fields")
+    if not isinstance(answers, dict):
+        return None
+    labels = whitepaper.metadata.get("numbered_field_labels")
+    return answers, labels if isinstance(labels, dict) else {}
+
+
+def _without_fields(rule: Rule, whitepaper: Whitepaper, sections: tuple[str, ...]) -> Finding:
+    """A template rule on a draft without field numbers: Missing where the sections it reads are absent or
+    hold only placeholders, otherwise Review with the note that the check needs the numbered-field layout."""
+    is_de = whitepaper.language == "de"
+    texts = [whitepaper.section(section) for section in sections]
+    if all(_absent(text, is_de) for text in texts):
+        return Finding(rule=rule, status="missing", word_count=0, issues=(_absent(texts[0], is_de) or "",))
+    english, german = _WHAT[rule.rule_id]
+    note = _NO_FIELDS[1].format(what=german) if is_de else _NO_FIELDS[0].format(what=english)
+    return Finding(rule=rule, status="review", word_count=sum(map(_count_words, texts)), issues=(note,))
+
+
+def _notification_date_format_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """Field 01 of Table 2 (I.01 of Tables 3 and 4) holds exactly a date written YYYY-MM-DD. A draft without
+    field numbers passes once its notification_date section holds a date in that form."""
+    is_de = whitepaper.language == "de"
+    numbered = _numbered(whitepaper)
+    if numbered is None:
+        text = whitepaper.section(rule.section)
+        if absent := _absent(text, is_de):
+            return Finding(rule=rule, status="missing", word_count=0, issues=(absent,))
+        if iso_dates_in(text):
+            return Finding(rule=rule, status="pass", word_count=_count_words(text))
+        msg = (
+            "Der Abschnitt enthält kein gültiges Datum in der Form JJJJ-MM-TT, die die Vorlage der "
+            "Durchführungsverordnung (EU) 2024/2984 für das Datum der Mitteilung verlangt (etwa 2026-03-02)."
+            if is_de
+            else "The section holds no valid date written YYYY-MM-DD, the form the template of Implementing "
+            "Regulation (EU) 2024/2984 requires for the date of notification (for example 2026-03-02)."
+        )
+        return Finding(rule=rule, status="review", word_count=_count_words(text), issues=(msg,))
+    answers, _ = numbered
+    number = NOTIFICATION_DATE_FIELDS[whitepaper.type]
+    answer = strip_name(str(answers.get(number, "")), NOTIFICATION_DATE_NAMES)
+    name = number if is_de else f"{number} (Date of notification)"
+    if not answer.strip() or is_placeholder(answer):
+        msg = (
+            f"Feld {name} ist leer, fehlt oder enthält nur einen Platzhalter."
+            if is_de
+            else f"Field {name} is empty, not in the draft or holds only a placeholder."
+        )
+        return Finding(rule=rule, status="missing", word_count=0, issues=(msg,))
+    if is_iso_date(answer):
+        return Finding(rule=rule, status="pass", word_count=_count_words(answer))
+    msg = (
+        f"Feld {name} enthält nicht genau ein gültiges Datum in der Form JJJJ-MM-TT (etwa 2026-03-02)."
+        if is_de
+        else f"Field {name} does not hold exactly one valid date written YYYY-MM-DD (for example "
+        "2026-03-02)."
+    )
+    return Finding(rule=rule, status="review", word_count=_count_words(answer), issues=(msg,))
+
+
+def _predefined_text_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """The predefined texts of the regime's table in the template's English or German wording
+    (template_checks.py). Missing when none of their fields holds an answer."""
+    numbered = _numbered(whitepaper)
+    if numbered is None:
+        return _without_fields(rule, whitepaper, _PREDEFINED_SECTIONS)
+    answers, labels = numbered
+    issues, answered = predefined_text_issues(answers, labels, whitepaper.type, whitepaper.language == "de")
+    status = "missing" if not answered else "review" if issues else "pass"
+    return Finding(rule=rule, status=status, word_count=0, issues=tuple(issues))
+
+
+def _field_types_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """The typed fields of the regime's table: data formats (ITS.FIELD_FORMATS) or code lists
+    (ITS.CODE_LISTS). Missing when the draft carries none of them under its number and template name."""
+    numbered = _numbered(whitepaper)
+    if numbered is None:
+        return _without_fields(rule, whitepaper, (rule.section,))
+    answers, labels = numbered
+    is_de = whitepaper.language == "de"
+    code_lists = rule.rule_id == "ITS.CODE_LISTS"
+    issues, present = field_type_issues(answers, labels, whitepaper.type, is_de, code_lists=code_lists)
+    if not present:
+        what = ("Codelisten", "code lists") if code_lists else ("Datentypen", "data types")
+        msg = (
+            f"Kein Feld mit einem der {what[0]} der Vorlage wurde unter seiner Nummer und seinem Namen in "
+            "der Vorlage gefunden."
+            if is_de
+            else f"No field with one of the template's {what[1]} was found under its number and template "
+            "name."
+        )
+        return Finding(rule=rule, status="missing", word_count=0, issues=(msg,))
+    return Finding(rule=rule, status="review" if issues else "pass", word_count=0, issues=tuple(issues))
+
+
+def _sustainability_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """Fields S.1 to S.16 of Delegated Regulation (EU) 2025/422 (template_checks.py). Missing when none of
+    S.1 to S.9 holds an answer."""
+    numbered = _numbered(whitepaper)
+    if numbered is None:
+        return _without_fields(rule, whitepaper, (rule.section,))
+    answers, _ = numbered
+    issues, answered = sustainability_issues(answers, whitepaper.language == "de")
+    status = "missing" if not answered else "review" if issues else "pass"
+    return Finding(rule=rule, status=status, word_count=0, issues=tuple(issues))
+
+
+TEMPLATE_RULE_CHECKS: dict[str, Callable[[Rule, Whitepaper], Finding]] = {
+    "ITS.NOTIFICATION_DATE_FORMAT": _notification_date_format_finding,
+    "ITS.PREDEFINED_TEXT": _predefined_text_finding,
+    "ITS.FIELD_FORMATS": _field_types_finding,
+    "ITS.CODE_LISTS": _field_types_finding,
+    "RTS.SUSTAINABILITY_INDICATORS": _sustainability_finding,
+}

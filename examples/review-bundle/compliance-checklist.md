@@ -3,8 +3,8 @@
 - **Document Title**: Synthetic EuroStable ART White Paper
 - **Regime/Type**: ART
 - **Source File**: examples/art-stablecoin.json
-- **SHA-256 Checksum**: `e8969fa1d2b061343085e85b22eec491f0b7adde670f9abfa937f2737fbb46ff`
-- **Review Timestamp**: 2026-10-29 06:57:48
+- **SHA-256 Checksum**: `eb1fa481e730137719b20c81986c85a1a5343fc350f8e149ef1c55402df01024`
+- **Review Timestamp**: 2026-11-04 13:22:21
 
 ## Rule Compliance Checklist
 
@@ -30,13 +30,18 @@
 | `ANNEX_II.G.VALUATION_AUDIT` | Anhang II Teil D Nr. 10 MiCAR | Referenced assets and valuation of the components of the claim (Annex II Part D No. 10 MiCAR) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.H` | Art. 19 Abs. 1 UAbs. 1 Buchst. h MiCAR i.V.m. Art. 4 VO (EU) 2025/422; Anhang Tabelle 3 Teil H VO (EU) 2024/2984 | Principal adverse environmental and climate-related impact of the consensus mechanism | MAJOR | **PASS** | [x] |
 | `ANNEX_II.I` | Anhang II Teil D Nr. 9, 14, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39, Art. 46 Abs. 1 UAbs. 3 Buchst. c und Art. 46 Abs. 4 MiCAR | Redemption rights and procedure (timing, fees, suspension conditions) | BLOCKER | **PASS** | [x] |
+| `ITS.NOTIFICATION_DATE_FORMAT` | Anhang Tabelle 2 Feld 01, Tabelle 3 Feld I.01, Tabelle 4 Feld I.01 VO (EU) 2024/2984 | Date of notification written as YYYY-MM-DD, the template's format | BLOCKER | **PASS** | [x] |
+| `ITS.PREDEFINED_TEXT` | Anhang Tabelle 2 Felder 02 bis 07, Tabelle 3 Felder I.02 bis I.04 und I.06, Tabelle 4 Felder I.02 bis I.05 und I.07 VO (EU) 2024/2984 | Predefined texts of the template (statements, warnings, right of redemption) in the template's English or German wording | BLOCKER | **REVIEW** | [ ] |
+| `ITS.FIELD_FORMATS` | Anhang Tabellen 1 bis 4 VO (EU) 2024/2984 | Data formats of the template's typed fields (dates, LEI, DTI, currency and market codes, numbers, days, true or false) | BLOCKER | **REVIEW** | [ ] |
+| `ITS.CODE_LISTS` | Anhang Tabellen 2 bis 4 VO (EU) 2024/2984 | Codes of the template's closed lists (offer or admission, holders, placement, white paper and submission type, exemption, Member States) | MAJOR | **REVIEW** | [ ] |
+| `RTS.SUSTAINABILITY_INDICATORS` | Art. 4 Abs. 1 und 2 i.V.m. Anhang Tabellen 2 und 3 VO (EU) 2025/422 | Sustainability indicators S.1 to S.9, and S.10 to S.16 above 500 000 kWh, in the format of Delegated Regulation (EU) 2025/422 | BLOCKER | **REVIEW** | [ ] |
 
 ## Summary of Findings
 
-- **Passed Checks**: 17
-- **Under Review**: 2
+- **Passed Checks**: 18
+- **Under Review**: 6
 - **Missing Sections**: 1
-- **BLOCKER Issues**: 3
+- **BLOCKER Issues**: 6
 
 > [!WARNING]
 > **BLOCKER issues are currently open.** The draft is not package-ready for an external review or filing workflow until the gaps are cured and a lawyer has signed off.

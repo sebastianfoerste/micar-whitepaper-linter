@@ -1,52 +1,55 @@
 {
   "schema": "micar-whitepaper-linter.artifact-manifest.v1",
-  "generated_at": "2026-10-29T06:57:48.094210+00:00",
+  "generated_at": "2026-11-04T13:22:21.374981+00:00",
   "source": {
     "path": "examples/art-stablecoin.json",
-    "sha256": "e8969fa1d2b061343085e85b22eec491f0b7adde670f9abfa937f2737fbb46ff"
+    "sha256": "eb1fa481e730137719b20c81986c85a1a5343fc350f8e149ef1c55402df01024"
   },
   "report": {
     "title": "Synthetic EuroStable ART White Paper",
     "whitepaper_type": "art",
-    "passed": 17,
-    "review": 2,
+    "passed": 18,
+    "review": 6,
     "missing": 1,
-    "blockers": 3,
+    "blockers": 6,
     "blocker_rule_ids": [
       "COMMON.IXBRL_TAGGING",
       "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
-      "ANNEX_II.G.CUSTODY"
+      "ANNEX_II.G.CUSTODY",
+      "ITS.PREDEFINED_TEXT",
+      "ITS.FIELD_FORMATS",
+      "RTS.SUSTAINABILITY_INDICATORS"
     ]
   },
   "outputs": [
     {
       "path": "dist/review-bundle/compliance-checklist.md",
-      "sha256": "0b5e43006b759e91184736abb8e98b93ba2e8a95a4dd2d30270ceb280af8e78f",
+      "sha256": "9664b05e4f57bc4473a6761cd1e2626e05931896975c7789bd64d5bfb44c9a03",
       "role": "compliance_checklist"
     },
     {
       "path": "dist/review-bundle/remediation-checklist.json",
-      "sha256": "dbe5e64e42187b1b79d27cb9e65382edf5db987061ce95046ad08b89da906da5",
+      "sha256": "e8503809d9fd0bb0be7cef7d7829a118f85f0dd585c99315eb8b29d54c917759",
       "role": "remediation_checklist"
     },
     {
       "path": "dist/review-bundle/coverage-matrix.json",
-      "sha256": "b95e9ebb2ad9cfcaa7aee68b44a3a9716e68eeb38ca6ce5c3e5782876464d409",
+      "sha256": "4926bce6c7a94575b11acfbb4dfc42ebc2780847b2924b141a15b59ce9763ec5",
       "role": "coverage_matrix"
     },
     {
       "path": "dist/review-bundle/review-table.json",
-      "sha256": "566c2d898d9bc46b95fa25f95fb3977188f2363b11a9a02697fec214253877a2",
+      "sha256": "2d9c5a711fb2ac7d17a54f0cf7b20b8835e976876adff13bf57f031ff09a33b1",
       "role": "review_table_json"
     },
     {
       "path": "dist/review-bundle/review-table.md",
-      "sha256": "4f166ab138826924a409b0365d055c1a73aff8f5308c64da5676fde9f283262d",
+      "sha256": "4e337bdfe506869ece27c9db6d7dc592fd736c5cae56d4d613759a3472b0c977",
       "role": "review_table_markdown"
     },
     {
       "path": "dist/review-bundle/reviewer-signoff.md",
-      "sha256": "14590b8f237934a50943915edb8ff3853940ab8780198040f9981ff387d1bc38",
+      "sha256": "53d00ddf636b6ec18ba24ed33c5a15f7c6b6b6fcc88981fc9480e39f64b5002c",
       "role": "lawyer_signoff"
     }
   ],
@@ -56,12 +59,15 @@
     "blocked_by": [
       "COMMON.IXBRL_TAGGING",
       "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
-      "ANNEX_II.G.CUSTODY"
+      "ANNEX_II.G.CUSTODY",
+      "ITS.PREDEFINED_TEXT",
+      "ITS.FIELD_FORMATS",
+      "RTS.SUSTAINABILITY_INDICATORS"
     ],
     "review_required": true,
     "notice": "Automated linter output requires substantive lawyer review before external use."
   },
   "review_notice": "Manifest proves local artifact integrity only. It is not a legal opinion, signature, notification, or filing approval.",
-  "overall_digest": "2ddbd99f6e5766fcaa5e9c4cfbecb27b115800b5c0b81a7eae0910b69a0b181c",
+  "overall_digest": "281da737c91633878d02678d691a21258f9664f824beb8db78af362a694b2355",
   "bundle_schema": "micar-whitepaper-linter.review-bundle.v1"
 }

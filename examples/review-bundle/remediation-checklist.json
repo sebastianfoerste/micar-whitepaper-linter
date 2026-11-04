@@ -4,9 +4,9 @@
   "whitepaper_type": "art",
   "status": "BLOCKED",
   "summary": {
-    "open_items": 3,
-    "blockers": 3,
-    "review_items": 2,
+    "open_items": 7,
+    "blockers": 6,
+    "review_items": 6,
     "missing_sections": 1
   },
   "items": [
@@ -68,6 +68,86 @@
         "parser_source_type": "json",
         "stable_anchor_id": "json:reserve_of_assets:201e6345d45fb626",
         "section_length": 1411
+      }
+    },
+    {
+      "rule_id": "ITS.PREDEFINED_TEXT",
+      "citation": "Anhang Tabelle 2 Felder 02 bis 07, Tabelle 3 Felder I.02 bis I.04 und I.06, Tabelle 4 Felder I.02 bis I.05 und I.07 VO (EU) 2024/2984",
+      "section": "management_statement",
+      "label": "Predefined texts of the template (statements, warnings, right of redemption) in the template's English or German wording",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of the predefined texts did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "management_statement",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:management_statement:4f05e63e3b9f4215",
+        "section_length": 393
+      }
+    },
+    {
+      "rule_id": "ITS.FIELD_FORMATS",
+      "citation": "Anhang Tabellen 1 bis 4 VO (EU) 2024/2984",
+      "section": "offer_or_admission",
+      "label": "Data formats of the template's typed fields (dates, LEI, DTI, currency and market codes, numbers, days, true or false)",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of the data formats did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:443c655b530f03ef",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ITS.CODE_LISTS",
+      "citation": "Anhang Tabellen 2 bis 4 VO (EU) 2024/2984",
+      "section": "offer_or_admission",
+      "label": "Codes of the template's closed lists (offer or admission, holders, placement, white paper and submission type, exemption, Member States)",
+      "severity": "MAJOR",
+      "status": "review",
+      "owner_role": "Compliance reviewer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of the code lists did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Review and strengthen the disclosure before sign-off.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:a2e468f0284fc19d",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "RTS.SUSTAINABILITY_INDICATORS",
+      "citation": "Art. 4 Abs. 1 und 2 i.V.m. Anhang Tabellen 2 und 3 VO (EU) 2025/422",
+      "section": "environmental_impact",
+      "label": "Sustainability indicators S.1 to S.9, and S.10 to S.16 above 500 000 kWh, in the format of Delegated Regulation (EU) 2025/422",
+      "severity": "BLOCKER",
+      "status": "review",
+      "owner_role": "Responsible lawyer",
+      "missing_evidence": false,
+      "issues": [
+        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of the sustainability indicators of Delegated Regulation (EU) 2025/422 did not run. It runs on a white paper in the numbered-field layout (XHTML)."
+      ],
+      "next_action": "Cure the blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "environmental_impact",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:environmental_impact:e26b3cb7ef593c8d",
+        "section_length": 742
       }
     }
   ],

@@ -1,7 +1,7 @@
 MiCAR Whitepaper Linter - Incomplete Synthetic EuroStable ART Draft
 Whitepaper type: ART
 ==============================================================================
-Pass: 1  |  Review: 13  |  Missing: 6  |  Blockers: 15
+Pass: 1  |  Review: 14  |  Missing: 10  |  Blockers: 19
 
 [REVIEW] [BLOCKER] COMMON.SUMMARY  Plain-language summary
            Cite:  Art. 6(7), Art. 19(6), Art. 51(6) MiCAR
@@ -134,6 +134,36 @@ Pass: 1  |  Review: 13  |  Missing: 6  |  Blockers: 15
            Cite:  Annex II, Part D, points 9, 14, 15 and 16, Part G, point 3 in conjunction with Art. 39, Art. 46(1), third subparagraph, point (c) and Art. 46(4) MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'redemption'  (0 words)
+           -  Section is empty or absent.
+
+[MISS  ] [BLOCKER] ITS.NOTIFICATION_DATE_FORMAT  Date of notification written as YYYY-MM-DD, the template's format
+           Cite:  Annex, Table 2, field 01, Table 3, field I.01, Table 4, field I.01 Regulation (EU) 2024/2984
+           Text:  https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng
+           Section: 'notification_date'  (0 words)
+           -  Section holds only placeholder text such as TBD or TBC.
+
+[REVIEW] [BLOCKER] ITS.PREDEFINED_TEXT  Predefined texts of the template (statements, warnings, right of redemption) in the template's English or German wording
+           Cite:  Annex, Table 2, fields 02 to 07, Table 3, fields I.02 to I.04 and I.06, Table 4, fields I.02 to I.05 and I.07 Regulation (EU) 2024/2984
+           Text:  https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng
+           Section: 'management_statement'  (5 words)
+           -  This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of the predefined texts did not run. It runs on a white paper in the numbered-field layout (XHTML).
+
+[MISS  ] [BLOCKER] ITS.FIELD_FORMATS  Data formats of the template's typed fields (dates, LEI, DTI, currency and market codes, numbers, days, true or false)
+           Cite:  Annex, Tables 1 to 4 Regulation (EU) 2024/2984
+           Text:  https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng
+           Section: 'offer_or_admission'  (0 words)
+           -  Section is empty or absent.
+
+[MISS  ] [MAJOR  ] ITS.CODE_LISTS  Codes of the template's closed lists (offer or admission, holders, placement, white paper and submission type, exemption, Member States)
+           Cite:  Annex, Tables 2 to 4 Regulation (EU) 2024/2984
+           Text:  https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng
+           Section: 'offer_or_admission'  (0 words)
+           -  Section is empty or absent.
+
+[MISS  ] [BLOCKER] RTS.SUSTAINABILITY_INDICATORS  Sustainability indicators S.1 to S.9, and S.10 to S.16 above 500 000 kWh, in the format of Delegated Regulation (EU) 2025/422
+           Cite:  Art. 4(1) and (2) in conjunction with Annex, Tables 2 and 3 Regulation (EU) 2025/422
+           Text:  https://eur-lex.europa.eu/eli/reg_del/2025/422/oj/eng
+           Section: 'environmental_impact'  (0 words)
            -  Section is empty or absent.
 
 ==============================================================================

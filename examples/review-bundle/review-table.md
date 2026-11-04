@@ -30,6 +30,11 @@ This markdown table is a local review artifact. It does not approve filing, publ
 | ANNEX_II.G.VALUATION_AUDIT | Anhang II Teil D Nr. 10 MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | ANNEX_II.H | Art. 19 Abs. 1 UAbs. 1 Buchst. h MiCAR i.V.m. Art. 4 VO (EU) 2025/422; Anhang Tabelle 3 Teil H VO (EU) 2024/2984 | pass | no | pending_lawyer_confirmation | yes |
 | ANNEX_II.I | Anhang II Teil D Nr. 9, 14, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39, Art. 46 Abs. 1 UAbs. 3 Buchst. c und Art. 46 Abs. 4 MiCAR | pass | no | pending_lawyer_confirmation | yes |
+| ITS.NOTIFICATION_DATE_FORMAT | Anhang Tabelle 2 Feld 01, Tabelle 3 Feld I.01, Tabelle 4 Feld I.01 VO (EU) 2024/2984 | pass | no | pending_lawyer_confirmation | yes |
+| ITS.PREDEFINED_TEXT | Anhang Tabelle 2 Felder 02 bis 07, Tabelle 3 Felder I.02 bis I.04 und I.06, Tabelle 4 Felder I.02 bis I.05 und I.07 VO (EU) 2024/2984 | review | yes | remediation_required | yes |
+| ITS.FIELD_FORMATS | Anhang Tabellen 1 bis 4 VO (EU) 2024/2984 | review | yes | remediation_required | yes |
+| ITS.CODE_LISTS | Anhang Tabellen 2 bis 4 VO (EU) 2024/2984 | review | no | lawyer_review_required | yes |
+| RTS.SUSTAINABILITY_INDICATORS | Art. 4 Abs. 1 und 2 i.V.m. Anhang Tabellen 2 und 3 VO (EU) 2025/422 | review | yes | remediation_required | yes |
 
 ## Review Gate
 

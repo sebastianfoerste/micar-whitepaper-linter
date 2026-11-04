@@ -1,14 +1,14 @@
 {
   "schema": "micar-whitepaper-linter.coverage-matrix.v1",
-  "generated_at": "2026-10-29T06:57:48.094210+00:00",
+  "generated_at": "2026-11-04T13:22:21.374981+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "summary": {
-    "total": 20,
-    "pass": 17,
-    "review": 2,
+    "total": 25,
+    "pass": 18,
+    "review": 6,
     "missing": 1,
-    "blockers": 3
+    "blockers": 6
   },
   "coverage": [
     {
@@ -69,14 +69,14 @@
       "citation": "Art. 6 Abs. 8, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR",
       "severity": "MAJOR",
       "status": "pass",
-      "word_count": 17,
+      "word_count": 15,
       "blocker": false,
       "next_action": "Keep disclosure under lawyer review before external use.",
       "source_anchor": {
         "section_key": "notification_date",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:notification_date:d015fb69bd078a74",
-        "section_length": 109
+        "stable_anchor_id": "json:notification_date:1797439646d525bf",
+        "section_length": 107
       }
     },
     {
@@ -350,14 +350,102 @@
         "stable_anchor_id": "json:redemption:f30c1426e8222ca8",
         "section_length": 892
       }
+    },
+    {
+      "rule_id": "ITS.NOTIFICATION_DATE_FORMAT",
+      "annex": "ITS",
+      "section": "notification_date",
+      "citation": "Anhang Tabelle 2 Feld 01, Tabelle 3 Feld I.01, Tabelle 4 Feld I.01 VO (EU) 2024/2984",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "word_count": 15,
+      "blocker": false,
+      "next_action": "Keep disclosure under lawyer review before external use.",
+      "source_anchor": {
+        "section_key": "notification_date",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:notification_date:3bbdc9d8be42de60",
+        "section_length": 107
+      }
+    },
+    {
+      "rule_id": "ITS.PREDEFINED_TEXT",
+      "annex": "ITS",
+      "section": "management_statement",
+      "citation": "Anhang Tabelle 2 Felder 02 bis 07, Tabelle 3 Felder I.02 bis I.04 und I.06, Tabelle 4 Felder I.02 bis I.05 und I.07 VO (EU) 2024/2984",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 236,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "management_statement",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:management_statement:4f05e63e3b9f4215",
+        "section_length": 393
+      }
+    },
+    {
+      "rule_id": "ITS.FIELD_FORMATS",
+      "annex": "ITS",
+      "section": "offer_or_admission",
+      "citation": "Anhang Tabellen 1 bis 4 VO (EU) 2024/2984",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 80,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:443c655b530f03ef",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "ITS.CODE_LISTS",
+      "annex": "ITS",
+      "section": "offer_or_admission",
+      "citation": "Anhang Tabellen 2 bis 4 VO (EU) 2024/2984",
+      "severity": "MAJOR",
+      "status": "review",
+      "word_count": 80,
+      "blocker": false,
+      "next_action": "Strengthen the disclosure before sign-off.",
+      "source_anchor": {
+        "section_key": "offer_or_admission",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:offer_or_admission:a2e468f0284fc19d",
+        "section_length": 501
+      }
+    },
+    {
+      "rule_id": "RTS.SUSTAINABILITY_INDICATORS",
+      "annex": "RTS",
+      "section": "environmental_impact",
+      "citation": "Art. 4 Abs. 1 und 2 i.V.m. Anhang Tabellen 2 und 3 VO (EU) 2025/422",
+      "severity": "BLOCKER",
+      "status": "review",
+      "word_count": 104,
+      "blocker": true,
+      "next_action": "Cure blocker before any notification workflow continues.",
+      "source_anchor": {
+        "section_key": "environmental_impact",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:environmental_impact:e26b3cb7ef593c8d",
+        "section_length": 742
+      }
     }
   ],
   "blockers": [
     "COMMON.IXBRL_TAGGING",
     "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
-    "ANNEX_II.G.CUSTODY"
+    "ANNEX_II.G.CUSTODY",
+    "ITS.PREDEFINED_TEXT",
+    "ITS.FIELD_FORMATS",
+    "RTS.SUSTAINABILITY_INDICATORS"
   ],
   "warnings": [],
   "review_notice": "Coverage matrix is a deterministic disclosure checklist. It is not legal advice, a signature, a notification, or filing approval.",
-  "digest": "a8dc5245ffa31917b9ebd8cd3dc986ddc9a6a64a3e7985cdadd1d6f5f3d6508e"
+  "digest": "fe180a61d6cd1e65c98aae0665c1de5c5e25d4ef1c9aa1ef2f29457d8b40fdd3"
 }

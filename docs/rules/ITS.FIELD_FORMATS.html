@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Data formats of the template&#x27;s typed fields (dates, LEI, DTI, currency and market codes, numbers, days, true or false). Annex, Tables 1 to 4 Regulation (EU) 2024/2984.">
+<title>ITS.FIELD_FORMATS: MiCAR Whitepaper Linter rule</title>
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <a class="brand" href="../"><span class="brand-mark" aria-hidden="true">M</span><span>MiCAR <strong>Whitepaper Linter</strong></span></a>
+  <nav aria-label="Site"><a href="../">Overview</a><a href="../rules/">Rules</a><a href="../playground/">Playground</a><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter">Source</a></nav>
+</header>
+<main id="main">
+<p class="eyebrow">Rule · BLOCKER</p>
+<h1>ITS.FIELD_FORMATS</h1>
+<p class="lede">Data formats of the template&#x27;s typed fields (dates, LEI, DTI, currency and market codes, numbers, days, true or false)</p>
+<div class="panel"><dl class="facts">
+<dt>Citation</dt><dd>Annex, Tables 1 to 4 Regulation (EU) 2024/2984</dd>
+<dt>Canonical form</dt><dd lang="de">Anhang Tabellen 1 bis 4 VO (EU) 2024/2984</dd>
+<dt>Runs for</dt><dd>Annex I · other crypto-assets; Annex II · asset-referenced tokens; Annex III · e-money tokens</dd>
+<dt>Severity if open</dt><dd>BLOCKER</dd>
+<dt>Section key</dt><dd><code>offer_or_admission</code></dd>
+<dt>Minimum words</dt><dd>none: checks for the template's data types</dd>
+<dt>Listed terms (English)</dt><dd>none</dd>
+<dt>Listed terms (German)</dt><dd lang="de">none</dd>
+<dt>Package version</dt><dd>1.2.1, built from source that may include unreleased changes</dd>
+<dt>Source</dt><dd><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/rules/templates.py">rules/templates.py</a></dd>
+</dl></div>
+<h2>How the status is set</h2>
+<ul class="plain"><li><strong>Missing</strong>: in a numbered-field XHTML draft, no field with a data type is present under its number with the template's English or German name as its label, or with no label.</li><li><strong>Review</strong>: such a field holds an answer that is not of its type (below). An empty field, a placeholder and an answer marked not applicable are not checked here; the other rules report missing answers. The finding names the field and the expected type, never the answer.</li><li>In a draft without field numbers (JSON, PDF, DOCX, Markdown, heading-based XHTML): <strong>Missing</strong> where section <code>offer_or_admission</code> is absent, empty or holds only a placeholder, otherwise <strong>Review</strong> with a note that the field-level check needs the numbered-field layout. Such a draft never passes.</li><li><strong>Pass</strong>: every such field the draft carries holds its type.</li></ul><p>The fields with a data type, from the form column of each table:</p><ul class="plain"><li>Table 2 (other crypto-assets): a date YYYY-MM-DD: A.5, B.6, C.5, E.21, E.22, E.28, F.9, F.10; an LEI (ISO 17442, check digits checked): A.6, B.7, C.6, E.31; a number of days of up to three digits: A.10; true or false: A.15, B.1, D.6, E.6, E.20, F.15, F.16, F.17, G.6, G.9, G.12, G.14, G.16, H.6, H.8; an amount {DECIMAL-18/3} or a whole number: E.3, E.4, E.5, E.8, E.10; an ISO 4217 currency code or a DTI: E.9; a whole number {INTEGER-n}: E.12, G.5; a MIC (ISO 10383, four capital letters or digits): E.34; a DTI (ISO 24165, nine letters or digits): F.13, F.14.</li><li>Table 3 (asset-referenced tokens): a date YYYY-MM-DD: A.6, B.11, B.12, C.16, C.17, D.2; an LEI (ISO 17442, check digits checked): A.7, AA.1, AA.3, C.22, G.8; true or false: A.13, A.21, A.22, A.23, B.17, B.18, C.15, D.8, D.11, D.13, D.15, D.32, D.33, E.6, E.8, G.4; a DTI (ISO 24165, nine letters or digits): B.15, B.16; an amount {DECIMAL-18/3} or a whole number: C.2, C.3, C.4; a number {DECIMAL-18/3}: C.7; a MIC (ISO 10383, four capital letters or digits): C.25; a whole number {INTEGER-n}: D.7; an ISO 4217 currency code: D.35.</li><li>Table 4 (e-money tokens): a date YYYY-MM-DD: A.6, B.8, B.9; an LEI (ISO 17442, check digits checked): A.7, A.27; a number of days of up to three digits: A.11; true or false: A.17, A.18, A.19, A.21, A.24, B.14, B.15, D.9, D.11, E.7, E.9; a DTI (ISO 24165, nine letters or digits): B.12, B.13; a number {DECIMAL-18/3}: C.2; a MIC (ISO 10383, four capital letters or digits): C.4.</li></ul>
+<h2>Legal basis</h2>
+<p>Annex, Tables 1 to 4 Regulation (EU) 2024/2984</p>
+<ul class="plain"><li><a href="https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng">https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng</a></li></ul>
+<p class="callout">Checked on 2026-11-04 against the English and German Official Journal text of Implementing Regulation (EU) 2024/2984 (OJ L, 2024/2984, 3.12.2024) as the Publications Office Cellar served it: the legend of Table 1 and the form column of Tables 2 to 4. No amendment or corrigendum was searched for.</p>
+<h2>Synthetic examples</h2>
+<p class="small muted">Each example is linted when this page is generated. The build fails if a result differs.</p>
+<div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>Draft without field numbers, section absent</strong></div><p class="small muted">A JSON, PDF, DOCX, Markdown or heading-based XHTML draft without section offer_or_admission is missing, as on the other rules.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;sections&quot;: {}
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>Draft without field numbers</strong></div><p class="small muted">The draft has no field numbers, so the field-level check does not run; the finding says so and stays open until the white paper is checked in the numbered-field layout.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;sections&quot;: {
+    &quot;offer_or_admission&quot;: &quot;Synthetic section text of a draft without field numbers.&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>No typed field</strong></div><p class="small muted">The draft carries none of the fields the template types under its number.</p><pre><code>Numbered-field XHTML draft (Table 2), as the loader reads its fields:
+A.1 | Name | Synthetic Offeror GmbH, a fictional company</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>German number and a written-out date</strong></div><p class="small muted">Field E.3 uses a comma as decimal separator; the template&#x27;s decimal has a full stop. Field A.5 is not written YYYY-MM-DD.</p><pre><code>Numbered-field XHTML draft (Table 2), as the loader reads its fields:
+A.1 | Name | Synthetic Offeror GmbH, a fictional company
+A.5 | Registration date | 1 April 2021
+A.6 | Legal entity identifier | 9999SYNTH0000ZZQ0166
+E.1 | Public offering or admission to trading | ATTR
+E.3 | Fundraising target | 5.000.000,00
+E.13 | Targeted holders | RETL
+F.4 | Type of crypto-asset white paper | OTHR
+F.18 | Home Member State | DE</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>Typed fields in the template&#x27;s formats</strong></div><p class="small muted">Each typed field holds its type. The LEI&#x27;s check digits are checked offline; nothing is looked up in a registry.</p><pre><code>Numbered-field XHTML draft (Table 2), as the loader reads its fields:
+A.1 | Name | Synthetic Offeror GmbH, a fictional company
+A.5 | Registration date | 2021-04-01
+A.6 | Legal entity identifier | 9999SYNTH0000ZZQ0166
+E.1 | Public offering or admission to trading | ATTR
+E.3 | Fundraising target | 5000000
+E.13 | Targeted holders | RETL
+F.4 | Type of crypto-asset white paper | OTHR
+F.18 | Home Member State | DE</code></pre></div>
+<h2>Limitations</h2>
+<ul class="plain"><li>Reads the fields of a numbered-field XHTML draft by their numbers; text elsewhere is not considered. In a draft without field numbers it reads section <code>offer_or_admission</code> only to tell whether it is absent.</li><li>Reads the text a reader sees. An Inline XBRL document can show a tagged value in another form than the value it reports, through a transformation; the check does not read the tags, so a reviewer confirms the tagged value of each field it reports.</li><li>Skips a field whose label is not the template's English or German name for its number: the draft numbers its fields otherwise. A field without a label is checked by its number alone, so a draft that renumbers and leaves out labels can be checked against the wrong type.</li><li>Not checked: the legal form (ISO 20275), the registered address and head office (ISO 3166-1 codes with free text), the offer expenses, the referenced assets and the closed lists of languages, competent authorities and applicable laws, which the Official Journal does not print. The Official Journal types field D.2 of Table 3 (“Planned functionalities use”) as a date; the check follows it.</li><li>A number may set commas, spaces or apostrophes between groups of three digits, up to two words such as a unit and, for an amount, a currency code or sign; a comma as decimal separator goes to review. A duration counts as up to three digits, optionally with “days” or “Tage”; “5 business days” goes to review. True or false counts also as richtig or falsch and with the template's gloss (“true – Yes”); yes or no goes to review.</li><li>A DTI counts as nine letters or digits; its check character and the DTI registry are not checked. LEI check digits are verified offline. The ISO 4217 list was compiled offline and may miss a recent change.</li><li>Status and severity are fixed by the rule. A draft cannot waive or downgrade them.</li><li>The template checks have not yet been run against a real notified white paper; for Tables 3 and 4 they follow the Official Journal text only.</li></ul>
+<p class="small muted">Disagree with this rule, or missing one? <a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/issues/new?template=rule-proposal.yml">Propose a rule change</a>.</p>
+
+</main>
+<footer><span>MiCAR Whitepaper Linter 1.2.1 · MIT licence · First-pass screening, not legal advice.</span><span>Generated from the rule set by <code>scripts/build_rule_docs.py</code>.</span></footer>
+</body>
+</html>
