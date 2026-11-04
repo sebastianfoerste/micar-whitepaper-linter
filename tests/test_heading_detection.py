@@ -3044,6 +3044,35 @@ _STATEMENT = (
     "This crypto-asset white paper has not been approved by any competent authority in any Member State of the "
     "European Union."
 )
+# The limits of the lead-in that decides whether a pseudo-negation is its only negation word. The PDF writer wraps
+# this paragraph before "MiCAR", as a PDF may.
+_WRAPPED_BEFORE_A_NAME = (
+    "For the purposes of this paper, the token does not qualify under the classification of MiCAR as any of the "
+    "following, including but not limited to:"
+)
+_TWO_ITEMS = ("- an asset-referenced token;", "- an e-money token.")
+_NOT_LIMITED = ", including but not limited to:"
+_SPLIT_BEFORE_A_NAME = ("The token does not qualify, under the categories that", "MiCAR defines, as any of the following")
+_SPLIT_AFTER_A_FULL_STOP = (
+    "The token does not qualify under the categories of MiCAR (i.e.",
+    "those it defines) as any of the following",
+)
+_SPLIT_AFTER_A_SEMICOLON = (
+    "The token does not qualify under the categories that MiCAR defines;",
+    "in particular as any of the following",
+)
+_UNINSURED = ("Holders note that the token is not insured", "by any deposit guarantee scheme;")
+_RISKS_NOT_LIMITED = (
+    "the risks include, but are not limited to:",
+    "- the reserve of assets may lose value;",
+    "- the custodian may fail.",
+)
+_NESTED_RISKS = (
+    "(a) the token is not backed by any of the following:",
+    "- a reserve of assets;",
+    "- a referenced currency.",
+    "(b) the offeror may fail.",
+)
 
 
 @pytest.mark.parametrize("suffix", sorted(ALL_WRITERS))
@@ -3399,6 +3428,119 @@ _STATEMENT = (
             ],
             _regimes(ART, EMT),
         ),
+        # In a DOCX or PDF the lead-in that decides whether a pseudo-negation is the only negation word stops at a
+        # line that starts a clause (a capital letter, a digit or a name: "MiCAR", where a PDF wraps the paragraph
+        # or a DOCX splits it) and after a line that ends in a full stop ("(i.e."), also inside a sentence; a line
+        # that ends in a semicolon ("defines;") is passed over, the next line continuing the clause that line
+        # continued, and a line that ends in a colon carries its clause on unless its own lead-in holds only
+        # pseudo-negations. So "does not qualify" on the earlier line is not seen,
+        # and the list reads as if only the pseudo-negation negated it, which governs no item: the draft for
+        # another crypto-asset is an ART, as in 1.2.1 (before #96 the pseudo-negation's own "not" governed the
+        # items, so it was other). The same paragraph in one DOCX paragraph is other. Markdown and XHTML end the
+        # clause at the colon.
+        (
+            [_CRYPTO_ASSET, *_lines(_WRAPPED_BEFORE_A_NAME, *_TWO_ITEMS), *_MEADOW_OFFEROR],
+            {".docx": OTHER, ".pdf": ART, ".md": ART, ".xhtml": ART},
+        ),
+        (
+            [
+                _CRYPTO_ASSET,
+                *_lines(_SPLIT_BEFORE_A_NAME[0], _SPLIT_BEFORE_A_NAME[1] + _NOT_LIMITED, *_TWO_ITEMS),
+                *_MEADOW_OFFEROR,
+            ],
+            _regimes(ART, ART),
+        ),
+        (
+            [
+                _CRYPTO_ASSET,
+                *_lines(_SPLIT_AFTER_A_FULL_STOP[0], _SPLIT_AFTER_A_FULL_STOP[1] + _NOT_LIMITED, *_TWO_ITEMS),
+                *_MEADOW_OFFEROR,
+            ],
+            _regimes(ART, ART),
+        ),
+        (
+            [
+                _CRYPTO_ASSET,
+                *_lines(_SPLIT_AFTER_A_SEMICOLON[0], _SPLIT_AFTER_A_SEMICOLON[1] + _NOT_LIMITED, *_TWO_ITEMS),
+                *_MEADOW_OFFEROR,
+            ],
+            _regimes(ART, ART),
+        ),
+        # Without the pseudo-negation, such a negation stands more than eight words before the items or in a clause
+        # that has ended, so the list sets the regime in every format anyway.
+        (
+            [
+                _CRYPTO_ASSET,
+                *_lines(_WRAPPED_BEFORE_A_NAME.replace(", including but not limited to", ""), *_TWO_ITEMS),
+                *_MEADOW_OFFEROR,
+            ],
+            _regimes(ART, ART),
+        ),
+        (
+            [
+                _CRYPTO_ASSET,
+                *_lines(_SPLIT_BEFORE_A_NAME[0], _SPLIT_BEFORE_A_NAME[1] + ":", *_TWO_ITEMS),
+                *_MEADOW_OFFEROR,
+            ],
+            _regimes(ART, ART),
+        ),
+        # A line that ends in a semicolon does not end a DOCX or PDF lead-in: the lines after it continue the
+        # clause that it continued, without its own text, so the lead-in reaches past it to "the token is not
+        # insured", whose negation governs the risk list after the pseudo-negation, and the ART draft is other (as
+        # before #96). Markdown and XHTML start the lead-in after the semicolon, so the list makes the draft an ART
+        # there; with a full stop in place of the semicolon, it does so in every format.
+        (
+            [*_SST_ISSUER, ("heading", "Risk Factors"), *_lines(*_UNINSURED, *_RISKS_NOT_LIMITED)],
+            _regimes(OTHER, ART),
+        ),
+        (
+            [
+                *_SST_ISSUER,
+                ("heading", "Risk Factors"),
+                *_lines(_UNINSURED[0], _UNINSURED[1].replace(";", "."), *_RISKS_NOT_LIMITED),
+            ],
+            _regimes(ART, ART),
+        ),
+        # A list nested in an item of a list whose lead-in holds only pseudo-negations continues that lead-in,
+        # which governs nothing, so the negation of the item that leads the inner list ("(a) the token is not
+        # backed by any of the following:") is not seen, and the draft for another crypto-asset is an ART in every
+        # format, as in 1.2.1 and as with the lead-in "The risks include:" (before #96, other in a DOCX or PDF).
+        (
+            [
+                _CRYPTO_ASSET,
+                ("body", "MeadowPoints is a utility token."),
+                ("heading", "Risk Factors"),
+                *_lines("The risks include, but are not limited to:", *_NESTED_RISKS),
+                *_MEADOW_OFFEROR[:2],
+            ],
+            _regimes(ART, ART),
+        ),
+        (
+            [
+                _CRYPTO_ASSET,
+                ("body", "MeadowPoints is a utility token."),
+                ("heading", "Risk Factors"),
+                *_lines("The risks include:", *_NESTED_RISKS),
+                *_MEADOW_OFFEROR[:2],
+            ],
+            _regimes(ART, ART),
+        ),
+        # A hard line wrap inside a Markdown paragraph after "Art." ends the lead-in there, and so does a manual
+        # line break inside a DOCX paragraph: the draft for another crypto-asset is an ART (in Markdown other before
+        # #96). XHTML reads the line ends as spaces, and the PDF writer wraps the paragraph elsewhere, so both read
+        # the lead-in as one line: other.
+        (
+            [
+                _CRYPTO_ASSET,
+                (
+                    "body",
+                    "The token does not qualify under the categories set out in Art.\n3(1) MiCAR, as any instrument "
+                    "including but not limited to\n- an asset-referenced token.",
+                ),
+                *_MEADOW_OFFEROR,
+            ],
+            {".docx": ART, ".pdf": OTHER, ".md": ART, ".xhtml": OTHER},
+        ),
     ],
     ids=[
         "full stop",
@@ -3434,6 +3576,17 @@ _STATEMENT = (
         "heading lead-in with a colon",
         "heading lead-in without a colon",
         "upper-case list letters",
+        "pseudo-negation after a wrap before a name",
+        "pseudo-negation after a paragraph that a name starts",
+        "pseudo-negation after a line that ends in a full stop",
+        "pseudo-negation after a line that ends in a semicolon",
+        "wrap before a name without a pseudo-negation",
+        "paragraph that a name starts without a pseudo-negation",
+        "lead-in past a line that ends in a semicolon",
+        "lead-in after a line that ends in a full stop",
+        "nested list after a pseudo-negation",
+        "nested list without a pseudo-negation",
+        "hard line wrap after Art.",
     ],
 )
 def test_the_documented_limits_of_the_regime_reading(
