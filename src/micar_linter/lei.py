@@ -7,8 +7,9 @@ says only that the characters are internally consistent.
 
 A party section, and any text that names an LEI label or holds an LEI-shaped code
 with a letter, reads LEIs (reads_leis). A draft with one such section or such text
-reads LEIs in all its text (draft_reads_leis): every section, and the text of a
-document file outside its sections. Each text is read as written and, where markup or
+reads LEIs in all its text (draft_reads_leis): every section, the text of a
+document file outside its sections, and that text as a reader sees it where hidden text makes it differ
+(codes_only_as_shown). Each text is read as written and, where markup or
 a character reference changes it, as a Markdown or HTML renderer shows it (_shown).
 There every LEI-like code counts, wherever it stands: one run of 16 to 24 letters and
 digits (or a longer one with "LEI" or a word glued to such a code), groups that a
@@ -581,12 +582,28 @@ def codes_outside_sections(
     holds, read as a text that reads LEIs: those in a heading, a table, a header or footer, or text in no
     section. A code whose span differs from the one a section quotes, because the section text leaves out a
     heading or joins lines differently, is listed too. The texts are read as written and as shown."""
-    if not document_text:
+    return _codes_not_in([str(text) for text in sections.values()], document_text)
+
+
+def codes_only_as_shown(
+    sections: Mapping[str, str], document_text: str, shown_text: str
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """The LEI-shaped codes and the malformed LEI-like codes of a document file's text as a reader sees it
+    (shown_text: without hidden, deleted or moved-away text, see the loaders) that neither a section nor the
+    whole text of the file (document_text) holds, read as a text that reads LEIs: those that text a reader
+    cannot see completes, splits or glues to other text in the other readings. The texts are read as written
+    and as shown."""
+    return _codes_not_in([*(str(text) for text in sections.values()), document_text], shown_text)
+
+
+def _codes_not_in(texts: list[str], text: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """The LEI-shaped and the malformed LEI-like codes of a text, read as one that reads LEIs, that none of
+    the texts holds."""
+    if not text:
         return (), ()
-    texts = [str(text) for text in sections.values()]
-    inside = {code for text in texts for code in find_leis(text, True, True)}
-    quoted = {code for text in texts for code in malformed_leis(text, True)}
+    inside = {code for other in texts for code in find_leis(other, True, True)}
+    quoted = {code for other in texts for code in malformed_leis(other, True)}
     return (
-        tuple(code for code in find_leis(document_text, True, True) if code not in inside),
-        tuple(code for code in malformed_leis(document_text, True) if code not in quoted),
+        tuple(code for code in find_leis(text, True, True) if code not in inside),
+        tuple(code for code in malformed_leis(text, True) if code not in quoted),
     )

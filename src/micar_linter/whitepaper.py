@@ -90,8 +90,10 @@ _RESERVED_METADATA_KEYS = (
     "placeholder_fields",
     "numbered_fields",
     # Set by the document loaders: the whole text of the file, headings, tables and text in no section
-    # included, which COMMON.LEI_CHECK_DIGITS reads besides the sections.
+    # included, which COMMON.LEI_CHECK_DIGITS reads besides the sections, and the same text without what a
+    # reader cannot see (DOCX, PDF, XHTML and HTML; absent where it is the same), which that rule reads too.
     "document_text",
+    "shown_text",
     "reserve_characterisation_reviewed_by",
     "reserve_characterisation_reviewed_on",
 )
@@ -386,21 +388,22 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
     numbered_fields: dict[str, str] | None = None
     extracted = ""
     headings: tuple[str, ...] = ()
-    # The whole text of the file, which COMMON.LEI_CHECK_DIGITS reads besides the sections.
-    document_text = ""
+    # The whole text of the file, which COMMON.LEI_CHECK_DIGITS reads besides the sections, and the same text
+    # without what a reader cannot see, "" where the two are the same.
+    document_text = shown_text = ""
     try:
         if suffix == ".pdf":
             from micar_linter.document import parse_pdf
 
             parsed = parse_pdf(path)
             sections, extracted, headings = parsed.sections, parsed.text, parsed.headings
-            document_text = parsed.document_text
+            document_text, shown_text = parsed.document_text, parsed.shown_text
         elif suffix == ".docx":
             from micar_linter.document import parse_docx
 
             parsed = parse_docx(path)
             sections, extracted, headings = parsed.sections, parsed.text, parsed.headings
-            document_text = parsed.document_text
+            document_text, shown_text = parsed.document_text, parsed.shown_text
         elif suffix == ".md":
             from micar_linter.document import load_from_markdown
 
@@ -414,12 +417,11 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
                 is_numbered_layout,
                 sections_from_numbered_fields,
             )
-            from micar_linter.xhtml_parser import document_text as xhtml_document_text
-            from micar_linter.xhtml_parser import is_script_packed, load_from_xhtml
+            from micar_linter.xhtml_parser import document_texts, is_script_packed, load_from_xhtml
 
             script_packed = is_script_packed(path)
             source = _unpack_viewer_page(path) if script_packed else path
-            document_text = xhtml_document_text(source)
+            document_text, shown_text = document_texts(source)
             fields = extract_numbered_fields(source)
             if is_numbered_layout(fields):
                 # The template wording names every regime ("not an asset-referenced token"),
@@ -487,6 +489,9 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
         "placeholder_fields": placeholder_fields,
         "document_text": document_text,
     }
+    # Only a file with text a reader cannot see carries the key.
+    if shown_text:
+        metadata["shown_text"] = shown_text
     # Only a numbered-field draft carries the key, so a point rule can tell which layout it reads.
     if numbered_fields is not None:
         metadata["numbered_fields"] = numbered_fields

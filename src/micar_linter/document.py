@@ -7,10 +7,12 @@ import re
 import statistics
 from collections import Counter
 from collections.abc import Callable, Iterable
+from contextlib import suppress
 from dataclasses import dataclass, replace
 from functools import partial
 from itertools import pairwise
 from pathlib import Path
+from typing import NamedTuple
 
 from micar_linter.placeholders import is_not_applicable, is_placeholder
 from micar_linter.rules.annex_i import NOT_APPROVED_STATEMENT_EN
@@ -411,16 +413,19 @@ class DocumentSections:
     after a line that ends a section). Regime inference reads the extracted text (text): a heading such
     as "Reserve of Assets" may be the only place that names the regime. COMMON.LEI_CHECK_DIGITS reads
     the whole text of the file (document_text): for a PDF that is the extracted text, for a DOCX every w:t
-    of the body and of the headers and footers (_docx_text: the paragraphs of tables and text boxes, tracked
+    of the body and of the headers and footers (_docx_texts: the paragraphs of tables and text boxes, tracked
     insertions, content controls, text moved away under tracked changes and any w:t inside a tracked
     deletion included). The sections and the extracted text of a DOCX hold only the runs and hyperlinks
-    directly in a body paragraph (python-docx's paragraph text).
+    directly in a body paragraph (python-docx's paragraph text). It also reads the same text without what a
+    reader cannot see (shown_text: _docx_texts for a DOCX, _pdf_lines for a PDF), which is empty where it
+    equals document_text.
     """
 
     sections: dict[str, str]
     headings: tuple[str, ...]
     text: str = ""
     document_text: str = ""
+    shown_text: str = ""
 
 
 def _words(text: str) -> list[str]:
@@ -1316,49 +1321,231 @@ def parse_docx(path: Path) -> DocumentSections:
             current_keys, opener, section_level = [], kind, level
             opener_number = _opening_number(number, opener_number)
 
+    document_text, shown_text = _docx_document_texts(doc)
     return DocumentSections(
         {k: "\n".join(v) for k, v in sections.items()},
         tuple(headings),
         "\n".join(texts),
-        _docx_document_text(doc),
+        document_text,
+        shown_text if shown_text != document_text else "",
     )
 
 
-def _docx_text(element) -> str:
-    """The text of an element, a paragraph per line: every w:t (tracked insertions, hyperlinks, content
-    controls and the paragraphs of tables and text boxes included), tabs, line breaks and non-breaking
-    hyphens. Deleted text as Word writes it (w:delText) and field codes are not read. Text moved away under
-    tracked changes (a w:t inside w:moveFrom) and a w:t inside w:del, which Word does not show as the
-    accepted text, are read too."""
+# A colour channel at least this bright (of 1) is white or nearly so, in a DOCX run colour and a PDF fill or
+# stroke colour alike.
+_WHITE = 0.95
+
+
+def _white_hex(value: str) -> bool:
+    """Whether a DOCX colour value ("FFFFFF", "auto") is white or nearly so: each channel at least _WHITE."""
+    if len(value) != 6:
+        return False
+    try:
+        return all(int(value[i : i + 2], 16) >= _WHITE * 255 for i in (0, 2, 4))
+    except ValueError:
+        return False
+
+
+class _DocxLook:
+    """Whether a DOCX run can be seen, from the run properties set on it, in its character style, in its
+    paragraph's style (each with the styles it is based on) and in the document defaults, the nearest
+    first. A run is hidden where w:vanish is on, where its font is under 1 pt (w:sz under 2 half-points), or
+    where its colour is white or nearly so (w:color, each channel at least _WHITE) and no highlight
+    (w:highlight other than none) or shading (w:shd other than nil) sits behind it. Paragraph and table cell
+    shading and the page colour are not looked at, so white text on a coloured paragraph counts as hidden.
+    Word combines w:vanish set in two styles as a toggle; here any one of them hides the run."""
+
+    def __init__(self, doc) -> None:
+        from docx.oxml.ns import qn
+
+        self._qn = qn
+        self._tags = {
+            qn("w:vanish"): "vanish",
+            qn("w:sz"): "size",
+            qn("w:color"): "color",
+            qn("w:highlight"): "highlight",
+            qn("w:shd"): "shading",
+        }
+        styles = doc.styles.element
+        self._styles: dict[str, tuple[dict[str, object], str | None]] = {}
+        self._default_paragraph: str | None = None
+        for style in styles.iterchildren(qn("w:style")):
+            style_id = style.get(qn("w:styleId"))
+            if style_id is None:
+                continue
+            based_on = style.find(qn("w:basedOn"))
+            self._styles[style_id] = (
+                self._properties(style.find(qn("w:rPr"))),
+                based_on.get(qn("w:val")) if based_on is not None else None,
+            )
+            if style.get(qn("w:type")) == "paragraph" and style.get(qn("w:default")) in ("1", "true", "on"):
+                self._default_paragraph = style_id
+        defaults = styles.find(f"{qn('w:docDefaults')}/{qn('w:rPrDefault')}/{qn('w:rPr')}")
+        self._defaults = self._properties(defaults)
+        self._resolved: dict[str | None, dict[str, object]] = {None: {}}
+        self._hidden: dict[tuple[object, ...], bool] = {}
+
+    def _properties(self, run_properties) -> dict[str, object]:
+        """The properties of a w:rPr that can hide a run."""
+        found: dict[str, object] = {}
+        if run_properties is None:
+            return found
+        val = self._qn("w:val")
+        for child in run_properties:
+            name = self._tags.get(child.tag)
+            if name == "vanish":
+                found[name] = child.get(val, "true").lower() not in ("0", "false", "off")
+            elif name == "size":
+                with suppress(ValueError):
+                    found[name] = int(child.get(val, ""))
+            elif name == "color":
+                found[name] = child.get(val, "")
+            elif name == "highlight":
+                found[name] = child.get(val, "none") != "none"
+            elif name == "shading":
+                found[name] = child.get(val, "") != "nil"
+        return found
+
+    def _style(self, style_id: str | None) -> dict[str, object]:
+        """The properties of a style and the styles it is based on, the style's own first."""
+        if style_id in self._resolved:
+            return self._resolved[style_id]
+        chain: list[dict[str, object]] = []
+        seen: set[str] = set()
+        current = style_id
+        while current is not None and current not in seen and current in self._styles:
+            seen.add(current)
+            properties, current = self._styles[current]
+            chain.append(properties)
+        merged: dict[str, object] = {}
+        for properties in reversed(chain):
+            merged.update(properties)
+        self._resolved[style_id] = merged
+        return merged
+
+    def paragraph_style(self, paragraph) -> str | None:
+        """The style of a w:p: its w:pStyle, or the default paragraph style."""
+        qn = self._qn
+        style = paragraph.find(f"{qn('w:pPr')}/{qn('w:pStyle')}")
+        return style.get(qn("w:val")) if style is not None else self._default_paragraph
+
+    def run_hidden(self, run, paragraph_style: str | None) -> bool:
+        """Whether a w:r is hidden (see the class)."""
+        qn = self._qn
+        run_properties = run.find(qn("w:rPr"))
+        character = run_properties.find(qn("w:rStyle")) if run_properties is not None else None
+        character_style = character.get(qn("w:val")) if character is not None else None
+        direct = self._properties(run_properties)
+        key = (character_style, paragraph_style, *sorted(direct.items()))
+        if (hidden := self._hidden.get(key)) is None:
+            merged = {
+                **self._defaults,
+                **self._style(paragraph_style),
+                **self._style(character_style),
+                **direct,
+            }
+            size = merged.get("size")
+            hidden = bool(
+                merged.get("vanish")
+                or (isinstance(size, int) and size < 2)
+                or (
+                    _white_hex(str(merged.get("color", "")))
+                    and not merged.get("highlight")
+                    and not merged.get("shading")
+                )
+            )
+            self._hidden[key] = hidden
+        return hidden
+
+    def mark_hidden(self, paragraph) -> bool:
+        """Whether the mark of a w:p is deleted, moved away or hidden (w:vanish on the mark itself), so that
+        Word runs the paragraph on into the next one."""
+        qn = self._qn
+        mark = paragraph.find(f"{qn('w:pPr')}/{qn('w:rPr')}")
+        if mark is None:
+            return False
+        if mark.find(qn("w:del")) is not None or mark.find(qn("w:moveFrom")) is not None:
+            return True
+        return bool(self._properties(mark).get("vanish"))
+
+
+def _docx_texts(element, look: _DocxLook) -> tuple[str, str]:
+    """The text of an element, a paragraph per line, and the same text as Word shows it with every tracked
+    change accepted.
+
+    The first is every w:t (tracked insertions, hyperlinks, content controls and the paragraphs of tables and
+    text boxes included), tabs, line breaks and non-breaking hyphens. Deleted text as Word writes it
+    (w:delText) and field codes are not read. Text moved away under tracked changes (a w:t inside w:moveFrom)
+    and a w:t inside w:del, which Word does not show as the accepted text, are read too.
+
+    The second leaves out what the first reads inside a w:del or a w:moveFrom and in a run that _DocxLook
+    finds hidden (with everything in it, such as a text box), and runs a paragraph whose mark is deleted,
+    moved away or hidden on into the next. What stays joins as Word shows it, so a code split between a run
+    and a content control, a tracked insertion, a field result or a smart tag reads as one."""
     from docx.oxml.ns import qn
     from lxml import etree
 
-    text, tab, breaks, hyphen, paragraph = (
+    text, tab, breaks, hyphen, paragraph, run, removal = (
         qn("w:t"),
         qn("w:tab"),
         (qn("w:br"), qn("w:cr")),
         qn("w:noBreakHyphen"),
         qn("w:p"),
+        qn("w:r"),
+        (qn("w:del"), qn("w:moveFrom")),
     )
     parts: list[str] = []
+    shown: list[str] = []
+    # The open w:del and w:moveFrom elements and hidden runs, the style of each open paragraph and whether
+    # each open run is hidden.
+    unseen = 0
+    styles: list[str | None] = []
+    runs: list[bool] = []
     for event, node in etree.iterwalk(element, events=("start", "end")):
+        tag = node.tag
         if event == "end":
-            if node.tag == paragraph:
+            if tag == paragraph:
+                styles.pop()
                 parts.append("\n")
-        elif node.tag == text:
-            parts.append(node.text or "")
-        elif node.tag == tab:
-            parts.append("\t")
-        elif node.tag in breaks:
-            parts.append("\n")
-        elif node.tag == hyphen:
-            parts.append("-")
-    return "".join(parts)
+                if not unseen and not look.mark_hidden(node):
+                    shown.append("\n")
+            elif tag == run:
+                unseen -= runs.pop()
+            elif tag in removal:
+                unseen -= 1
+            continue
+        if tag == paragraph:
+            styles.append(look.paragraph_style(node))
+            continue
+        if tag == run:
+            hidden = not unseen and look.run_hidden(node, styles[-1] if styles else None)
+            runs.append(hidden)
+            unseen += hidden
+            continue
+        if tag in removal:
+            unseen += 1
+            continue
+        if tag == text:
+            piece = node.text or ""
+        elif tag == tab:
+            piece = "\t"
+        elif tag in breaks:
+            piece = "\n"
+        elif tag == hyphen:
+            piece = "-"
+        else:
+            continue
+        parts.append(piece)
+        if not unseen:
+            shown.append(piece)
+    return "".join(parts), "".join(shown)
 
 
-def _docx_document_text(doc) -> str:
-    """The whole text of a DOCX: its body, then the headers and footers that each section defines."""
-    texts = [_docx_text(doc.element.body)]
+def _docx_document_texts(doc) -> tuple[str, str]:
+    """The whole text of a DOCX, and the same text as Word shows it (_docx_texts): its body, then the headers
+    and footers that each section defines."""
+    look = _DocxLook(doc)
+    texts = [_docx_texts(doc.element.body, look)]
     for section in doc.sections:
         for part in (
             section.header,
@@ -1370,8 +1557,8 @@ def _docx_document_text(doc) -> str:
         ):
             # A part linked to the previous section's has no definition of its own.
             if not part.is_linked_to_previous:
-                texts.append(_docx_text(part._element))
-    return "\n".join(texts)
+                texts.append(_docx_texts(part._element, look))
+    return "\n".join(text for text, _ in texts), "\n".join(shown for _, shown in texts)
 
 
 def load_from_docx(path: Path) -> dict[str, str]:
@@ -1416,17 +1603,198 @@ def _record_run(runs: list[tuple[str, _RunStyle | None]], text, cm, tm, font, si
     runs.append((str(text), _font_style(cm, tm, font, size)))
 
 
-def _pdf_lines(reader) -> list[_Line]:
-    """The non-empty text lines of a PDF, with the font and height of each where pypdf reports them.
+_IDENTITY = (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+# The text-showing operators, and the index of the string or array operand each shows.
+_SHOWS_TEXT = {b"Tj": 0, b"TJ": 0, b"'": 0, b'"': 2}
+# The device colour spaces, by the number of components that sets a colour in each.
+_DEVICE_SPACES = {"/DeviceGray": 1, "/DeviceRGB": 3, "/DeviceCMYK": 4}
+
+
+def _multiply(first, second) -> tuple[float, ...]:
+    """The product of two PDF matrices [a b c d e f], first then second."""
+    a, b, c, d, e, f = first
+    g, h, i, j, k, m = second
+    return (a * g + b * i, a * h + b * j, c * g + d * i, c * h + d * j, e * g + f * i + k, e * h + f * j + m)
+
+
+def _ink_white(space: str, components: tuple[float, ...]) -> bool:
+    """Whether a colour in a device colour space is white or nearly so: each grey or RGB component at least
+    _WHITE, each CMYK component at most 1 - _WHITE. A colour in any other space is not."""
+    if _DEVICE_SPACES.get(space) != len(components):
+        return False
+    if space == "/DeviceCMYK":
+        return all(value <= 1 - _WHITE for value in components)
+    return all(value >= _WHITE for value in components)
+
+
+class _Ink(NamedTuple):
+    """The part of a PDF graphics state that decides whether text can be seen."""
+
+    mode: int = 0
+    size: float = 0.0
+    fill_space: str = "/DeviceGray"
+    fill: tuple[float, ...] = (0.0,)
+    stroke_space: str = "/DeviceGray"
+    stroke: tuple[float, ...] = (0.0,)
+    ctm: tuple[float, ...] = _IDENTITY
+
+
+class _PdfInk:
+    """Follows the graphics state of a PDF page through pypdf's operator visitors, to tell text that cannot be
+    seen: drawn in text render mode 3 or 7 (invisible, or a clipping path only), painted only in white or
+    nearly white (each colour the render mode paints: the fill for modes 0 and 4, the stroke for 1 and 5,
+    both for 2 and 6; a colour set with g, rg or k and their stroke forms, or with sc or scn in a device
+    colour space, see _ink_white), or in a font under 1 pt on the page (its size scaled by the text matrix,
+    the current transformation matrix and the matrix of each form XObject it is drawn in).
+
+    Text that is transparent, under other content, clipped away, off the page, in a pattern or in a colour
+    space other than the device ones is not told apart. With hide, the text of each text-showing operator
+    that cannot be seen is emptied before pypdf reads it (pypdf calls the visitor with the operands it then
+    reads, and builds them afresh for each extraction), so the page's text leaves it out."""
+
+    def __init__(self, resources, hide: bool) -> None:
+        self.hide = hide
+        self.hidden = False
+        self._state = _Ink()
+        self._saved: list[_Ink] = []
+        self._resources: list = [resources]
+        # For each form XObject being drawn, the state and the stack to restore after it (None for an image).
+        self._forms: list[tuple[_Ink, list[_Ink]] | None] = []
+
+    def before(self, operator: bytes, operands: list, cm, tm) -> None:
+        state = self._state
+        try:
+            if operator in _SHOWS_TEXT:
+                if self._unseen(tm):
+                    self.hidden = True
+                    if self.hide:
+                        from pypdf.generic import ArrayObject, TextStringObject
+
+                        index = _SHOWS_TEXT[operator]
+                        if index < len(operands):
+                            operands[index] = ArrayObject() if operator == b"TJ" else TextStringObject("")
+            elif operator == b"q":
+                self._saved.append(state)
+            elif operator == b"Q":
+                if self._saved:
+                    self._state = self._saved.pop()
+            elif operator == b"cm":
+                self._state = state._replace(ctm=_multiply(tuple(map(float, operands[:6])), state.ctm))
+            elif operator == b"Tr":
+                self._state = state._replace(mode=int(operands[0]))
+            elif operator == b"Tf":
+                self._state = state._replace(size=float(operands[1]))
+            elif operator in (b"g", b"rg", b"k", b"G", b"RG", b"K"):
+                space = {1: "/DeviceGray", 3: "/DeviceRGB", 4: "/DeviceCMYK"}[len(operands)]
+                self._paint(operator.islower(), space, tuple(map(float, operands)))
+            elif operator in (b"cs", b"CS"):
+                space = str(operands[0])
+                initial = (0.0, 0.0, 0.0, 1.0) if space == "/DeviceCMYK" else (0.0,) * _DEVICE_SPACES.get(space, 1)
+                self._paint(operator == b"cs", space, initial)
+            elif operator in (b"sc", b"scn", b"SC", b"SCN"):
+                fills = operator.islower()
+                numbers = tuple(float(value) for value in operands if isinstance(value, int | float))
+                # A pattern name among the operands paints a pattern, which is not white.
+                self._paint(
+                    fills,
+                    state.fill_space if fills else state.stroke_space,
+                    numbers if len(numbers) == len(operands) else (),
+                )
+            elif operator == b"Do":
+                self._enter_form(operands[0])
+        except (TypeError, ValueError, IndexError, KeyError, AttributeError):
+            pass
+
+    def after(self, operator: bytes, operands: list, cm, tm) -> None:
+        if operator == b"Do" and self._forms:
+            saved = self._forms.pop()
+            if saved is not None:
+                self._state, self._saved = saved
+                self._resources.pop()
+
+    def _paint(self, fills: bool, space: str, components: tuple[float, ...]) -> None:
+        if fills:
+            self._state = self._state._replace(fill_space=space, fill=components)
+        else:
+            self._state = self._state._replace(stroke_space=space, stroke=components)
+
+    def _enter_form(self, name) -> None:
+        """Before a form XObject: its content draws with the state saved and its own matrix and resources."""
+        self._forms.append(None)
+        resources = _resolved(self._resources[-1]) or {}
+        xobject = _resolved(_resolved(resources.get("/XObject")).get(name))
+        if xobject.get("/Subtype") != "/Form":
+            return
+        matrix = tuple(map(float, _resolved(xobject.get("/Matrix")) or _IDENTITY))
+        self._forms[-1] = (self._state, self._saved)
+        self._saved = []
+        self._state = self._state._replace(ctm=_multiply(matrix, self._state.ctm))
+        self._resources.append(xobject.get("/Resources") or resources)
+
+    def _unseen(self, tm) -> bool:
+        state = self._state
+        if state.mode in (3, 7):
+            return True
+        page = _multiply(tuple(map(float, tm)), state.ctm)
+        if abs(state.size) * math.hypot(page[2], page[3]) < 1:
+            return True
+        painted = []
+        if state.mode in (0, 2, 4, 6):
+            painted.append(_ink_white(state.fill_space, state.fill))
+        if state.mode in (1, 2, 5, 6):
+            painted.append(_ink_white(state.stroke_space, state.stroke))
+        return bool(painted) and all(painted)
+
+
+def _shown_lines(text: str) -> list[str]:
+    return [raw.strip() for raw in text.splitlines() if raw.strip()]
+
+
+def _page_resources(page):
+    """The resources of a page, its own or those it inherits from the page tree."""
+    node = page
+    for _ in range(64):
+        if node is None:
+            break
+        if "/Resources" in node:
+            return node["/Resources"]
+        node = _resolved(node.get("/Parent"))
+    return None
+
+
+def _pdf_lines(reader) -> tuple[list[_Line], str]:
+    """The non-empty text lines of a PDF, with the font and height of each where pypdf reports them, and the
+    same text without what cannot be seen (_PdfInk), or "" where nothing on any page is hidden.
 
     The text visitor of pypdf reports each run of text with its font and position. Where the runs do not
     add up to the extracted page text (form XObjects, right-to-left text), that page goes by line shape
-    alone.
+    alone. A page that draws text that cannot be seen is read a second time, without that text.
     """
     lines: list[_Line] = []
+    shown: list[str] = []
+    any_hidden = False
     for number, page in enumerate(reader.pages):
         runs: list[tuple[str, _RunStyle | None]] = []
-        text = page.extract_text(visitor_text=partial(_record_run, runs)) or ""
+        ink = _PdfInk(_page_resources(page), hide=False)
+        text = (
+            page.extract_text(
+                visitor_text=partial(_record_run, runs),
+                visitor_operand_before=ink.before,
+                visitor_operand_after=ink.after,
+            )
+            or ""
+        )
+        if ink.hidden:
+            any_hidden = True
+            hiding = _PdfInk(_page_resources(page), hide=True)
+            shown.extend(
+                _shown_lines(
+                    page.extract_text(visitor_operand_before=hiding.before, visitor_operand_after=hiding.after)
+                    or ""
+                )
+            )
+        else:
+            shown.extend(_shown_lines(text))
         styles = (
             [style for run, style in runs for _ in run] if "".join(run for run, _ in runs) == text else []
         )
@@ -1442,7 +1810,7 @@ def _pdf_lines(reader) -> list[_Line]:
                 lines.append(_Line(raw.strip(), size, bold, number, letters[0][2]))
             else:
                 lines.append(_Line(raw.strip(), page=number))
-    return lines
+    return lines, "\n".join(shown) if any_hidden else ""
 
 
 def parse_pdf(path: Path) -> DocumentSections:
@@ -1463,7 +1831,8 @@ def parse_pdf(path: Path) -> DocumentSections:
             "PDF support requires the optional 'pdf' extra: pip install micar-whitepaper-linter[pdf]"
         ) from exc
 
-    return _line_sections(_pdf_lines(pypdf.PdfReader(path)), statement=True)
+    lines, shown_text = _pdf_lines(pypdf.PdfReader(path))
+    return replace(_line_sections(lines, statement=True), shown_text=shown_text)
 
 
 def load_from_pdf(path: Path) -> dict[str, str]:

@@ -319,15 +319,91 @@ def document_text(source: Path | bytes) -> str:
     text_fragments joins them: inside a word they run on, and a field number ("A.1") stays apart from the
     label after it.
     """
+    return document_texts(source)[0]
+
+
+def document_texts(source: Path | bytes) -> tuple[str, str]:
+    """document_text, and the same text as a browser shows it (_shown_flow), or "" where the two are the
+    same. The document is parsed once."""
     root = parse_html(source).getroot()
     if root is None:
-        return ""
+        return "", ""
+    text = _flow_lines(_text_flow(root, _unshown))
+    shown = _flow_lines(_shown_flow(root, False))
+    return text, shown if shown != text else ""
+
+
+# The inline style declarations that hide an element or its text: display, visibility and
+# content-visibility, each with its last value in the element's style attribute.
+_STYLE_DECLARATION = re.compile(
+    r"(?:^|;)\s*(display|visibility|content-visibility)\s*:\s*([a-z-]+)", re.IGNORECASE
+)
+_CSS_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
+
+
+def _inline_style(element: etree._Element) -> dict[str, str]:
+    """The display, visibility and content-visibility that an element's style attribute sets."""
+    style = element.get("style")
+    if not style:
+        return {}
+    if "/*" in style:
+        style = _CSS_COMMENT.sub("", style)
+    return {name.lower(): value.lower() for name, value in _STYLE_DECLARATION.findall(style)}
+
+
+def _shown_flow(
+    element: etree._Element, invisible: bool
+) -> Iterator[str | etree._Element | object | None]:
+    """_text_flow without what a browser does not show by the element's own markup: the head, scripts,
+    styles and templates; an element that its style attribute sets to display:none, or that carries the
+    hidden attribute and whose style attribute sets no other display, with all its content and its line
+    breaks; the content of an element whose style attribute sets content-visibility:hidden, or whose hidden
+    attribute is until-found; and the text of an element that its style attribute sets to visibility:hidden
+    or collapse, or that inherits that visibility from an ancestor without setting visibility:visible
+    itself. Such text keeps its place on the line, so it stands as a space; the line breaks of its elements
+    stay. Style sheets (<style>, linked CSS and their classes) and every other property (opacity, colour,
+    font size, position, clipping) are not read."""
+    if not isinstance(element.tag, str) or _unshown(element):
+        return
+    tag = element.tag.rsplit("}", 1)[-1].lower()
+    style = _inline_style(element)
+    hidden = element.get("hidden")
+    display = style.get("display")
+    if display == "none" or (hidden is not None and hidden.lower() != "until-found" and display is None):
+        return
+    if tag == "br":
+        yield _LINE_BREAK
+        return
+    visibility = style.get("visibility")
+    if visibility in ("hidden", "collapse"):
+        invisible = True
+    elif visibility == "visible":
+        invisible = False
+    skip_content = style.get("content-visibility") == "hidden" or (
+        hidden is not None and hidden.lower() == "until-found"
+    )
+    block = tag in _BLOCK_TAGS
+    if block:
+        yield None
+    if not skip_content:
+        if element.text:
+            yield " " if invisible else element.text
+        for child in element:
+            yield from _shown_flow(child, invisible)
+            if child.tail:
+                yield " " if invisible else child.tail
+    if block:
+        yield None
+
+
+def _flow_lines(flow: Iterable[str | etree._Element | object | None]) -> str:
+    """The text of a flow, a line per block element and <br>, joined as document_text describes."""
     lines: list[str] = []
     line: list[str] = []
     # The last character of the line and the end of the text after its last whitespace, as far back as
     # _inside_word reads, so that a long word is not copied for every piece of it.
     last = word = ""
-    for piece in _text_flow(root, _unshown):
+    for piece in flow:
         if isinstance(piece, str):
             if not piece:
                 continue
