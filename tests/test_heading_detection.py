@@ -2671,6 +2671,7 @@ _PSEUDO_NEGATION_SENTENCES = {
     "not be restricted to": "Its use shall not be restricted to holders of the e-money token.",
     "not be limited to": "Its use shall not be limited to holders of an asset-referenced token.",
     "not only": "MeadowPoints is not only no asset-referenced token but also no e-money token.",
+    "not only, alone": "MeadowPoints does not only differ from an e-money token in who issues it.",
 }
 
 
@@ -2683,7 +2684,9 @@ def test_a_pseudo_negation_negates_a_phrase_outside_a_list_as_any_negation_does(
 ):
     # A pseudo-negation governs no item of a list after it, but in a sentence its negation word governs the phrase
     # at most eight words after it as any negation word does, as before #96, so each Annex I draft is other. At
-    # 0e24058 the negation word inside a pseudo-negation was none anywhere, and these drafts were an EMT or ART.
+    # 0e24058 the negation word inside a pseudo-negation was none anywhere, and each of these drafts but one was an
+    # EMT or ART there: in "not only" the word "no" negates each phrase as well, so that draft was other at 0e24058
+    # too and guards nothing about pseudo-negations; "not only, alone" is the case that does.
     blocks = [_CRYPTO_ASSET, ("body", sentence), *_MEADOW_OFFEROR]
     assert load_whitepaper(EVERY_WRITER[suffix](tmp_path / f"meadowpoints{suffix}", blocks)).type is WhitepaperType.OTHER
 
@@ -2876,6 +2879,22 @@ _LISTS_THAT_GO_ON = {
         "(a) An E-Money Token",
         "(b) A Structured Deposit",
     ],
+    # A line that reads as a heading after a list that one condition of a closed list leaves open.
+    "one item, then a label": [_NOT_QUALIFIED, "(a) a deposit.", "(b) E-Money Token"],
+    "items ending in a comma, then a label": [
+        _NOT_QUALIFIED,
+        "(a) a financial instrument,",
+        "(b) a deposit.",
+        "(c) E-Money Token",
+    ],
+    "last item without a full stop, then a label": [
+        _NOT_QUALIFIED,
+        "(a) a financial instrument;",
+        "(b) a deposit",
+        "(c) E-Money Token",
+    ],
+    # A line after the closing item whose first word is "An".
+    "An after the closing item": [_NOT_QUALIFIED, "(a) a financial instrument;", "(b) a deposit.", "(c) An E-Money Token"],
 }
 
 
@@ -2884,6 +2903,11 @@ _LISTS_THAT_GO_ON = {
 def test_a_negated_lead_in_still_governs_the_items_of_a_list_that_goes_on(
     tmp_path: Path, suffix: str, lines: list[str]
 ):
+    # The first six cases pass with or without the closed-list reading of #96 (their last line ends in a full stop,
+    # has no capital letter, starts with "An" or follows a new lead-in), so they guard only that the lead-in
+    # governs such lines. Each of the last four fails under a reading that drops one condition of a closed list
+    # (at least two items, a semicolon at the end of each item before the last, a full stop at the end of the
+    # last) or the rule that a line whose first word is "A" or "An" reads as an item.
     blocks = [_CRYPTO_ASSET, *_lines(*lines), *_MEADOW_OFFEROR]
     assert load_whitepaper(WRITERS[suffix][0](tmp_path / f"meadowpoints{suffix}", blocks)).type is WhitepaperType.OTHER
 
@@ -2899,7 +2923,7 @@ _LISTS_NOT_CLOSED = {
 
 @pytest.mark.parametrize("suffix", sorted(WRITERS))
 @pytest.mark.parametrize("lines", list(_LISTS_NOT_CLOSED.values()), ids=list(_LISTS_NOT_CLOSED))
-def test_a_list_is_closed_only_by_a_full_stop_after_two_or_more_items_ending_in_a_semicolon(
+def test_a_list_is_closed_only_by_a_full_stop_after_one_or_more_items_ending_in_a_semicolon(
     tmp_path: Path, suffix: str, lines: list[str]
 ):
     # Each condition of a closed list: two or more items, each item before the last ending in a semicolon, and
@@ -3070,7 +3094,7 @@ _STATEMENT = (
             _regimes(OTHER, ART),
         ),
         # A line after the list that starts with a list letter is read as an item in a DOCX or PDF, where no
-        # item ends the list with a full stop after items that end in a semicolon.
+        # item closes the list with a full stop after items that end in a semicolon.
         (
             [
                 *_SST_ISSUER,
@@ -3141,6 +3165,21 @@ _STATEMENT = (
             ],
             {".docx": ART, ".pdf": OTHER, ".md": ART, ".xhtml": ART},
         ),
+        # Where the line below ends without a full stop, the joined line ("(c) Reserve of AssetsHeld in cash and
+        # short-term government bonds") still reads as a heading and is judged on its own words.
+        (
+            [
+                *_SST_ISSUER,
+                *_lines(
+                    "Holders should note that the token is not covered by:",
+                    "(a) any investor compensation scheme;",
+                    "(b) any deposit guarantee scheme.",
+                ),
+                ("title", "(c) Reserve of Assets"),
+                ("body", "Held in cash and short-term government bonds"),
+            ],
+            _regimes(ART, ART),
+        ),
         # A paragraph that ends in a negation and no full stop reaches the next paragraph of its section in
         # Markdown and XHTML.
         (
@@ -3196,6 +3235,32 @@ _STATEMENT = (
                 *_SST_ISSUER,
                 ("heading", "Risk Factors"),
                 ("body", "The issuer holds, without limitation, a reserve of assets in cash and bonds."),
+            ],
+            _regimes(OTHER, OTHER),
+        ),
+        # The other three sentences of test_a_pseudo_negation_does_not_negate_the_phrase_after_it (5b8043d), which
+        # name the regime of the ART or EMT draft in 1.2.1 and at 5b8043d.
+        (
+            [
+                *_SST_ISSUER,
+                ("heading", "Risk Factors"),
+                ("body", "The token is not only an asset-referenced token: it also gives access to a loyalty scheme."),
+            ],
+            _regimes(OTHER, OTHER),
+        ),
+        (
+            [
+                *_SST_ISSUER,
+                ("heading", "Risk Factors"),
+                ("body", "Holders are not necessarily repaid from the reserve of assets in full."),
+            ],
+            _regimes(OTHER, OTHER),
+        ),
+        (
+            [
+                *_SST_ISSUER,
+                ("heading", "Risk Factors"),
+                ("body", "Its use is not restricted to holders of the e-money token."),
             ],
             _regimes(OTHER, OTHER),
         ),
@@ -3345,12 +3410,16 @@ _STATEMENT = (
         "line after a closed list",
         "item after a closed list",
         "line run together after a closed list",
+        "label run together after a closed list",
         "paragraphs",
         "over a list item",
         "item read as a heading",
         "category",
         "phrase after a pseudo-negation",
         "reserve after a pseudo-negation",
+        "asset-referenced token after not only",
+        "reserve after not necessarily",
+        "e-money token after not restricted to",
         "item after a pseudo-negation",
         "inner list",
         "colon lead-in",
