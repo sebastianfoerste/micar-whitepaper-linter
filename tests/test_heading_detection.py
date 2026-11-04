@@ -2608,6 +2608,96 @@ def test_a_lead_in_whose_negation_is_open_governs_its_items(tmp_path: Path, suff
     assert load_whitepaper(LIST_WRITERS[suffix](tmp_path / f"meadowpoints{suffix}", blocks)).type is WhitepaperType.OTHER
 
 
+def _write_html(path: Path, blocks: list[tuple[str, str]]) -> Path:
+    """An HTML draft without an XML declaration: each heading block an h2, each other block a paragraph."""
+    elements = "\n".join(
+        f"<h2>{escape(text)}</h2>" if kind == "heading" else f"<p>{escape(text)}</p>" for kind, text in blocks
+    )
+    path.write_text(f'<!DOCTYPE html>\n<html lang="en">\n<body>\n{elements}\n</body>\n</html>\n', encoding="utf-8")
+    return path
+
+
+# Every format whose regime is inferred: DOCX, PDF, Markdown, and heading-layout XHTML and HTML.
+EVERY_WRITER = {**{suffix: writer for suffix, (writer, _) in ALL_WRITERS.items()}, ".html": _write_html}
+_PSEUDO_NEGATION_LEAD_INS = [
+    "The risks include, but are not limited to:",
+    "The risks include, but aren't limited to:",
+    "The risks shall include but shall not be limited to the following:",
+    "Risks include, but are not restricted to:",
+    "Risks include, without limitation:",
+    "Without limitation, the risks include:",
+    "The following list of risks is not exhaustive:",
+    "The risks include, among others, but not exclusively:",
+    "The risks include, among others, but not only:",
+]
+
+
+@pytest.mark.parametrize("suffix", sorted(EVERY_WRITER))
+@pytest.mark.parametrize("markers", [("-", "-"), ("(a)", "(b)"), ("1)", "2)")], ids=["-", "(a)", "1)"])
+@pytest.mark.parametrize("lead_in", _PSEUDO_NEGATION_LEAD_INS)
+def test_a_pseudo_negation_governs_no_item_of_the_list_after_it(
+    tmp_path: Path, suffix: str, markers: tuple[str, str], lead_in: str
+):
+    # A pseudo-negation ("not limited to", "not restricted to", "not exhaustive", "not exclusively", "not only",
+    # "without limitation") holds a negation word but negates nothing, so the risk list of an ART draft names its
+    # regime in every format. Before, a DOCX or PDF read the items as negated by the lead-in and the draft as other.
+    first, second = markers
+    blocks = [
+        *_SST_ISSUER,
+        ("heading", "Risk Factors"),
+        *_lines(lead_in, f"{first} the reserve of assets may lose value;", f"{second} the custodian may fail."),
+    ]
+    assert load_whitepaper(EVERY_WRITER[suffix](tmp_path / f"synthetic{suffix}", blocks)).type is WhitepaperType.ART
+
+
+@pytest.mark.parametrize("suffix", sorted(EVERY_WRITER))
+@pytest.mark.parametrize(
+    ("sentence", "regime"),
+    [
+        ("The issuer holds, without limitation, a reserve of assets in cash and bonds.", WhitepaperType.ART),
+        ("The token is not only an asset-referenced token: it also gives access to a loyalty scheme.", WhitepaperType.ART),
+        ("Holders are not necessarily repaid from the reserve of assets in full.", WhitepaperType.ART),
+        ("Its use is not restricted to holders of the e-money token.", WhitepaperType.EMT),
+    ],
+    ids=["without limitation", "not only", "not necessarily", "not restricted to"],
+)
+def test_a_pseudo_negation_does_not_negate_the_phrase_after_it(
+    tmp_path: Path, suffix: str, sentence: str, regime: WhitepaperType
+):
+    # Before, the negation word inside the pseudo-negation governed the phrase at most eight words after it.
+    blocks = [*_SST_ISSUER, ("heading", "Risk Factors"), ("body", sentence)]
+    assert load_whitepaper(EVERY_WRITER[suffix](tmp_path / f"synthetic{suffix}", blocks)).type is regime
+
+
+_BESIDE_PSEUDO_NEGATIONS = {
+    "after without limitation": ["Without limitation, the token is not an asset-referenced token or an e-money token."],
+    "after not limited to": [
+        "The token is not limited to one network and is not an asset-referenced token or an e-money token."
+    ],
+    "after not only": [
+        "The token is not only a loyalty token and is not an asset-referenced token or an e-money token."
+    ],
+    "lead-in": ["The token is not, without limitation,", "- an asset-referenced token;", "- an e-money token."],
+}
+
+
+@pytest.mark.parametrize(
+    ("suffix", "lines"),
+    [
+        pytest.param(suffix, lines, id=f"{name}-{suffix}")
+        for name, lines in _BESIDE_PSEUDO_NEGATIONS.items()
+        for suffix in sorted(EVERY_WRITER)
+        if name != "lead-in" or suffix in (".docx", ".pdf")
+    ],
+)
+def test_a_negation_beside_a_pseudo_negation_still_negates(tmp_path: Path, suffix: str, lines: list[str]):
+    # Only the negation word inside a pseudo-negation is no negation; another negation in the clause still governs
+    # the phrase, so each Annex I draft is other. The lead-in is checked in a DOCX or PDF, where its list items
+    # continue it; Markdown, XHTML and HTML end its clause at the first item's semicolon.
+    blocks = [_CRYPTO_ASSET, *_lines(*lines), *_MEADOW_OFFEROR]
+    assert load_whitepaper(EVERY_WRITER[suffix](tmp_path / f"meadowpoints{suffix}", blocks)).type is WhitepaperType.OTHER
+
+
 def test_a_long_markdown_list_is_read_in_little_memory(tmp_path: Path):
     # Markdown reads a section as one text, so 200 kB of two-letter list lines take about 2 MB at their peak
     # (the line-by-line reading that Round 4 added and Round 5 trimmed took 46 MB, then 2 MB).
@@ -2686,13 +2776,14 @@ _STATEMENT = (
             ],
             _regimes(EMT, EMT),
         ),
-        # A negation that is not about the items governs them in a DOCX or PDF.
+        # A negation that is not about the items governs them in a DOCX or PDF; a pseudo-negation such as "but
+        # are not limited to" governs nothing (test_a_pseudo_negation_governs_no_item_of_the_list_after_it).
         (
             [
                 *_SST_ISSUER,
                 ("heading", "Risk Factors"),
                 *_lines(
-                    "The risks include, but are not limited to:",
+                    "There is no guarantee that:",
                     "- the reserve of assets may lose value;",
                     "- the custodian may fail.",
                 ),
@@ -2766,6 +2857,16 @@ _STATEMENT = (
                 *_MEADOW_OFFEROR,
             ],
             _regimes(ART, ART),
+        ),
+        # A phrase after a pseudo-negation counts as one without it does, so a draft for another crypto-asset
+        # that lists e-money tokens so is an EMT, as in 1.2.1.
+        (
+            [
+                _CRYPTO_ASSET,
+                *_lines("The platform lists crypto-assets including but not limited to e-money tokens."),
+                *_MEADOW_OFFEROR,
+            ],
+            _regimes(EMT, EMT),
         ),
         # In a DOCX or PDF an item leads no list of its own: the items of the inner list continue the lead-in
         # of the outer one, as in 1.2.1.
@@ -2898,6 +2999,7 @@ _STATEMENT = (
         "over a list item",
         "item read as a heading",
         "category",
+        "phrase after a pseudo-negation",
         "inner list",
         "colon lead-in",
         "introduction under no section",

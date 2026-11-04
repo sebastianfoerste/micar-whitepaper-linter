@@ -225,6 +225,14 @@ _NEGATION = re.compile(r"\b(?:not|no|neither|nor|never|without|other than|except
 _CLAUSE_END = re.compile(r"[.!?;:](?=\s|$)|\b(?:but|however|whereas|although|though|while)\b")
 _NEGATION_REACH = 8
 _NEGATION_LOOKBACK = 200
+# A phrase that holds a negation word but negates nothing (a pseudo-negation, as NegEx and pyConTextNLP list
+# "not only" and "not necessarily"): "not limited to" ("The risks include, but are not limited to:"), "not
+# restricted to", "not exhaustive", "not exclusively" and "without limitation". The negation word inside one
+# does not count, so it governs neither the phrase after it nor the items of a list it leads into.
+_PSEUDO_NEGATION = re.compile(
+    r"(?:\bnot|n't)\s+(?:(?:be\s+)?(?:limited|restricted)\s+to|exhaustive|exclusively|only|necessarily)\b"
+    r"|\bwithout\s+limitation\b"
+)
 # A list item: a bullet or dash, or a list number of one or two digits or a lower-case list letter or roman
 # numeral with a full stop or a bracket, before its text.
 _LIST_ITEM = re.compile(
@@ -237,11 +245,17 @@ _ENDS_IN_NEGATION = re.compile(rf"(?:{_NEGATION.pattern})\W*$")
 
 
 def _negated(text: str, start: int) -> bool:
-    """Whether a negation governs the marker at start of the lower-case text."""
+    """Whether a negation governs the marker at start of the lower-case text. A negation word inside a
+    pseudo-negation ("not limited to") is none."""
     before = text[max(0, start - _NEGATION_LOOKBACK) : start]
     ends = list(_CLAUSE_END.finditer(before))
     clause = before[ends[-1].end() :] if ends else before
-    negations = list(_NEGATION.finditer(clause))
+    pseudo = [match.span() for match in _PSEUDO_NEGATION.finditer(clause)]
+    negations = [
+        match
+        for match in _NEGATION.finditer(clause)
+        if not any(first <= match.start() < end for first, end in pseudo)
+    ]
     return bool(negations) and len(clause[negations[-1].end() :].split()) <= _NEGATION_REACH
 
 
