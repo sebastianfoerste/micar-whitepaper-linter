@@ -324,7 +324,7 @@ def document_text(source: Path | bytes) -> str:
 
 def document_texts(source: Path | bytes) -> tuple[str, str]:
     """document_text, and the same text as a browser shows it (_shown_flow), or "" where the two are the
-    same. The document is parsed once."""
+    same. The document is parsed once and walked twice."""
     root = parse_html(source).getroot()
     if root is None:
         return "", ""
@@ -333,63 +333,232 @@ def document_texts(source: Path | bytes) -> tuple[str, str]:
     return text, shown if shown != text else ""
 
 
-# The inline style declarations that hide an element or its text: display, visibility and
-# content-visibility, each with its last value in the element's style attribute.
-_STYLE_DECLARATION = re.compile(
-    r"(?:^|;)\s*(display|visibility|content-visibility)\s*:\s*([a-z-]+)", re.IGNORECASE
+# The tokens of a style attribute as CSS reads them: a comment, which runs to "*/" or to the end; a
+# string, which runs to its closing quote, a line end or the end; an escape; whitespace; a delimiter; or a
+# run of other characters. Each token starts where the one before ends, so the attribute is read once.
+_CSS_TOKEN = re.compile(
+    r"""(?P<comment>/\*.*?(?:\*/|\Z))
+    |(?P<string>"(?:[^"\\\n]|\\.)*(?:"|(?=\n)|\Z)|'(?:[^'\\\n]|\\.)*(?:'|(?=\n)|\Z))
+    |(?P<escape>\\(?:(?P<hex>[0-9a-fA-F]{1,6})(?:\r\n|[ \t\n\r\f])?|.|\Z))
+    |(?P<space>[ \t\n\r\f]+)
+    |(?P<delim>[;:!(){}\[\]])
+    |(?P<other>[^/"'\\;:!(){}\[\] \t\n\r\f]+|/)""",
+    re.DOTALL | re.VERBOSE,
 )
-_CSS_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
+_CSS_WIDE = {"inherit", "initial", "unset", "revert", "revert-layer"}
+# The values of display that CSS Display Level 3 defines, with the legacy and prefixed ones browsers
+# accept, and those of visibility and content-visibility. A browser drops a declaration with another value.
+_DISPLAY_OUTSIDE = {"block", "inline", "run-in"}
+_DISPLAY_INSIDE = {"flow", "flow-root", "table", "flex", "grid", "ruby", "math"}
+_DISPLAY_ONE = _DISPLAY_OUTSIDE | _DISPLAY_INSIDE | _CSS_WIDE | {
+    "list-item", "contents", "none", "inline-block", "inline-table", "inline-flex", "inline-grid",
+    "table-row-group", "table-header-group", "table-footer-group", "table-row", "table-cell",
+    "table-column-group", "table-column", "table-caption", "ruby-base", "ruby-text", "ruby-base-container",
+    "ruby-text-container", "-webkit-box", "-webkit-inline-box", "-webkit-flex", "-webkit-inline-flex",
+    "-moz-box", "-moz-inline-box", "-ms-flexbox", "-ms-inline-flexbox", "-ms-grid", "-ms-inline-grid",
+}
+_STYLE_VALUES = {
+    "visibility": {"visible", "hidden", "collapse"} | _CSS_WIDE,
+    "content-visibility": {"visible", "auto", "hidden"} | _CSS_WIDE,
+}
+
+
+def _valid_display(keywords: list[str]) -> bool:
+    """Whether the keywords are a value of display: one keyword, or an outer display, an inner display and
+    list-item, each at most once, list-item only with flow or flow-root inside."""
+    if len(keywords) == 1:
+        return keywords[0] in _DISPLAY_ONE
+    outside = [k for k in keywords if k in _DISPLAY_OUTSIDE]
+    inside = [k for k in keywords if k in _DISPLAY_INSIDE]
+    items = [k for k in keywords if k == "list-item"]
+    return (
+        len(outside) <= 1
+        and len(inside) <= 1
+        and len(items) <= 1
+        and len(outside) + len(inside) + len(items) == len(keywords)
+        and (not items or inside in ([], ["flow"], ["flow-root"]))
+    )
+
+
+def _css_words(tokens: list[tuple[str, str]]) -> list[str] | None:
+    """The words of a declaration's name or value, ASCII letters in lower case, or None where it holds a
+    string or a delimiter. Whitespace and comments part words; an escaped character never does."""
+    words: list[str] = []
+    word = ""
+    for kind, text in tokens:
+        if kind in ("string", "delim"):
+            return None
+        if kind in ("space", "comment"):
+            if word:
+                words.append(word)
+            word = ""
+        else:
+            word += text
+    if word:
+        words.append(word)
+    return [word.lower() if word.isascii() else word for word in words]
+
+
+def _declarations(style: str) -> dict[str, str]:
+    """The display, visibility and content-visibility that a style attribute sets, as a browser reads it:
+    a declaration whose value is invalid is dropped, the last valid one counts, and one marked !important
+    wins over those without the mark. Comments, strings and escapes are read as CSS reads them: an escape
+    stands for its character, which then is no delimiter."""
+    found: dict[str, tuple[str, bool]] = {}
+    declaration: list[tuple[str, str]] = []
+    depth = 0
+
+    def read() -> None:
+        colon = next((i for i, token in enumerate(declaration) if token == ("delim", ":")), None)
+        if colon is None:
+            return
+        names = _css_words(declaration[:colon])
+        if names not in (["display"], ["visibility"], ["content-visibility"]):
+            return
+        name = names[0]
+        value = declaration[colon + 1 :]
+        important = False
+        marks = [i for i, token in enumerate(value) if token == ("delim", "!")]
+        if marks:
+            if len(marks) > 1 or _css_words(value[marks[0] + 1 :]) != ["important"]:
+                return
+            value, important = value[: marks[0]], True
+        keywords = _css_words(value)
+        if not keywords:
+            return
+        if name == "display":
+            if not _valid_display(keywords):
+                return
+        elif len(keywords) > 1 or keywords[0] not in _STYLE_VALUES[name]:
+            return
+        if important or not found.get(name, ("", False))[1]:
+            found[name] = (" ".join(keywords), important)
+
+    for match in _CSS_TOKEN.finditer(style):
+        kind, text = match.lastgroup or "other", match.group()
+        if kind == "escape":
+            code = match.group("hex")
+            number = int(code, 16) if code is not None else -1
+            if code is None:
+                text = text[1:] or "\ufffd"
+            elif 0 < number <= 0x10FFFF and not 0xD800 <= number <= 0xDFFF:
+                text = chr(number)
+            else:
+                text = "\ufffd"
+            kind = "other"
+        elif kind == "delim":
+            if text in "([{":
+                depth += 1
+            elif text in ")]}":
+                depth = max(depth - 1, 0)
+            elif text == ";" and not depth:
+                read()
+                declaration.clear()
+                continue
+        declaration.append((kind, text))
+    read()
+    return {name: value for name, (value, _) in found.items()}
 
 
 def _inline_style(element: etree._Element) -> dict[str, str]:
     """The display, visibility and content-visibility that an element's style attribute sets."""
     style = element.get("style")
-    if not style:
-        return {}
-    if "/*" in style:
-        style = _CSS_COMMENT.sub("", style)
-    return {name.lower(): value.lower() for name, value in _STYLE_DECLARATION.findall(style)}
+    return _declarations(style) if style else {}
+
+
+# Elements that the HTML user agent style sheet sets to display:none, which a display that the style
+# attribute sets undoes, as it undoes the hidden attribute (and <dialog>, while it has no open attribute).
+_UA_HIDDEN_TAGS = {
+    "area", "base", "basefont", "datalist", "link", "meta", "noembed", "noframes", "param", "rp", "title",
+}
+# Elements whose content a browser does not render, whatever their style: <noscript>, which the user agent
+# style sheet hides with !important where scripts run, and the fallback content of replaced elements.
+_UNRENDERED_CONTENT_TAGS = {"noscript", "iframe", "canvas", "object", "video", "audio", "embed"}
+# SVG elements that are not rendered where they stand, in lower case as the HTML parser reads them.
+_SVG_UNRENDERED_TAGS = {
+    "desc", "title", "metadata", "defs", "symbol", "clippath", "mask", "pattern", "marker", "lineargradient",
+    "radialgradient", "filter", "style", "script",
+}
+
+
+def _local_name(element: etree._Element) -> str:
+    return element.tag.rsplit("}", 1)[-1].lower() if isinstance(element.tag, str) else ""
 
 
 def _shown_flow(
-    element: etree._Element, invisible: bool
+    element: etree._Element, invisible: bool, svg: bool = False
 ) -> Iterator[str | etree._Element | object | None]:
-    """_text_flow without what a browser does not show by the element's own markup: the head, scripts,
-    styles and templates; an element that its style attribute sets to display:none, or that carries the
-    hidden attribute and whose style attribute sets no other display, with all its content and its line
-    breaks; the content of an element whose style attribute sets content-visibility:hidden, or whose hidden
-    attribute is until-found; and the text of an element that its style attribute sets to visibility:hidden
-    or collapse, or that inherits that visibility from an ancestor without setting visibility:visible
-    itself. Such text keeps its place on the line, so it stands as a space; the line breaks of its elements
-    stay. Style sheets (<style>, linked CSS and their classes) and every other property (opacity, colour,
-    font size, position, clipping) are not read."""
-    if not isinstance(element.tag, str) or _unshown(element):
+    """_text_flow without what a browser does not show by the document's own markup.
+
+    Left out with all their content and line breaks: the head, scripts, styles and templates; <noscript>
+    and the content of <iframe>, <canvas>, <object>, <video>, <audio> and <embed>; inside an <svg>, the
+    elements an SVG drawing does not render where they stand (_SVG_UNRENDERED_TAGS); an element that its
+    style attribute sets to display:none or, inside an <svg>, whose display attribute is none where the
+    style attribute sets no display; and, where neither sets a display, an element with the hidden
+    attribute (other than until-found), one of _UA_HIDDEN_TAGS and a <dialog> without the open attribute.
+    Of a <details> without the open attribute only the first <summary> child is read. The content of an
+    element whose style attribute sets content-visibility:hidden, or that carries hidden="until-found"
+    where the style attribute sets no content-visibility, is left out. The text of an element that its
+    style attribute sets to visibility:hidden or collapse (inside an <svg>, its visibility attribute where
+    the style attribute sets none), or that inherits that visibility from an ancestor without setting
+    visibility:visible itself, keeps its place on the line, so it stands as a space; the line breaks of its
+    elements stay. The style attribute is read as _declarations reads it; revert and revert-layer count as
+    no value, initial as visible and, like unset and inherit, as a display other than none. Style sheets
+    (<style>, linked CSS and their classes), every other property (opacity, colour, font size, position,
+    clipping, transforms) and scripts are not read."""
+    tag = _local_name(element)
+    if not tag or tag in _UNSHOWN_TAGS or tag in _UNRENDERED_CONTENT_TAGS:
         return
-    tag = element.tag.rsplit("}", 1)[-1].lower()
+    if svg and tag in _SVG_UNRENDERED_TAGS:
+        return
     style = _inline_style(element)
-    hidden = element.get("hidden")
     display = style.get("display")
-    if display == "none" or (hidden is not None and hidden.lower() != "until-found" and display is None):
+    if display in ("revert", "revert-layer"):
+        display = None
+    if display is None and svg:
+        attribute = (element.get("display") or "").strip().lower()
+        display = attribute if attribute in _DISPLAY_ONE - _CSS_WIDE else None
+    hidden = element.get("hidden")
+    until_found = hidden is not None and hidden.lower() == "until-found"
+    if display == "none" or (
+        display is None
+        and (
+            (hidden is not None and not until_found)
+            or tag in _UA_HIDDEN_TAGS
+            or (tag == "dialog" and element.get("open") is None)
+        )
+    ):
         return
     if tag == "br":
         yield _LINE_BREAK
         return
     visibility = style.get("visibility")
+    if visibility is None and svg:
+        visibility = (element.get("visibility") or "").strip().lower()
     if visibility in ("hidden", "collapse"):
         invisible = True
-    elif visibility == "visible":
+    elif visibility in ("visible", "initial"):
         invisible = False
-    skip_content = style.get("content-visibility") == "hidden" or (
-        hidden is not None and hidden.lower() == "until-found"
-    )
+    content_visibility = style.get("content-visibility")
+    if content_visibility in (None, "revert", "revert-layer"):
+        skip_content = until_found
+    else:
+        skip_content = content_visibility == "hidden"
+    svg = (svg or tag == "svg") and tag != "foreignobject"
     block = tag in _BLOCK_TAGS
     if block:
         yield None
-    if not skip_content:
+    if skip_content:
+        pass
+    elif tag == "details" and element.get("open") is None:
+        summary = next((child for child in element if _local_name(child) == "summary"), None)
+        if summary is not None:
+            yield from _shown_flow(summary, invisible, svg)
+    else:
         if element.text:
             yield " " if invisible else element.text
         for child in element:
-            yield from _shown_flow(child, invisible)
+            yield from _shown_flow(child, invisible, svg)
             if child.tail:
                 yield " " if invisible else child.tail
     if block:

@@ -1346,14 +1346,57 @@ def _white_hex(value: str) -> bool:
         return False
 
 
+# The theme colours of DrawingML (a:clrScheme) by the name WordprocessingML gives them, and the names that
+# the document settings map (w:clrSchemeMapping, Word's defaults here) onto those.
+_THEME_SLOTS = {
+    "dark1": "dk1", "light1": "lt1", "dark2": "dk2", "light2": "lt2", "accent1": "accent1",
+    "accent2": "accent2", "accent3": "accent3", "accent4": "accent4", "accent5": "accent5",
+    "accent6": "accent6", "hyperlink": "hlink", "followedHyperlink": "folHlink",
+}
+_THEME_MAPPED = {"background1": "light1", "text1": "dark1", "background2": "light2", "text2": "dark2"}
+# Word's default theme where a document has none: its light 1 is white and its dark 1 black.
+_DEFAULT_THEME = {"dk1": "000000", "lt1": "FFFFFF"}
+
+
+def _mixed(value: str, tint: str | None, shade: str | None) -> str:
+    """A hex colour with a theme tint (mixed with white: FF keeps it, 00 makes it white) or a theme shade (mixed
+    with black: FF keeps it, 00 makes it black) applied, each channel on its own."""
+    try:
+        channels = [int(value[i : i + 2], 16) for i in (0, 2, 4)]
+        if tint is not None:
+            share = int(tint, 16) / 255
+            channels = [round(255 - (255 - c) * share) for c in channels]
+        if shade is not None:
+            share = int(shade, 16) / 255
+            channels = [round(c * share) for c in channels]
+    except ValueError:
+        return value
+    return "".join(f"{c:02X}" for c in channels)
+
+
 class _DocxLook:
-    """Whether a DOCX run can be seen, from the run properties set on it, in its character style, in its
-    paragraph's style (each with the styles it is based on) and in the document defaults, the nearest
-    first. A run is hidden where w:vanish is on, where its font is under 1 pt (w:sz under 2 half-points), or
-    where its colour is white or nearly so (w:color, each channel at least _WHITE) and no highlight
-    (w:highlight other than none) or shading (w:shd other than nil) sits behind it. Paragraph and table cell
-    shading and the page colour are not looked at, so white text on a coloured paragraph counts as hidden.
-    Word combines w:vanish set in two styles as a toggle; here any one of them hides the run."""
+    """Whether a DOCX run can be seen.
+
+    A run is hidden where w:vanish is on, where its font is under 1 pt or its characters are scaled to under
+    1 pt wide (w:sz under 2 half-points, or w:sz times the character scale w:w under 2 half-points at 100 %;
+    10 pt where no w:sz is set), or where its colour is white or nearly so (w:color, each channel at least
+    _WHITE) and no background sits behind it: a highlight (w:highlight other than none and white), run
+    shading or the shading of the table cell it stands in (w:shd: the fill of clear and patterned shading,
+    the colour of solid shading, automatic standing for black there; nil, no fill and white or nearly white
+    are no background), or, in a nested table, the shading of the cell around. A colour, fill or pattern
+    colour that names a theme colour (w:themeColor, w:themeFill, with its tint or shade, see _mixed) takes
+    it from the document's theme (light 1 is white and dark 1 black without one).
+
+    Each property counts as set on the run, else in its character style, else in its paragraph's style (the
+    default paragraph style for a paragraph without one), else in the run properties of the table style of
+    the table it stands in (the default table style for a table without one), else in the document
+    defaults, each style with the styles it is based on. The table style counts after the paragraph style as
+    well, and the run is hidden if either order hides it. w:vanish set in any style or in the defaults
+    hides the run unless the run sets it off itself: Word toggles it, so a style that sets it off does not
+    show the run, and two styles that set it on show it in Word but not here. A cell's own shading counts
+    before its table style's, and no fill there lets the cell around show. The shading of a paragraph or a
+    table, conditional table formatting (w:tblStylePr) and the page colour are not looked at, so white
+    text there counts as hidden."""
 
     def __init__(self, doc) -> None:
         from docx.oxml.ns import qn
@@ -1362,28 +1405,86 @@ class _DocxLook:
         self._tags = {
             qn("w:vanish"): "vanish",
             qn("w:sz"): "size",
+            qn("w:w"): "scale",
             qn("w:color"): "color",
             qn("w:highlight"): "highlight",
             qn("w:shd"): "shading",
         }
+        self._theme = self._theme_colours(doc)
         styles = doc.styles.element
-        self._styles: dict[str, tuple[dict[str, object], str | None]] = {}
-        self._default_paragraph: str | None = None
+        # Each style's run properties, the style it is based on and, for a table style, its cell shading.
+        self._styles: dict[str, tuple[dict[str, object], str | None, bool | None]] = {}
+        self._default: dict[str, str | None] = {"paragraph": None, "table": None}
         for style in styles.iterchildren(qn("w:style")):
             style_id = style.get(qn("w:styleId"))
             if style_id is None:
                 continue
             based_on = style.find(qn("w:basedOn"))
+            shading = style.find(f"{qn('w:tcPr')}/{qn('w:shd')}")
             self._styles[style_id] = (
                 self._properties(style.find(qn("w:rPr"))),
                 based_on.get(qn("w:val")) if based_on is not None else None,
+                self._background(shading) if shading is not None else None,
             )
-            if style.get(qn("w:type")) == "paragraph" and style.get(qn("w:default")) in ("1", "true", "on"):
-                self._default_paragraph = style_id
+            kind = style.get(qn("w:type"))
+            # The last default style of a type is the default, as the standard has it.
+            if kind in self._default and style.get(qn("w:default")) in ("1", "true", "on"):
+                self._default[kind] = style_id
         defaults = styles.find(f"{qn('w:docDefaults')}/{qn('w:rPrDefault')}/{qn('w:rPr')}")
         self._defaults = self._properties(defaults)
-        self._resolved: dict[str | None, dict[str, object]] = {None: {}}
+        self._resolved: dict[str | None, tuple[dict[str, object], bool, bool | None]] = {None: ({}, False, None)}
         self._hidden: dict[tuple[object, ...], bool] = {}
+
+    def _theme_colours(self, doc) -> dict[str, str]:
+        """The theme colours of a document by the names WordprocessingML gives them, as hex."""
+        from docx.opc.constants import RELATIONSHIP_TYPE
+        from docx.oxml import parse_xml
+
+        colours = dict(_DEFAULT_THEME)
+        try:
+            scheme = parse_xml(doc.part.part_related_by(RELATIONSHIP_TYPE.THEME).blob).find(
+                ".//{http://schemas.openxmlformats.org/drawingml/2006/main}clrScheme"
+            )
+        except Exception:
+            scheme = None
+        for slot in scheme if scheme is not None else ():
+            name = slot.tag.rsplit("}", 1)[-1]
+            for colour in slot:
+                kind = colour.tag.rsplit("}", 1)[-1]
+                value = colour.get("val") if kind == "srgbClr" else colour.get("lastClr") if kind == "sysClr" else None
+                if kind == "sysClr" and value is None:
+                    value = {"window": "FFFFFF", "windowText": "000000"}.get(colour.get("val", ""))
+                if value is not None:
+                    colours[name] = value
+        mapping = dict(_THEME_MAPPED)
+        with suppress(Exception):
+            element = doc.settings.element.find(self._qn("w:clrSchemeMapping"))
+            if element is not None:
+                for name in mapping:
+                    key = {"background1": "bg1", "text1": "t1", "background2": "bg2", "text2": "t2"}[name]
+                    if (target := element.get(self._qn(f"w:{key}"))) in _THEME_SLOTS:
+                        mapping[name] = target
+        named = {name: colours[slot] for name, slot in _THEME_SLOTS.items() if slot in colours}
+        named |= {name: named[target] for name, target in mapping.items() if target in named}
+        return named
+
+    def _colour(self, element, value: str, theme: str, tint: str, shade: str) -> str:
+        """The colour an element's attributes give: the theme colour where one is named, else the value."""
+        qn = self._qn
+        if (name := element.get(qn(theme))) is not None and name in self._theme:
+            return _mixed(self._theme[name], element.get(qn(tint)), element.get(qn(shade)))
+        return element.get(qn(value), "")
+
+    def _background(self, shading) -> bool:
+        """Whether a w:shd puts a background behind text that is neither missing nor white (see the class)."""
+        pattern = shading.get(self._qn("w:val"), "")
+        if pattern == "nil":
+            return False
+        if pattern == "solid":
+            colour = self._colour(shading, "w:color", "w:themeColor", "w:themeTint", "w:themeShade")
+            return colour in ("", "auto") or not _white_hex(colour)
+        fill = self._colour(shading, "w:fill", "w:themeFill", "w:themeFillTint", "w:themeFillShade")
+        return fill not in ("", "auto") and not _white_hex(fill)
 
     def _properties(self, run_properties) -> dict[str, object]:
         """The properties of a w:rPr that can hide a run."""
@@ -1395,67 +1496,94 @@ class _DocxLook:
             name = self._tags.get(child.tag)
             if name == "vanish":
                 found[name] = child.get(val, "true").lower() not in ("0", "false", "off")
-            elif name == "size":
+            elif name in ("size", "scale"):
                 with suppress(ValueError):
-                    found[name] = int(child.get(val, ""))
+                    found[name] = int(child.get(val, "").removesuffix("%"))
             elif name == "color":
-                found[name] = child.get(val, "")
+                found[name] = self._colour(child, "w:val", "w:themeColor", "w:themeTint", "w:themeShade")
             elif name == "highlight":
-                found[name] = child.get(val, "none") != "none"
+                found[name] = child.get(val, "none") not in ("none", "white")
             elif name == "shading":
-                found[name] = child.get(val, "") != "nil"
+                found[name] = self._background(child)
         return found
 
-    def _style(self, style_id: str | None) -> dict[str, object]:
-        """The properties of a style and the styles it is based on, the style's own first."""
+    def _style(self, style_id: str | None) -> tuple[dict[str, object], bool, bool | None]:
+        """The run properties of a style and the styles it is based on (the style's own first), whether any of
+        them sets w:vanish on, and the cell shading of the nearest that sets one."""
         if style_id in self._resolved:
             return self._resolved[style_id]
-        chain: list[dict[str, object]] = []
+        chain: list[tuple[dict[str, object], str | None, bool | None]] = []
         seen: set[str] = set()
         current = style_id
         while current is not None and current not in seen and current in self._styles:
             seen.add(current)
-            properties, current = self._styles[current]
-            chain.append(properties)
+            chain.append(self._styles[current])
+            current = chain[-1][1]
         merged: dict[str, object] = {}
-        for properties in reversed(chain):
+        for properties, _, _ in reversed(chain):
             merged.update(properties)
-        self._resolved[style_id] = merged
-        return merged
+        vanish = any(properties.get("vanish") for properties, _, _ in chain)
+        shading = next((shading for _, _, shading in chain if shading is not None), None)
+        self._resolved[style_id] = (merged, vanish, shading)
+        return self._resolved[style_id]
 
     def paragraph_style(self, paragraph) -> str | None:
         """The style of a w:p: its w:pStyle, or the default paragraph style."""
         qn = self._qn
         style = paragraph.find(f"{qn('w:pPr')}/{qn('w:pStyle')}")
-        return style.get(qn("w:val")) if style is not None else self._default_paragraph
+        return style.get(qn("w:val")) if style is not None else self._default["paragraph"]
 
-    def run_hidden(self, run, paragraph_style: str | None) -> bool:
-        """Whether a w:r is hidden (see the class)."""
+    def table_style(self, table) -> str | None:
+        """The style of a w:tbl: its w:tblStyle, or the default table style."""
+        qn = self._qn
+        style = table.find(f"{qn('w:tblPr')}/{qn('w:tblStyle')}")
+        return style.get(qn("w:val")) if style is not None else self._default["table"]
+
+    def cell_background(self, cell, table_style: str | None, around: bool) -> bool:
+        """Whether a w:tc has a background behind its text (see the class); around is that of the cell around a
+        nested table."""
+        qn = self._qn
+        shading = cell.find(f"{qn('w:tcPr')}/{qn('w:shd')}")
+        own = self._background(shading) if shading is not None else self._style(table_style)[2]
+        return bool(own) or around
+
+    def run_hidden(self, run, paragraph_style: str | None, table_style: str | None, background: bool) -> bool:
+        """Whether a w:r is hidden (see the class), in a paragraph of the style, in a table of the style or none,
+        on a cell background or not."""
         qn = self._qn
         run_properties = run.find(qn("w:rPr"))
         character = run_properties.find(qn("w:rStyle")) if run_properties is not None else None
         character_style = character.get(qn("w:val")) if character is not None else None
         direct = self._properties(run_properties)
-        key = (character_style, paragraph_style, *sorted(direct.items()))
+        key = (character_style, paragraph_style, table_style, background, *sorted(direct.items()))
         if (hidden := self._hidden.get(key)) is None:
-            merged = {
-                **self._defaults,
-                **self._style(paragraph_style),
-                **self._style(character_style),
-                **direct,
-            }
-            size = merged.get("size")
-            hidden = bool(
-                merged.get("vanish")
-                or (isinstance(size, int) and size < 2)
-                or (
-                    _white_hex(str(merged.get("color", "")))
-                    and not merged.get("highlight")
-                    and not merged.get("shading")
-                )
+            paragraph, paragraph_vanish, _ = self._style(paragraph_style)
+            character_properties, character_vanish, _ = self._style(character_style)
+            table, table_vanish, _ = self._style(table_style)
+            if "vanish" in direct:
+                vanish = bool(direct["vanish"])
+            else:
+                vanish = bool(self._defaults.get("vanish")) or paragraph_vanish or character_vanish or table_vanish
+            hidden = vanish or any(
+                self._unseen({**self._defaults, **first, **second, **character_properties, **direct}, background)
+                for first, second in ((table, paragraph), (paragraph, table))
             )
             self._hidden[key] = hidden
         return hidden
+
+    @staticmethod
+    def _unseen(properties: dict[str, object], background: bool) -> bool:
+        """Whether merged run properties make a run too small or white on no background."""
+        size = properties.get("size", 20)
+        scale = properties.get("scale", 100)
+        if isinstance(size, int) and (size < 2 or (isinstance(scale, int) and size * scale < 200)):
+            return True
+        return (
+            _white_hex(str(properties.get("color", "")))
+            and not properties.get("highlight")
+            and not properties.get("shading")
+            and not background
+        )
 
     def mark_hidden(self, paragraph) -> bool:
         """Whether the mark of a w:p is deleted, moved away or hidden (w:vanish on the mark itself), so that
@@ -1485,7 +1613,7 @@ def _docx_texts(element, look: _DocxLook) -> tuple[str, str]:
     from docx.oxml.ns import qn
     from lxml import etree
 
-    text, tab, breaks, hyphen, paragraph, run, removal = (
+    text, tab, breaks, hyphen, paragraph, run, removal, table, cell = (
         qn("w:t"),
         qn("w:tab"),
         (qn("w:br"), qn("w:cr")),
@@ -1493,13 +1621,17 @@ def _docx_texts(element, look: _DocxLook) -> tuple[str, str]:
         qn("w:p"),
         qn("w:r"),
         (qn("w:del"), qn("w:moveFrom")),
+        qn("w:tbl"),
+        qn("w:tc"),
     )
     parts: list[str] = []
     shown: list[str] = []
-    # The open w:del and w:moveFrom elements and hidden runs, the style of each open paragraph and whether
-    # each open run is hidden.
+    # The open w:del and w:moveFrom elements and hidden runs, the style of each open paragraph and table,
+    # whether each open cell has a background and whether each open run is hidden.
     unseen = 0
     styles: list[str | None] = []
+    tables: list[str | None] = []
+    backgrounds: list[bool] = []
     runs: list[bool] = []
     for event, node in etree.iterwalk(element, events=("start", "end")):
         tag = node.tag
@@ -1513,12 +1645,28 @@ def _docx_texts(element, look: _DocxLook) -> tuple[str, str]:
                 unseen -= runs.pop()
             elif tag in removal:
                 unseen -= 1
+            elif tag == table:
+                tables.pop()
+            elif tag == cell:
+                backgrounds.pop()
             continue
         if tag == paragraph:
             styles.append(look.paragraph_style(node))
             continue
+        if tag == table:
+            tables.append(look.table_style(node))
+            continue
+        if tag == cell:
+            around = bool(backgrounds) and backgrounds[-1]
+            backgrounds.append(look.cell_background(node, tables[-1] if tables else None, around))
+            continue
         if tag == run:
-            hidden = not unseen and look.run_hidden(node, styles[-1] if styles else None)
+            hidden = not unseen and look.run_hidden(
+                node,
+                styles[-1] if styles else None,
+                tables[-1] if tables else None,
+                bool(backgrounds) and backgrounds[-1],
+            )
             runs.append(hidden)
             unseen += hidden
             continue
@@ -1627,11 +1775,122 @@ def _ink_white(space: str, components: tuple[float, ...]) -> bool:
     return all(value >= _WHITE for value in components)
 
 
+def _device_space(value) -> str:
+    """The device colour space a colour space stands for: a device space itself, an ICC-based space by its
+    number of components (/N), a calibrated grey or RGB space as /DeviceGray or /DeviceRGB; the family name of
+    any other space."""
+    value = _resolved(value)
+    if isinstance(value, list) and value:
+        family = str(_resolved(value[0]))
+        if family == "/ICCBased" and len(value) > 1:
+            components = _resolved(_resolved(value[1]).get("/N"))
+            return {1: "/DeviceGray", 3: "/DeviceRGB", 4: "/DeviceCMYK"}.get(components, family)
+        return {"/CalGray": "/DeviceGray", "/CalRGB": "/DeviceRGB"}.get(family, family)
+    return str(value)
+
+
+def _reference(value) -> tuple[int, int] | None:
+    """The object number and generation of an indirect reference, or of the object it was read from."""
+    reference = value if hasattr(value, "idnum") else getattr(value, "indirect_reference", None)
+    return (reference.idnum, reference.generation) if hasattr(reference, "idnum") else None
+
+
+class _OptionalContent:
+    """Which optional content (layers) the default configuration of a PDF shows: an optional content group
+    (/OCG) is off where the configuration's /OFF array names it, or where its /BaseState is /OFF and its /ON
+    array does not name it; a membership dictionary (/OCMD) is shown as its visibility expression (/VE: /And,
+    /Or, /Not) or else its policy (/P: /AllOn, /AnyOn by default, /AnyOff, /AllOff) over its groups (/OCGs)
+    says. Anything else, and an expression nested deeper than _OC_DEPTH or read through more than
+    _OC_BUDGET times, counts as shown."""
+
+    _OC_DEPTH = 32
+    # The most groups and operators one membership dictionary is read through, so that expressions that share
+    # arrays cannot take exponential time; beyond it the content counts as shown.
+    _OC_BUDGET = 10_000
+
+    def __init__(self, reader) -> None:
+        self._budget = 0
+        self._off: set[tuple[int, int]] = set()
+        self._on: set[tuple[int, int]] = set()
+        self._base_off = False
+        self._shown: dict[tuple[int, int], bool] = {}
+        with suppress(Exception):
+            config = _resolved(_resolved(_resolved(reader.trailer["/Root"]).get("/OCProperties")).get("/D"))
+            self._base_off = str(config.get("/BaseState", "/ON")) == "/OFF"
+            for key, found in (("/OFF", self._off), ("/ON", self._on)):
+                for group in _resolved(config.get(key)) or ():
+                    if (reference := _reference(group)) is not None:
+                        found.add(reference)
+
+    def shown(self, value, depth: int = 0) -> bool:
+        """Whether content marked with this optional content group or membership dictionary is shown."""
+        self._budget = self._OC_BUDGET
+        try:
+            return self._shown_as(value, depth)
+        except Exception:
+            return True
+
+    def _group_shown(self, value) -> bool:
+        reference = _reference(value)
+        if reference is None:
+            return True
+        return reference not in self._off and (not self._base_off or reference in self._on)
+
+    def _shown_as(self, value, depth: int) -> bool:
+        reference = _reference(value)
+        if reference is not None and reference in self._shown:
+            return self._shown[reference]
+        target = _resolved(value)
+        kind = str(target.get("/Type", "")) if hasattr(target, "get") else ""
+        if kind != "/OCMD":
+            result = self._group_shown(value) if kind == "/OCG" else True
+        elif target.get("/VE") is not None:
+            result = self._expression(target.get("/VE"), depth + 1)
+        else:
+            groups = _resolved(target.get("/OCGs"))
+            groups = list(groups) if isinstance(groups, list) else [] if groups is None else [groups]
+            states = [self._group_shown(group) for group in groups if _resolved(group) is not None]
+            policy = str(target.get("/P", "/AnyOn"))
+            if not states:
+                result = True
+            elif policy == "/AllOn":
+                result = all(states)
+            elif policy == "/AnyOff":
+                result = not all(states)
+            elif policy == "/AllOff":
+                result = not any(states)
+            else:
+                result = any(states)
+        if reference is not None:
+            self._shown[reference] = result
+        return result
+
+    def _expression(self, value, depth: int) -> bool:
+        self._budget -= 1
+        if depth > self._OC_DEPTH or self._budget < 0:
+            return True
+        expression = _resolved(value)
+        if not isinstance(expression, list):
+            return self._group_shown(value)
+        if not expression:
+            return True
+        operator = str(_resolved(expression[0]))
+        operands = [self._expression(operand, depth + 1) for operand in expression[1:]]
+        if operator == "/Not":
+            return not operands[0] if operands else True
+        if operator == "/And":
+            return all(operands)
+        if operator == "/Or":
+            return any(operands) if operands else True
+        return True
+
+
 class _Ink(NamedTuple):
     """The part of a PDF graphics state that decides whether text can be seen."""
 
     mode: int = 0
     size: float = 0.0
+    scale: float = 1.0
     fill_space: str = "/DeviceGray"
     fill: tuple[float, ...] = (0.0,)
     stroke_space: str = "/DeviceGray"
@@ -1641,27 +1900,51 @@ class _Ink(NamedTuple):
 
 class _PdfInk:
     """Follows the graphics state of a PDF page through pypdf's operator visitors, to tell text that cannot be
-    seen: drawn in text render mode 3 or 7 (invisible, or a clipping path only), painted only in white or
+    seen: drawn in text render mode 3 or 7 (invisible, or a clipping path only); painted only in white or
     nearly white (each colour the render mode paints: the fill for modes 0 and 4, the stroke for 1 and 5,
     both for 2 and 6; a colour set with g, rg or k and their stroke forms, or with sc or scn in a device
-    colour space, see _ink_white), or in a font under 1 pt on the page (its size scaled by the text matrix,
-    the current transformation matrix and the matrix of each form XObject it is drawn in).
+    colour space or one that stands for one, _device_space, named directly or through the /ColorSpace
+    resources, see _ink_white); drawn with glyphs under 1 pt high or wide on the page (the Tf size, for the
+    width times the horizontal scaling Tz, scaled by the text matrix, the current transformation matrix and
+    the matrix of each form XObject it is drawn in; the height measured across the baseline); or inside
+    marked content (BDC with the /OC tag) or a form XObject (its /OC entry) whose optional content the
+    document's default configuration does not show (_OptionalContent).
 
     Text that is transparent, under other content, clipped away, off the page, in a pattern or in a colour
-    space other than the device ones is not told apart. With hide, the text of each text-showing operator
-    that cannot be seen is emptied before pypdf reads it (pypdf calls the visitor with the operands it then
-    reads, and builds them afresh for each extraction), so the page's text leaves it out."""
+    space other than those is not told apart. An operator whose operands this cannot read (a number too large
+    for a float among them) changes nothing here, as it changes nothing in pypdf's text. With hide, the text of
+    each text-showing operator that cannot be seen is emptied before pypdf reads it (pypdf calls the visitor
+    with the operands it then reads, and builds them afresh for each extraction), so the page's text leaves it
+    out."""
 
-    def __init__(self, resources, hide: bool) -> None:
+    def __init__(self, resources, hide: bool, optional: _OptionalContent) -> None:
         self.hide = hide
         self.hidden = False
+        self._optional = optional
         self._state = _Ink()
         self._saved: list[_Ink] = []
         self._resources: list = [resources]
-        # For each form XObject being drawn, the state and the stack to restore after it (None for an image).
-        self._forms: list[tuple[_Ink, list[_Ink]] | None] = []
+        # The marked content sequences open in the content being read, whether each is optional content
+        # that is not shown, and how many of them are not shown.
+        self._marked: list[bool] = []
+        self._off = 0
+        # For each form XObject being drawn: the state, the stack, the marked content and the count of
+        # sequences not shown to restore after it (None for an image).
+        self._forms: list[tuple[_Ink, list[_Ink], list[bool], int] | None] = []
 
     def before(self, operator: bytes, operands: list, cm, tm) -> None:
+        if operator in (b"BDC", b"BMC"):
+            off = False
+            if operator == b"BDC":
+                with suppress(Exception):
+                    off = str(operands[0]) == "/OC" and not self._optional.shown(self._marked_content(operands[1]))
+            self._marked.append(off)
+            self._off += off
+            return
+        if operator == b"EMC":
+            if self._marked:
+                self._off -= self._marked.pop()
+            return
         state = self._state
         try:
             if operator in _SHOWS_TEXT:
@@ -1684,11 +1967,13 @@ class _PdfInk:
                 self._state = state._replace(mode=int(operands[0]))
             elif operator == b"Tf":
                 self._state = state._replace(size=float(operands[1]))
+            elif operator == b"Tz":
+                self._state = state._replace(scale=float(operands[0]) / 100)
             elif operator in (b"g", b"rg", b"k", b"G", b"RG", b"K"):
                 space = {1: "/DeviceGray", 3: "/DeviceRGB", 4: "/DeviceCMYK"}[len(operands)]
                 self._paint(operator.islower(), space, tuple(map(float, operands)))
             elif operator in (b"cs", b"CS"):
-                space = str(operands[0])
+                space = self._space(operands[0])
                 initial = (0.0, 0.0, 0.0, 1.0) if space == "/DeviceCMYK" else (0.0,) * _DEVICE_SPACES.get(space, 1)
                 self._paint(operator == b"cs", space, initial)
             elif operator in (b"sc", b"scn", b"SC", b"SCN"):
@@ -1702,15 +1987,35 @@ class _PdfInk:
                 )
             elif operator == b"Do":
                 self._enter_form(operands[0])
-        except (TypeError, ValueError, IndexError, KeyError, AttributeError):
+        except Exception:
+            # An operand this cannot read (a number too large for a float, a missing resource) leaves the state
+            # as it was: each branch changes it only once it has read all it needs.
             pass
 
     def after(self, operator: bytes, operands: list, cm, tm) -> None:
         if operator == b"Do" and self._forms:
             saved = self._forms.pop()
             if saved is not None:
-                self._state, self._saved = saved
+                self._state, self._saved, self._marked, self._off = saved
                 self._resources.pop()
+
+    def _marked_content(self, properties):
+        """The optional content a BDC names: its property list, inline or named in the /Properties resources."""
+        if hasattr(properties, "keys"):
+            return properties
+        resources = _resolved(self._resources[-1]) or {}
+        named = _resolved(resources.get("/Properties")) or {}
+        return named.raw_get(properties) if hasattr(named, "raw_get") else named.get(properties)
+
+    def _space(self, name) -> str:
+        """The colour space a cs or CS operand names (_device_space), through the /ColorSpace resources."""
+        name = str(name)
+        if name in _DEVICE_SPACES or name == "/Pattern":
+            return name
+        resources = _resolved(self._resources[-1]) or {}
+        spaces = _resolved(resources.get("/ColorSpace")) or {}
+        value = spaces.get(name)
+        return name if value is None else _device_space(value)
 
     def _paint(self, fills: bool, space: str, components: tuple[float, ...]) -> None:
         if fills:
@@ -1719,24 +2024,30 @@ class _PdfInk:
             self._state = self._state._replace(stroke_space=space, stroke=components)
 
     def _enter_form(self, name) -> None:
-        """Before a form XObject: its content draws with the state saved and its own matrix and resources."""
+        """Before a form XObject: its content draws with the state saved and its own matrix and resources, and
+        is not shown where its optional content is not."""
         self._forms.append(None)
         resources = _resolved(self._resources[-1]) or {}
         xobject = _resolved(_resolved(resources.get("/XObject")).get(name))
         if xobject.get("/Subtype") != "/Form":
             return
         matrix = tuple(map(float, _resolved(xobject.get("/Matrix")) or _IDENTITY))
-        self._forms[-1] = (self._state, self._saved)
+        off = xobject.get("/OC") is not None and not self._optional.shown(xobject.raw_get("/OC"))
+        self._forms[-1] = (self._state, self._saved, self._marked, self._off)
         self._saved = []
+        self._marked = [off]
+        self._off += off
         self._state = self._state._replace(ctm=_multiply(matrix, self._state.ctm))
         self._resources.append(xobject.get("/Resources") or resources)
 
     def _unseen(self, tm) -> bool:
         state = self._state
-        if state.mode in (3, 7):
+        if self._off or state.mode in (3, 7):
             return True
-        page = _multiply(tuple(map(float, tm)), state.ctm)
-        if abs(state.size) * math.hypot(page[2], page[3]) < 1:
+        a, b, c, d, _, _ = _multiply(tuple(map(float, tm)), state.ctm)
+        along = math.hypot(a, b)
+        # The glyphs' width along the baseline and their height across it.
+        if abs(state.size * state.scale) * along < 1 or abs(state.size) * abs(a * d - b * c) < along:
             return True
         painted = []
         if state.mode in (0, 2, 4, 6):
@@ -1773,9 +2084,10 @@ def _pdf_lines(reader) -> tuple[list[_Line], str]:
     lines: list[_Line] = []
     shown: list[str] = []
     any_hidden = False
+    optional = _OptionalContent(reader)
     for number, page in enumerate(reader.pages):
         runs: list[tuple[str, _RunStyle | None]] = []
-        ink = _PdfInk(_page_resources(page), hide=False)
+        ink = _PdfInk(_page_resources(page), False, optional)
         text = (
             page.extract_text(
                 visitor_text=partial(_record_run, runs),
@@ -1786,7 +2098,7 @@ def _pdf_lines(reader) -> tuple[list[_Line], str]:
         )
         if ink.hidden:
             any_hidden = True
-            hiding = _PdfInk(_page_resources(page), hide=True)
+            hiding = _PdfInk(_page_resources(page), True, optional)
             shown.extend(
                 _shown_lines(
                     page.extract_text(visitor_operand_before=hiding.before, visitor_operand_after=hiding.after)

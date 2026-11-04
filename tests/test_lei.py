@@ -1165,6 +1165,18 @@ DOCX_HIDINGS = {
     "white": _run(HIDDEN, '<w:color w:val="FFFFFF"/>'),
     "nearly white": _run(HIDDEN, '<w:color w:val="F4F4F4"/>'),
     "half-point font": _run(HIDDEN, '<w:sz w:val="1"/>'),
+    # Characters scaled to 1 % of their width (w:w): 0.11 pt wide in the 11 pt default font.
+    "1 % character scale": _run(HIDDEN, '<w:w w:val="1"/>'),
+    # White on shading or a highlight that is itself white or has no fill is white on the white page.
+    "white on shading without fill": _run(
+        HIDDEN, '<w:color w:val="FFFFFF"/><w:shd w:val="clear" w:color="auto" w:fill="auto"/>'
+    ),
+    "white on white shading": _run(
+        HIDDEN, '<w:color w:val="FFFFFF"/><w:shd w:val="clear" w:color="auto" w:fill="FFFFFF"/>'
+    ),
+    "white on a white highlight": _run(HIDDEN, '<w:color w:val="FFFFFF"/><w:highlight w:val="white"/>'),
+    # A theme colour replaces w:val: background1 is the theme's light colour, white in Word's default theme.
+    "theme background colour": _run(HIDDEN, '<w:color w:val="000000" w:themeColor="background1"/>'),
     "moveFrom": f"<w:moveFrom {_REVISION}>{_run(HIDDEN)}</w:moveFrom>",
     "del": f"<w:del {_REVISION}>{_run(HIDDEN)}</w:del>",
     "delText": f'<w:del {_REVISION}><w:r><w:delText xml:space="preserve">{HIDDEN}</w:delText></w:r></w:del>',
@@ -1172,7 +1184,10 @@ DOCX_HIDINGS = {
     "shown": _run(HIDDEN),
     "vanish switched off": _run(HIDDEN, '<w:rStyle w:val="SyntheticHidden"/><w:vanish w:val="0"/>'),
     "white on a highlight": _run(HIDDEN, '<w:color w:val="FFFFFF"/><w:highlight w:val="black"/>'),
+    "white on solid shading": _run(HIDDEN, '<w:color w:val="FFFFFF"/><w:shd w:val="solid" w:color="auto"/>'),
     "1 pt font": _run(HIDDEN, '<w:sz w:val="2"/>'),
+    "half-width characters": _run(HIDDEN, '<w:w w:val="50"/>'),
+    "theme text colour": _run(HIDDEN, '<w:color w:val="FFFFFF" w:themeColor="text1"/>'),
     "tracked insertion": f"<w:ins {_REVISION}>{_run(HIDDEN)}</w:ins>",
     None: "",
 }
@@ -1259,8 +1274,19 @@ DOCX_HIDDEN_CASES = [
     for placement in DOCX_PLACEMENTS
     for hiding in ("vanish", "vanish in a character style", "white", "half-point font", "moveFrom", "del")
 ] + [
-    pytest.param("body paragraph", hiding, id=f"body paragraph-{hiding}")
-    for hiding in ("vanish in a style it is based on", "nearly white", "delText", None)
+    pytest.param(placement, hiding, id=f"{placement}-{hiding}")
+    for placement in ("body paragraph", "table cell")
+    for hiding in (
+        "vanish in a style it is based on",
+        "nearly white",
+        "1 % character scale",
+        "white on shading without fill",
+        "white on white shading",
+        "white on a white highlight",
+        "theme background colour",
+        "delText",
+        None,
+    )
 ]
 
 
@@ -1278,10 +1304,21 @@ def test_hidden_text_in_a_docx_never_completes_a_code_that_is_shown_malformed(
 
 @pytest.mark.parametrize("placement", DOCX_PLACEMENTS)
 @pytest.mark.parametrize(
-    "hiding", ["shown", "vanish switched off", "white on a highlight", "1 pt font", "tracked insertion"]
+    "hiding",
+    [
+        "shown",
+        "vanish switched off",
+        "white on a highlight",
+        "white on solid shading",
+        "1 pt font",
+        "half-width characters",
+        "theme text colour",
+        "tracked insertion",
+    ],
 )
 def test_a_code_that_a_docx_shows_valid_still_passes(tmp_path: Path, placement: str, hiding: str):
-    # Shown as Word shows it, the code is valid. A 1 pt font is not under 1 pt, so it counts as shown (ADR 0007).
+    # Shown as Word shows it, the code is valid. A 1 pt font is not under 1 pt, and half-width characters of an 11 pt
+    # font are not under 1 pt wide, so they count as shown (ADR 0007).
     # In a body paragraph or a list item a tracked insertion is no section text, so the section quotes the code
     # malformed and the rule goes to review, which fails safe (ADR 0007); everywhere else the rule passes.
     regime = WhitepaperType.ART if placement == "dropped section" else WhitepaperType.OTHER
@@ -1358,12 +1395,141 @@ def test_a_docx_is_read_as_word_shows_it(xml: str, shown: str):
     assert shown_text.strip("\n") == shown
 
 
-def _pdf_file(path: Path, content: str, form: tuple[str, str] | None = None) -> Path:
+def _style(kind: str, style_id: str, run: str = "", cell: str = "", based_on: str = "", default: bool = False) -> str:
+    """A w:style of the kind with the run properties and, for a table style, the cell properties."""
+    return (
+        f'<w:style {_W} w:type="{kind}"{' w:default="1"' if default else ""} w:styleId="{style_id}">'
+        f'<w:name w:val="{style_id}"/>{f'<w:basedOn w:val="{based_on}"/>' if based_on else ""}'
+        f"{f'<w:rPr>{run}</w:rPr>' if run else ''}{f'<w:tcPr>{cell}</w:tcPr>' if cell else ''}</w:style>"
+    )
+
+
+def _table(content: str, table_style: str = "", cell: str = "") -> str:
+    """A one-cell table in the table style, with the cell properties, whose cell holds the content (paragraphs)."""
+    style = f'<w:tblStyle w:val="{table_style}"/>' if table_style else ""
+    return (
+        f"<w:tbl><w:tblPr>{style}</w:tblPr><w:tblGrid><w:gridCol/></w:tblGrid><w:tr><w:tc>"
+        f"{f'<w:tcPr>{cell}</w:tcPr>' if cell else ''}{content}</w:tc></w:tr></w:tbl><w:p/>"
+    )
+
+
+_DARK_FILL = '<w:shd w:val="clear" w:color="auto" w:fill="000000" w:themeFill="text1"/>'
+_NO_FILL = '<w:shd w:val="clear" w:color="auto" w:fill="auto"/>'
+_TABLE_STYLES = {
+    "hidden": _style("table", "SyntheticHiddenTable", "<w:vanish/>"),
+    "white": _style("table", "SyntheticWhiteTable", '<w:color w:val="FFFFFF"/>'),
+    "tiny": _style("table", "SyntheticTinyTable", '<w:sz w:val="1"/>'),
+    "based on hidden": _style("table", "SyntheticNoteTable", based_on="SyntheticHiddenTable"),
+    # White text on black cell shading, as Word's "Dark List" table style sets it, in theme colours.
+    "dark": _style("table", "SyntheticDarkTable", '<w:color w:val="FFFFFF" w:themeColor="background1"/>', _DARK_FILL),
+    "default hidden": _style("table", "SyntheticDefaultTable", "<w:vanish/>", default=True),
+    "large paragraph": _style("paragraph", "SyntheticLargeParagraph", '<w:sz w:val="24"/>'),
+    "hidden paragraph": _style("paragraph", "SyntheticHiddenParagraph", "<w:vanish/>"),
+    "shown character": _style("character", "SyntheticShownCharacter", '<w:vanish w:val="0"/>'),
+}
+
+
+@pytest.mark.parametrize(
+    ("xml", "styles", "shown"),
+    [
+        # A table style's run properties apply to the runs of its tables, also through a style based on it.
+        (_table(f"<w:p>{_run('A')}</w:p>", "SyntheticHiddenTable"), ("hidden",), ""),
+        (_table(f"<w:p>{_run('A')}</w:p>", "SyntheticWhiteTable"), ("white",), ""),
+        (_table(f"<w:p>{_run('A')}</w:p>", "SyntheticTinyTable"), ("tiny",), ""),
+        (_table(f"<w:p>{_run('A')}</w:p>", "SyntheticNoteTable"), ("hidden", "based on hidden"), ""),
+        # A table without a style of its own takes the default table style.
+        (_table(f"<w:p>{_run('A')}</w:p>"), ("default hidden",), ""),
+        # The run's own properties come after the table style's.
+        (_table(f"<w:p>{_run('A', '<w:vanish w:val="0"/>')}</w:p>", "SyntheticHiddenTable"), ("hidden",), "A"),
+        # A paragraph style counts before and after the table style, and the run is hidden if either way hides it.
+        (
+            _table(f'<w:p><w:pPr><w:pStyle w:val="SyntheticLargeParagraph"/></w:pPr>{_run("A")}</w:p>', "SyntheticTinyTable"),
+            ("tiny", "large paragraph"),
+            "",
+        ),
+        # White text on the cell shading of its table style, or of its cell, is shown; shading that the cell clears
+        # is not there, and a nested table's cell without shading shows the shading of the cell it stands in.
+        (_table(f"<w:p>{_run('A')}</w:p>", "SyntheticDarkTable"), ("dark",), "A"),
+        (_table(f"<w:p>{_run('A', '<w:color w:val="FFFFFF"/>')}</w:p>", cell=_DARK_FILL), (), "A"),
+        (_table(f"<w:p>{_run('A')}</w:p>", "SyntheticDarkTable", _NO_FILL), ("dark",), ""),
+        (
+            _table(_table(f"<w:p>{_run('A', '<w:color w:val="FFFFFF"/>')}</w:p>"), cell=_DARK_FILL),
+            (),
+            "A",
+        ),
+        # w:vanish is a toggle: in a style, off leaves it as the styles before set it; only the run's own w:vanish
+        # sets it absolutely.
+        (
+            '<w:p><w:pPr><w:pStyle w:val="SyntheticHiddenParagraph"/></w:pPr>'
+            + _run("A", '<w:rStyle w:val="SyntheticShownCharacter"/>')
+            + "</w:p>",
+            ("hidden paragraph", "shown character"),
+            "",
+        ),
+        # A theme colour with a shade (here 50 % of white) is no longer white.
+        ("<w:p>" + _run("A", '<w:color w:val="FFFFFF" w:themeColor="background1" w:themeShade="80"/>') + "</w:p>", (), "A"),
+    ],
+    ids=[
+        "table style vanish",
+        "table style white",
+        "table style under 1 pt",
+        "table style based on",
+        "default table style",
+        "vanish off on the run",
+        "paragraph style size",
+        "white on table style shading",
+        "white on cell shading",
+        "cell clears the shading",
+        "nested table on shading",
+        "vanish toggle",
+        "theme colour shade",
+    ],
+)
+def test_a_docx_table_style_cell_shading_and_theme_colours(xml: str, styles: tuple[str, ...], shown: str):
+    _, shown_text = _docx_shown_text(xml, tuple(_TABLE_STYLES[name] for name in styles))
+    assert shown_text.strip("\n") == shown
+
+
+@pytest.mark.parametrize("properties", ["<w:vanish/>", '<w:color w:val="FFFFFF"/>', '<w:sz w:val="1"/>'])
+def test_a_table_style_that_hides_text_cannot_complete_a_code(tmp_path: Path, properties: str):
+    # The table style hides the missing character; the code's run undoes it with its own properties.
+    import docx
+    from docx.oxml import parse_xml
+
+    document = docx.Document()
+    document.styles.element.append(parse_xml(_style("table", "SyntheticStyledTable", properties)))
+    document.add_heading("Information about the Issuer", level=1)
+    document.add_paragraph(ISSUER_TEXT)
+    document.add_heading(OFFEROR, level=1)
+    document.add_paragraph("Synthetic Offeror GmbH, a fictional company, offers the token.")
+    table = document.add_table(rows=1, cols=1)
+    table._tbl.tblPr.append(parse_xml(f'<w:tblStyle {_W} w:val="SyntheticStyledTable"/>'))
+    shown = _run(SHOWN, '<w:vanish w:val="0"/><w:color w:val="000000"/><w:sz w:val="22"/>')
+    for element in parse_xml(f"<w:x {_W}>{shown}{_run(HIDDEN)}</w:x>"):
+        table.cell(0, 0).paragraphs[0]._p.append(element)
+    document.add_heading("Risk Factors", level=1)
+    document.add_paragraph("Holders may lose the full amount.")
+    document.save(tmp_path / "styled.docx")
+    check_digits, _ = _check_digits(tmp_path / "styled.docx")
+    assert check_digits.status == "review"
+    assert any(SHOWN in issue for issue in check_digits.issues)
+
+
+def _pdf_file(
+    path: Path,
+    content: str,
+    form: tuple[str, str] | None = None,
+    resources: str = "",
+    extra: tuple[str, ...] = (),
+    catalog: str = "",
+    form_entries: str = "",
+) -> Path:
     """A one-page PDF in Helvetica (/F1) and Helvetica-Bold (/F2) that draws the content, with a form XObject /Fm1
-    (its matrix and its content) where one is given."""
-    page_resources = b"/Font << /F1 3 0 R /F2 4 0 R >>"
+    (its matrix and its content, and the form_entries in its dictionary) where one is given. The extra objects are
+    numbered from 8, resources go into the page's resources and catalog into the catalog."""
+    page_resources = b"/Font << /F1 3 0 R /F2 4 0 R >> " + resources.encode()
     objects = [
-        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Catalog /Pages 2 0 R " + catalog.encode() + b" >>",
         b"<< /Type /Pages /Kids [5 0 R] /Count 1 >>",
         b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
         b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>",
@@ -1373,12 +1539,16 @@ def _pdf_file(path: Path, content: str, form: tuple[str, str] | None = None) -> 
     if form is not None:
         matrix, stream = form
         objects.append(
-            b"<< /Type /XObject /Subtype /Form /BBox [0 0 20000 20000] /Matrix [%s] "
-            b"/Resources << /Font << /F1 3 0 R >> >> /Length %d >>\nstream\n" % (matrix.encode(), len(stream))
+            b"<< /Type /XObject /Subtype /Form /BBox [0 0 20000 20000] /Matrix [%s] %s"
+            b"/Resources << /Font << /F1 3 0 R >> >> /Length %d >>\nstream\n"
+            % (matrix.encode(), form_entries.encode(), len(stream))
             + stream.encode()
             + b"\nendstream"
         )
         page_resources += b" /XObject << /Fm1 7 0 R >>"
+    else:
+        objects.append(b"<< >>")
+    objects.extend(entry.encode() for entry in extra)
     objects[4] = (
         b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1000 792] /Resources << " + page_resources + b" >> "
         b"/Contents 6 0 R >>"
@@ -1405,14 +1575,14 @@ _CODE_END = 50 + sum(_WIDTHS[char] for char in _CODE_LINE) / 100
 _CODE_BASELINE = 770 - 3 * 13
 
 
-def _pdf_hidden(path: Path, hiding: str | None) -> Path:
+def _pdf_hidden(path: Path, hiding: str | None, operators: str | None = None) -> Path:
     """A PDF whose offeror code is shown malformed on one line, with the missing character drawn right after it as
-    PDF_HIDINGS gives it."""
+    PDF_HIDINGS gives it, or with the operators after it."""
     lines = [
         ("/F2 14 Tf", "Information about the Issuer", ""),
         ("/F1 10 Tf", ISSUER_TEXT, ""),
         ("/F2 14 Tf", OFFEROR, ""),
-        ("/F1 10 Tf", _CODE_LINE, PDF_HIDINGS[hiding]),
+        ("/F1 10 Tf", _CODE_LINE, PDF_HIDINGS[hiding] if operators is None else operators),
         ("/F2 14 Tf", "Risk Factors", ""),
         ("/F1 10 Tf", "Holders may lose the full amount.", ""),
     ]
@@ -1423,9 +1593,13 @@ def _pdf_hidden(path: Path, hiding: str | None) -> Path:
         content += f" q 1 1 1 rg {box} f Q"
     elif hiding == "clipped away":
         content = f"q 0 0 1000 792 re {box} W* n {content} Q"
-    return _pdf_file(path, content)
+    resources, extra, catalog = _PDF_RESOURCES.get(hiding, ("", (), ""))
+    return _pdf_file(path, content, resources=resources, extra=extra, catalog=catalog)
 
 
+# Back to the start of the code line, so that the lines after it stand where they did.
+_CODE_LINE_START = f"1 0 0 1 50 {_CODE_BASELINE} Tm"
+_OCG = "<< /Type /OCG /Name (Synthetic layer) >>"
 PDF_HIDINGS = {
     None: "",
     "render mode 3": f"3 Tr ({HIDDEN}) Tj 0 Tr",
@@ -1436,18 +1610,77 @@ PDF_HIDINGS = {
     "nearly white sc": f"/DeviceRGB cs 0.97 0.97 0.97 sc ({HIDDEN}) Tj 0 0 0 sc",
     "white TJ": f"1 g [({HIDDEN})] TJ 0 g",
     "white stroke in render mode 1": f"1 Tr 1 G ({HIDDEN}) Tj 0 G 0 Tr",
+    # A colour space that the page's resources name, and the device, ICC-based or calibrated space it stands for.
+    "white in a named colour space": f"/CS0 cs 1 1 1 sc ({HIDDEN}) Tj 0 g",
+    "white in an ICC-based colour space": f"/CS1 cs 1 1 1 scn ({HIDDEN}) Tj 0 g",
+    "white in a calibrated colour space": f"/CS2 cs 1 1 1 sc ({HIDDEN}) Tj 0 g",
     "0.1 pt font": f"/F1 0.1 Tf ({HIDDEN}) Tj /F1 10 Tf",
     "0.5 pt by the text matrix": f"/F1 1 Tf 0.5 0 0 0.5 {_CODE_END:.2f} {_CODE_BASELINE} Tm ({HIDDEN}) Tj /F1 10 Tf",
+    # Glyphs squeezed to 0.1 pt wide by the horizontal scaling (Tz) or the text matrix, or flattened to 0.1 pt high
+    # by a text matrix that slants them.
+    "1 % horizontal scaling": f"1 Tz ({HIDDEN}) Tj 100 Tz",
+    "squeezed by the text matrix": f"0.01 0 0 1 {_CODE_END:.2f} {_CODE_BASELINE} Tm ({HIDDEN}) Tj {_CODE_LINE_START}",
+    "flattened by the text matrix": f"1 0 1 0.01 {_CODE_END:.2f} {_CODE_BASELINE} Tm ({HIDDEN}) Tj {_CODE_LINE_START}",
+    # Optional content (a layer) that the document's default configuration turns off, by name, by its base state,
+    # through a membership dictionary or through its visibility expression.
+    "optional content off": f"/OC /oc1 BDC ({HIDDEN}) Tj EMC",
+    "optional content off by its base state": f"/OC /oc1 BDC ({HIDDEN}) Tj EMC",
+    "optional content membership off": f"/OC /mc1 BDC ({HIDDEN}) Tj EMC",
+    "optional content expression off": f"/OC /mc2 BDC ({HIDDEN}) Tj EMC",
+    "optional content nested": f"/OC /oc1 BDC /Span << /ActualText (x) >> BDC ({HIDDEN}) Tj EMC EMC",
     # Shown: the code is valid as the page shows it.
     "shown": f"({HIDDEN}) Tj",
     "black stroke in render mode 1": f"1 Tr ({HIDDEN}) Tj 0 Tr",
     "white fill, black stroke": f"2 Tr 1 g ({HIDDEN}) Tj 0 g 0 Tr",
     "restored by Q": f"q 1 g Q ({HIDDEN}) Tj",
+    "optional content on": f"/OC /oc1 BDC ({HIDDEN}) Tj EMC",
+    "after optional content that is off": f"/OC /oc1 BDC EMC ({HIDDEN}) Tj",
+    "half-width horizontal scaling": f"50 Tz ({HIDDEN}) Tj 100 Tz",
     # Remaining limits: hidden, but not told apart (ADR 0007).
     "1 pt font": f"/F1 1 Tf ({HIDDEN}) Tj /F1 10 Tf",
-    "white in a named colour space": f"/CS0 cs 1 1 1 scn ({HIDDEN}) Tj 0 g",
+    "white in a Lab colour space": f"/CS3 cs 100 0 0 sc ({HIDDEN}) Tj 0 g",
     "under a white rectangle": f"({HIDDEN}) Tj",
     "clipped away": f"({HIDDEN}) Tj",
+}
+# The page resources, the objects (numbered from 8) and the catalog entries a hiding needs.
+_COLOUR_SPACES = (
+    "/ColorSpace << /CS0 /DeviceRGB /CS1 [/ICCBased 8 0 R] /CS2 [/CalRGB << /WhitePoint [0.9505 1 1.089] >>] "
+    "/CS3 [/Lab << /WhitePoint [0.9505 1 1.089] >>] >>",
+    ("<< /N 3 /Alternate /DeviceRGB /Length 0 >>\nstream\n\nendstream",),
+    "",
+)
+_LAYERS = "/Properties << /oc1 8 0 R /mc1 9 0 R /mc2 10 0 R >>"
+_MEMBERSHIPS = (_OCG, "<< /Type /OCMD /OCGs [8 0 R] /P /AllOn >>", "<< /Type /OCMD /VE [/Not 11 0 R] >>", _OCG)
+_PDF_RESOURCES = {
+    **dict.fromkeys(
+        (
+            "white in a named colour space",
+            "white in an ICC-based colour space",
+            "white in a calibrated colour space",
+            "white in a Lab colour space",
+        ),
+        _COLOUR_SPACES,
+    ),
+    **dict.fromkeys(
+        (
+            "optional content off",
+            "optional content membership off",
+            "optional content nested",
+            "after optional content that is off",
+        ),
+        (_LAYERS, _MEMBERSHIPS, "/OCProperties << /OCGs [8 0 R 11 0 R] /D << /OFF [8 0 R] >> >>"),
+    ),
+    "optional content off by its base state": (
+        _LAYERS,
+        _MEMBERSHIPS,
+        "/OCProperties << /OCGs [8 0 R 11 0 R] /D << /BaseState /OFF /ON [11 0 R] >> >>",
+    ),
+    "optional content expression off": (
+        _LAYERS,
+        _MEMBERSHIPS,
+        "/OCProperties << /OCGs [8 0 R 11 0 R] /D << /ON [8 0 R 11 0 R] >> >>",
+    ),
+    "optional content on": (_LAYERS, _MEMBERSHIPS, "/OCProperties << /OCGs [8 0 R 11 0 R] /D << /ON [8 0 R] >> >>"),
 }
 
 
@@ -1465,18 +1698,37 @@ PDF_HIDINGS = {
             "nearly white sc",
             "white TJ",
             "white stroke in render mode 1",
+            "white in a named colour space",
+            "white in an ICC-based colour space",
+            "white in a calibrated colour space",
             "0.1 pt font",
             "0.5 pt by the text matrix",
+            "1 % horizontal scaling",
+            "squeezed by the text matrix",
+            "flattened by the text matrix",
+            "optional content off",
+            "optional content off by its base state",
+            "optional content membership off",
+            "optional content expression off",
+            "optional content nested",
         )
     ]
     + [
         (hiding, "pass")
-        for hiding in ("shown", "black stroke in render mode 1", "white fill, black stroke", "restored by Q")
+        for hiding in (
+            "shown",
+            "black stroke in render mode 1",
+            "white fill, black stroke",
+            "restored by Q",
+            "optional content on",
+            "after optional content that is off",
+            "half-width horizontal scaling",
+        )
     ]
     # Remaining limits (ADR 0007 and the rule page): the hidden character still completes the code.
     + [
         (hiding, "pass")
-        for hiding in ("1 pt font", "white in a named colour space", "under a white rectangle", "clipped away")
+        for hiding in ("1 pt font", "white in a Lab colour space", "under a white rectangle", "clipped away")
     ],
 )
 def test_hidden_text_in_a_pdf(tmp_path: Path, hiding: str | None, status: str):
@@ -1498,6 +1750,65 @@ def test_hidden_text_in_a_pdf_form_xobject(tmp_path: Path, form: tuple[str, str]
         f"BT 13 TL 50 770 Td /F2 14 Tf (Information about the Issuer) Tj 0 -13 Td /F1 10 Tf ({ISSUER_TEXT}) Tj "
         f"0 -13 Td /F2 14 Tf ({OFFEROR}) Tj ET /Fm1 Do BT 50 600 Td /F2 14 Tf (Risk Factors) Tj ET"
     )
+    check_digits, _ = _check_digits(_pdf_file(tmp_path / "form.pdf", content, form))
+    assert check_digits.status == "review"
+    assert any(SHOWN in issue for issue in check_digits.issues)
+
+
+def test_a_pdf_form_xobject_in_optional_content_that_is_off_is_not_shown(tmp_path: Path):
+    from micar_linter.document import parse_pdf
+
+    content = "BT 50 770 Td /F1 10 Tf (Synthetic layer test) Tj ET /Fm1 Do"
+    form = ("1 0 0 1 0 0", "BT /F1 10 Tf 1 0 0 1 50 700 Tm (Synthetic hidden layer) Tj ET")
+    path = _pdf_file(
+        tmp_path / "layer.pdf",
+        content,
+        form,
+        extra=(_OCG,),
+        catalog="/OCProperties << /OCGs [8 0 R] /D << /OFF [8 0 R] >> >>",
+        form_entries="/OC 8 0 R ",
+    )
+    parsed = parse_pdf(path)
+    assert "Synthetic hidden layer" in parsed.document_text
+    assert parsed.shown_text == "Synthetic layer test"
+
+
+# An integer too large for a float, and a decimal number that only an infinite float holds.
+_HUGE = "9" * 400
+
+
+@pytest.mark.parametrize(
+    "operators",
+    [
+        f"{_HUGE} g 0 g",
+        f"{_HUGE} 0 0 rg 0 g",
+        f"0 0 0 {_HUGE} k 0 g",
+        f"{_HUGE} G 0 G",
+        f"{_HUGE} 0 0 RG 0 G",
+        f"0 0 0 {_HUGE} K 0 G",
+        f"q {_HUGE} 0 0 1 0 0 cm Q",
+        f"/F1 {_HUGE} Tf /F1 10 Tf",
+        f"/DeviceRGB cs {_HUGE} 0 0 sc 0 g",
+        f"/DeviceRGB cs {_HUGE} 0 0 scn 0 g",
+        f"{_HUGE}.5 Tr 0 Tr",
+        f"/OC /{_HUGE} BDC EMC",
+    ],
+)
+def test_a_number_too_large_for_a_float_does_not_stop_reading_a_pdf(tmp_path: Path, operators: str):
+    # The operator is passed over as pypdf passes it over, and the code shown malformed still keeps the rule from
+    # passing.
+    check_digits, _ = _check_digits(_pdf_hidden(tmp_path / "huge.pdf", None, operators))
+    assert check_digits.status == "review"
+    assert any(SHOWN in issue for issue in check_digits.issues)
+
+
+def test_a_form_xobject_matrix_too_large_for_a_float_does_not_stop_reading_a_pdf(tmp_path: Path):
+    content = (
+        f"BT 13 TL 50 770 Td /F2 14 Tf (Information about the Issuer) Tj 0 -13 Td /F1 10 Tf ({ISSUER_TEXT}) Tj "
+        f"0 -13 Td /F2 14 Tf ({OFFEROR}) Tj 0 -13 Td /F1 10 Tf ({_CODE_LINE}) Tj ET /Fm1 Do "
+        "BT 50 600 Td /F2 14 Tf (Risk Factors) Tj ET"
+    )
+    form = (f"{_HUGE} 0 0 1 0 0", "BT /F1 10 Tf 1 0 0 1 50 650 Tm (Synthetic note) Tj ET")
     check_digits, _ = _check_digits(_pdf_file(tmp_path / "form.pdf", content, form))
     assert check_digits.status == "review"
     assert any(SHOWN in issue for issue in check_digits.issues)
@@ -1539,15 +1850,23 @@ HIDDEN_MARKUP = {
         "review",
     ),
     "shown malformed": (f"<p>The LEI of the offeror is {SHOWN}.</p>", "review"),
-    # A fragment in a block of its own is read apart from the code, as it would be if shown. No full stop follows
-    # the code, so a reading that ran the two blocks together would complete it: in a paragraph, both the section
-    # text and the text of the file would have to; in a table row, which no section reads, the text of the file.
-    "in a block of its own": (
+    # A hidden fragment in a block of its own is left out of the text as a browser shows it, whatever the other
+    # readings do with the block, so the code stays malformed there.
+    "in a hidden block of its own": (
         f'<p>The LEI of the offeror is {SHOWN}</p><p hidden="hidden">{HIDDEN}</p>',
         "review",
     ),
-    "in a table row of its own": (
+    "in a hidden table row of its own": (
         f'<table><tr><td>The LEI of the offeror is {SHOWN}</td></tr><tr><td hidden="hidden">{HIDDEN}</td></tr></table>',
+        "review",
+    ),
+    # A fragment shown in a block of its own is read apart from the code. No full stop follows the code, so the rule
+    # would pass only if every reading ran the two blocks together: the text of the file, the text as shown (kept
+    # wherever it differs) and, in a paragraph, the section text; a table row is in no section.
+    # test_each_xhtml_reading_keeps_blocks_apart checks each of the two readings of the file on its own.
+    "in a shown block of its own": (f"<p>The LEI of the offeror is {SHOWN}</p><p>{HIDDEN}</p>", "review"),
+    "in a shown table row of its own": (
+        f"<table><tr><td>The LEI of the offeror is {SHOWN}</td></tr><tr><td>{HIDDEN}</td></tr></table>",
         "review",
     ),
     # A hidden separator inside the code splits it, for the reading of all the text, into groups that are no
@@ -1578,6 +1897,95 @@ HIDDEN_MARKUP = {
         f'<p>The LEI of the offeror is {OTHER_LEI[:9]}<span hidden="hidden">/</span>{OTHER_LEI[9:]}.</p>',
         "pass",
     ),
+    # What the browser hides by its own rules: elements its style sheet sets to display:none (a closed <dialog>
+    # among them) unless the style attribute sets a display, <noscript>, the fallback content of a replaced element,
+    # all but the summary of a closed <details>, and what an SVG drawing does not render.
+    **{
+        f"<{tag}>": (f"<p>The LEI of the offeror is {SHOWN}<{tag}>{HIDDEN}</{tag}>.</p>", "review")
+        for tag in (
+            "datalist", "noembed", "noframes", "rp", "noscript", "iframe", "canvas", "object", "video", "audio",
+        )
+    },
+    # A closed <dialog> or the content of a closed <details> between the two lines of a wrapped code.
+    "closed <dialog> in a wrapped code": (
+        f"<p>The LEI of the offeror is {SHOWN[:12]}<br/><dialog>see below</dialog>{SHOWN[12:]}.</p>",
+        "review",
+    ),
+    "closed <details> in a wrapped code": (
+        f"<details><summary>The LEI of the offeror is {SHOWN[:12]}</summary>see below</details><p>{SHOWN[12:]}.</p>",
+        "review",
+    ),
+    "SVG <desc>": (f"<p>The LEI of the offeror is {SHOWN}<svg><desc>{HIDDEN}</desc></svg>.</p>", "review"),
+    "SVG <defs>": (f"<p>The LEI of the offeror is {SHOWN}<svg><defs><text>{HIDDEN}</text></defs></svg>.</p>", "review"),
+    "SVG display attribute": (
+        f'<p>The LEI of the offeror is {SHOWN}<svg><text display="none">{HIDDEN}</text></svg>.</p>',
+        "review",
+    ),
+    "SVG visibility attribute": (
+        f'<p>The LEI of the offeror is {SHOWN}<svg><g visibility="hidden"><text>{HIDDEN}</text></g></svg>.</p>',
+        "review",
+    ),
+    # A declaration the browser drops (an invalid value) does not undo the one before it, nor the hidden attribute;
+    # an !important declaration wins over a later one without it.
+    "display:none, then an invalid display": (
+        f'<p>The LEI of the offeror is {SHOWN}<span style="display:none;display:bogus">{HIDDEN}</span>.</p>',
+        "review",
+    ),
+    "hidden attribute with an invalid display": (
+        f'<p>The LEI of the offeror is {SHOWN}<span hidden="" style="display:bogus">{HIDDEN}</span>.</p>',
+        "review",
+    ),
+    "visibility:hidden, then an invalid visibility": (
+        f'<p>The LEI of the offeror is {SHOWN}<span style="visibility:hidden;visibility:x">{HIDDEN}</span>.</p>',
+        "review",
+    ),
+    "display:none !important, then display:inline": (
+        f'<p>The LEI of the offeror is {SHOWN}<span style="display:none !important; display:inline">{HIDDEN}</span>.'
+        "</p>",
+        "review",
+    ),
+    # CSS escapes, a string holding "/*" and a comment that runs to the end of the attribute are read as CSS reads
+    # them.
+    "display:none in escapes": (
+        f'<p>The LEI of the offeror is {SHOWN}<span style="dis\\70 lay: \\6e one">{HIDDEN}</span>.</p>',
+        "review",
+    ),
+    "display:none after a string holding a comment start": (
+        f'<p>The LEI of the offeror is {SHOWN}<span style="font-family:\'/*\'; display:none">{HIDDEN}</span>.</p>',
+        "review",
+    ),
+    "display:none before an unclosed comment": (
+        f'<p>The LEI of the offeror is {SHOWN}<span style="display:none /* note">{HIDDEN}</span>.</p>',
+        "review",
+    ),
+    # Shown by the browser too: the code is valid as shown.
+    "open <dialog> in a wrapped code": (
+        f'<p>The LEI of the offeror is {SHOWN[:12]}<br/><dialog open="open">see below</dialog>{SHOWN[12:]}.</p>',
+        "pass",
+    ),
+    "open <details> in a wrapped code": (
+        f'<details open="open"><summary>The LEI of the offeror is {SHOWN[:12]}</summary>see below</details>'
+        f"<p>{SHOWN[12:]}.</p>",
+        "pass",
+    ),
+    "summary of a closed <details>": (
+        f"<details><summary>The LEI of the offeror is {SHOWN}<b>{HIDDEN}</b>.</summary>Note</details>",
+        "pass",
+    ),
+    "<datalist> with a display of its own": (
+        f'<p>The LEI of the offeror is {SHOWN}<datalist style="display:inline">{HIDDEN}</datalist>.</p>',
+        "pass",
+    ),
+    "display:none, then display:inline": (
+        f'<p>The LEI of the offeror is {SHOWN}<span style="display:none; display:inline">{HIDDEN}</span>.</p>',
+        "pass",
+    ),
+    "SVG text": (f"<p>The LEI of the offeror is {SHOWN}<svg><text>{HIDDEN}</text></svg>.</p>", "pass"),
+    "SVG display attribute under a style": (
+        f'<p>The LEI of the offeror is {SHOWN}<svg><text display="none" style="display:inline">{HIDDEN}</text></svg>.'
+        "</p>",
+        "pass",
+    ),
     # Remaining limits (ADR 0007 and the rule page): a style sheet and other properties are not read.
     "style sheet": (
         f'<style>.synthetic-note {{ display: none }}</style><p>The LEI of the offeror is {SHOWN}'
@@ -1595,6 +2003,24 @@ HIDDEN_MARKUP = {
 def test_hidden_text_in_xhtml_and_html(tmp_path: Path, markup: str, status: str, suffix: str):
     check_digits, _ = _check_digits(_write_xhtml(tmp_path / f"hidden{suffix}", markup))
     assert check_digits.status == status
+
+
+@pytest.mark.parametrize(
+    "markup",
+    [
+        f"<p>The LEI of the offeror is {SHOWN}</p><p>{HIDDEN}</p>",
+        f"<table><tr><td>The LEI of the offeror is {SHOWN}</td></tr><tr><td>{HIDDEN}</td></tr></table>",
+    ],
+    ids=["paragraphs", "table rows"],
+)
+def test_each_xhtml_reading_keeps_blocks_apart(markup: str):
+    # The text of the file and the text as shown each put the two blocks on lines of their own; a hidden note after
+    # them makes the two readings differ, so that both are kept.
+    from micar_linter.xhtml_parser import document_texts
+
+    text, shown = document_texts(f"<html><body>{markup}<p hidden>Note</p></body></html>".encode())
+    assert text.endswith(f"{SHOWN}\n{HIDDEN}\nNote")
+    assert shown.endswith(f"{SHOWN}\n{HIDDEN}")
 
 
 def test_a_code_only_the_shown_text_holds_is_named_as_such():
@@ -1680,8 +2106,9 @@ def test_a_file_without_hidden_text_keeps_no_shown_text(tmp_path: Path, suffix: 
 
 
 def test_reading_hidden_text_takes_linear_time(tmp_path: Path):
-    # Each loader reads the text as shown in the same pass as all of it (the PDF loader a page with hidden text
-    # twice), so the time grows linearly. A quadratic reading of these inputs would take minutes.
+    # The DOCX loader reads the text as shown in the same walk as all of it, the XHTML and HTML loader parses the file
+    # once and walks it twice and reads each style attribute once, and the PDF loader extracts a page with hidden
+    # text twice, so the time grows linearly. A quadratic reading of these inputs would take minutes.
     import docx
     from docx.oxml import parse_xml
 
@@ -1715,6 +2142,14 @@ def test_reading_hidden_text_takes_linear_time(tmp_path: Path):
     text, shown = document_texts(page.encode())
     assert time.perf_counter() - start < 2
     assert len(page) > 200_000 and shown
+
+    # Style attributes that CSS reads to their end: unclosed comments, strings and escapes, and many declarations.
+    for style in ("/* " * 70_000, "'/* " * 50_000, '"\\' * 70_000, "display:none;" * 16_000, "a:b !" * 40_000):
+        page = f'<html><body><p>LEI A1B2<span style="{style.replace('"', "&quot;")}">C3</span></p></body></html>'
+        start = time.perf_counter()
+        document_texts(page.encode())
+        assert time.perf_counter() - start < 2, style[:8]
+        assert len(page) > 200_000
 
     operators = " ".join(f"{3 if i % 2 else 0} Tr (A1B2 ) Tj" + (" T*" if i % 10 == 9 else "") for i in range(8_000))
     content = f"BT /F1 10 Tf 50 770 Td 12 TL {operators} ET".encode()
