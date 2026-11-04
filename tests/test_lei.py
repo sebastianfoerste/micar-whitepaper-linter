@@ -2122,6 +2122,60 @@ def test_a_hidden_separator_splits_a_pdf_code(tmp_path: Path, hiding: str | None
         assert any(f"{OTHER_LEI[:9]} {OTHER_LEI[9:]}" in issue for issue in check_digits.issues)
 
 
+# A malformed code in lower case, which the page shows whole, with a "/" after its first six letters.
+_LOWER_CASE_CODE = "hwupkr0mpou8fgxbt394"
+
+
+@pytest.mark.parametrize(("hiding", "status"), [("half-point font", "pass"), ("vanish", "review")])
+def test_a_hidden_separator_under_1_pt_can_split_a_malformed_lower_case_docx_code(
+    tmp_path: Path, hiding: str, status: str
+):
+    # A documented limit (ADR 0007, the rule page): the reading as a reader sees it leaves a gap for a run under 1 pt,
+    # as for every hidden run that Word lays out, although such a run takes next to no room, so the page shows no gap
+    # there. The gap leaves the word "hwupkr" beside "0mpou8fgxbt394", which together are no LEI-like code
+    # (test_the_documented_limits_of_the_reading), so the code the page shows malformed is not read and the rule
+    # passes, as in 1.2.1 and before #95. Left out of the page (w:vanish), the separator leaves the code whole, so
+    # the rule goes to Review.
+    import docx
+    from docx.oxml import parse_xml
+
+    separator = DOCX_HIDINGS[hiding].replace(f">{HIDDEN}</w:", ">/</w:")
+    code = f"{_run('The LEI of the offeror is ' + _LOWER_CASE_CODE[:6])}{separator}{_run(_LOWER_CASE_CODE[6:] + '.')}"
+    document = docx.Document()
+    document.add_heading("Information about the Issuer", level=1)
+    document.add_paragraph(ISSUER_TEXT)
+    document.add_heading(OFFEROR, level=1)
+    paragraph = document.add_paragraph()
+    for element in parse_xml(f"<w:x {_W}>{code}</w:x>"):
+        paragraph._p.append(element)
+    document.add_heading("Risk Factors", level=1)
+    document.add_paragraph("Holders may lose the full amount.")
+    document.save(tmp_path / "lower.docx")
+    check_digits, _ = _check_digits(tmp_path / "lower.docx")
+    assert check_digits.status == status
+    if status == "review":
+        assert any(_LOWER_CASE_CODE in issue for issue in check_digits.issues)
+
+
+@pytest.mark.parametrize(("hiding", "status"), [("0.1 pt font", "pass"), (None, "review")], ids=["0.1 pt font", "none"])
+def test_a_hidden_separator_under_1_pt_can_split_a_malformed_lower_case_pdf_code(
+    tmp_path: Path, hiding: str | None, status: str
+):
+    # The same limit in a PDF, where all hidden text leaves a gap: glyphs under 1 pt take next to no room, so the page
+    # shows the code whole, and the rule passes, as in 1.2.1 and before #95. Without the separator, it goes to Review.
+    separator = PDF_HIDINGS[hiding].replace(f"({HIDDEN})", "(/)")
+    path = _pdf_hidden(
+        tmp_path / "lower.pdf",
+        hiding,
+        f"{separator} ({_LOWER_CASE_CODE[6:]}.) Tj",
+        f"The LEI of the offeror is {_LOWER_CASE_CODE[:6]}",
+    )
+    check_digits, _ = _check_digits(path)
+    assert check_digits.status == status
+    if status == "review":
+        assert any(_LOWER_CASE_CODE in issue for issue in check_digits.issues)
+
+
 HIDDEN_MARKUP = {
     # A fragment the text joins to the code would complete it; the text as a browser shows it keeps it malformed.
     "display:none": (f'<p>The LEI of the offeror is {SHOWN}<span style="display:none">{HIDDEN}</span>.</p>', "review"),
