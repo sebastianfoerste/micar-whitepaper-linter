@@ -2762,6 +2762,49 @@ def test_a_negation_beside_a_pseudo_negation_still_negates(tmp_path: Path, suffi
     assert load_whitepaper(EVERY_WRITER[suffix](tmp_path / f"meadowpoints{suffix}", blocks)).type is WhitepaperType.OTHER
 
 
+# Lead-ins that hold a negation before a pseudo-negation that "but" sets apart from it, with the two items of the
+# list after each.
+_REAL_NEGATIONS_BEFORE_A_PSEUDO_NEGATION = {
+    "including but not limited to": "The token does not qualify as any of the following, including but not limited to:",
+    "including, but not limited to": "The token is not any of the following, including, but not limited to:",
+    "including but not restricted to": "The token does not fall into any category, including but not restricted to:",
+    "not, and shall not be": (
+        "MeadowPoints is not, and shall not be treated as, any instrument including, but not limited to:"
+    ),
+    "no colon": "MeadowPoints does not qualify as a crypto-asset of the kinds below, including but not limited to",
+    "no claims": "Holders have no claims, including but not limited to:",
+    # The full stop of "Art." inside the line ends no lead-in.
+    "Art.": "The token is not, within the meaning of Art. 3(1) MiCAR, any of the following, including but not limited to:",
+}
+_TOKEN_ITEMS = ("an asset-referenced token;", "an e-money token.")
+_CLAIM_ITEMS = ("a claim on a reserve of assets;", "redemption at par in a referenced currency.")
+
+
+@pytest.mark.parametrize("suffix", sorted(WRITERS))
+@pytest.mark.parametrize(
+    ("kind", "markers"),
+    [("body", ("-", "-")), ("body", ("(a)", "(b)")), ("body", ("1)", "2)")), ("list bullet", ("", ""))],
+    ids=["-", "(a)", "1)", "Word list style"],
+)
+@pytest.mark.parametrize(
+    "lead_in",
+    list(_REAL_NEGATIONS_BEFORE_A_PSEUDO_NEGATION.values()),
+    ids=list(_REAL_NEGATIONS_BEFORE_A_PSEUDO_NEGATION),
+)
+def test_a_pseudo_negation_leaves_a_negation_of_its_lead_in_to_govern_the_list(
+    tmp_path: Path, suffix: str, kind: str, markers: tuple[str, str], lead_in: str
+):
+    # "but" ends the clause, but not the lead-in: a negation before it in the lead-in still governs the list, so the
+    # "not" of the pseudo-negation negates as before #96, and each Annex I draft is other in a DOCX or PDF, as on
+    # 4a3deb7. At d979243 the pseudo-negation counted as none, as it was the only negation word of its clause, and
+    # the items were read on their own: the draft was an ART.
+    texts = _CLAIM_ITEMS if lead_in.startswith("Holders") else _TOKEN_ITEMS
+    items = [(kind, f"{marker} {text}".strip()) for marker, text in zip(markers, texts, strict=True)]
+    blocks = [_CRYPTO_ASSET, ("body", lead_in), *items, *_MEADOW_OFFEROR]
+    path = WRITERS[suffix][0](tmp_path / f"meadowpoints{suffix}", blocks)
+    assert load_whitepaper(path).type is WhitepaperType.OTHER
+
+
 # The markers of a list closed by a full stop and of the heading after it, which takes the next marker.
 _CLOSED_LIST_MARKERS = [
     ("(a)", "(b)", "(c)"),

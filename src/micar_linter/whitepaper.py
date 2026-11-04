@@ -230,12 +230,17 @@ _NEGATION_LOOKBACK = 200
 # pyConTextNLP list "not only" and "not necessarily"): "not limited to", "not be limited to", "not restricted
 # to", "not be restricted to", "not exhaustive", "not exclusively", "not only", "not necessarily" (each also
 # with "n't") and "without limitation". Matched where a negation word starts. It governs no item of a list
-# after it ("The risks include, but are not limited to:"), where it is the only kind of negation in its
-# clause (_negated, _continued); elsewhere its negation word negates as any other does.
+# after it ("The risks include, but are not limited to:"), where every negation word of its lead-in stands in
+# one (_negated, _continued, _lead_in); elsewhere its negation word negates as any other does.
 _PSEUDO_NEGATION = re.compile(
     r"(?:not|n't)\s+(?:(?:be\s+)?(?:limited|restricted)\s+to|exhaustive|exclusively|only|necessarily)\b"
     r"|without\s+limitation\b"
 )
+# The end of a line or paragraph that ends in a sentence mark, where a lead-in starts (_lead_in). Neither
+# "but", which ends the clause of "including but not limited to", nor a sentence mark inside a line ends a
+# lead-in, so a negation before them ("The token is not any of the following, including but not limited
+# to:") stands in the lead-in of the pseudo-negation.
+_LEAD_IN_START = re.compile(r"[.!?;:][ \t]*\n")
 # A list item: a bullet or dash, or a list number of one or two digits or a lower-case list letter or roman
 # numeral with a full stop or a bracket, before its text.
 _LIST_ITEM = re.compile(
@@ -254,9 +259,10 @@ def _negated(text: str, start: int) -> bool:
 
     A pseudo-negation ("not limited to") governs no list item after it: where the marker stands in or after a
     line that starts with a list marker (_LIST_ITEM) after the end of the pseudo-negation, its negation word
-    is none. That holds only where every negation word of the clause stands in a pseudo-negation that ends
-    before such a line. Otherwise each negation word counts, as before #96: beside another one ("The token is
-    not, among other things and not limited to these,") and in the marker's own sentence ("including but not
+    is none. That holds only where every negation word of its lead-in (_lead_in) stands in a pseudo-negation
+    that ends before such a line. Otherwise each negation word counts, as before #96: beside another one in
+    the lead-in ("The token is not any of the following, including but not limited to", "The token is not,
+    among other things and not limited to these,") and in the marker's own sentence ("including but not
     limited to e-money tokens"), also where a line end splits that sentence."""
     before = text[max(0, start - _NEGATION_LOOKBACK) : start]
     ends = list(_CLAUSE_END.finditer(before))
@@ -264,16 +270,30 @@ def _negated(text: str, start: int) -> bool:
     negations = list(_NEGATION.finditer(clause))
     if not negations:
         return False
-    if _PSEUDO_NEGATION.match(clause, negations[-1].start()):
-        # The start of the last list item line of the clause; a pseudo-negation that ends before it governs
-        # nothing, where the clause holds no other negation word.
-        item = max((match.start() for match in _ITEM_LINE.finditer(clause)), default=-1)
+    if (
+        _PSEUDO_NEGATION.match(clause, negations[-1].start())
+        and (lead_in := _lead_in(before, start <= _NEGATION_LOOKBACK)) is not None
+    ):
+        # The start of the last list item line; a pseudo-negation that ends before it governs nothing, where
+        # the lead-in holds no other negation word.
+        item = max((match.start() for match in _ITEM_LINE.finditer(lead_in)), default=-1)
         if all(
-            (pseudo := _PSEUDO_NEGATION.match(clause, match.start())) and pseudo.end() <= item
-            for match in negations
+            (pseudo := _PSEUDO_NEGATION.match(lead_in, match.start())) and pseudo.end() <= item
+            for match in _NEGATION.finditer(lead_in)
         ):
             return False
     return len(clause[negations[-1].end() :].split()) <= _NEGATION_REACH
+
+
+def _lead_in(text: str, whole: bool) -> str | None:
+    """The lead-in at the end of the lower-case text, with the list after it: the text after the last line or
+    paragraph that ends in a full stop, question or exclamation mark, semicolon or colon (_LEAD_IN_START), or
+    all of it where no line does and the text is whole. None where the lookback cut the text and no line in it
+    ends so: the lead-in may then start before the text and hold a negation there."""
+    starts = list(_LEAD_IN_START.finditer(text))
+    if starts:
+        return text[starts[-1].end() :]
+    return text if whole else None
 
 
 def _names_regime(pieces: list[tuple[str, int]], markers: tuple[str, ...]) -> bool:
@@ -344,8 +364,9 @@ def _continued(previous: tuple[str, str, bool] | None) -> str:
     purposes of MiCAR the token is not", which a PDF may read as a heading). A line that ends in a
     semicolon is an item of a list, and the next line continues the clause that it continued. A colon at
     the end of a line introduces the line after it, so it ends no clause there, unless each negation word of
-    that clause stands in a pseudo-negation: such a lead-in governs no line of its list, whether or not the
-    line has a list marker (a Word list style shows one that the text does not hold).
+    the lead-in that the colon ends (_lead_in) stands in a pseudo-negation: such a lead-in governs no line of
+    its list, whether or not the line has a list marker (a Word list style shows one that the text does not
+    hold).
     """
     if previous is None:
         return ""
@@ -355,18 +376,20 @@ def _continued(previous: tuple[str, str, bool] | None) -> str:
     text = text.rstrip()
     if text.endswith(";"):
         return clause
-    continued = f"{clause}\n{text.removesuffix(':')}"[-_NEGATION_LOOKBACK:]
-    if text.endswith(":") and _only_pseudo_negations(continued):
+    continued = f"{clause}\n{text.removesuffix(':')}"
+    # The clause that the line continues is whole where the lookback did not cut it.
+    if text.endswith(":") and _only_pseudo_negations(_lead_in(continued, len(clause) < _NEGATION_LOOKBACK)):
         return ""
-    return continued
+    return continued[-_NEGATION_LOOKBACK:]
 
 
-def _only_pseudo_negations(text: str) -> bool:
-    """Whether the last clause of the lower-case text holds a negation word and each stands in a
+def _only_pseudo_negations(lead_in: str | None) -> bool:
+    """Whether the lower-case lead-in (None: not known) holds a negation word and each stands in a
     pseudo-negation."""
-    ends = list(_CLAUSE_END.finditer(text))
-    negations = list(_NEGATION.finditer(text, ends[-1].end() if ends else 0))
-    return bool(negations) and all(_PSEUDO_NEGATION.match(text, match.start()) for match in negations)
+    if lead_in is None:
+        return False
+    negations = list(_NEGATION.finditer(lead_in))
+    return bool(negations) and all(_PSEUDO_NEGATION.match(lead_in, match.start()) for match in negations)
 
 
 def _regime_pieces(
