@@ -1324,10 +1324,11 @@ def test_a_code_that_a_docx_shows_valid_still_passes(tmp_path: Path, placement: 
     # Shown as Word shows it, the code is valid. A 1 pt font is not under 1 pt, and half-width characters of an 11 pt
     # font are not under 1 pt wide, so they count as shown (ADR 0007).
     # In a body paragraph or a list item a tracked insertion is no section text, so the section quotes the code
-    # malformed and the rule goes to review, which fails safe (ADR 0007); everywhere else the rule passes.
+    # malformed and the rule goes to review, which fails safe (ADR 0007); so does a body paragraph of a section the
+    # regime drops, whose text the rule still reads as the section text reads it. Everywhere else the rule passes.
     regime = WhitepaperType.ART if placement == "dropped section" else WhitepaperType.OTHER
     check_digits, _ = _check_digits(_docx_hidden(tmp_path / "shown.docx", placement, hiding), regime)
-    in_section_runs = placement in ("body paragraph", "list item")
+    in_section_runs = placement in ("body paragraph", "list item", "dropped section")
     assert check_digits.status == ("review" if in_section_runs and hiding == "tracked insertion" else "pass")
 
 
@@ -2238,6 +2239,132 @@ HIDDEN_MARKUP = {
 def test_hidden_text_in_xhtml_and_html(tmp_path: Path, markup: str, status: str, suffix: str):
     check_digits, _ = _check_digits(_write_xhtml(tmp_path / f"hidden{suffix}", markup))
     assert check_digits.status == status
+
+
+# A heading the DOCX loader maps to each section that some regime drops.
+DROPPABLE = {
+    "crypto_asset": "Information about the Crypto-Asset",
+    "art": "Reference Assets",
+    "emt": "Denomination",
+    "not_approved_statement": "Statement in accordance with Article 6(3)",
+}
+# A regime and a section it drops. With no regime given, the risk list after a pseudo-negation lead-in or the
+# heading after a closed negated list makes the draft an ART, which drops its crypto-asset section; before,
+# both read as negated and the draft was another crypto-asset, which keeps it.
+DROPPING = [
+    (WhitepaperType.ART, "crypto_asset", ()),
+    (WhitepaperType.ART, "emt", ()),
+    (WhitepaperType.ART, "not_approved_statement", ()),
+    (WhitepaperType.EMT, "art", ()),
+    (WhitepaperType.EMT, "crypto_asset", ()),
+    (WhitepaperType.OTHER, "art", ()),
+    (WhitepaperType.OTHER, "emt", ()),
+    (
+        None,
+        "crypto_asset",
+        (
+            "The risks include, but are not limited to:",
+            "- the reserve of assets may lose value;",
+            "- the custodian may fail.",
+        ),
+    ),
+    (
+        None,
+        "crypto_asset",
+        (
+            "Holders should note that the token is not covered by:",
+            "(a) any investor compensation scheme;",
+            "(b) any deposit guarantee scheme.",
+            "(c) Reserve of Assets",
+        ),
+    ),
+]
+
+
+def _docx_dropped(path: Path, section: str, risks: tuple[str, ...], completion: str) -> Path:
+    """A DOCX whose offeror code stands in a paragraph of the given section: shown malformed with its last
+    character moved away (w:moveFrom), in a w:t inside a tracked deletion, in a hidden run (w:vanish) or nowhere
+    ("none"), or shown valid, whole ("shown") or with its last character in a tracked insertion ("inserted")."""
+    import docx
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+
+    def run(text: str):
+        element = OxmlElement("w:r")
+        text_element = OxmlElement("w:t")
+        text_element.text = text
+        element.append(text_element)
+        return element
+
+    def tracked(name: str, child):
+        element = OxmlElement(name)
+        element.set(qn("w:id"), "1")
+        element.set(qn("w:author"), "Synthetic Reviewer")
+        element.append(child)
+        return element
+
+    document = docx.Document()
+    document.add_heading("Information about the Issuer", level=1)
+    document.add_paragraph(ISSUER_TEXT)
+    document.add_heading(DROPPABLE[section], level=1)
+    paragraph = document.add_paragraph("The LEI of the offeror is ")
+    paragraph._p.append(run(OTHER_LEI if completion == "shown" else SHOWN))
+    if completion in ("moveFrom", "del", "inserted"):
+        wrapper = {"moveFrom": "w:moveFrom", "del": "w:del", "inserted": "w:ins"}[completion]
+        paragraph._p.append(tracked(wrapper, run(HIDDEN)))
+    if completion == "vanish":
+        hidden = run(HIDDEN)
+        properties = OxmlElement("w:rPr")
+        properties.append(OxmlElement("w:vanish"))
+        hidden.insert(0, properties)
+        paragraph._p.append(hidden)
+    document.add_heading("Risk Factors", level=1)
+    for line in risks or ("Holders may lose the full amount.",):
+        document.add_paragraph(line)
+    document.save(path)
+    return path
+
+
+@pytest.mark.parametrize(
+    ("completion", "status"),
+    [
+        # Malformed as shown: the text of the dropped section shows the code malformed.
+        ("moveFrom", "review"),
+        ("del", "review"),
+        ("none", "review"),
+        # Malformed as a reader sees it: the section text holds the hidden run and reads the code valid, but the
+        # reading as a reader sees it (shown_text) leaves the run out, in a section the regime drops as anywhere.
+        ("vanish", "review"),
+        # Valid as shown.
+        ("shown", "pass"),
+        # Fails safe, as in a section the regime keeps: the section text leaves the tracked insertion out.
+        ("inserted", "review"),
+    ],
+)
+@pytest.mark.parametrize(
+    ("regime", "section", "risks"),
+    DROPPING,
+    ids=[f"{regime.value if regime else 'inferred'}-{section}-{len(risks)}" for regime, section, risks in DROPPING],
+)
+def test_a_code_in_a_section_the_regime_drops_is_read_as_its_section_shows_it(
+    tmp_path: Path,
+    regime: WhitepaperType | None,
+    section: str,
+    risks: tuple[str, ...],
+    completion: str,
+    status: str,
+):
+    # The text of the file holds the moved-away or deleted character, so it reads the code complete and valid.
+    # The loader drops the sections of the other regimes; COMMON.LEI_CHECK_DIGITS reads their text too, so the
+    # code still reads as the section shows it, and a change of the regime cannot make the rule pass.
+    path = _docx_dropped(tmp_path / "dropped.docx", section, risks, completion)
+    keeping = {"art": WhitepaperType.ART, "emt": WhitepaperType.EMT}.get(section, WhitepaperType.OTHER)
+    assert section in load_whitepaper(path, keeping).sections
+    whitepaper = load_whitepaper(path, regime)
+    assert section not in whitepaper.sections
+    check_digits, consistency = _check_digits(path, regime)
+    assert check_digits.status == status
+    assert consistency.status == "pass"
 
 
 @pytest.mark.parametrize(
