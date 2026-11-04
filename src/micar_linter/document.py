@@ -410,9 +410,11 @@ class DocumentSections:
     Heading text is not section body, and some text sits in no section (before the first heading, or
     after a line that ends a section). Regime inference reads the extracted text (text): a heading such
     as "Reserve of Assets" may be the only place that names the regime. COMMON.LEI_CHECK_DIGITS reads
-    the whole text of the file (document_text): for a PDF that is the extracted text, for a DOCX it adds
-    the paragraphs of tables, text boxes, headers and footers, tracked insertions and text moved away under
-    tracked changes.
+    the whole text of the file (document_text): for a PDF that is the extracted text, for a DOCX every w:t
+    of the body and of the headers and footers (_docx_text: the paragraphs of tables and text boxes, tracked
+    insertions, content controls, text moved away under tracked changes and any w:t inside a tracked
+    deletion included). The sections and the extracted text of a DOCX hold only the runs and hyperlinks
+    directly in a body paragraph (python-docx's paragraph text).
     """
 
     sections: dict[str, str]

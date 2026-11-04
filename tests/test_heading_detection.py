@@ -969,8 +969,8 @@ _SST_ISSUER = [
             ],
             WhitepaperType.EMT,
         ),
-        # A negated lead-in governs every item of the list after it, also where the items end in a
-        # semicolon, and also where a PDF reads the lead-in as a heading.
+        # A negated lead-in governs each dash, bullet or bracket item of the list after it, also where the items
+        # end in a semicolon, and also where a PDF reads the lead-in as a heading that ends in a negation.
         (
             [
                 ("body", "For the purposes of MiCAR the token is not"),
@@ -2207,6 +2207,33 @@ def test_a_given_regime_is_not_inferred(tmp_path: Path, suffix: str, monkeypatch
     assert given.sections == inferred.sections
 
 
+@pytest.mark.parametrize("suffix", sorted(LIST_WRITERS))
+def test_a_given_regime_is_not_inferred_from_a_list(tmp_path: Path, suffix: str, monkeypatch: pytest.MonkeyPatch):
+    # The list that test_a_given_regime_is_not_inferred used before the list reading was backed out: a DOCX or
+    # PDF reads it as other and Markdown as an EMT (as the "semicolon" case of
+    # test_the_documented_limits_of_the_regime_reading shows with a shorter lead-in). A given regime is not
+    # inferred, so the text is not read for it, and it holds where the inference would differ.
+    import micar_linter.whitepaper as whitepaper
+
+    blocks = [_CRYPTO_ASSET, *_lines(_LEAD_IN, "- an asset-referenced token;", "- an e-money token."), *_MEADOW_OFFEROR]
+    path = LIST_WRITERS[suffix](tmp_path / f"meadowpoints{suffix}", blocks)
+    inferred = load_whitepaper(path)
+
+    def unread(*args: object) -> list[tuple[str, int]]:
+        raise AssertionError("the regime was inferred although it was given")
+
+    monkeypatch.setattr(whitepaper, "_regime_pieces", unread)
+    given = load_whitepaper(path, WhitepaperType.OTHER)
+    assert given.type is WhitepaperType.OTHER
+    if suffix == ".md":
+        # An EMT draft has no Annex I crypto-asset section; the given regime keeps it.
+        assert inferred.type is WhitepaperType.EMT
+        assert "crypto_asset" in given.sections and "crypto_asset" not in inferred.sections
+    else:
+        assert inferred.type is WhitepaperType.OTHER
+        assert given.sections == inferred.sections
+
+
 # The list cases of Rounds 4 and 5 that the regime reading meets without the list reading those rounds
 # added, which was backed out after the verification of the merged changes, and the limits of that reading.
 _LEAD_IN = "For the purposes of MiCAR the token is not"
@@ -2619,6 +2646,11 @@ def _regimes(docx_and_pdf: WhitepaperType, markup: WhitepaperType) -> dict[str, 
 
 
 ART, EMT, OTHER = WhitepaperType.ART, WhitepaperType.EMT, WhitepaperType.OTHER
+_ART_INTRODUCTION = "The Synthetic Stable Token is an asset-referenced token."
+_STATEMENT = (
+    "This crypto-asset white paper has not been approved by any competent authority in any Member State of the "
+    "European Union."
+)
 
 
 @pytest.mark.parametrize("suffix", sorted(ALL_WRITERS))
@@ -2751,6 +2783,109 @@ ART, EMT, OTHER = WhitepaperType.ART, WhitepaperType.EMT, WhitepaperType.OTHER
             ],
             _regimes(ART, OTHER),
         ),
+        # In Markdown and XHTML a lead-in that ends in a colon ends its clause at the colon, so the list after
+        # it sets the regime there; a DOCX or PDF reads its items as other.
+        (
+            [
+                _CRYPTO_ASSET,
+                *_lines("The token is not:", "- an asset-referenced token", "- an e-money token"),
+                *_MEADOW_OFFEROR,
+            ],
+            _regimes(OTHER, ART),
+        ),
+        # An introduction that calls the token an asset-referenced token makes the draft an ART in a DOCX or PDF
+        # wherever the inference reads it (in a DOCX a paragraph of its body); Markdown and XHTML read only section
+        # text, so not under a first heading that names no section, as in 1.2.1.
+        (
+            [
+                ("heading", "Introduction"),
+                ("body", "The Synthetic Stable Token is an asset-referenced token."),
+                *_SST_ISSUER,
+            ],
+            _regimes(ART, OTHER),
+        ),
+        # The same introduction under a heading that names a section is read in every format.
+        (
+            [
+                ("heading", "Summary"),
+                ("body", "The Synthetic Stable Token is an asset-referenced token."),
+                *_SST_ISSUER,
+            ],
+            _regimes(ART, ART),
+        ),
+        # After a section, XHTML leaves it open under a heading that names none, so the introduction is read as
+        # its text there; Markdown ends the section at every heading.
+        (
+            [
+                ("heading", "Summary"),
+                ("body", "The Synthetic Stable Token gives holders a claim on the issuer."),
+                ("heading", "Background"),
+                ("body", "The Synthetic Stable Token is an asset-referenced token."),
+                *_SST_ISSUER,
+            ],
+            {**_regimes(ART, ART), ".md": OTHER},
+        ),
+        # Before any heading, Markdown and XHTML read no introduction; a DOCX or PDF does, as in 1.2.1.
+        ([("body", _ART_INTRODUCTION), *_SST_ISSUER], _regimes(ART, OTHER)),
+        # After the first-page statement in the line (Markdown) or paragraph (XHTML) where the statement ends,
+        # which now joins the statement's own section, every format reads it (1.2.1 read it only from a DOCX or
+        # PDF); test_the_text_after_the_statement_is_read_only_where_the_statement_ends reads the next line.
+        ([("body", f"{_STATEMENT} {_ART_INTRODUCTION}"), *_SST_ISSUER], _regimes(ART, ART)),
+        # Before the statement in its line or paragraph, which the statement then does not open, Markdown and
+        # XHTML do not read it, as in 1.2.1.
+        ([("body", f"{_ART_INTRODUCTION} {_STATEMENT}"), *_SST_ISSUER], _regimes(ART, OTHER)),
+        # A negation before the phrase in its clause makes the introduction other (in 1.2.1 an ART).
+        (
+            [
+                ("heading", "Summary"),
+                ("body", "The Synthetic Stable Token is not an e-money token and is therefore an asset-referenced token."),
+                *_SST_ISSUER,
+            ],
+            _regimes(OTHER, OTHER),
+        ),
+        # A phrase split over two paragraphs (in a PDF two lines) is not found in any format, as in 1.2.1;
+        # test_a_phrase_that_a_line_end_splits_inside_a_paragraph reads one paragraph.
+        (
+            [
+                ("heading", "Summary"),
+                ("plain", "The Synthetic Stable Token is an asset-"),
+                ("plain", "referenced token."),
+                *_SST_ISSUER,
+            ],
+            _regimes(OTHER, OTHER),
+        ),
+        # A lead-in that the loader reads as a heading and that ends in a negation and a colon governs nothing:
+        # the colon ends its clause. Markdown and XHTML end the clause at a colon at the end of a line.
+        (
+            [
+                _CRYPTO_ASSET,
+                ("bold", "The token is not:"),
+                *_lines("- an asset-referenced token;", "- an e-money token."),
+                *_MEADOW_OFFEROR,
+            ],
+            _regimes(ART, ART),
+        ),
+        # Without the colon, such a lead-in governs the items after it in a DOCX or PDF (docs/SETUP.md); Markdown
+        # and XHTML end the clause at the first item's semicolon.
+        (
+            [
+                _CRYPTO_ASSET,
+                ("bold", "The token is not"),
+                *_lines("- an asset-referenced token;", "- an e-money token."),
+                *_MEADOW_OFFEROR,
+            ],
+            _regimes(OTHER, EMT),
+        ),
+        # Upper-case list letters are no list items: each starts a new sentence (Markdown and XHTML end the
+        # clause at the semicolon instead).
+        (
+            [
+                _CRYPTO_ASSET,
+                *_lines(_LEAD_IN, "(A) an asset-referenced token; or", "(B) an e-money token."),
+                *_MEADOW_OFFEROR,
+            ],
+            _regimes(ART, EMT),
+        ),
     ],
     ids=[
         "full stop",
@@ -2764,6 +2899,18 @@ ART, EMT, OTHER = WhitepaperType.ART, WhitepaperType.EMT, WhitepaperType.OTHER
         "item read as a heading",
         "category",
         "inner list",
+        "colon lead-in",
+        "introduction under no section",
+        "introduction in a section",
+        "introduction after a section",
+        "introduction before any heading",
+        "introduction with the statement",
+        "introduction before the statement",
+        "negated introduction",
+        "phrase split over two paragraphs",
+        "heading lead-in with a colon",
+        "heading lead-in without a colon",
+        "upper-case list letters",
     ],
 )
 def test_the_documented_limits_of_the_regime_reading(
@@ -2772,3 +2919,188 @@ def test_the_documented_limits_of_the_regime_reading(
     # The CHANGELOG and docs/SETUP.md name these limits; this test keeps the docs and the code in step.
     path = ALL_WRITERS[suffix][0](tmp_path / f"synthetic{suffix}", blocks)
     assert load_whitepaper(path).type is regimes[suffix]
+
+
+_INTRODUCTION_RUN = f'<w:r><w:t xml:space="preserve">{_ART_INTRODUCTION}</w:t></w:r>'
+_REVISION = 'w:id="1" w:author="Synthetic Reviewer"'
+# The introduction inside a body paragraph ("Note: ..."), as a run of its own or inside another element.
+_INLINE_INTRODUCTIONS = {
+    "hyperlink": f'<w:hyperlink w:anchor="introduction">{_INTRODUCTION_RUN}</w:hyperlink>',
+    "run marked hidden": f'<w:r><w:rPr><w:vanish/></w:rPr><w:t xml:space="preserve">{_ART_INTRODUCTION}</w:t></w:r>',
+    "tracked insertion": f"<w:ins {_REVISION}>{_INTRODUCTION_RUN}</w:ins>",
+    "moved here": f"<w:moveTo {_REVISION}>{_INTRODUCTION_RUN}</w:moveTo>",
+    "content control": f"<w:sdt><w:sdtPr/><w:sdtContent>{_INTRODUCTION_RUN}</w:sdtContent></w:sdt>",
+    "smart tag": f'<w:smartTag w:uri="urn:synthetic" w:element="note">{_INTRODUCTION_RUN}</w:smartTag>',
+    "simple field": f'<w:fldSimple w:instr=" DOCPROPERTY Introduction ">{_INTRODUCTION_RUN}</w:fldSimple>',
+}
+
+
+@pytest.mark.parametrize(
+    ("placement", "regime"),
+    [
+        ("body", ART),
+        ("table", OTHER),
+        ("header", OTHER),
+        ("tracked insertion", OTHER),
+        ("hyperlink", ART),
+        ("run marked hidden", ART),
+        ("footer", OTHER),
+        ("moved here", OTHER),
+        ("content control", OTHER),
+        ("smart tag", OTHER),
+        ("simple field", OTHER),
+    ],
+)
+def test_a_docx_introduction_is_read_for_the_regime_only_in_a_paragraph_of_its_body(
+    tmp_path: Path, placement: str, regime: WhitepaperType
+):
+    # The regime of a DOCX is read from the runs and hyperlinks that stand directly in the paragraphs of its body
+    # (python-docx's paragraph text), runs marked hidden included, not from its tables, headers or footers, nor from
+    # text inside a tracked insertion or move, a content control, a smart tag or a simple field, as in 1.2.1
+    # (CHANGELOG, docs/SETUP.md).
+    from docx.oxml import parse_xml
+    from docx.oxml.ns import nsdecls
+
+    document = docx.Document()
+    if placement == "body":
+        document.add_paragraph(_ART_INTRODUCTION)
+    elif placement == "table":
+        document.add_table(rows=1, cols=1).cell(0, 0).text = _ART_INTRODUCTION
+    elif placement == "header":
+        document.sections[0].header.paragraphs[0].text = _ART_INTRODUCTION
+    elif placement == "footer":
+        document.sections[0].footer.paragraphs[0].text = _ART_INTRODUCTION
+    else:
+        paragraph = document.add_paragraph("Note: ")
+        for element in parse_xml(f"<w:x {nsdecls('w')}>{_INLINE_INTRODUCTIONS[placement]}</w:x>"):
+            paragraph._p.append(element)
+    for kind, text in _SST_ISSUER:
+        if kind == "heading":
+            document.add_heading(text, level=1)
+        else:
+            document.add_paragraph(text)
+    path = tmp_path / "introduction.docx"
+    document.save(path)
+    assert load_whitepaper(path).type is regime
+
+
+@pytest.mark.parametrize(
+    ("first", "second"),
+    [
+        ("The Synthetic Stable Token is an asset-", "referenced token."),
+        ("The Synthetic Stable Token is backed by a reserve of", "assets held in cash."),
+    ],
+    ids=["after a hyphen", "between words"],
+)
+@pytest.mark.parametrize(
+    ("suffix", "regime"), [(".docx", OTHER), (".md", OTHER), (".xhtml", ART), (".html", ART)]
+)
+def test_a_phrase_that_a_line_end_splits_inside_a_paragraph(
+    tmp_path: Path, first: str, second: str, suffix: str, regime: WhitepaperType
+):
+    # A line break inside a DOCX paragraph and a line end inside a Markdown paragraph keep the two parts of a phrase
+    # apart, as in 1.2.1; a <br> inside an XHTML or HTML paragraph reads as a space, or joins a word broken after its
+    # hyphen, so the phrase is found there (CHANGELOG). 1.2.1 ran the text on either side of the <br> together with
+    # nothing between them: with this markup it found only "asset-" / "referenced token";
+    # test_a_phrase_that_a_br_splits_is_found_whatever_the_whitespace_beside_it varies the whitespace.
+    path = tmp_path / f"split{suffix}"
+    issuer = _SST_ISSUER[1][1]
+    if suffix == ".docx":
+        document = docx.Document()
+        document.add_heading("Summary", level=1)
+        run = document.add_paragraph().add_run(first)
+        run.add_break()
+        run.add_text(second)
+        document.add_heading("Information about the Issuer", level=1)
+        document.add_paragraph(issuer)
+        document.save(path)
+    elif suffix == ".md":
+        path.write_text(f"## Summary\n\n{first}\n{second}\n\n## Information about the Issuer\n\n{issuer}\n", encoding="utf-8")
+    else:
+        path.write_text(
+            f"<html><body><h2>Summary</h2><p>{first}<br/>{second}</p>"
+            f"<h2>Information about the Issuer</h2><p>{issuer}</p></body></html>",
+            encoding="utf-8",
+        )
+    assert load_whitepaper(path).type is regime
+
+
+@pytest.mark.parametrize(
+    ("first", "second"),
+    [
+        ("The Synthetic Stable Token is an asset-", "referenced token."),
+        ("The Synthetic Stable Token is backed by a reserve of", "assets held in cash."),
+    ],
+    ids=["after a hyphen", "between words"],
+)
+@pytest.mark.parametrize(
+    "shape",
+    ["{}<br/>{}", "{}<br/>\n{}", "{} <br/>{}", "{}\n<br/>{}"],
+    ids=["none", "line end after", "space before", "line end before"],
+)
+@pytest.mark.parametrize("suffix", [".xhtml", ".html"])
+def test_a_phrase_that_a_br_splits_is_found_whatever_the_whitespace_beside_it(
+    tmp_path: Path, first: str, second: str, shape: str, suffix: str
+):
+    # The phrase is found with or without a space or line end beside the <br> (CHANGELOG). 1.2.1 ran the text on
+    # either side of the <br> together with nothing between them, so it found "reserve of" / "assets" only with
+    # whitespace beside the <br> and "asset-" / "referenced token" only with none.
+    path = tmp_path / f"split{suffix}"
+    path.write_text(
+        f"<html><body><h2>Summary</h2><p>{shape.format(first, second)}</p>"
+        f"<h2>Information about the Issuer</h2><p>{_SST_ISSUER[1][1]}</p></body></html>",
+        encoding="utf-8",
+    )
+    assert load_whitepaper(path).type is ART
+
+
+_STATEMENT_FIRST_LINE = "This crypto-asset white paper has not been approved by any competent authority in any Member State"
+_STATEMENT_LAST_LINE = "of the European Union."
+
+
+@pytest.mark.parametrize(
+    ("suffix", "statement", "regime"),
+    [
+        # Markdown reads the text after the statement in the line where the statement ends, also where the
+        # statement wraps over lines, and not the next line of the same paragraph.
+        (".md", f"{_STATEMENT} {_ART_INTRODUCTION}", ART),
+        (".md", f"{_STATEMENT_FIRST_LINE}\n{_STATEMENT_LAST_LINE} {_ART_INTRODUCTION}", ART),
+        (".md", f"{_STATEMENT}\n{_ART_INTRODUCTION}", OTHER),
+        (".md", f"{_STATEMENT_FIRST_LINE}\n{_STATEMENT_LAST_LINE}\n{_ART_INTRODUCTION}", OTHER),
+        # XHTML and HTML read it in the paragraph where the statement ends, after a <br> too, and not in the next
+        # paragraph.
+        (".xhtml", f"<p>{_STATEMENT} {_ART_INTRODUCTION}</p>", ART),
+        (".xhtml", f"<p>{_STATEMENT}<br/>{_ART_INTRODUCTION}</p>", ART),
+        (".xhtml", f"<p>{_STATEMENT_FIRST_LINE}</p><p>{_STATEMENT_LAST_LINE} {_ART_INTRODUCTION}</p>", ART),
+        (".xhtml", f"<p>{_STATEMENT}</p><p>{_ART_INTRODUCTION}</p>", OTHER),
+        (".html", f"<p>{_STATEMENT}<br/>{_ART_INTRODUCTION}</p>", ART),
+        (".html", f"<p>{_STATEMENT}</p><p>{_ART_INTRODUCTION}</p>", OTHER),
+    ],
+    ids=[
+        "markdown same line",
+        "markdown wrapped statement, its last line",
+        "markdown next line",
+        "markdown wrapped statement, next line",
+        "xhtml same paragraph",
+        "xhtml after a br",
+        "xhtml statement over two paragraphs, its last paragraph",
+        "xhtml next paragraph",
+        "html after a br",
+        "html next paragraph",
+    ],
+)
+def test_the_text_after_the_statement_is_read_only_where_the_statement_ends(
+    tmp_path: Path, suffix: str, statement: str, regime: WhitepaperType
+):
+    # Before any heading, Markdown, XHTML and HTML read an introduction only after the first-page statement in its
+    # last line (Markdown) or paragraph (XHTML, HTML), which joins the statement's own section (CHANGELOG); in
+    # 1.2.1 all of these were other.
+    path = tmp_path / f"statement{suffix}"
+    issuer_heading, issuer = _SST_ISSUER[0][1], _SST_ISSUER[1][1]
+    if suffix == ".md":
+        path.write_text(f"{statement}\n\n## {issuer_heading}\n\n{issuer}\n", encoding="utf-8")
+    else:
+        path.write_text(
+            f"<html><body>{statement}<h2>{issuer_heading}</h2><p>{issuer}</p></body></html>", encoding="utf-8"
+        )
+    assert load_whitepaper(path).type is regime
