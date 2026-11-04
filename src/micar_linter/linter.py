@@ -12,12 +12,14 @@ from micar_linter.anchors import SourceAnchor, build_source_anchors
 from micar_linter.contact import CONTACT_FIELDS, has_email_address, has_period_in_days, has_telephone_number
 from micar_linter.lei import (
     PARTY_SECTIONS,
+    codes_only_as_shown,
     codes_outside_sections,
     draft_reads_leis,
     has_valid_check_digits,
     leis_by_section,
     malformed_leis_by_section,
     other_person_leis,
+    reads_leis,
 )
 from micar_linter.placeholders import is_not_applicable, is_placeholder
 from micar_linter.rules import RULESETS
@@ -603,27 +605,38 @@ _OUTSIDE = (
     "außerhalb der Abschnittstexte (in einer Überschrift, einer Tabelle, einer Kopf- oder Fußzeile oder in "
     "keinem Abschnitt)",
 )
+# Where a code sits that only the text of a document file as a reader sees it holds (the reserved metadata key
+# shown_text).
+_SHOWN = (
+    "in the text as a reader sees it (without hidden, deleted or moved-away text)",
+    "im Text, wie ihn ein Leser sieht (ohne verborgenen, gelöschten oder verschobenen Text)",
+)
 
 
-def _malformed_lei_issue(code: str, section: str | None, is_de: bool) -> str:
+def _place(section: str | tuple[str, str] | None, is_de: bool) -> str:
+    """Where a code sits: a section key, None for _OUTSIDE, or _SHOWN."""
+    if isinstance(section, str):
+        return f"im Abschnitt '{section}'" if is_de else f"in section '{section}'"
+    return (section or _OUTSIDE)[1 if is_de else 0]
+
+
+def _malformed_lei_issue(code: str, section: str | tuple[str, str] | None, is_de: bool) -> str:
+    place = _place(section, is_de)
     if is_de:
-        place = f"im Abschnitt '{section}'" if section is not None else _OUTSIDE[1]
         return (
             f"Der Code '{code}' {place} ist keine korrekt gebildete LEI "
             "(20 Zeichen: 18 Großbuchstaben oder Ziffern, dann zwei Prüfziffern)."
         )
-    place = f"in section '{section}'" if section is not None else _OUTSIDE[0]
     return (
         f"The code '{code}' {place} is not a well-formed LEI "
         "(20 characters: 18 upper-case letters or digits, then two check digits)."
     )
 
 
-def _invalid_lei_issue(code: str, section: str | None, is_de: bool) -> str:
+def _invalid_lei_issue(code: str, section: str | tuple[str, str] | None, is_de: bool) -> str:
+    place = _place(section, is_de)
     if is_de:
-        place = f"im Abschnitt '{section}'" if section is not None else _OUTSIDE[1]
         return f"LEI '{code}' {place} hat ungültige Prüfziffern (ISO/IEC 7064 MOD 97-10)."
-    place = f"in section '{section}'" if section is not None else _OUTSIDE[0]
     return f"LEI '{code}' {place} fails the ISO/IEC 7064 MOD 97-10 check digits."
 
 
@@ -631,11 +644,14 @@ def _lei_check_digits_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     """Fails closed: a draft without any LEI cannot show valid check digits, and every LEI-like code in a
     draft that reads LEIs must be an LEI with valid check digits.
 
-    A draft reads LEIs in all its text once it has a party section, or a section or its file text names an LEI
-    label or holds an LEI-shaped code with a letter (lei.draft_reads_leis). Then every section is read, and so
-    is the text of a document file outside its sections (the reserved metadata key document_text, set only by
-    the document loaders: headings, tables, headers and footers, text in no section, and the text of each
-    section that the regime drops, so no regime makes a code that a section shows malformed pass). Each text
+    A draft reads LEIs in all its text once it has a party section, or a section or its file text names an
+    LEI label or holds an LEI-shaped code with a letter (lei.draft_reads_leis). Then every section is read,
+    and so is the text of a document file outside its sections (the reserved metadata key document_text,
+    set only by the document loaders: headings, tables, headers and footers, text in no section, and the text
+    of each section that the regime drops, so no regime makes a code that a section shows malformed pass).
+    Where a DOCX, PDF, XHTML or HTML file holds text a reader cannot see, the same text without it is read too
+    (the reserved metadata key shown_text, see the loaders), so text that is not shown cannot complete, split
+    or glue a code that is shown, in a section the regime drops too: reading it can only add issues. Each text
     is read as written and, where markup or a character reference changes it, as shown. An LEI-shaped code
     there with invalid check digits, and an LEI-like code that is not LEI-shaped (wrong length, lower case, a
     letter in a check-digit position, a character outside ASCII, glued to a word, split into groups), keeps
@@ -645,9 +661,13 @@ def _lei_check_digits_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     is_de = whitepaper.language == "de"
     sections = whitepaper.sections
     document_text = str(whitepaper.metadata.get("document_text", ""))
-    everywhere = draft_reads_leis(sections, document_text)
+    shown_text = str(whitepaper.metadata.get("shown_text", ""))
+    everywhere = draft_reads_leis(sections, document_text) or reads_leis(shown_text)
     outside_leis, outside_malformed = (
         codes_outside_sections(sections, document_text) if everywhere else ((), ())
+    )
+    shown_leis, shown_malformed = (
+        codes_only_as_shown(sections, document_text, shown_text) if everywhere else ((), ())
     )
     issues = [
         _invalid_lei_issue(code, section, is_de)
@@ -664,6 +684,10 @@ def _lei_check_digits_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
         for code in codes
     )
     issues.extend(_malformed_lei_issue(code, None, is_de) for code in outside_malformed)
+    issues.extend(
+        _invalid_lei_issue(code, _SHOWN, is_de) for code in shown_leis if not has_valid_check_digits(code)
+    )
+    issues.extend(_malformed_lei_issue(code, _SHOWN, is_de) for code in shown_malformed)
     if not leis_by_section(sections):
         msg = (
             "Im Entwurf wurde keine Rechtsträgerkennung (LEI, 20 Zeichen nach ISO 17442) gefunden; "

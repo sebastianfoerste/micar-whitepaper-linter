@@ -90,9 +90,11 @@ _RESERVED_METADATA_KEYS = (
     "placeholder_fields",
     "numbered_fields",
     # Set by the document loaders: the whole text of the file, headings, tables and text in no section
-    # included, and the text of each section the regime drops, which COMMON.LEI_CHECK_DIGITS reads besides
-    # the sections.
+    # included, and the text of each section the regime drops, which COMMON.LEI_CHECK_DIGITS reads besides the
+    # sections, and the whole text of the file without what a reader cannot see (DOCX, PDF, XHTML and HTML;
+    # absent where it is the same), which that rule reads too.
     "document_text",
+    "shown_text",
     "reserve_characterisation_reviewed_by",
     "reserve_characterisation_reviewed_on",
 )
@@ -510,21 +512,22 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
     extracted = ""
     headings: tuple[str, ...] = ()
     # The whole text of the file (and below, the text of the sections the regime drops), which
-    # COMMON.LEI_CHECK_DIGITS reads besides the sections.
-    document_text = ""
+    # COMMON.LEI_CHECK_DIGITS reads besides the sections, and the whole text of the file without what a reader
+    # cannot see, "" where the two are the same.
+    document_text = shown_text = ""
     try:
         if suffix == ".pdf":
             from micar_linter.document import parse_pdf
 
             parsed = parse_pdf(path)
             sections, extracted, headings = parsed.sections, parsed.text, parsed.headings
-            document_text = parsed.document_text
+            document_text, shown_text = parsed.document_text, parsed.shown_text
         elif suffix == ".docx":
             from micar_linter.document import parse_docx
 
             parsed = parse_docx(path)
             sections, extracted, headings = parsed.sections, parsed.text, parsed.headings
-            document_text = parsed.document_text
+            document_text, shown_text = parsed.document_text, parsed.shown_text
         elif suffix == ".md":
             from micar_linter.document import load_from_markdown
 
@@ -538,12 +541,11 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
                 is_numbered_layout,
                 sections_from_numbered_fields,
             )
-            from micar_linter.xhtml_parser import document_text as xhtml_document_text
-            from micar_linter.xhtml_parser import is_script_packed, load_from_xhtml
+            from micar_linter.xhtml_parser import document_texts, is_script_packed, load_from_xhtml
 
             script_packed = is_script_packed(path)
             source = _unpack_viewer_page(path) if script_packed else path
-            document_text = xhtml_document_text(source)
+            document_text, shown_text = document_texts(source)
             fields = extract_numbered_fields(source)
             if is_numbered_layout(fields):
                 # The template wording names every regime ("not an asset-referenced token"),
@@ -591,9 +593,11 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
 
     # The sections of the other regimes are dropped. Art. 19 MiCAR prescribes no first-page statement, so
     # no ART rule reads one. COMMON.LEI_CHECK_DIGITS still reads the text of each dropped section, after
-    # the text of the file and a blank line apart from it: the text of the file holds text moved away,
-    # deleted or hidden that can complete a code the section shows malformed, so a code that only a dropped
-    # section shows malformed would pass, and a change of the regime could make such a draft pass.
+    # the text of the file and a blank line apart from it, so it reads a code there as in a section the regime
+    # keeps and a change of the regime cannot make a draft pass: the text of the file holds text moved away or
+    # deleted that can complete a code the section shows malformed, which the text as a reader sees it
+    # (shown_text) leaves out only where that reading does not fail, and it joins to the code a tracked
+    # insertion, a content control, a field result or a smart tag that the section text leaves out.
     dropped = [str(sections.pop(key)) for key in _DROPPED_SECTIONS[wp_type] if key in sections]
     if dropped:
         document_text = "\n\n".join((document_text, *dropped))
@@ -608,6 +612,9 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
         "placeholder_fields": placeholder_fields,
         "document_text": document_text,
     }
+    # Only a file with text a reader cannot see carries the key.
+    if shown_text:
+        metadata["shown_text"] = shown_text
     # Only a numbered-field draft carries the key, so a point rule can tell which layout it reads.
     if numbered_fields is not None:
         metadata["numbered_fields"] = numbered_fields
