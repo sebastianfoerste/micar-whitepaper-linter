@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 import re
 import statistics
+from bisect import bisect_right
 from collections import Counter
 from collections.abc import Callable, Iterable
 from contextlib import suppress
@@ -1871,8 +1872,9 @@ class _OptionalContent:
     /Or, /Not) or else its policy (/P: /AllOn, /AnyOn by default, /AnyOff, /AllOff) over its groups (/OCGs)
     says. Anything else, and an expression nested deeper than _OC_DEPTH or read through more than
     _OC_BUDGET times, counts as shown. Each group, membership dictionary, /OCGs array (with its policy) and
-    /VE expression is read once (_once), so content that names the same ones again and again takes linear
-    time."""
+    /VE expression is read once (_once), and each array inside a /VE expression once for each depth it is
+    reached at (_sub_expression), also where many membership dictionaries share it, so content that names the
+    same ones again and again takes linear time."""
 
     _OC_DEPTH = 32
     # The most groups and operators one membership dictionary is read through, so that expressions that share
@@ -1887,6 +1889,9 @@ class _OptionalContent:
         # What has been read (_once), by what was read and how, with the object read, so that the identity of
         # a direct object stays its own.
         self._read: dict[tuple[object, str], tuple[object, bool]] = {}
+        # The expressions read (_sub_expression), by what was read and the depth, with their operands read in
+        # full so far.
+        self._arrays: dict[tuple[object, int], tuple[object, list[int], list[bool], list[bool]]] = {}
         with suppress(Exception):
             config = _resolved(_resolved(_resolved(reader.trailer["/Root"]).get("/OCProperties")).get("/D"))
             self._base_off = str(config.get("/BaseState", "/ON")) == "/OFF"
@@ -1945,6 +1950,8 @@ class _OptionalContent:
         return any(states)
 
     def _expression(self, value, depth: int) -> bool:
+        """A visibility expression read from this depth, each group and operator it reads through taking one
+        from the budget. An expression (an array) is read once for each depth (_sub_expression)."""
         self._budget -= 1
         if depth > self._OC_DEPTH or self._budget < 0:
             return True
@@ -1953,14 +1960,48 @@ class _OptionalContent:
             return self._group_shown(value)
         if not expression:
             return True
+        return self._sub_expression(value, expression, depth)
+
+    def _sub_expression(self, value, expression: list, depth: int) -> bool:
+        """What an expression's operator (/Not, /And, /Or; any other counts as shown) gives for its operands,
+        read in order, each taking from the budget what it takes; once the budget is spent, every operand
+        left counts as shown, as reading it would give.
+
+        An expression is read once for each depth (also where many membership dictionaries share it, as
+        [/And 8 0 R] with 8 0 R a long array): the operands read in full are kept, in order, with the budget
+        each took and the value of the operator so far, and a later reading takes as many of them as the
+        budget left holds (a binary search) and reads on from there. So each operand is read in full once for
+        each depth; beyond that, a reading reads in each array at most the one operand in which the budget
+        runs out; and an expression reads as a reading from scratch would."""
+        reference = _reference(value)
+        key = (reference if reference is not None else id(expression), depth)
+        if key not in self._arrays:
+            # The expression (so that the identity of a direct one stays its own), the budget its first n
+            # operands took, whether all and whether any of them are shown, and whether the first is.
+            self._arrays[key] = (expression, [0], [True], [False])
+        _, took, every, some = self._arrays[key]
+        count = len(expression) - 1
+        read = bisect_right(took, self._budget) - 1
+        self._budget -= took[read]
+        all_shown, any_shown = every[read], some[read]
+        first = some[1] if read else True
+        while read < count and self._budget >= 0:
+            before = self._budget
+            shown = self._expression(expression[read + 1], depth + 1)
+            if read == len(took) - 1 and self._budget >= 0:
+                took.append(took[-1] + before - self._budget)
+                every.append(every[-1] and shown)
+                some.append(some[-1] or shown)
+            all_shown, any_shown = all_shown and shown, any_shown or shown
+            first = shown if read == 0 else first
+            read += 1
         operator = str(_resolved(expression[0]))
-        operands = [self._expression(operand, depth + 1) for operand in expression[1:]]
         if operator == "/Not":
-            return not operands[0] if operands else True
+            return not first if count else True
         if operator == "/And":
-            return all(operands)
+            return all_shown
         if operator == "/Or":
-            return any(operands) if operands else True
+            return any_shown or read < count if count else True
         return True
 
 

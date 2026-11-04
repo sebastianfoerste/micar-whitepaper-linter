@@ -1890,6 +1890,35 @@ def test_a_pdf_form_xobject_in_optional_content_that_is_off_is_not_shown(tmp_pat
     assert parsed.shown_text == "Synthetic layer test"
 
 
+def test_pdf_optional_content_reads_a_shared_array_as_it_reads_it_alone(tmp_path: Path):
+    # One membership dictionary reads through at most 10,000 groups and operators; beyond that its content counts as
+    # shown. The array 8 0 R holds 9,984 groups that are on and then one that is off. Read through [/And 8 0 R], the
+    # group that is off is within the budget, so the content is not shown; after 20 groups more, it is beyond it, so
+    # the content counts as shown. A reader that keeps what it read of the shared array reads both as a fresh reader
+    # does, in either order.
+    from pypdf import PdfReader
+
+    from micar_linter.document import _OptionalContent
+
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R /OCProperties << /OCGs [6 0 R 7 0 R] /D << /OFF [6 0 R] >> >> >>",
+        b"<< /Type /Pages /Kids [] /Count 0 >>",
+        b"<< /Type /OCMD /VE [/And 8 0 R] >>",
+        b"<< /Type /OCMD /VE [/And %s 8 0 R] >>" % " ".join(["7 0 R"] * 20).encode(),
+        b"<< >>",
+        _OCG.encode(),
+        _OCG.encode(),
+        b"[/And %s 6 0 R]" % " ".join(["7 0 R"] * 9_984).encode(),
+    ]
+    reader = PdfReader(_pdf_objects(tmp_path / "budget.pdf", objects))
+    alone, after = (reader.get_object(number).indirect_reference for number in (3, 4))
+    assert not _OptionalContent(reader).shown(alone)
+    assert _OptionalContent(reader).shown(after)
+    for order in ((alone, after), (after, alone)):
+        optional = _OptionalContent(reader)
+        assert [optional.shown(ocmd) for ocmd in order] == [_OptionalContent(reader).shown(ocmd) for ocmd in order]
+
+
 # An integer too large for a float, and a decimal number that only an infinite float holds.
 _HUGE = "9" * 400
 
@@ -2560,7 +2589,8 @@ def test_reading_hidden_text_takes_linear_time(tmp_path: Path):
     # long its w:basedOn chain; document_texts parses an XHTML or HTML file once for its two readings, walks it twice
     # and reads each style attribute once; and the PDF loader extracts a page with hidden text twice and reads each
     # optional content group, membership dictionary, /OCGs array and /VE expression once, however often the page
-    # names it. So the time grows linearly. A quadratic reading of these inputs would take minutes.
+    # names it, and each operand of an array inside a /VE expression once for each depth, however many membership
+    # dictionaries share it. So the time grows linearly. A quadratic reading of these inputs would take minutes.
     import docx
     from docx.oxml import parse_xml
 
@@ -2641,15 +2671,39 @@ def test_reading_hidden_text_takes_linear_time(tmp_path: Path):
 
     # 8,000 marked content sequences each naming optional content of 8,000 groups: one membership dictionary given
     # directly in the /Properties resources, or 8,000 such dictionaries that share an /OCGs array or a /VE
-    # expression. The group is on, so all the text is shown.
+    # expression, or whose own /VE expressions share an array inside them (also nested deeper, and with 20,000
+    # groups, more than one dictionary may read through). In the last shape each dictionary first reads through
+    # shared chains of arrays ([/And C C], each twice the one before) that take a different part of the budget, so
+    # it reaches the shared array with a different budget left. The group is on, so all the text is shown.
     groups = " ".join(["6 0 R"] * 8_000)
+    chains = [b"[/And 6 0 R]"] + [b"[/And %d 0 R %d 0 R]" % (number, number) for number in range(8, 20)]
+    spends = [" ".join(f"{8 + bit} 0 R" for bit in range(13) if number >> bit & 1) for number in range(8_000)]
     shapes = {
         "one direct dictionary": (b"/oc0 << /Type /OCMD /OCGs [%s] /P /AllOn >>" % groups.encode(), 1, b"<< >>"),
         "shared /OCGs": (b"/oc%d << /Type /OCMD /OCGs 7 0 R /P /AllOn >>", 8_000, b"[%s]" % groups.encode()),
         "shared /VE": (b"/oc%d << /Type /OCMD /VE 7 0 R >>", 8_000, b"[/And %s]" % groups.encode()),
+        "array shared inside /VE": (b"/oc%d << /Type /OCMD /VE [/And 7 0 R] >>", 8_000, b"[/Or %s]" % groups.encode()),
+        "array shared deeper inside /VE": (
+            b"/oc%d << /Type /OCMD /VE [/Not [/Not [/And 7 0 R]]] >>",
+            8_000,
+            b"[/Or %s]" % groups.encode(),
+        ),
+        "array beyond the budget shared inside /VE": (
+            b"/oc%d << /Type /OCMD /VE [/And 7 0 R] >>",
+            8_000,
+            b"[/Or %s]" % " ".join(["6 0 R"] * 20_000).encode(),
+        ),
+        "shared array reached with different budgets": (
+            [b"/oc%d << /Type /OCMD /VE [/And %s 7 0 R] >>" % (n, spend.encode()) for n, spend in enumerate(spends)],
+            8_000,
+            b"[/Or %s]" % " ".join(["6 0 R"] * 12_000).encode(),
+        ),
     }
     for name, (entry, count, shared) in shapes.items():
-        properties = b" ".join(entry % number if count > 1 else entry for number in range(count))
+        if isinstance(entry, list):
+            properties = b" ".join(entry)
+        else:
+            properties = b" ".join(entry % number if count > 1 else entry for number in range(count))
         marks = " ".join(f"/OC /oc{number % count} BDC EMC" for number in range(8_000))
         objects = [
             b"<< /Type /Catalog /Pages 2 0 R /OCProperties << /OCGs [6 0 R] /D << /ON [6 0 R] >> >> >>",
@@ -2659,6 +2713,7 @@ def test_reading_hidden_text_takes_linear_time(tmp_path: Path):
             _stream(f"BT /F1 10 Tf 50 770 Td (LEI A1B2) Tj ET {marks}"),
             b"<< /Type /OCG /Name (Synthetic layer) >>",
             shared,
+            *chains,
         ]
         path = _pdf_objects(tmp_path / "layers.pdf", objects)
         start = time.perf_counter()
