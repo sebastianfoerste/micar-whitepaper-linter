@@ -60,8 +60,6 @@ def test_a_calendar_date_passes_however_short_the_section(text: str):
         "2026-13-01",
         "v1.2.2026",
         "Synthetic fixture notification date placeholder for reviewer demo only.",
-        # The unfilled starter template passed the former check of five words and the term "date".
-        "REPLACE: Date of notification to the competent authority (Art. 8 Abs. 1 MiCAR).",
     ],
 )
 def test_text_without_a_calendar_date_is_under_review(text: str):
@@ -99,7 +97,6 @@ def test_an_official_eu_language_passes_however_short_the_section(text: str):
         "Sitz in Deutschland",
         "The drafting team will polish the text before notification.",
         "This white paper is drawn up in a language customary in the sphere of international finance.",
-        "REPLACE: State the language of the white paper (official language of the home Member State).",
     ],
 )
 def test_text_naming_no_official_eu_language_is_under_review(text: str):
@@ -114,6 +111,17 @@ def test_text_naming_no_official_eu_language_is_under_review(text: str):
         ("", "Section is empty or absent."),
         ("TBD", "Section holds only placeholder text such as TBD or TBC."),
         ("[●]", "Section holds only placeholder text such as TBD or TBC."),
+        # The unfilled starter template passed the former check of five words and the term "date", and
+        # names a date and a language only in its note to the drafter.
+        (
+            "REPLACE: Date of notification to the competent authority (Art. 8 Abs. 1 MiCAR), e.g. 2026-03-02.",
+            "Section still holds the template's REPLACE: note.",
+        ),
+        (
+            "REPLACE: State the language of the white paper (official language of the home Member State), "
+            "e.g. English.",
+            "Section still holds the template's REPLACE: note.",
+        ),
     ],
 )
 def test_an_empty_or_placeholder_answer_is_missing(rule_id: str, section: str, text: str, issue: str):

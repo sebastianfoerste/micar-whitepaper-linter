@@ -43,6 +43,7 @@ _PART_TITLE = re.compile(
 # A short line that opens a part without a dash ("Part B", "Part AA", "B. Issuer"); a longer line that starts
 # with a letter and a full stop is body text.
 _PART_HEADING = re.compile(r"^(?:(?:part|teil)\s+(?:[A-Z]|(?-i:AA))\b|[A-Z]\.\s+\S)", re.I)
+_PART_WORD = re.compile(r"^(?:part|teil)\s+(?:[A-Z]|(?-i:AA))\b", re.I)
 # Some authors run several fields together in one paragraph ("A.1 Name: N/A A.2 Legal form: N/A").
 # The colon requirement keeps cross-references such as "see F.14" from opening a field.
 _INLINE_FIELD = re.compile(r"(?<=\s)(?=[A-Z]\.\d{1,2}\s+(?:(?![A-Z]\.\d)[^:]){1,120}:)")
@@ -256,7 +257,13 @@ def extract_numbered_fields(source: Path | bytes) -> list[NumberedField]:
             contents.setdefault(current, [])
             if inline.strip():
                 contents[current].append(inline.strip())
-        elif current and not _is_part_heading(node):
+        elif current and _is_part_heading(node):
+            # A part title ends the field before it, so an introduction between the title and the part's
+            # first field does not answer that field. A short "B. Issuer" line, which an answer such as
+            # "J. Doe" can also look like, is only left out.
+            if _PART_TITLE.match(node) or _PART_WORD.match(node):
+                current = None
+        elif current:
             contents[current].append(node)
 
     return [

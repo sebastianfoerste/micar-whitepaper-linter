@@ -101,6 +101,9 @@ def test_a_section_of_placeholders_is_missing(text: str):
         "XXL Logistics GmbH",
         "Folgt der Satzung der Quillmoor Ledger S.A.",
         "Wird nachgereicht bis 2 March 2026.",
+        # The template's marker counts only where the section opens with it, as the template writes it.
+        "Date of notification: 2 March 2026. REPLACE: confirm with counsel.",
+        "Replace: 2 March 2026",
     ],
 )
 def test_text_around_a_placeholder_is_not_a_placeholder(text: str):
@@ -187,3 +190,37 @@ def test_a_part_answered_not_applicable_in_german_reads_as_not_applicable(tmp_pa
         warning.startswith("Part I: all 2 numbered fields are marked not applicable")
         for warning in report.warnings
     )
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "REPLACE: Date of notification of the white paper to the competent authority, e.g. 2 March 2026.",
+        "  REPLACE: State the language of the white paper, e.g. English.",
+        "REPLACE:",
+    ],
+)
+def test_a_section_still_holding_the_template_note_is_missing(text: str):
+    # The starter template's note to the drafter is no answer, however long it is or whatever it names:
+    # before, it read as written text, and a note naming a date or a language could even pass.
+    for rule_id, section in (("COMMON.NOTIFICATION_DATE", "notification_date"), ("COMMON.LANGUAGE", "language")):
+        whitepaper = Whitepaper(
+            title="Quillmoor draft", type=WhitepaperType.OTHER, sections={section: text}, metadata={}
+        )
+        finding = next(f for f in lint_whitepaper(whitepaper).findings if f.rule.rule_id == rule_id)
+        assert (finding.status, finding.issues) == ("missing", ("Section still holds the template's REPLACE: note.",))
+
+
+def test_a_party_section_still_holding_the_template_note_gives_the_lei_rules_missing():
+    whitepaper = Whitepaper(
+        title="Quillmoor draft",
+        type=WhitepaperType.ART,
+        sections={"issuer": "REPLACE: Name, registration date, LEI or other identifier of the issuer."},
+        metadata={},
+    )
+    statuses = {
+        f.rule.rule_id: f.status
+        for f in lint_whitepaper(whitepaper).findings
+        if f.rule.rule_id in {"COMMON.LEI_CHECK_DIGITS", "COMMON.LEI_CONSISTENCY"}
+    }
+    assert statuses == {"COMMON.LEI_CHECK_DIGITS": "missing", "COMMON.LEI_CONSISTENCY": "missing"}

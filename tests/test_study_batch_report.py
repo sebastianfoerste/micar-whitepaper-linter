@@ -7,6 +7,7 @@ from pathlib import Path
 
 from micar_linter.batch import (
     build_study_findings,
+    main_study_batch,
     render_study_findings_json,
     write_study_findings_csv,
 )
@@ -221,3 +222,27 @@ def test_study_rules_accept_response_time_and_ticker_title(tmp_path: Path):
     assert "ANNEX_I_PART_A_06_CONTACT_RESPONSE_PERIOD" not in finding_ids
     assert "ANNEX_I_PART_D_01_ASSET_NAME_ABBREVIATION" not in finding_ids
     assert "Named Parent Limited" not in rendered
+
+
+def test_study_batch_that_processes_no_document_writes_nothing_and_exits_1(tmp_path: Path, capsys):
+    # Without the cache every document is excluded; the run used to write an empty sample over the
+    # committed findings and exit 0.
+    manifest_path = _manifest(tmp_path)
+    out = tmp_path / "findings-pseudonymous.json"
+    code = main_study_batch(
+        ["--manifest", str(manifest_path), "--cache", str(tmp_path / "missing-cache"), "--out", str(out)]
+    )
+    assert code == 1
+    assert not out.exists()
+    assert not out.with_suffix(".csv").exists()
+    assert "cached_document_not_found (1)" in capsys.readouterr().err
+
+
+def test_study_batch_that_processes_a_document_writes_and_exits_0(tmp_path: Path):
+    manifest_path = _manifest(tmp_path)
+    cache = tmp_path / "cache"
+    _cached_html(cache)
+    out = tmp_path / "findings-pseudonymous.json"
+    assert main_study_batch(["--manifest", str(manifest_path), "--cache", str(cache), "--out", str(out)]) == 0
+    assert json.loads(out.read_text(encoding="utf-8"))["summary"]["documents_reviewed"] == 1
+    assert out.with_suffix(".csv").exists()

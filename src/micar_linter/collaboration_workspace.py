@@ -17,6 +17,9 @@ from typing import Any
 
 from lxml import etree
 
+from micar_linter.document import match_heading_to_section, parse_docx
+from micar_linter.rules import RULESETS
+
 W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 MC_NS = "http://schemas.openxmlformats.org/markup-compatibility/2006"
 R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -182,17 +185,47 @@ def update_cell(
     return result
 
 
+def _section_headings(document: dict[str, Any]) -> dict[str, str]:
+    """The first heading of a DOCX draft that names each section, by section key, as parse_docx reads the
+    headings. Empty for another format, or when the file is gone or no longer has the digest it was read with.
+    """
+    path = Path(document.get("source_path", ""))
+    if path.suffix.lower() != ".docx" or not path.is_file():
+        return {}
+    if hashlib.sha256(path.read_bytes()).hexdigest() != document.get("source_sha256"):
+        return {}
+    headings: dict[str, str] = {}
+    for heading in parse_docx(path).headings:
+        for key in match_heading_to_section(heading):
+            headings.setdefault(key, heading)
+    return headings
+
+
 def build_change_set(workspace: dict[str, Any]) -> dict[str, Any]:
+    """One pending change per finding that did not pass.
+
+    A change built from a finding replaces no draft text: its original_text is empty, and its proposed_text,
+    the remediation, is added. anchor_text names the heading of a DOCX draft under which it belongs (the
+    first heading that names the rule's section), or is empty when the draft has no such heading or is not a
+    DOCX; the tracked DOCX export inserts the change after that heading (#59).
+    """
+    sections = {rule.rule_id: rule.section for rules in RULESETS.values() for rule in rules}
+    documents = {document["document_id"]: document for document in workspace["vault"]["documents"]}
+    headings: dict[str, dict[str, str]] = {}
     changes = []
     for row in workspace["review_table"]["rows"]:
         if row["status"] == "PASS":
             continue
+        document_id = row["document_id"]
+        if document_id not in headings:
+            headings[document_id] = _section_headings(documents.get(document_id, {}))
         changes.append(
             {
                 "id": f"change:{row['row_id']}",
-                "document_id": row["document_id"],
+                "document_id": document_id,
                 "locator": row["rule_id"],
-                "original_text": row["extracted_value"],
+                "original_text": "",
+                "anchor_text": headings[document_id].get(sections.get(row["rule_id"], ""), ""),
                 "proposed_text": row["remediation"]
                 or "Add the required MiCAR disclosure with verified support.",
                 "rationale": f"Review against {row['citation']}",
@@ -224,6 +257,19 @@ def decide_change(change_set: dict[str, Any], change_id: str, decision: str) -> 
         item["decision"] in {"accepted", "rejected"} for item in result["changes"]
     )
     return result
+
+
+def _inserted_paragraph(
+    text: str, ids: Iterator[int], author: str, date: str, excluded: set[etree._Element]
+) -> etree._Element:
+    """A new paragraph holding the text as one tracked insertion, which Reject All removes whole."""
+    insertion = _revision("ins", ids, author, date)
+    inserted_run = etree.SubElement(insertion, f"{{{W_NS}}}r")
+    etree.SubElement(inserted_run, f"{{{W_NS}}}t").text = text
+    excluded.add(insertion)
+    paragraph = etree.Element(f"{{{W_NS}}}p")
+    paragraph.append(insertion)
+    return paragraph
 
 
 def _revision(tag: str, ids: Iterator[int], author: str, date: str) -> etree._Element:
@@ -507,8 +553,9 @@ def _contents_styles(styles_path: Path, parser: etree.XMLParser) -> set[str]:
 @dataclass(frozen=True)
 class TrackedDocxExport:
     """What export_tracked_docx wrote: the output path and the ids of the accepted changes it placed in the
-    document, appended at its end because their original text was not found where it can be redlined, or left
-    out because they belong to another document of the change set. A change without an id is named by its
+    document, appended at its end because their original text was not found where it can be redlined or,
+    for a change that replaces nothing, the document has no paragraph reading its anchor_text, or left out
+    because they belong to another document of the change set. A change without an id is named by its
     position, "changes[3]"."""
 
     path: Path
@@ -530,11 +577,14 @@ def export_tracked_docx(
     """Write a copy of the source DOCX with the accepted changes of the change set as tracked revisions.
 
     A change whose original text is found where it can be redlined is written there as a tracked deletion
-    and insertion. Any other change, including one whose text lies only across the edge of a content control
-    or over part of a link to an external address, is appended at the end of the body as a tracked insertion
-    alone, with no deletion of text the document never held (#61), and its id is reported as unplaced. With a
-    change set that names its documents (`source_digests`), only the changes whose `document_id` maps to the
-    source's digest apply, besides changes without a `document_id`; the others are reported as skipped (#60).
+    and insertion. A change that replaces nothing (empty original_text, as build_change_set writes it) is
+    inserted as a new paragraph after the first paragraph outside a table of contents that reads its
+    anchor_text, the heading of its section (#59). Any other change, including one whose text lies only across
+    the edge of a content control or over part of a link to an external address, is appended at the end of
+    the body as a tracked insertion alone, with no deletion of text the document never held (#61), and its id
+    is reported as unplaced. With a change set that names its documents (`source_digests`), only the changes
+    whose `document_id` maps to the source's digest apply, besides changes without a `document_id`; the others
+    are reported as skipped (#60).
     """
     if source.resolve() == output.resolve():
         raise ValueError("redline output must not overwrite the source document")
@@ -582,6 +632,7 @@ def export_tracked_docx(
             )
         }
         candidates = [p for p in candidates if p not in contents] + [p for p in candidates if p in contents]
+        last_inserted: dict[etree._Element, etree._Element] = {}
         for index, change in enumerate(change_set["changes"]):
             if change["decision"] != "accepted":
                 continue
@@ -605,14 +656,26 @@ def export_tracked_docx(
                 _redline_match(*match, original, proposed, ids, author, change_timestamp, excluded)
                 placed.append(change_id)
                 continue
-            # The original text is not in the document (for a change set built from a draft, it is the rule
-            # label, #59), so the proposed text is appended as an insertion that Reject All removes whole.
-            insertion = _revision("ins", ids, author, change_timestamp)
-            inserted_run = etree.SubElement(insertion, f"{{{W_NS}}}r")
-            etree.SubElement(inserted_run, f"{{{W_NS}}}t").text = proposed
-            excluded.add(insertion)
-            paragraph = etree.Element(f"{{{W_NS}}}p")
-            paragraph.append(insertion)
+            anchor = (change.get("anchor_text") or "").strip()
+            heading = next(
+                (
+                    candidate
+                    for candidate in (candidates if anchor and not original else [])
+                    if candidate not in contents
+                    and "".join(candidate.xpath(_LIVE_TEXT, namespaces=namespaces)).strip() == anchor
+                ),
+                None,
+            )
+            paragraph = _inserted_paragraph(proposed, ids, author, change_timestamp, excluded)
+            if heading is not None:
+                # A change that replaces nothing goes under its heading, after the changes placed there
+                # before it (#59).
+                last_inserted.get(heading, heading).addnext(paragraph)
+                last_inserted[heading] = paragraph
+                placed.append(change_id)
+                continue
+            # The original text is not in the document, or the change replaces nothing and names no heading
+            # the document has (a missing section), so the proposed text is appended at the end.
             body.insert(body.index(section) if section is not None else len(body), paragraph)
             unplaced.append(change_id)
         tree.write(str(document_path), xml_declaration=True, encoding="UTF-8", standalone=True)

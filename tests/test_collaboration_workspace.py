@@ -66,12 +66,12 @@ def test_docx_redline_uses_tracked_insertions_and_deletions(tmp_path) -> None:
     workspace = _workspace()
     change_set = build_change_set(workspace)
     first = change_set["changes"][0]
+    # A reviewer's change that replaces draft text: the paragraph that holds it is redlined in place.
+    first["original_text"] = "Summary to be rewritten"
     source = tmp_path / "source.docx"
     document = docx.Document()
     document.add_paragraph("Original clause survives")
     document.add_table(rows=1, cols=1).cell(0, 0).text = "Original table survives"
-    # The change set built from a draft records the rule label as the original text (#59); a paragraph
-    # that holds it lets the accepted change be redlined in place.
     document.add_paragraph(first["original_text"])
     document.save(source)
     source_digest = hashlib.sha256(source.read_bytes()).hexdigest()
@@ -150,7 +150,8 @@ def test_export_applies_only_the_changes_of_the_exported_document(tmp_path) -> N
         xml = etree.fromstring(package.read("word/document.xml"))
     ns = {"w": _W}
     assert xml.xpath("count(.//w:ins)", namespaces=ns) == len(own)
-    assert xml.xpath("count(.//w:del)", namespaces=ns) == len(result.placed)
+    # Changes built from a draft replace nothing (#59).
+    assert xml.xpath("count(.//w:del)", namespaces=ns) == 0
     assert hashlib.sha256(source.read_bytes()).hexdigest() == docx_digest
     # A change set without document ids keeps applying every change, as before.
     change_set["source_digests"] = {"source": docx_digest}
@@ -159,6 +160,58 @@ def test_export_applies_only_the_changes_of_the_exported_document(tmp_path) -> N
     everything = export_tracked_docx(source, tmp_path / "all-reviewed.docx", change_set)
     assert everything.skipped == ()
     assert len(everything.placed + everything.unplaced) == len(own) + len(other)
+
+
+def test_change_set_built_from_a_docx_inserts_each_change_under_its_heading(tmp_path) -> None:
+    # #59: a change built from a draft used the rule label as its original text, so none of the changes of
+    # examples/sample-draft.docx was placed. It now replaces nothing and names the heading of its section.
+    source = Path("examples/sample-draft.docx")
+    change_set = build_change_set(build_whitepaper_workspace([source]))
+    assert {change["original_text"] for change in change_set["changes"]} == {""}
+    anchored = {change["id"]: change["anchor_text"] for change in change_set["changes"] if change["anchor_text"]}
+    assert anchored
+    for change in list(change_set["changes"]):
+        change_set = decide_change(change_set, change["id"], "accepted")
+    result = export_tracked_docx(source, tmp_path / "anchored.docx", change_set)
+    assert set(result.placed) == set(anchored)
+    assert set(result.unplaced) == {change["id"] for change in change_set["changes"]} - set(anchored)
+    with zipfile.ZipFile(source) as package:
+        before = etree.fromstring(package.read("word/document.xml"))
+    with zipfile.ZipFile(result.path) as package:
+        after = etree.fromstring(package.read("word/document.xml"))
+    ns = {"w": _W}
+    assert after.xpath("count(.//w:del)", namespaces=ns) == 0
+    texts = ["".join(p.xpath(".//w:t/text()", namespaces=ns)) for p in after.xpath(".//w:body/w:p", namespaces=ns)]
+    proposed = {change["id"]: change["proposed_text"] for change in change_set["changes"]}
+    # Each placed change follows its heading, after any change placed there before it.
+    for change_id, heading in anchored.items():
+        position = texts.index(heading)
+        following = texts[position + 1 :]
+        assert proposed[change_id] in following[: len(anchored)]
+    # Reject All leaves the draft's own paragraphs as they were.
+    for insertion in after.xpath(".//w:ins", namespaces=ns):
+        paragraph = insertion.getparent()
+        paragraph.getparent().remove(paragraph)
+    assert [
+        "".join(p.xpath(".//w:t/text()", namespaces=ns)) for p in after.xpath(".//w:body/w:p", namespaces=ns)
+    ] == ["".join(p.xpath(".//w:t/text()", namespaces=ns)) for p in before.xpath(".//w:body/w:p", namespaces=ns)]
+
+
+def test_change_with_an_anchor_the_document_lacks_is_appended(tmp_path) -> None:
+    source = tmp_path / "anchor.docx"
+    _docx_with_paragraphs(source, _run("Summary"), _run("The issuer is Example AG."))
+    change_set = _accepted_change_set(source, "", "Add the key information.")
+    change_set["changes"][0].update(id="change:summary", anchor_text="Risk warning")
+    result = export_tracked_docx(source, tmp_path / "anchor-missing.docx", change_set)
+    assert (result.placed, result.unplaced) == ((), ("change:summary",))
+    change_set["changes"][0]["anchor_text"] = "Summary"
+    result = export_tracked_docx(source, tmp_path / "anchor-found.docx", change_set)
+    assert (result.placed, result.unplaced) == (("change:summary",), ())
+    with zipfile.ZipFile(result.path) as package:
+        xml = etree.fromstring(package.read("word/document.xml"))
+    paragraphs = xml.xpath(".//w:body/w:p", namespaces={"w": _W})
+    assert _paragraph_views(paragraphs[1]) == ("Add the key information.", "")
+    assert _paragraph_views(paragraphs[2]) == ("The issuer is Example AG.",) * 2
 
 
 def test_validate_workflow_pack_accepts_the_built_pack_and_names_each_problem() -> None:

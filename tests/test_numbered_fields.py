@@ -106,6 +106,31 @@ def test_part_title_between_paragraph_fields_ends_the_field_before_it(tmp_path: 
     assert not fields["A.2"].answered
 
 
+@pytest.mark.parametrize("title", [*sorted(PART_TITLES.values()), "Part B", "Teil AA"])
+def test_text_after_a_part_title_does_not_answer_the_field_before_it(tmp_path: Path, title: str):
+    # An introduction between a part title and the part's first field belongs to no field: before the
+    # fix it joined the field before the title, so an "N/A" field there read as answered.
+    path = _write(
+        tmp_path,
+        "<p>A.1 Name: Quillmoor Ledger S.A.</p><p>A.2 Legal form</p><p>N/A</p>"
+        f"<p>{title}</p>"
+        "<p>This part describes the issuer of the crypto-asset in some detail for the reader.</p>"
+        "<p>B.1 Name: Quillmoor Issuer AG</p>",
+    )
+    fields = {field.field_id: field for field in extract_numbered_fields(path)}
+    assert fields["A.2"].content == "N/A"
+    assert not fields["A.2"].answered
+    assert fields["B.1"].content == "Quillmoor Issuer AG"
+
+
+def test_short_letter_line_in_a_field_does_not_end_it(tmp_path: Path):
+    # "J. Doe" looks like a short "B. Issuer" part line, but such a line does not end the field: the
+    # field's next line stays in it.
+    path = _write(tmp_path, "<p>A.12 Members of the management body</p><p>J. Doe</p><p>Chair of the board</p>")
+    fields = {field.field_id: field for field in extract_numbered_fields(path)}
+    assert "Chair of the board" in fields["A.12"].content
+
+
 @pytest.mark.parametrize(
     "text",
     [
