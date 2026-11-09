@@ -123,6 +123,43 @@ def test_text_after_a_part_title_does_not_answer_the_field_before_it(tmp_path: P
     assert fields["B.1"].content == "Quillmoor Issuer AG"
 
 
+@pytest.mark.parametrize(
+    "reference",
+    [
+        "Part E of this white paper describes the offer.",
+        "Teil B dieses Whitepapers beschreibt den Emittenten.",
+        "Part E.3 sets out the amount of the offer.",
+        "part a of the terms applies.",
+    ],
+)
+def test_cross_reference_to_a_part_does_not_end_the_field(tmp_path: Path, reference: str):
+    # A line that starts with "Part E" but is no part title, as a cross-reference wrapped to the start of a
+    # line in a PDF conversion, is left out and keeps the rest of the answer in its field.
+    path = _write(
+        tmp_path,
+        "<p>D.2 Description of the project</p><p>The project runs a shared ledger for logistics firms.</p>"
+        f"<p>{reference}</p><p>The ledger settles freight invoices within one business day.</p>"
+        "<p>E.1 Amount: 1000</p>",
+    )
+    fields = {field.field_id: field for field in extract_numbered_fields(path)}
+    assert fields["D.2"].content.endswith("The ledger settles freight invoices within one business day.")
+
+
+@pytest.mark.parametrize(
+    "header",
+    ["Part A - Information about the offeror or the person seeking admission to trading", "Part A"],
+)
+def test_title_of_the_fields_own_part_does_not_end_the_field(tmp_path: Path, header: str):
+    # A PDF conversion can repeat the part title as a page header between a field's label and its answer.
+    path = _write(
+        tmp_path,
+        f"<p>A.8 Contact telephone number</p><p>{header}</p><p>+49 30 0000 0000</p>"
+        "<p>A.9 E-mail address: contact@offeror.example</p>",
+    )
+    fields = {field.field_id: field for field in extract_numbered_fields(path)}
+    assert fields["A.8"].content == "+49 30 0000 0000"
+
+
 def test_short_letter_line_in_a_field_does_not_end_it(tmp_path: Path):
     # "J. Doe" looks like a short "B. Issuer" part line, but such a line does not end the field: the
     # field's next line stays in it.

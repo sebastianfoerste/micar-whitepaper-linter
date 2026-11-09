@@ -779,7 +779,8 @@ def status_logic(rule: Rule) -> str:
     if rule.rule_id in ANSWER_CHECKS:
         missing = (
             f'<ul class="plain"><li><strong>Missing</strong>: section <code>{_e(rule.section)}</code> is absent '
-            "or empty, or holds only placeholder text such as TBD or TBC.</li>"
+            "or empty, holds only placeholder text such as TBD or TBC, or opens with the starter template's "
+            "<code>REPLACE:</code> note.</li>"
         )
         if rule.rule_id == "COMMON.NOTIFICATION_DATE":
             return (
@@ -811,8 +812,9 @@ def status_logic(rule: Rule) -> str:
             "confirmation, not trusted facts.</li></ul>"
         )
     missing = (
-        f"<li><strong>Missing</strong>: section <code>{_e(rule.section)}</code> is absent or empty, or holds "
-        "only placeholder text such as TBD or TBC.</li>"
+        f"<li><strong>Missing</strong>: section <code>{_e(rule.section)}</code> is absent or empty, holds only "
+        "placeholder text such as TBD or TBC, or opens with the starter template's <code>REPLACE:</code> "
+        "note.</li>"
     )
     if rule.rule_id in NOT_APPROVED_STATEMENT_RULE_IDS:
         emt = rule.rule_id.startswith("ANNEX_III.")
@@ -930,7 +932,8 @@ def _contact_status_logic(rule: Rule) -> str:
     return (
         f'<ul class="plain"><li><strong>Missing</strong>: in a numbered-field XHTML draft, {fields} are each '
         f"empty, absent or hold only placeholder text such as TBD; in any other draft, section {section} is absent "
-        "or empty, or holds only placeholder text.</li>"
+        "or empty, holds only placeholder text, or opens with the starter template's <code>REPLACE:</code> "
+        "note.</li>"
         "<li><strong>Review</strong>: in a numbered-field XHTML draft, one of those fields is empty or absent, holds "
         "only a placeholder, is marked not applicable, which the template does not provide for, or gives no "
         f"telephone number ({phone}), no e-mail address ({email}) or no number of days ({days}). In any other "

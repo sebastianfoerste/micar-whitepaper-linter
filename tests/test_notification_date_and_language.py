@@ -111,8 +111,8 @@ def test_text_naming_no_official_eu_language_is_under_review(text: str):
         ("", "Section is empty or absent."),
         ("TBD", "Section holds only placeholder text such as TBD or TBC."),
         ("[●]", "Section holds only placeholder text such as TBD or TBC."),
-        # The unfilled starter template passed the former check of five words and the term "date", and
-        # names a date and a language only in its note to the drafter.
+        # The unfilled starter template passed the former checks on its notes, which hold the words "date"
+        # and "language"; a note that names a date or a language, as these do, is no answer either.
         (
             "REPLACE: Date of notification to the competent authority (Art. 8 Abs. 1 MiCAR), e.g. 2026-03-02.",
             "Section still holds the template's REPLACE: note.",
@@ -127,6 +127,11 @@ def test_text_naming_no_official_eu_language_is_under_review(text: str):
 def test_an_empty_or_placeholder_answer_is_missing(rule_id: str, section: str, text: str, issue: str):
     finding = _finding(rule_id, section, text)
     assert (finding.status, finding.word_count, finding.issues) == ("missing", 0, (issue,))
+
+
+def test_a_german_draft_still_holding_the_template_note_gets_the_german_issue():
+    finding = _finding("COMMON.NOTIFICATION_DATE", "notification_date", "REPLACE: Datum der Übermittlung.", "de")
+    assert (finding.status, finding.issues) == ("missing", ("Abschnitt enthält noch den Hinweis REPLACE: der Vorlage.",))
 
 
 def test_german_drafts_get_german_issues():
