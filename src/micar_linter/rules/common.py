@@ -180,30 +180,6 @@ COMMON_RULES: tuple[Rule, ...] = (
     ),
 )
 
-# COMMON.DTI_FORMAT reads the ISO 24165 Digital Token Identifiers offline (micar_linter.dti). Art. 3
-# Abs. 1 und 2 VO (EU) 2025/421, applicable from 23 December 2025, asks for the type 3 DTI of the
-# functionally fungible group and a DTI for each crypto-asset where a DTI is provided; the template of
-# VO (EU) 2024/2984 carries them in fields F.13 and F.14 (Table 2, Part F), B.15 and B.16 (Table 3, Part B)
-# and B.12 and B.13 (Table 4, Part B), and its Table 1 gives {DTI} as 9 alphanumerical characters (OJ
-# texts read on 2026-11-10). One ID with one variant per regime, each reading the part that holds the
-# fields; rules/__init__.py puts each variant into its regime's set.
-def _dti_rule(table: str, part: str, section: str) -> Rule:
-    return Rule(
-        rule_id="COMMON.DTI_FORMAT",
-        citation=(
-            f"Art. 3 Abs. 1 und 2 VO (EU) 2025/421; Anhang Tabelle {table} Teil {part} VO (EU) 2024/2984"
-        ),
-        section=section,
-        label="Digital Token Identifiers of the crypto-asset and its functionally fungible group (ISO 24165)",
-        min_words=0,
-        severity=Severity.MINOR,
-    )
-
-
-DTI_RULE_OTHER = _dti_rule("2", "F", "crypto_asset")
-DTI_RULE_ART = _dti_rule("3", "B", "art")
-DTI_RULE_EMT = _dti_rule("4", "B", "emt")
-
 # Art. 51 Abs. 4 MiCAR asks an e-money token white paper only to warn that investor compensation
 # and deposit guarantee schemes do not cover the token. The loss-of-value, transferability and
 # liquidity statements of Art. 6 Abs. 5 and Art. 19 Abs. 4 have no counterpart there.

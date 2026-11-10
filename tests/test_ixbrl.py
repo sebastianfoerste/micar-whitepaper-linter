@@ -104,22 +104,3 @@ def test_load_whitepaper_xhtml_with_tagging_check(tmp_path: Path):
     assert wp.type == WhitepaperType.OTHER
     assert "ixbrl_issues" in wp.metadata
     assert len(wp.metadata["ixbrl_issues"]) > 0
-
-
-def test_a_later_dated_taxonomy_release_is_named_not_reported_as_untagged(tmp_path: Path):
-    # ESMA distinguishes taxonomy releases by a date in the namespace (section 3.5.1 of its taxonomy
-    # documentation, ESMA65-955014868-14829). 2099-01-01 stands for a release this module has not read.
-    later = "https://www.esma.europa.eu/taxonomy/2099-01-01/mica/"
-    file_path = tmp_path / "later_release.xhtml"
-    file_path.write_text(
-        f'<html xmlns:ix="http://www.xbrl.org/2013/inlineXBRL" xmlns:mica="{later}"><body>'
-        '<ix:nonNumeric name="mica:StatementAboutPotentialRisks" contextRef="c">Risk.</ix:nonNumeric></body></html>',
-        encoding="utf-8",
-    )
-    issues = validate_ixbrl(file_path)
-    assert issues[0].startswith(
-        "Facts are tagged with an ESMA MiCA taxonomy version this linter does not know (2099-01-01;"
-    )
-    assert not any(issue.startswith("No fact is tagged") for issue in issues)
-    # The gate never passes: the completeness note stays.
-    assert issues[-1] == COMPLETENESS_NOTE

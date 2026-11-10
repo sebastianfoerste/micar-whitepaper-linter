@@ -1,7 +1,7 @@
 MiCAR Whitepaper Linter - Synthetic EuroStable ART White Paper
 Whitepaper type: ART
 ==============================================================================
-Pass: 17  |  Review: 3  |  Missing: 1  |  Blockers: 3
+Pass: 17  |  Review: 2  |  Missing: 1  |  Blockers: 3
 
 [PASS  ] [BLOCKER] COMMON.SUMMARY  Plain-language summary
            Cite:  Art. 6(7), Art. 19(6), Art. 51(6) MiCAR
@@ -43,13 +43,6 @@ Pass: 17  |  Review: 3  |  Missing: 1  |  Blockers: 3
            Cite:  Annex I, Part A, point 5, Part B, point 5, Part C, point 5, Annex II, Part A, point 5, Annex III, Part A, point 5 MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'issuer'  (0 words)
-
-[REVIEW] [MINOR  ] COMMON.DTI_FORMAT  Digital Token Identifiers of the crypto-asset and its functionally fungible group (ISO 24165)
-           Cite:  Art. 3(1) and (2) Regulation (EU) 2025/421; Annex, Table 3, Part B Regulation (EU) 2024/2984
-           Text:  https://eur-lex.europa.eu/eli/reg_del/2025/421/oj/eng
-           Text:  https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng
-           Section: 'art'  (143 words)
-           -  No ISO 24165 Digital Token Identifier (DTI) is given. Where no DTI is available, Art. 3(3) of Delegated Regulation (EU) 2025/421 asks for a digital token identifier approved by ESMA at Union level.
 
 [PASS  ] [BLOCKER] ANNEX_II.A  Information about the issuer of the ART (identity, management body, governance arrangements)
            Cite:  Annex II, Part A MiCAR

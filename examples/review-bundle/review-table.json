@@ -1,6 +1,6 @@
 {
   "schema": "micar-whitepaper-linter.review-table",
-  "generated_at": "2026-11-10T21:27:00.657402+00:00",
+  "generated_at": "2026-10-29T06:57:48.094210+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "source": {
@@ -8,9 +8,9 @@
     "sha256": "e8969fa1d2b061343085e85b22eec491f0b7adde670f9abfa937f2737fbb46ff"
   },
   "summary": {
-    "total": 21,
+    "total": 20,
     "pass": 17,
-    "review": 3,
+    "review": 2,
     "missing": 1,
     "blockers": 3,
     "export_gate": "blocked"
@@ -29,7 +29,7 @@
   "editor_draft_package": {
     "schema": "micar-whitepaper-linter.editor-draft-package.v1",
     "status": "draft_only",
-    "suggested_edit_count": 4,
+    "suggested_edit_count": 3,
     "blocker_count": 3,
     "formats": [
       "json",
@@ -40,9 +40,9 @@
   },
   "review_table_economics": {
     "schema": "micar-whitepaper-linter.review-table-economics.v1",
-    "row_count": 21,
+    "row_count": 20,
     "column_count": 12,
-    "estimated_cell_tasks": 252,
+    "estimated_cell_tasks": 240,
     "route": "deterministic_cli",
     "max_vault_documents": 100000,
     "reset_strategy": "Each rule row and generated review column is evaluated from deterministic parser output and the local rule catalog.",
@@ -53,7 +53,7 @@
     "mode": "deterministic_cli",
     "external_action_allowed": false,
     "route_summary": "Rule evaluation, coverage, remediation and review-table export are deterministic. No LLM route or external delivery route is present.",
-    "context_window_strategy": "21 rule row(s), each evaluated against deterministic parser output and the local rule catalog.",
+    "context_window_strategy": "20 rule row(s), each evaluated against deterministic parser output and the local rule catalog.",
     "source_connectors": [
       {
         "key": "draft-whitepaper",
@@ -66,14 +66,14 @@
         "key": "rule-catalog",
         "label": "MiCAR rule catalog",
         "status": "enabled",
-        "scope": "21 rule row(s) across art.",
+        "scope": "20 rule row(s) across art.",
         "gate": "Rules are deterministic and versioned in source control."
       },
       {
         "key": "source-anchors",
         "label": "Source anchors",
         "status": "enabled",
-        "scope": "21/21 row(s) include source anchors.",
+        "scope": "20/20 row(s) include source anchors.",
         "gate": "Citation and source anchor coverage must be checked by the reviewer."
       },
       {
@@ -146,7 +146,7 @@
       "Do not mark a blocker cured before the deterministic linter is rerun.",
       "Do not describe a notification, publication or exchange submission as approved."
     ],
-    "suggested_prompt": "Role: MiCAR white paper reviewer.\nObjective: remediate deterministic findings for Synthetic EuroStable ART White Paper.\nWhite paper type: art.\nOpen blockers: COMMON.IXBRL_TAGGING, ANNEX_II.G.DEPOSIT_FLOOR_REVIEW, ANNEX_II.G.CUSTODY.\nMissing rules: COMMON.IXBRL_TAGGING.\nSource anchors: 21/21 rule row(s).\nOutput: remediation by rule id, source anchor to verify, reviewer decision and filing gate.\nReview gate: draft only. Rerun the deterministic CLI before relying on any cure."
+    "suggested_prompt": "Role: MiCAR white paper reviewer.\nObjective: remediate deterministic findings for Synthetic EuroStable ART White Paper.\nWhite paper type: art.\nOpen blockers: COMMON.IXBRL_TAGGING, ANNEX_II.G.DEPOSIT_FLOOR_REVIEW, ANNEX_II.G.CUSTODY.\nMissing rules: COMMON.IXBRL_TAGGING.\nSource anchors: 20/20 rule row(s).\nOutput: remediation by rule id, source anchor to verify, reviewer decision and filing gate.\nReview gate: draft only. Rerun the deterministic CLI before relying on any cure."
   },
   "rows": [
     {
@@ -1314,155 +1314,6 @@
           "label": "Citation coverage",
           "value": "anchor_and_citation",
           "status": "complete",
-          "review_gate": "Qualified lawyer review required before external use.",
-          "external_action_allowed": false
-        },
-        {
-          "column_id": "export_gate",
-          "label": "Export gate",
-          "value": "review_required",
-          "status": "needs_review",
-          "review_gate": "Qualified lawyer review required before external use.",
-          "external_action_allowed": false
-        }
-      ]
-    },
-    {
-      "row_id": "review-row-7499cc59fa612e14",
-      "rule_id": "COMMON.DTI_FORMAT",
-      "citation": "Art. 3 Abs. 1 und 2 VO (EU) 2025/421; Anhang Tabelle 3 Teil B VO (EU) 2024/2984",
-      "section": "art",
-      "label": "Digital Token Identifiers of the crypto-asset and its functionally fungible group (ISO 24165)",
-      "severity": "MINOR",
-      "status": "review",
-      "blocker": false,
-      "word_count": 143,
-      "issues": [
-        "No ISO 24165 Digital Token Identifier (DTI) is given. Where no DTI is available, Art. 3(3) of Delegated Regulation (EU) 2025/421 asks for a digital token identifier approved by ESMA at Union level."
-      ],
-      "remediation": "Strengthen the disclosure before sign-off.",
-      "reviewer_decision": "lawyer_review_required",
-      "verification_state": "needs_verification",
-      "source_anchor": {
-        "section_key": "art",
-        "parser_source_type": "json",
-        "stable_anchor_id": "json:art:6477f8e0fa8c706e",
-        "section_length": 912
-      },
-      "anchor_verified": true,
-      "citation_coverage": "anchor_and_citation",
-      "export_gate": "review_required",
-      "playbook": {
-        "id": "art-art",
-        "skill": "rule-review-playbook",
-        "rule_scope": [
-          "COMMON.DTI_FORMAT"
-        ],
-        "citation": "Art. 3 Abs. 1 und 2 VO (EU) 2025/421; Anhang Tabelle 3 Teil B VO (EU) 2024/2984",
-        "severity": "MINOR",
-        "review_gate": "Qualified lawyer review required before external use.",
-        "priority": "standard_review",
-        "external_action_allowed": false
-      },
-      "word_suggested_edit": {
-        "schema": "micar-whitepaper-linter.word-suggested-edit.v1",
-        "action": "revise_clause",
-        "instruction": "Strengthen the disclosure before sign-off.",
-        "target_section": "art",
-        "draft_only": true,
-        "external_action_allowed": false
-      },
-      "delivery_block": {
-        "status": "review_required",
-        "external_action_allowed": false,
-        "review_gate": "Lawyer sign-off and deterministic rerun required before external filing or publication."
-      },
-      "review_cells": [
-        {
-          "column_id": "rule_id",
-          "label": "Rule ID",
-          "value": "COMMON.DTI_FORMAT",
-          "status": "needs_review",
-          "review_gate": "Qualified lawyer review required before external use.",
-          "external_action_allowed": false
-        },
-        {
-          "column_id": "citation",
-          "label": "Citation",
-          "value": "Art. 3 Abs. 1 und 2 VO (EU) 2025/421; Anhang Tabelle 3 Teil B VO (EU) 2024/2984",
-          "status": "needs_review",
-          "review_gate": "Qualified lawyer review required before external use.",
-          "external_action_allowed": false
-        },
-        {
-          "column_id": "section",
-          "label": "Section",
-          "value": "art",
-          "status": "needs_review",
-          "review_gate": "Qualified lawyer review required before external use.",
-          "external_action_allowed": false
-        },
-        {
-          "column_id": "status",
-          "label": "Status",
-          "value": "review",
-          "status": "needs_review",
-          "review_gate": "Qualified lawyer review required before external use.",
-          "external_action_allowed": false
-        },
-        {
-          "column_id": "blocker",
-          "label": "Blocker",
-          "value": "false",
-          "status": "needs_review",
-          "review_gate": "Qualified lawyer review required before external use.",
-          "external_action_allowed": false
-        },
-        {
-          "column_id": "word_count",
-          "label": "Word count",
-          "value": "143",
-          "status": "needs_review",
-          "review_gate": "Qualified lawyer review required before external use.",
-          "external_action_allowed": false
-        },
-        {
-          "column_id": "remediation",
-          "label": "Remediation",
-          "value": "Strengthen the disclosure before sign-off.",
-          "status": "needs_review",
-          "review_gate": "Qualified lawyer review required before external use.",
-          "external_action_allowed": false
-        },
-        {
-          "column_id": "reviewer_decision",
-          "label": "Reviewer decision",
-          "value": "lawyer_review_required",
-          "status": "needs_review",
-          "review_gate": "Qualified lawyer review required before external use.",
-          "external_action_allowed": false
-        },
-        {
-          "column_id": "verification_state",
-          "label": "Verification",
-          "value": "needs_verification",
-          "status": "needs_review",
-          "review_gate": "Qualified lawyer review required before external use.",
-          "external_action_allowed": false
-        },
-        {
-          "column_id": "source_anchor",
-          "label": "Source anchor",
-          "value": "json:art:6477f8e0fa8c706e",
-          "status": "needs_review",
-          "review_gate": "Qualified lawyer review required before external use.",
-          "external_action_allowed": false
-        },
-        {
-          "column_id": "citation_coverage",
-          "label": "Citation coverage",
-          "value": "anchor_and_citation",
-          "status": "needs_review",
           "review_gate": "Qualified lawyer review required before external use.",
           "external_action_allowed": false
         },
@@ -3247,5 +3098,5 @@
   ],
   "warnings": [],
   "review_notice": "Review table rows are deterministic linter outputs. Reviewer decisions remain pending until a qualified lawyer signs off.",
-  "digest": "1442b5a68058c037edbd9378d699fd2fdd5c724022960cbf9eac39497403053e"
+  "digest": "001f36b1a070fa1b990d07621718b26ed0b7cf0d825ad5ccab05c6e872003c7a"
 }

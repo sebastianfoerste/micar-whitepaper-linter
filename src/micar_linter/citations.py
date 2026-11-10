@@ -18,7 +18,6 @@ import re
 ACT_URLS: dict[str, str] = {
     "MiCAR": "https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng",
     "VO (EU) 2024/2984": "https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng",
-    "VO (EU) 2025/421": "https://eur-lex.europa.eu/eli/reg_del/2025/421/oj/eng",
     "VO (EU) 2025/422": "https://eur-lex.europa.eu/eli/reg_del/2025/422/oj/eng",
     "Richtlinie 2009/110/EG": "https://eur-lex.europa.eu/eli/dir/2009/110/oj/eng",
 }

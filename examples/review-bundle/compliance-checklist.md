@@ -4,7 +4,7 @@
 - **Regime/Type**: ART
 - **Source File**: examples/art-stablecoin.json
 - **SHA-256 Checksum**: `e8969fa1d2b061343085e85b22eec491f0b7adde670f9abfa937f2737fbb46ff`
-- **Review Timestamp**: 2026-11-10 21:27:00
+- **Review Timestamp**: 2026-10-29 06:57:48
 
 ## Rule Compliance Checklist
 
@@ -18,7 +18,6 @@
 | `COMMON.IXBRL_TAGGING` | Art. 2 VO (EU) 2024/2984 | Inline XBRL (iXBRL) compliance and ESMA metadata tagging | BLOCKER | **MISSING** | [ ] |
 | `COMMON.LEI_CHECK_DIGITS` | Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, Anhang III Teil A Nr. 5 MiCAR | Legal Entity Identifier format and check digits (ISO 17442, ISO/IEC 7064 MOD 97-10) | MAJOR | **PASS** | [x] |
 | `COMMON.LEI_CONSISTENCY` | Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, Anhang III Teil A Nr. 5 MiCAR | Legal Entity Identifiers agree across the party sections and the rest of the draft | MAJOR | **PASS** | [x] |
-| `COMMON.DTI_FORMAT` | Art. 3 Abs. 1 und 2 VO (EU) 2025/421; Anhang Tabelle 3 Teil B VO (EU) 2024/2984 | Digital Token Identifiers of the crypto-asset and its functionally fungible group (ISO 24165) | MINOR | **REVIEW** | [ ] |
 | `ANNEX_II.A` | Anhang II Teil A MiCAR | Information about the issuer of the ART (identity, management body, governance arrangements) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.B` | Anhang II Teil B MiCAR | Information about the asset-referenced token (characteristics, plans and milestones) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.C` | Anhang II Teil C MiCAR | Information about the offer to the public of the ART or its admission to trading | BLOCKER | **PASS** | [x] |
@@ -35,7 +34,7 @@
 ## Summary of Findings
 
 - **Passed Checks**: 17
-- **Under Review**: 3
+- **Under Review**: 2
 - **Missing Sections**: 1
 - **BLOCKER Issues**: 3
 
