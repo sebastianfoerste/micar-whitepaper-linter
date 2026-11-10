@@ -240,6 +240,30 @@ def test_change_goes_under_the_heading_paragraph_it_names(tmp_path) -> None:
     assert (result.placed, texts) == (("change:summary",), ["Summary", "Add the key information.", "The issuer is Example AG."])
 
 
+@pytest.mark.parametrize("page", ["", '<w:r><w:tab/></w:r><w:r><w:t xml:space="preserve">2</w:t></w:r>'])
+def test_contents_line_in_capitals_is_not_taken_for_the_heading(tmp_path, page: str) -> None:
+    # A contents line set directly in the body in a contents style, in capitals, reads as a heading to
+    # parse_docx; the change still goes under the section's heading, never into the contents.
+    source = tmp_path / "contents.docx"
+    _docx_with_paragraphs(
+        source,
+        '<w:pPr><w:pStyle w:val="TOC1"/></w:pPr>' + _run("SUMMARY") + page,
+        '<w:pPr><w:pStyle w:val="Heading1"/></w:pPr>' + _run("Summary"),
+        _run("The token gives holders a claim on the issuer."),
+    )
+    change_set = build_change_set(build_whitepaper_workspace([source]))
+    summary = next(change for change in change_set["changes"] if change["locator"] == "COMMON.SUMMARY")
+    assert (summary["anchor_text"], summary["anchor_paragraph"]) == ("Summary", 1)
+    for change in list(change_set["changes"]):
+        change_set = decide_change(change_set, change["id"], "accepted")
+    result = export_tracked_docx(source, tmp_path / "contents-reviewed.docx", change_set)
+    assert summary["id"] in result.placed
+    with zipfile.ZipFile(result.path) as package:
+        texts = _body_texts(etree.fromstring(package.read("word/document.xml")))
+    assert texts[0] == "SUMMARY" + ("2" if page else "")
+    assert texts[1:3] == ["Summary", summary["proposed_text"]]
+
+
 @pytest.mark.parametrize(
     "anchor",
     [

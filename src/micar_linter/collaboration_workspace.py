@@ -187,8 +187,9 @@ def update_cell(
 
 def _section_headings(document: dict[str, Any]) -> dict[str, tuple[str, int]]:
     """The first heading of a DOCX draft that names each section, by section key, as parse_docx reads the
-    headings: its text and its place among the paragraphs directly in the body. Empty for another format, or
-    when the file is gone or no longer has the digest it was read with.
+    headings: its text and its place among the paragraphs directly in the body. A paragraph in a contents
+    style is no heading here. Empty for another format, or when the file is gone or no longer has the digest
+    it was read with.
     """
     path = Path(document.get("source_path", ""))
     if path.suffix.lower() != ".docx" or not path.is_file():
@@ -196,8 +197,12 @@ def _section_headings(document: dict[str, Any]) -> dict[str, tuple[str, int]]:
     if hashlib.sha256(path.read_bytes()).hexdigest() != document.get("source_sha256"):
         return {}
     parsed = parse_docx(path)
+    # A contents line in capitals or bold reads as a heading too; the section's heading comes after it.
+    contents = _contents_positions(path)
     headings: dict[str, tuple[str, int]] = {}
     for heading, position in zip(parsed.headings, parsed.heading_positions, strict=True):
+        if position in contents:
+            continue
         for key in match_heading_to_section(heading):
             headings.setdefault(key, (heading, position))
     return headings
@@ -268,7 +273,8 @@ def decide_change(change_set: dict[str, Any], change_id: str, decision: str) -> 
 def _inserted_paragraph(
     text: str, ids: Iterator[int], author: str, date: str, excluded: set[etree._Element]
 ) -> etree._Element:
-    """A new paragraph whose text and paragraph mark are tracked insertions: Reject All removes it whole."""
+    """A new paragraph whose text and paragraph mark are tracked insertions, so Reject All removes it whole
+    where a paragraph follows it; before a table or at the end of the body an empty paragraph can remain."""
     paragraph = etree.Element(f"{{{W_NS}}}p")
     mark = etree.SubElement(etree.SubElement(paragraph, f"{{{W_NS}}}pPr"), f"{{{W_NS}}}rPr")
     mark.append(_revision("ins", ids, author, date))
@@ -564,20 +570,35 @@ def _redline_match(
     excluded.add(inserted)
 
 
-def _contents_styles(styles_path: Path, parser: etree.XMLParser) -> set[str]:
+def _contents_styles(styles: etree._Element | None) -> set[str]:
     """Ids of the table-of-contents paragraph styles: Word's built-in ids, and any style named "toc 1" to
     "toc 9" or "contents 1" to "contents 9", whatever id the document language gives it."""
     levels = range(1, 10)
     ids = {f"TOC{level}" for level in levels}
-    if not styles_path.exists():
+    if styles is None:
         return ids
     names = {f"{prefix} {level}" for prefix in ("toc", "contents") for level in levels}
     return ids | {
         style.get(f"{{{W_NS}}}styleId")
-        for style in etree.parse(str(styles_path), parser=parser).xpath(
-            "w:style[@w:type='paragraph']", namespaces=NSMAP
-        )
+        for style in styles.xpath("w:style[@w:type='paragraph']", namespaces=NSMAP)
         if style.xpath("string(w:name/@w:val)", namespaces=NSMAP).lower() in names
+    }
+
+
+def _contents_positions(path: Path) -> set[int]:
+    """The places, among the paragraphs directly in the body, of a DOCX's paragraphs in a contents style."""
+    parser = etree.XMLParser(resolve_entities=False, no_network=True)
+    with zipfile.ZipFile(path) as package:
+        body = etree.fromstring(package.read("word/document.xml"), parser=parser).find("w:body", NSMAP)
+        has_styles = "word/styles.xml" in package.namelist()
+        styles = etree.fromstring(package.read("word/styles.xml"), parser=parser) if has_styles else None
+    if body is None:
+        return set()
+    contents = _contents_styles(styles)
+    return {
+        position
+        for position, paragraph in enumerate(body.findall("w:p", NSMAP))
+        if paragraph.xpath("string(w:pPr/w:pStyle/@w:val)", namespaces=NSMAP) in contents
     }
 
 
@@ -653,7 +674,10 @@ def export_tracked_docx(
         # A table of contents that is not a field repeats the headings as plain text: try its paragraphs last,
         # so a change to a heading reaches the heading.
         candidates = body.xpath(".//w:p[not(ancestor::mc:Fallback)]", namespaces=namespaces)
-        contents_styles = _contents_styles(extracted / "word" / "styles.xml", parser)
+        styles_path = extracted / "word" / "styles.xml"
+        contents_styles = _contents_styles(
+            etree.parse(str(styles_path), parser=parser).getroot() if styles_path.exists() else None
+        )
         contents = {
             paragraph
             for paragraph in candidates
@@ -718,8 +742,8 @@ def _anchor_paragraph(
     """The heading paragraph after which a change that replaces nothing belongs, or None.
 
     A change set built from a draft names the heading's place among the paragraphs directly in the body
-    (anchor_paragraph); the paragraph there must still read anchor_text. A change set built by hand that names
-    only anchor_text takes the first such paragraph outside a table of contents.
+    (anchor_paragraph); the paragraph there must still read anchor_text and be no contents line. A change set
+    built by hand that names only anchor_text takes the first such paragraph outside a table of contents.
     """
     anchor = (change.get("anchor_text") or "").strip()
     if not anchor:
@@ -728,7 +752,9 @@ def _anchor_paragraph(
     if position is None:
         return next((p for p in direct if p not in contents and _paragraph_text(p) == anchor), None)
     valid = isinstance(position, int) and not isinstance(position, bool) and 0 <= position < len(direct)
-    return direct[position] if valid and _paragraph_text(direct[position]) == anchor else None
+    if not valid or direct[position] in contents:
+        return None
+    return direct[position] if _paragraph_text(direct[position]) == anchor else None
 
 
 def build_workflow_pack(

@@ -146,6 +146,48 @@ def test_cross_reference_to_a_part_does_not_end_the_field(tmp_path: Path, refere
 
 
 @pytest.mark.parametrize(
+    "paragraph",
+    [
+        # A cross-reference in inline markup is a text fragment of its own, but no block.
+        "The offer is described in <b>Part E</b> of this white paper.",
+        # A wrapped German cross-reference that starts a line.
+        "Teil G gemäß Anhang I beschreibt die Rechte.",
+    ],
+)
+def test_part_reference_inside_an_answer_does_not_end_the_field(tmp_path: Path, paragraph: str):
+    path = _write(
+        tmp_path,
+        f"<p>D.2 Description of the project</p><p>{paragraph}</p>"
+        "<p>The ledger settles freight invoices within one business day.</p><p>E.1 Amount: 1000</p>",
+    )
+    fields = {field.field_id: field for field in extract_numbered_fields(path)}
+    assert fields["D.2"].content.endswith("The ledger settles freight invoices within one business day.")
+
+
+@pytest.mark.parametrize(
+    "markup",
+    [
+        # A title without a dash and of more than 20 words.
+        "<p>N/A</p><p>Part B Information about the issuer, if different from the offeror or person seeking "
+        "admission to trading, as the template of the implementing regulation sets it out for this table</p>"
+        "<p>This part describes the issuer of the crypto-asset in some detail for the reader.</p>",
+        # Fields and a part title run together in one paragraph.
+        "<p>N/A Part B \u2013 Information about the issuer, if different from the offeror or person seeking "
+        "admission to trading This part describes the issuer.</p>",
+        # Swiss and Liechtenstein German, and capitals.
+        "<p>N/A</p><p>AA \u2013 Gemäss Artikel 19 Absatz 1 Unterabsatz 2 der Verordnung</p><p>Dieser Teil "
+        "beschreibt andere Personen.</p>",
+        "<p>N/A</p><p>AA \u2013 GEMÄSS ARTIKEL 19</p><p>Dieser Teil beschreibt andere Personen.</p>",
+    ],
+)
+def test_other_wordings_of_a_part_title_end_the_field_before_it(tmp_path: Path, markup: str):
+    path = _write(tmp_path, f"<p>A.2 Legal form</p>{markup}<p>B.1 Name: Quillmoor Issuer AG</p>")
+    fields = {field.field_id: field for field in extract_numbered_fields(path)}
+    assert fields["A.2"].content == "N/A"
+    assert not fields["A.2"].answered
+
+
+@pytest.mark.parametrize(
     "header",
     ["Part A - Information about the offeror or the person seeking admission to trading", "Part A"],
 )
