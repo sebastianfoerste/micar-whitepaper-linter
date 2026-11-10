@@ -1776,7 +1776,9 @@ def status_logic(rule: Rule) -> str:
             "iXBRL viewer page. A viewer page packs the white paper into a script; the content checks read the "
             "unpacked text, and the viewer's rendering is not the XHTML document itself.</li>"
             "<li><strong>Review</strong>: the draft is any other XHTML file. The check reports namespace problems "
-            "and always adds that tag completeness was not checked.</li><li><strong>Pass</strong>: never. This is "
+            "and always adds that tag completeness was not checked. It knows the 2025 taxonomy (namespace date "
+            "2025-03-31); facts tagged in an ESMA MiCA namespace with another date, which ESMA uses for later "
+            "releases, are named as a version the check does not know.</li><li><strong>Pass</strong>: never. This is "
             "a fail-closed format gate.</li></ul>"
         )
     if rule.rule_id == "COMMON.LEI_CHECK_DIGITS":
