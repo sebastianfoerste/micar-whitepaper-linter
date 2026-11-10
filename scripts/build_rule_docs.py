@@ -1856,7 +1856,8 @@ def status_logic(rule: Rule) -> str:
     if rule.rule_id in ANSWER_CHECKS:
         missing = (
             f'<ul class="plain"><li><strong>Missing</strong>: section <code>{_e(rule.section)}</code> is absent '
-            "or empty, or holds only placeholder text such as TBD or TBC.</li>"
+            "or empty, holds only placeholder text such as TBD or TBC, or opens with the starter template's "
+            "<code>REPLACE:</code> note.</li>"
         )
         if rule.rule_id == "COMMON.NOTIFICATION_DATE":
             return (
@@ -1888,8 +1889,9 @@ def status_logic(rule: Rule) -> str:
             "confirmation, not trusted facts.</li></ul>"
         )
     missing = (
-        f"<li><strong>Missing</strong>: section <code>{_e(rule.section)}</code> is absent or empty, or holds "
-        "only placeholder text such as TBD or TBC.</li>"
+        f"<li><strong>Missing</strong>: section <code>{_e(rule.section)}</code> is absent or empty, holds only "
+        "placeholder text such as TBD or TBC, or opens with the starter template's <code>REPLACE:</code> "
+        "note.</li>"
     )
     if rule.rule_id in NOT_APPROVED_STATEMENT_RULE_IDS:
         emt = rule.rule_id.startswith("ANNEX_III.")
@@ -2007,7 +2009,8 @@ def _contact_status_logic(rule: Rule) -> str:
     return (
         f'<ul class="plain"><li><strong>Missing</strong>: in a numbered-field XHTML draft, {fields} are each '
         f"empty, absent or hold only placeholder text such as TBD; in any other draft, section {section} is absent "
-        "or empty, or holds only placeholder text.</li>"
+        "or empty, holds only placeholder text, or opens with the starter template's <code>REPLACE:</code> "
+        "note.</li>"
         "<li><strong>Review</strong>: in a numbered-field XHTML draft, one of those fields is empty or absent, holds "
         "only a placeholder, is marked not applicable, which the template does not provide for, or gives no "
         f"telephone number ({phone}), no e-mail address ({email}) or no number of days ({days}). In any other "
@@ -2126,7 +2129,8 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             "sees it, without the text that the loader finds a reader cannot see. A code that is malformed or fails "
             "its check digits in either reading keeps the rule from passing, so hidden text that the second reading "
             "leaves out cannot complete a code the document shows malformed, split it into groups that are no "
-            "LEI-like code, or glue it to other text. Hidden text that still takes up its room on the page (a DOCX "
+            "LEI-like code (but see below for a separator under 1 pt), or glue it to other text. Hidden text that "
+            "still takes up its room on the page (a DOCX "
             "run laid out white or under 1 pt, all hidden PDF text, XHTML or HTML text that "
             "<code>visibility</code> hides) leaves a gap where it stands, so it cannot join two groups the page "
             "shows apart into one code either; text left out of the page (<code>w:vanish</code>, deleted or "
@@ -2167,9 +2171,11 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             "form XObject with an <code>/OC</code> entry whose optional content (layer) the document's "
             "default configuration turns off (by its <code>/OFF</code> array, or its <code>/BaseState "
             "/OFF</code> without its <code>/ON</code> array, and for a membership dictionary by its "
-            "visibility expression or its policy). An operator whose operands this reading cannot read (a number "
-            "too large for a float in a colour, <code>cm</code>, <code>Tf</code> or <code>Tr</code>, a form "
-            "matrix without six numbers) leaves the reading as it was; where pypdf cannot read an operand itself "
+            "visibility expression or its policy). The state is saved before every form XObject and restored after "
+            "it, so nothing the form's content sets outlasts the form, also where its matrix does not hold six "
+            "numbers (which leaves the matrix as it was). An operator whose operands this reading cannot read (a "
+            "number too large for a float in a colour, <code>cm</code>, <code>Tf</code> or <code>Tr</code>) leaves "
+            "the reading as it was; where pypdf cannot read an operand itself "
             "(a number too large for a float for <code>Tz</code>, <code>Tw</code>, <code>TL</code>, "
             "<code>Td</code> or <code>Tm</code>, among others), the file cannot be read, as before. In XHTML or HTML, <code>&lt;noscript&gt;</code> and the content of "
             "<code>&lt;iframe&gt;</code>, <code>&lt;canvas&gt;</code>, <code>&lt;object&gt;</code>, "
@@ -2234,13 +2240,24 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             "<code>&lt;dialog&gt;</code> hides it, fallback content that a browser shows (an "
             "<code>&lt;object&gt;</code> whose resource cannot be shown, a <code>&lt;noscript&gt;</code> or "
             "<code>&lt;canvas&gt;</code> where scripts are off), and SVG text in <code>&lt;defs&gt;</code> that "
-            "a <code>&lt;use&gt;</code> element draws. The section "
+            "a <code>&lt;use&gt;</code> element draws. Inside a malformed code, such a gap can instead hide the "
+            "code: a separator under 1 pt (a DOCX run in a font under 1 pt, PDF glyphs under 1 pt), which the page "
+            "shows no gap for, can split it into groups that are no LEI-like code, such as a word of letters only "
+            "beside a group of another length (a <code>/</code> in a half-point font after <code>hwupkr</code> in "
+            "<code>hwupkr0mpou8fgxbt394</code>), so no reading names the code and the rule passes, as in 1.2.1. The "
+            "section "
             "text of a DOCX holds only the runs and hyperlinks that stand directly in a paragraph of the body, so "
             "it leaves out text in a tracked insertion or at a move's new place (<code>w:moveTo</code>), a content "
             "control, a field result (<code>w:fldSimple</code>), a smart tag, custom XML or a text box. A valid code "
             "that such text completes with four "
             "characters or fewer reads as malformed in the section text, and the rule goes to review, which fails "
-            "safe; with five or more, what stays in the section text is no LEI-like code and the rule passes. A "
+            "safe; with five or more, what stays in the section text is no LEI-like code and the rule passes. That "
+            "holds in a section the draft's regime drops too: the loader drops the sections of the other regimes (an ART "
+            "draft its EMT, crypto-asset and first-page statement sections, an EMT draft its ART and crypto-asset sections, "
+            "any other draft its ART and EMT sections, whether the regime is inferred or given with <code>--type</code>) but "
+            "keeps the text of each for the rule, as the section text reads it, so a code that a dropped section shows "
+            "malformed goes to review whatever the regime (a code there never counts as found), and the second reading "
+            "covers a dropped section as it covers the rest of the file. A "
             "malformed code that is no LEI-like code in the text as written or as shown is not seen either: one run of fewer than 16 letters and digits, or of more than 24 (28 for one "
             "with a digit after a glued LEI) that no glued word explains, as when a code has lost or gained five or "
             "more characters or has digits glued to it; groups that together hold fewer than 16; a run of letters "

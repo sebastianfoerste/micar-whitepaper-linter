@@ -22,7 +22,7 @@ from micar_linter.lei import (
     other_person_leis,
     reads_leis,
 )
-from micar_linter.placeholders import is_not_applicable, is_placeholder
+from micar_linter.placeholders import is_not_applicable, is_placeholder, is_template_note
 from micar_linter.point_fields import ANNEX_REGIMES, POINTS_BY_RULE, fields_text, fields_text_de, point_issues
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Finding, Rule, Severity
@@ -412,6 +412,12 @@ def _absent(text: str, is_de: bool) -> str | None:
     """The issue that makes a section Missing (empty, or placeholders such as TBD only), else None."""
     if not text.strip():
         return "Abschnitt ist leer oder fehlt." if is_de else "Section is empty or absent."
+    if is_template_note(text):
+        return (
+            "Abschnitt enthält noch den Hinweis REPLACE: der Vorlage."
+            if is_de
+            else "Section still holds the template's REPLACE: note."
+        )
     if is_placeholder(text):
         return (
             "Abschnitt enthält nur Platzhalter wie TBD oder TBC."
@@ -665,15 +671,16 @@ def _lei_check_digits_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     A draft reads LEIs in all its text once it has a party section, or a section or its file text names an
     LEI label or holds an LEI-shaped code with a letter (lei.draft_reads_leis). Then every section is read,
     and so is the text of a document file outside its sections (the reserved metadata key document_text,
-    set only by the document loaders: headings, tables, headers and footers, text in no section). Where a
-    DOCX, PDF, XHTML or HTML file holds text a reader cannot see, the same text without it is read too (the
-    reserved metadata key shown_text, see the loaders), so text that is not shown cannot complete, split or
-    glue a code that is shown: reading it can only add issues. Each text is read as written and, where markup
-    or a character reference changes it, as shown. An LEI-shaped code there with invalid check digits, and an
-    LEI-like code that is not LEI-shaped (wrong length, lower case, a letter in a check-digit position, a
-    character outside ASCII, glued to a word, split into groups), keeps the rule from passing. Only an
-    LEI-shaped code that a section that reads LEIs on its own holds as written counts as found, so a draft
-    whose only LEI sits outside such a section keeps the no-LEI status.
+    set only by the document loaders: headings, tables, headers and footers, text in no section, and the text
+    of each section that the regime drops, so no regime makes a code that a section shows malformed pass).
+    Where a DOCX, PDF, XHTML or HTML file holds text a reader cannot see, the same text without it is read too
+    (the reserved metadata key shown_text, see the loaders), so text that is not shown cannot complete, split
+    or glue a code that is shown, in a section the regime drops too: reading it can only add issues. Each text
+    is read as written and, where markup or a character reference changes it, as shown. An LEI-shaped code
+    there with invalid check digits, and an LEI-like code that is not LEI-shaped (wrong length, lower case, a
+    letter in a check-digit position, a character outside ASCII, glued to a word, split into groups), keeps
+    the rule from passing. Only an LEI-shaped code that a section that reads LEIs on its own holds as written
+    counts as found, so a draft whose only LEI sits outside such a section keeps the no-LEI status.
     """
     is_de = whitepaper.language == "de"
     sections = whitepaper.sections

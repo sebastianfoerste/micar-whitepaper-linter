@@ -1324,10 +1324,11 @@ def test_a_code_that_a_docx_shows_valid_still_passes(tmp_path: Path, placement: 
     # Shown as Word shows it, the code is valid. A 1 pt font is not under 1 pt, and half-width characters of an 11 pt
     # font are not under 1 pt wide, so they count as shown (ADR 0007).
     # In a body paragraph or a list item a tracked insertion is no section text, so the section quotes the code
-    # malformed and the rule goes to review, which fails safe (ADR 0007); everywhere else the rule passes.
+    # malformed and the rule goes to review, which fails safe (ADR 0007); so does a body paragraph of a section the
+    # regime drops, whose text the rule still reads as the section text reads it. Everywhere else the rule passes.
     regime = WhitepaperType.ART if placement == "dropped section" else WhitepaperType.OTHER
     check_digits, _ = _check_digits(_docx_hidden(tmp_path / "shown.docx", placement, hiding), regime)
-    in_section_runs = placement in ("body paragraph", "list item")
+    in_section_runs = placement in ("body paragraph", "list item", "dropped section")
     assert check_digits.status == ("review" if in_section_runs and hiding == "tracked insertion" else "pass")
 
 
@@ -1889,6 +1890,35 @@ def test_a_pdf_form_xobject_in_optional_content_that_is_off_is_not_shown(tmp_pat
     assert parsed.shown_text == "Synthetic layer test"
 
 
+def test_pdf_optional_content_reads_a_shared_array_as_it_reads_it_alone(tmp_path: Path):
+    # One membership dictionary reads through at most 10,000 groups and operators; beyond that its content counts as
+    # shown. The array 8 0 R holds 9,984 groups that are on and then one that is off. Read through [/And 8 0 R], the
+    # group that is off is within the budget, so the content is not shown; after 20 groups more, it is beyond it, so
+    # the content counts as shown. A reader that keeps what it read of the shared array reads both as a fresh reader
+    # does, in either order.
+    from pypdf import PdfReader
+
+    from micar_linter.document import _OptionalContent
+
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R /OCProperties << /OCGs [6 0 R 7 0 R] /D << /OFF [6 0 R] >> >> >>",
+        b"<< /Type /Pages /Kids [] /Count 0 >>",
+        b"<< /Type /OCMD /VE [/And 8 0 R] >>",
+        b"<< /Type /OCMD /VE [/And %s 8 0 R] >>" % " ".join(["7 0 R"] * 20).encode(),
+        b"<< >>",
+        _OCG.encode(),
+        _OCG.encode(),
+        b"[/And %s 6 0 R]" % " ".join(["7 0 R"] * 9_984).encode(),
+    ]
+    reader = PdfReader(_pdf_objects(tmp_path / "budget.pdf", objects))
+    alone, after = (reader.get_object(number).indirect_reference for number in (3, 4))
+    assert not _OptionalContent(reader).shown(alone)
+    assert _OptionalContent(reader).shown(after)
+    for order in ((alone, after), (after, alone)):
+        optional = _OptionalContent(reader)
+        assert [optional.shown(ocmd) for ocmd in order] == [_OptionalContent(reader).shown(ocmd) for ocmd in order]
+
+
 # An integer too large for a float, and a decimal number that only an infinite float holds.
 _HUGE = "9" * 400
 
@@ -2011,6 +2041,124 @@ def test_nested_pdf_forms_whose_matrix_cannot_be_read_do_not_stop_the_reading(tm
     assert any(SHOWN in issue for issue in check_digits.issues)
 
 
+@pytest.mark.parametrize(("hides", "shows"), [("1 g", "0 g"), ("3 Tr", "0 Tr")], ids=["white fill", "render mode 3"])
+@pytest.mark.parametrize(
+    ("subtype", "matrix"),
+    [
+        ("/Form", "1 0 0 1"),
+        ("/Form", "1 0 0 1 0 0 0"),
+        ("/Form", "/a /b /c /d /e /f"),
+        ("/PS", "1 0 0 1 0 0"),
+        ("/Form", "1 0 0 1 0 0"),
+    ],
+    ids=["four numbers", "seven numbers", "names", "PostScript XObject", "readable matrix"],
+)
+def test_the_state_is_restored_after_a_pdf_form_whose_entries_cannot_be_read(
+    tmp_path: Path, hides: str, shows: str, subtype: str, matrix: str
+):
+    # The page hides what it draws (white fill or render mode 3), draws /FmA, whose content shows (black or render
+    # mode 0), then draws the code line shown in q/Q and its last character after it in the page's own state, so a
+    # viewer shows the code malformed. Before, a form whose /Matrix did not hold six numbers, and an XObject that
+    # pypdf reads as a form though its /Subtype is not /Form, were drawn without saving the state, so the state the
+    # form's content set outlasted it and the last character was read as shown: the rule passed.
+    code = (
+        f"{hides} /FmA Do q {shows} BT /F1 10 Tf 1 0 0 1 50 {_CODE_BASELINE} Tm ({_CODE_LINE}) Tj ET Q "
+        f"BT /F1 10 Tf 1 0 0 1 {_CODE_END:.2f} {_CODE_BASELINE} Tm ({HIDDEN}) Tj ET {shows}"
+    )
+    content = (
+        f"BT 13 TL 50 770 Td /F2 14 Tf (Information about the Issuer) Tj 0 -13 Td /F1 10 Tf ({ISSUER_TEXT}) Tj "
+        f"0 -13 Td /F2 14 Tf ({OFFEROR}) Tj ET {code} BT 50 600 Td /F2 14 Tf (Risk Factors) Tj ET"
+    )
+    form = f"/Type /XObject /Subtype {subtype} /BBox [0 0 1000 792] /Matrix [{matrix}] /Resources << >>"
+    path = _pdf_objects(
+        tmp_path / "form.pdf",
+        [
+            b"<< /Type /Catalog /Pages 2 0 R >>",
+            b"<< /Type /Pages /Kids [5 0 R] /Count 1 >>",
+            *_HELVETICA,
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1000 792] /Resources << " + _FONTS
+            + b" /XObject << /FmA 7 0 R >> >> /Contents 6 0 R >>",
+            _stream(content),
+            _stream(shows, form),
+        ],
+    )
+    check_digits, _ = _check_digits(path)
+    assert check_digits.status == "review"
+    assert any(SHOWN in issue for issue in check_digits.issues)
+
+
+@pytest.mark.parametrize(
+    ("matrix", "status"),
+    [
+        ("(900900)", "review"),
+        ("<393030393030>", "review"),
+        ("[1 0 0 1 0 0]", "review"),
+        ("[9 0 0 9 0 0]", "pass"),
+    ],
+    ids=["string of six digits", "hex string of six digits", "identity array", "array scaling by nine"],
+)
+def test_a_pdf_form_matrix_that_is_no_array_of_numbers_is_not_read(tmp_path: Path, matrix: str, status: str):
+    # A form draws the code line and its last character in a 0.5 pt font, which a reader cannot see, so the page shows
+    # the code malformed. Before, a /Matrix given as a string of six digits was read character by character, as
+    # [9 0 0 9 0 0], so the last character counted as 4.5 pt and as shown, and the rule passed. A matrix that is not
+    # an array of six numbers is not read; an array that does scale the form by nine makes the character readable.
+    head = (
+        f"BT 13 TL 50 770 Td /F2 14 Tf (Information about the Issuer) Tj 0 -13 Td /F1 10 Tf ({ISSUER_TEXT}) Tj "
+        f"0 -13 Td /F2 14 Tf ({OFFEROR}) Tj ET /Fm1 Do BT 50 600 Td /F2 14 Tf (Risk Factors) Tj ET"
+    )
+    form = f"BT /F1 10 Tf 1 0 0 1 50 {_CODE_BASELINE} Tm ({_CODE_LINE}) Tj /F1 0.5 Tf ({HIDDEN}) Tj ET"
+    path = _pdf_objects(
+        tmp_path / "matrix.pdf",
+        [
+            b"<< /Type /Catalog /Pages 2 0 R >>",
+            b"<< /Type /Pages /Kids [5 0 R] /Count 1 >>",
+            *_HELVETICA,
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1000 792] /Resources << " + _FONTS
+            + b" /XObject << /Fm1 7 0 R >> >> /Contents 6 0 R >>",
+            _stream(head),
+            _stream(
+                form,
+                f"/Type /XObject /Subtype /Form /BBox [0 0 1000 792] /Matrix {matrix} /Resources << {_FONTS.decode()} >>",
+            ),
+        ],
+    )
+    check_digits, _ = _check_digits(path)
+    assert check_digits.status == status
+
+
+@pytest.mark.parametrize(
+    "resources",
+    [None, "[1]", "[]", "null", "99 0 R", "(synthetic)"],
+    ids=["absent", "array", "empty array", "null", "dangling reference", "string"],
+)
+def test_a_pdf_form_whose_resources_cannot_be_read_uses_those_around_it(tmp_path: Path, resources: str | None):
+    # The form marks its text with optional content that is off; the name /x is in the page's resources only. A form
+    # whose /Resources are not a dictionary (or are empty) uses those of the content around it, as one without
+    # /Resources does, so the marked text is hidden. Before, only a missing or empty /Resources fell back, and the
+    # marked text counted as shown.
+    from micar_linter.document import parse_pdf
+
+    form = "/Type /XObject /Subtype /Form /BBox [0 0 612 792]" + ("" if resources is None else f" /Resources {resources}")
+    path = _pdf_objects(
+        tmp_path / "resources.pdf",
+        [
+            b"<< /Type /Catalog /Pages 2 0 R /OCProperties << /OCGs [7 0 R] /D << /OFF [7 0 R] >> >> >>",
+            b"<< /Type /Pages /Kids [5 0 R] /Count 1 >>",
+            *_HELVETICA,
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << " + _FONTS
+            + b" /XObject << /Fm1 8 0 R >> /Properties << /x 7 0 R >> >> /Contents 6 0 R >>",
+            _stream("BT 50 770 Td /F1 10 Tf (Synthetic layer test) Tj ET /Fm1 Do"),
+            _OCG.encode(),
+            _stream("/OC /x BDC BT /F1 10 Tf 1 0 0 1 50 700 Tm (Synthetic hidden layer) Tj ET EMC", form),
+        ],
+    )
+    parsed = parse_pdf(path)
+    # pypdf finds no font for the form's text (the form's own resources hold none), so the page's text holds it as
+    # characters it cannot map; the text as shown leaves all of it out.
+    assert parsed.shown_text is not None
+    assert parsed.shown_text.splitlines() == ["Synthetic layer test"]
+
+
 # A hidden separator inside a valid code: hidden text still takes up its room on the page (the text position moves
 # past it as past text that is shown), so the page shows the code split into groups, and so does the text as shown.
 PDF_GAPS = {
@@ -2044,6 +2192,60 @@ def test_a_hidden_separator_splits_a_pdf_code(tmp_path: Path, hiding: str | None
     assert check_digits.status == status
     if status == "review":
         assert any(f"{OTHER_LEI[:9]} {OTHER_LEI[9:]}" in issue for issue in check_digits.issues)
+
+
+# A malformed code in lower case, which the page shows whole, with a "/" after its first six letters.
+_LOWER_CASE_CODE = "hwupkr0mpou8fgxbt394"
+
+
+@pytest.mark.parametrize(("hiding", "status"), [("half-point font", "pass"), ("vanish", "review")])
+def test_a_hidden_separator_under_1_pt_can_split_a_malformed_lower_case_docx_code(
+    tmp_path: Path, hiding: str, status: str
+):
+    # A documented limit (ADR 0007, the rule page): the reading as a reader sees it leaves a gap for a run under 1 pt,
+    # as for every hidden run that Word lays out, although such a run takes next to no room, so the page shows no gap
+    # there. The gap leaves the word "hwupkr" beside "0mpou8fgxbt394", which together are no LEI-like code
+    # (test_the_documented_limits_of_the_reading), so the code the page shows malformed is not read and the rule
+    # passes, as in 1.2.1 and before #95. Left out of the page (w:vanish), the separator leaves the code whole, so
+    # the rule goes to Review.
+    import docx
+    from docx.oxml import parse_xml
+
+    separator = DOCX_HIDINGS[hiding].replace(f">{HIDDEN}</w:", ">/</w:")
+    code = f"{_run('The LEI of the offeror is ' + _LOWER_CASE_CODE[:6])}{separator}{_run(_LOWER_CASE_CODE[6:] + '.')}"
+    document = docx.Document()
+    document.add_heading("Information about the Issuer", level=1)
+    document.add_paragraph(ISSUER_TEXT)
+    document.add_heading(OFFEROR, level=1)
+    paragraph = document.add_paragraph()
+    for element in parse_xml(f"<w:x {_W}>{code}</w:x>"):
+        paragraph._p.append(element)
+    document.add_heading("Risk Factors", level=1)
+    document.add_paragraph("Holders may lose the full amount.")
+    document.save(tmp_path / "lower.docx")
+    check_digits, _ = _check_digits(tmp_path / "lower.docx")
+    assert check_digits.status == status
+    if status == "review":
+        assert any(_LOWER_CASE_CODE in issue for issue in check_digits.issues)
+
+
+@pytest.mark.parametrize(("hiding", "status"), [("0.1 pt font", "pass"), (None, "review")], ids=["0.1 pt font", "none"])
+def test_a_hidden_separator_under_1_pt_can_split_a_malformed_lower_case_pdf_code(
+    tmp_path: Path, hiding: str | None, status: str
+):
+    # The same limit in a PDF, where all hidden text leaves a gap: glyphs under 1 pt take next to no room, so the page
+    # shows the code whole, and the rule passes, as in 1.2.1 and before #95. Without the separator, it goes to Review.
+    separator = PDF_HIDINGS[hiding].replace(f"({HIDDEN})", "(/)")
+    path = _pdf_hidden(
+        tmp_path / "lower.pdf",
+        hiding,
+        f"{separator} ({_LOWER_CASE_CODE[6:]}.) Tj",
+        f"The LEI of the offeror is {_LOWER_CASE_CODE[:6]}",
+    )
+    check_digits, _ = _check_digits(path)
+    assert check_digits.status == status
+    if status == "review":
+        assert any(_LOWER_CASE_CODE in issue for issue in check_digits.issues)
 
 
 HIDDEN_MARKUP = {
@@ -2240,6 +2442,132 @@ def test_hidden_text_in_xhtml_and_html(tmp_path: Path, markup: str, status: str,
     assert check_digits.status == status
 
 
+# A heading the DOCX loader maps to each section that some regime drops.
+DROPPABLE = {
+    "crypto_asset": "Information about the Crypto-Asset",
+    "art": "Reference Assets",
+    "emt": "Denomination",
+    "not_approved_statement": "Statement in accordance with Article 6(3)",
+}
+# A regime and a section it drops. With no regime given, the risk list after a pseudo-negation lead-in or the
+# heading after a closed negated list makes the draft an ART, which drops its crypto-asset section; before,
+# both read as negated and the draft was another crypto-asset, which keeps it.
+DROPPING = [
+    (WhitepaperType.ART, "crypto_asset", ()),
+    (WhitepaperType.ART, "emt", ()),
+    (WhitepaperType.ART, "not_approved_statement", ()),
+    (WhitepaperType.EMT, "art", ()),
+    (WhitepaperType.EMT, "crypto_asset", ()),
+    (WhitepaperType.OTHER, "art", ()),
+    (WhitepaperType.OTHER, "emt", ()),
+    (
+        None,
+        "crypto_asset",
+        (
+            "The risks include, but are not limited to:",
+            "- the reserve of assets may lose value;",
+            "- the custodian may fail.",
+        ),
+    ),
+    (
+        None,
+        "crypto_asset",
+        (
+            "Holders should note that the token is not covered by:",
+            "(a) any investor compensation scheme;",
+            "(b) any deposit guarantee scheme.",
+            "(c) Reserve of Assets",
+        ),
+    ),
+]
+
+
+def _docx_dropped(path: Path, section: str, risks: tuple[str, ...], completion: str) -> Path:
+    """A DOCX whose offeror code stands in a paragraph of the given section: shown malformed with its last
+    character moved away (w:moveFrom), in a w:t inside a tracked deletion, in a hidden run (w:vanish) or nowhere
+    ("none"), or shown valid, whole ("shown") or with its last character in a tracked insertion ("inserted")."""
+    import docx
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+
+    def run(text: str):
+        element = OxmlElement("w:r")
+        text_element = OxmlElement("w:t")
+        text_element.text = text
+        element.append(text_element)
+        return element
+
+    def tracked(name: str, child):
+        element = OxmlElement(name)
+        element.set(qn("w:id"), "1")
+        element.set(qn("w:author"), "Synthetic Reviewer")
+        element.append(child)
+        return element
+
+    document = docx.Document()
+    document.add_heading("Information about the Issuer", level=1)
+    document.add_paragraph(ISSUER_TEXT)
+    document.add_heading(DROPPABLE[section], level=1)
+    paragraph = document.add_paragraph("The LEI of the offeror is ")
+    paragraph._p.append(run(OTHER_LEI if completion == "shown" else SHOWN))
+    if completion in ("moveFrom", "del", "inserted"):
+        wrapper = {"moveFrom": "w:moveFrom", "del": "w:del", "inserted": "w:ins"}[completion]
+        paragraph._p.append(tracked(wrapper, run(HIDDEN)))
+    if completion == "vanish":
+        hidden = run(HIDDEN)
+        properties = OxmlElement("w:rPr")
+        properties.append(OxmlElement("w:vanish"))
+        hidden.insert(0, properties)
+        paragraph._p.append(hidden)
+    document.add_heading("Risk Factors", level=1)
+    for line in risks or ("Holders may lose the full amount.",):
+        document.add_paragraph(line)
+    document.save(path)
+    return path
+
+
+@pytest.mark.parametrize(
+    ("completion", "status"),
+    [
+        # Malformed as shown: the text of the dropped section shows the code malformed.
+        ("moveFrom", "review"),
+        ("del", "review"),
+        ("none", "review"),
+        # Malformed as a reader sees it: the section text holds the hidden run and reads the code valid, but the
+        # reading as a reader sees it (shown_text) leaves the run out, in a section the regime drops as anywhere.
+        ("vanish", "review"),
+        # Valid as shown.
+        ("shown", "pass"),
+        # Fails safe, as in a section the regime keeps: the section text leaves the tracked insertion out.
+        ("inserted", "review"),
+    ],
+)
+@pytest.mark.parametrize(
+    ("regime", "section", "risks"),
+    DROPPING,
+    ids=[f"{regime.value if regime else 'inferred'}-{section}-{len(risks)}" for regime, section, risks in DROPPING],
+)
+def test_a_code_in_a_section_the_regime_drops_is_read_as_its_section_shows_it(
+    tmp_path: Path,
+    regime: WhitepaperType | None,
+    section: str,
+    risks: tuple[str, ...],
+    completion: str,
+    status: str,
+):
+    # The text of the file holds the moved-away or deleted character, so it reads the code complete and valid.
+    # The loader drops the sections of the other regimes; COMMON.LEI_CHECK_DIGITS reads their text too, so the
+    # code still reads as the section shows it, and a change of the regime cannot make the rule pass.
+    path = _docx_dropped(tmp_path / "dropped.docx", section, risks, completion)
+    keeping = {"art": WhitepaperType.ART, "emt": WhitepaperType.EMT}.get(section, WhitepaperType.OTHER)
+    assert section in load_whitepaper(path, keeping).sections
+    whitepaper = load_whitepaper(path, regime)
+    assert section not in whitepaper.sections
+    check_digits, consistency = _check_digits(path, regime)
+    assert check_digits.status == status
+    assert consistency.status == "pass"
+
+
 @pytest.mark.parametrize(
     "markup",
     [
@@ -2387,7 +2715,8 @@ def test_reading_hidden_text_takes_linear_time(tmp_path: Path):
     # long its w:basedOn chain; document_texts parses an XHTML or HTML file once for its two readings, walks it twice
     # and reads each style attribute once; and the PDF loader extracts a page with hidden text twice and reads each
     # optional content group, membership dictionary, /OCGs array and /VE expression once, however often the page
-    # names it. So the time grows linearly. A quadratic reading of these inputs would take minutes.
+    # names it, and each operand of an array inside a /VE expression once for each depth, however many membership
+    # dictionaries share it. So the time grows linearly. A quadratic reading of these inputs would take minutes.
     import docx
     from docx.oxml import parse_xml
 
@@ -2468,15 +2797,39 @@ def test_reading_hidden_text_takes_linear_time(tmp_path: Path):
 
     # 8,000 marked content sequences each naming optional content of 8,000 groups: one membership dictionary given
     # directly in the /Properties resources, or 8,000 such dictionaries that share an /OCGs array or a /VE
-    # expression. The group is on, so all the text is shown.
+    # expression, or whose own /VE expressions share an array inside them (also nested deeper, and with 20,000
+    # groups, more than one dictionary may read through). In the last shape each dictionary first reads through
+    # shared chains of arrays ([/And C C], each twice the one before) that take a different part of the budget, so
+    # it reaches the shared array with a different budget left. The group is on, so all the text is shown.
     groups = " ".join(["6 0 R"] * 8_000)
+    chains = [b"[/And 6 0 R]"] + [b"[/And %d 0 R %d 0 R]" % (number, number) for number in range(8, 20)]
+    spends = [" ".join(f"{8 + bit} 0 R" for bit in range(13) if number >> bit & 1) for number in range(8_000)]
     shapes = {
         "one direct dictionary": (b"/oc0 << /Type /OCMD /OCGs [%s] /P /AllOn >>" % groups.encode(), 1, b"<< >>"),
         "shared /OCGs": (b"/oc%d << /Type /OCMD /OCGs 7 0 R /P /AllOn >>", 8_000, b"[%s]" % groups.encode()),
         "shared /VE": (b"/oc%d << /Type /OCMD /VE 7 0 R >>", 8_000, b"[/And %s]" % groups.encode()),
+        "array shared inside /VE": (b"/oc%d << /Type /OCMD /VE [/And 7 0 R] >>", 8_000, b"[/Or %s]" % groups.encode()),
+        "array shared deeper inside /VE": (
+            b"/oc%d << /Type /OCMD /VE [/Not [/Not [/And 7 0 R]]] >>",
+            8_000,
+            b"[/Or %s]" % groups.encode(),
+        ),
+        "array beyond the budget shared inside /VE": (
+            b"/oc%d << /Type /OCMD /VE [/And 7 0 R] >>",
+            8_000,
+            b"[/Or %s]" % " ".join(["6 0 R"] * 20_000).encode(),
+        ),
+        "shared array reached with different budgets": (
+            [b"/oc%d << /Type /OCMD /VE [/And %s 7 0 R] >>" % (n, spend.encode()) for n, spend in enumerate(spends)],
+            8_000,
+            b"[/Or %s]" % " ".join(["6 0 R"] * 12_000).encode(),
+        ),
     }
     for name, (entry, count, shared) in shapes.items():
-        properties = b" ".join(entry % number if count > 1 else entry for number in range(count))
+        if isinstance(entry, list):
+            properties = b" ".join(entry)
+        else:
+            properties = b" ".join(entry % number if count > 1 else entry for number in range(count))
         marks = " ".join(f"/OC /oc{number % count} BDC EMC" for number in range(8_000))
         objects = [
             b"<< /Type /Catalog /Pages 2 0 R /OCProperties << /OCGs [6 0 R] /D << /ON [6 0 R] >> >> >>",
@@ -2486,6 +2839,7 @@ def test_reading_hidden_text_takes_linear_time(tmp_path: Path):
             _stream(f"BT /F1 10 Tf 50 770 Td (LEI A1B2) Tj ET {marks}"),
             b"<< /Type /OCG /Name (Synthetic layer) >>",
             shared,
+            *chains,
         ]
         path = _pdf_objects(tmp_path / "layers.pdf", objects)
         start = time.perf_counter()

@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 import re
 import statistics
+from bisect import bisect_right
 from collections import Counter
 from collections.abc import Callable, Iterable
 from contextlib import suppress
@@ -418,7 +419,9 @@ class DocumentSections:
     deletion included). The sections and the extracted text of a DOCX hold only the runs and hyperlinks
     directly in a body paragraph (python-docx's paragraph text). It also reads the same text without what a
     reader cannot see (shown_text: _docx_texts for a DOCX, _pdf_lines for a PDF), which is empty where it
-    equals document_text.
+    equals document_text. For a DOCX, heading_positions gives each heading's place among the paragraphs
+    directly in the body (python-docx's Document.paragraphs, empty ones included), which the change sets of
+    collaboration_workspace.py use to place a change under its heading.
     """
 
     sections: dict[str, str]
@@ -426,6 +429,7 @@ class DocumentSections:
     text: str = ""
     document_text: str = ""
     shown_text: str = ""
+    heading_positions: tuple[int, ...] = ()
 
 
 def _words(text: str) -> list[str]:
@@ -1260,7 +1264,10 @@ def parse_docx(path: Path) -> DocumentSections:
     opener: str | None = None
     opener_number: str | None = None
     section_level: float | None = None
-    paragraphs = [(para, para.text.strip()) for para in doc.paragraphs if para.text.strip()]
+    body_paragraphs = doc.paragraphs
+    paragraphs = [(para, para.text.strip()) for para in body_paragraphs if para.text.strip()]
+    positions = [position for position, para in enumerate(body_paragraphs) if para.text.strip()]
+    heading_positions: list[int] = []
     paragraph_texts = [text for _, text in paragraphs]
     statement_end = 0
 
@@ -1299,6 +1306,7 @@ def parse_docx(path: Path) -> DocumentSections:
             continue
 
         headings.append(text)
+        heading_positions.append(positions[index])
         keys = match_heading_to_section(text)
         kind = _template_kind(text)
         number = _outline_number(text)
@@ -1328,6 +1336,7 @@ def parse_docx(path: Path) -> DocumentSections:
         "\n".join(texts),
         document_text,
         shown_text if shown_text != document_text else "",
+        tuple(heading_positions),
     )
 
 
@@ -1871,8 +1880,9 @@ class _OptionalContent:
     /Or, /Not) or else its policy (/P: /AllOn, /AnyOn by default, /AnyOff, /AllOff) over its groups (/OCGs)
     says. Anything else, and an expression nested deeper than _OC_DEPTH or read through more than
     _OC_BUDGET times, counts as shown. Each group, membership dictionary, /OCGs array (with its policy) and
-    /VE expression is read once (_once), so content that names the same ones again and again takes linear
-    time."""
+    /VE expression is read once (_once), and each array inside a /VE expression once for each depth it is
+    reached at (_sub_expression), also where many membership dictionaries share it, so content that names the
+    same ones again and again takes linear time."""
 
     _OC_DEPTH = 32
     # The most groups and operators one membership dictionary is read through, so that expressions that share
@@ -1887,6 +1897,9 @@ class _OptionalContent:
         # What has been read (_once), by what was read and how, with the object read, so that the identity of
         # a direct object stays its own.
         self._read: dict[tuple[object, str], tuple[object, bool]] = {}
+        # The expressions read (_sub_expression), by what was read and the depth, with their operands read in
+        # full so far.
+        self._arrays: dict[tuple[object, int], tuple[object, list[int], list[bool], list[bool]]] = {}
         with suppress(Exception):
             config = _resolved(_resolved(_resolved(reader.trailer["/Root"]).get("/OCProperties")).get("/D"))
             self._base_off = str(config.get("/BaseState", "/ON")) == "/OFF"
@@ -1945,6 +1958,8 @@ class _OptionalContent:
         return any(states)
 
     def _expression(self, value, depth: int) -> bool:
+        """A visibility expression read from this depth, each group and operator it reads through taking one
+        from the budget. An expression (an array) is read once for each depth (_sub_expression)."""
         self._budget -= 1
         if depth > self._OC_DEPTH or self._budget < 0:
             return True
@@ -1953,14 +1968,48 @@ class _OptionalContent:
             return self._group_shown(value)
         if not expression:
             return True
+        return self._sub_expression(value, expression, depth)
+
+    def _sub_expression(self, value, expression: list, depth: int) -> bool:
+        """What an expression's operator (/Not, /And, /Or; any other counts as shown) gives for its operands,
+        read in order, each taking from the budget what it takes; once the budget is spent, every operand
+        left counts as shown, as reading it would give.
+
+        An expression is read once for each depth (also where many membership dictionaries share it, as
+        [/And 8 0 R] with 8 0 R a long array): the operands read in full are kept, in order, with the budget
+        each took and the value of the operator so far, and a later reading takes as many of them as the
+        budget left holds (a binary search) and reads on from there. So each operand is read in full once for
+        each depth; beyond that, a reading reads in each array at most the one operand in which the budget
+        runs out; and an expression reads as a reading from scratch would."""
+        reference = _reference(value)
+        key = (reference if reference is not None else id(expression), depth)
+        if key not in self._arrays:
+            # The expression (so that the identity of a direct one stays its own), the budget its first n
+            # operands took, whether all and whether any of them are shown, and whether the first is.
+            self._arrays[key] = (expression, [0], [True], [False])
+        _, took, every, some = self._arrays[key]
+        count = len(expression) - 1
+        read = bisect_right(took, self._budget) - 1
+        self._budget -= took[read]
+        all_shown, any_shown = every[read], some[read]
+        first = some[1] if read else True
+        while read < count and self._budget >= 0:
+            before = self._budget
+            shown = self._expression(expression[read + 1], depth + 1)
+            if read == len(took) - 1 and self._budget >= 0:
+                took.append(took[-1] + before - self._budget)
+                every.append(every[-1] and shown)
+                some.append(some[-1] or shown)
+            all_shown, any_shown = all_shown and shown, any_shown or shown
+            first = shown if read == 0 else first
+            read += 1
         operator = str(_resolved(expression[0]))
-        operands = [self._expression(operand, depth + 1) for operand in expression[1:]]
         if operator == "/Not":
-            return not operands[0] if operands else True
+            return not first if count else True
         if operator == "/And":
-            return all(operands)
+            return all_shown
         if operator == "/Or":
-            return any(operands) if operands else True
+            return any_shown or read < count if count else True
         return True
 
 
@@ -1991,12 +2040,14 @@ class _PdfInk:
 
     Text that is transparent, under other content, clipped away, off the page, in a pattern or in a colour
     space other than those is not told apart. An operator whose operands this cannot read (a number too large
-    for a float among them, a form XObject /Matrix without six numbers) changes nothing here; where pypdf
-    itself cannot read it, pypdf stops the extraction. The visitors never raise: anything else that goes wrong
-    sets failed, and from then on they do nothing, so pypdf's own reading goes on as without them. With hide,
-    the text of each text-showing operator that cannot be seen is replaced by a _GAP before pypdf reads it
-    (pypdf calls the visitor with the operands it then reads, and builds them afresh for each extraction), so
-    the page's text leaves it out but keeps a gap where it takes up its room on the page."""
+    for a float among them) changes nothing here; where pypdf itself cannot read it, pypdf stops the
+    extraction. A form XObject is drawn with the state saved and restored after it, also where its entries
+    cannot be read (a /Matrix that is not an array of six numbers leaves the matrix as it was), so nothing its content sets
+    outlasts it. The visitors never raise: anything else that goes wrong sets failed, and from then on they do
+    nothing, so pypdf's own reading goes on as without them. With hide, the text of each text-showing operator
+    that cannot be seen is replaced by a _GAP before pypdf reads it (pypdf calls the visitor with the operands
+    it then reads, and builds them afresh for each extraction), so the page's text leaves it out but keeps a
+    gap where it takes up its room on the page."""
 
     def __init__(self, resources, hide: bool, optional: _OptionalContent) -> None:
         self.hide = hide
@@ -2010,9 +2061,9 @@ class _PdfInk:
         # that is not shown, and how many of them are not shown.
         self._marked: list[bool] = []
         self._off = 0
-        # For each form XObject being drawn: the state, the stack, the marked content and the count of
-        # sequences not shown to restore after it (None for an image).
-        self._forms: list[tuple[_Ink, list[_Ink], list[bool], int] | None] = []
+        # For each XObject being drawn: the state, the stack, the marked content and the count of sequences
+        # not shown to restore after it.
+        self._forms: list[tuple[_Ink, list[_Ink], list[bool], int]] = []
 
     def before(self, operator: bytes, operands: list, cm, tm) -> None:
         if not self.failed:
@@ -2086,15 +2137,14 @@ class _PdfInk:
                 self._enter_form(operands[0])
         except Exception:
             # An operand this cannot read (a number too large for a float, a missing resource) leaves the state
-            # as it was: each branch changes it only once it has read all it needs.
+            # as it was: each branch changes it only once it has read all it needs (Do saves the state first,
+            # so that it is restored after the XObject, _enter_form).
             pass
 
     def _after(self, operator: bytes) -> None:
         if operator == b"Do" and self._forms:
-            saved = self._forms.pop()
-            if saved is not None:
-                self._state, self._saved, self._marked, self._off = saved
-                self._resources.pop()
+            self._state, self._saved, self._marked, self._off = self._forms.pop()
+            self._resources.pop()
 
     def _marked_content(self, properties):
         """The optional content a BDC names: its property list, inline or named in the /Properties resources."""
@@ -2121,27 +2171,34 @@ class _PdfInk:
             self._state = self._state._replace(stroke_space=space, stroke=components)
 
     def _enter_form(self, name) -> None:
-        """Before a form XObject: its content draws with the state saved and its own matrix and resources, and
-        is not shown where its optional content is not. All is read before the state changes, so a form whose
-        matrix or entries cannot be read leaves it as it was (and None on the stack for after)."""
-        self._forms.append(None)
-        resources = _resolved(self._resources[-1]) or {}
-        xobject = _resolved(_resolved(resources.get("/XObject")).get(name))
-        if xobject.get("/Subtype") != "/Form":
-            return
-        matrix = _resolved(xobject.get("/Matrix")) or _IDENTITY
-        # A matrix without six numbers cannot be read, and is not read any further.
-        if len(matrix) != len(_IDENTITY):
-            raise ValueError("a form matrix holds six numbers")
-        ctm = _multiply(tuple(map(float, matrix)), self._state.ctm)
-        off = xobject.get("/OC") is not None and not self._optional.shown(xobject.raw_get("/OC"))
-        form_resources = xobject.get("/Resources") or resources
-        self._forms[-1] = (self._state, self._saved, self._marked, self._off)
+        """Before an XObject: the state is saved first, before anything of the XObject is read, so that after
+        it the state is restored whatever its content set, also where its entries cannot be read (an image
+        draws no content, and leaves the state as it was). A form's content draws with its own resources and
+        matrix, and is not shown where its optional content is not. An entry that cannot be read changes
+        nothing for its content: resources that cannot be read (not a dictionary, or empty) are those of the content
+        around it, and a matrix that is not an array of six numbers leaves the matrix as it was."""
+        self._forms.append((self._state, self._saved, self._marked, self._off))
         self._saved = []
+        self._marked = []
+        outer = self._resources[-1]
+        self._resources.append(outer)
+        resources = _resolved(outer) or {}
+        xobject = _resolved(_resolved(resources.get("/XObject")).get(name))
+        own = _resolved(xobject.get("/Resources"))
+        # Resources that cannot be read (not a dictionary, or empty) are those of the content around it.
+        self._resources[-1] = own if isinstance(own, dict) and own else outer
+        off = xobject.get("/OC") is not None and not self._optional.shown(xobject.raw_get("/OC"))
         self._marked = [off]
         self._off += off
-        self._state = self._state._replace(ctm=ctm)
-        self._resources.append(form_resources)
+        matrix = _resolved(xobject.get("/Matrix")) or _IDENTITY
+        # A matrix that is not an array of six numbers (a string of six digits is none) cannot be read, and is
+        # not read any further.
+        if not isinstance(matrix, (list, tuple)) or len(matrix) != len(_IDENTITY):
+            raise ValueError("a form matrix is an array of six numbers")
+        numbers = [_resolved(value) for value in matrix]
+        if not all(isinstance(value, (int, float)) and not isinstance(value, bool) for value in numbers):
+            raise ValueError("a form matrix is an array of six numbers")
+        self._state = self._state._replace(ctm=_multiply(tuple(map(float, numbers)), self._state.ctm))
 
     def _unseen(self, tm) -> bool:
         state = self._state

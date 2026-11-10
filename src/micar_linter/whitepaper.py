@@ -92,8 +92,9 @@ _RESERVED_METADATA_KEYS = (
     "numbered_fields",
     "numbered_field_labels",
     # Set by the document loaders: the whole text of the file, headings, tables and text in no section
-    # included, which COMMON.LEI_CHECK_DIGITS reads besides the sections, and the same text without what a
-    # reader cannot see (DOCX, PDF, XHTML and HTML; absent where it is the same), which that rule reads too.
+    # included, and the text of each section the regime drops, which COMMON.LEI_CHECK_DIGITS reads besides the
+    # sections, and the whole text of the file without what a reader cannot see (DOCX, PDF, XHTML and HTML;
+    # absent where it is the same), which that rule reads too.
     "document_text",
     "shown_text",
     "reserve_characterisation_reviewed_by",
@@ -224,16 +225,33 @@ _EMT_MARKERS = ("e-money token", "referenced currency", "safeguarding of funds")
 # new sentence (with a capital letter or a digit, or with a name such as "xStable"), and after a line shaped
 # like a title ("No Investor Compensation"); it runs on into a line that starts otherwise, since a DOCX may
 # split a sentence over paragraphs and a PDF wraps its lines inside a sentence, and into each item of a list
-# after a lead-in (_regime_pieces).
+# after a lead-in, other than a line after a closed list that reads as a heading (_regime_pieces).
 _NEGATION = re.compile(r"\b(?:not|no|neither|nor|never|without|other than|except|excluding|unlike)\b|n't\b")
 _CLAUSE_END = re.compile(r"[.!?;:](?=\s|$)|\b(?:but|however|whereas|although|though|while)\b")
 _NEGATION_REACH = 8
 _NEGATION_LOOKBACK = 200
+# A phrase that holds a negation word but does not negate what follows it (a pseudo-negation, as NegEx and
+# pyConTextNLP list "not only" and "not necessarily"): "not limited to", "not be limited to", "not restricted
+# to", "not be restricted to", "not exhaustive", "not exclusively", "not only", "not necessarily" (each also
+# with "n't") and "without limitation". Matched where a negation word starts. It governs no item of a list
+# after it ("The risks include, but are not limited to:"), where every negation word of its lead-in stands in
+# one (_negated, _continued, _lead_in); elsewhere its negation word negates as any other does.
+_PSEUDO_NEGATION = re.compile(
+    r"(?:not|n't)\s+(?:(?:be\s+)?(?:limited|restricted)\s+to|exhaustive|exclusively|only|necessarily)\b"
+    r"|without\s+limitation\b"
+)
+# The end of a line or paragraph that ends in a sentence mark, where a lead-in starts (_lead_in). Neither
+# "but", which ends the clause of "including but not limited to", nor a sentence mark inside a line ends a
+# lead-in, so a negation before them ("The token is not any of the following, including but not limited
+# to:") stands in the lead-in of the pseudo-negation.
+_LEAD_IN_START = re.compile(r"[.!?;:][ \t]*\n")
 # A list item: a bullet or dash, or a list number of one or two digits or a lower-case list letter or roman
 # numeral with a full stop or a bracket, before its text.
 _LIST_ITEM = re.compile(
     r"(?:[-*\u2013\u2014\u2022\u2023\u2043\u00b7\u25aa\u25cf]|\(?(?:[a-z]|[ivx]{1,4}|\d{1,2})[.)])\s"
 )
+# The start of a line that is a list item.
+_ITEM_LINE = re.compile(rf"\n[ \t]*(?:{_LIST_ITEM.pattern})")
 _FIRST_WORD = re.compile(r"[^\W_]+")
 # A heading that ends in a negation leads into the line after it; a colon after the negation ends the clause
 # there (_CLAUSE_END), so such a heading governs nothing.
@@ -241,12 +259,45 @@ _ENDS_IN_NEGATION = re.compile(rf"(?:{_NEGATION.pattern})\W*$")
 
 
 def _negated(text: str, start: int) -> bool:
-    """Whether a negation governs the marker at start of the lower-case text."""
+    """Whether a negation governs the marker at start of the lower-case text.
+
+    A pseudo-negation ("not limited to") governs no list item after it: where the marker stands in or after a
+    line that starts with a list marker (_LIST_ITEM) after the end of the pseudo-negation, its negation word
+    is none. That holds only where every negation word of its lead-in (_lead_in) stands in a pseudo-negation
+    that ends before such a line. Otherwise each negation word counts, as before #96: beside another one in
+    the lead-in ("The token is not any of the following, including but not limited to", "The token is not,
+    among other things and not limited to these,") and in the marker's own sentence ("including but not
+    limited to e-money tokens"), also where a line end splits that sentence."""
     before = text[max(0, start - _NEGATION_LOOKBACK) : start]
     ends = list(_CLAUSE_END.finditer(before))
     clause = before[ends[-1].end() :] if ends else before
     negations = list(_NEGATION.finditer(clause))
-    return bool(negations) and len(clause[negations[-1].end() :].split()) <= _NEGATION_REACH
+    if not negations:
+        return False
+    if (
+        _PSEUDO_NEGATION.match(clause, negations[-1].start())
+        and (lead_in := _lead_in(before, start <= _NEGATION_LOOKBACK)) is not None
+    ):
+        # The start of the last list item line; a pseudo-negation that ends before it governs nothing, where
+        # the lead-in holds no other negation word.
+        item = max((match.start() for match in _ITEM_LINE.finditer(lead_in)), default=-1)
+        if all(
+            (pseudo := _PSEUDO_NEGATION.match(lead_in, match.start())) and pseudo.end() <= item
+            for match in _NEGATION.finditer(lead_in)
+        ):
+            return False
+    return len(clause[negations[-1].end() :].split()) <= _NEGATION_REACH
+
+
+def _lead_in(text: str, whole: bool) -> str | None:
+    """The lead-in at the end of the lower-case text, with the list after it: the text after the last line or
+    paragraph that ends in a full stop, question or exclamation mark, semicolon or colon (_LEAD_IN_START), or
+    all of it where no line does and the text is whole. None where the lookback cut the text and no line in it
+    ends so: the lead-in may then start before the text and hold a negation there."""
+    starts = list(_LEAD_IN_START.finditer(text))
+    if starts:
+        return text[starts[-1].end() :]
+    return text if whole else None
 
 
 def _names_regime(pieces: list[tuple[str, int]], markers: tuple[str, ...]) -> bool:
@@ -316,7 +367,10 @@ def _continued(previous: tuple[str, str, bool] | None) -> str:
     A heading is judged on its own words, so nothing continues it unless it ends in a negation ("For the
     purposes of MiCAR the token is not", which a PDF may read as a heading). A line that ends in a
     semicolon is an item of a list, and the next line continues the clause that it continued. A colon at
-    the end of a line introduces the line after it, so it ends no clause there.
+    the end of a line introduces the line after it, so it ends no clause there, unless each negation word of
+    the lead-in that the colon ends (_lead_in) stands in a pseudo-negation: such a lead-in governs no line of
+    its list, whether or not the line has a list marker (a Word list style shows one that the text does not
+    hold).
     """
     if previous is None:
         return ""
@@ -326,7 +380,20 @@ def _continued(previous: tuple[str, str, bool] | None) -> str:
     text = text.rstrip()
     if text.endswith(";"):
         return clause
-    return f"{clause}\n{text.removesuffix(':')}"[-_NEGATION_LOOKBACK:]
+    continued = f"{clause}\n{text.removesuffix(':')}"
+    # The clause that the line continues is whole where the lookback did not cut it.
+    if text.endswith(":") and _only_pseudo_negations(_lead_in(continued, len(clause) < _NEGATION_LOOKBACK)):
+        return ""
+    return continued[-_NEGATION_LOOKBACK:]
+
+
+def _only_pseudo_negations(lead_in: str | None) -> bool:
+    """Whether the lower-case lead-in (None: not known) holds a negation word and each stands in a
+    pseudo-negation."""
+    if lead_in is None:
+        return False
+    negations = list(_NEGATION.finditer(lead_in))
+    return bool(negations) and all(_PSEUDO_NEGATION.match(lead_in, match.start()) for match in negations)
 
 
 def _regime_pieces(
@@ -345,9 +412,13 @@ def _regime_pieces(
     does so only after a lead-in that ends in a colon or a negation. The full stop after a list number or
     letter ("1.", "a.") ends the clause as any full stop does, so a lead-in governs no item marked so. An item
     continues the lead-in of its list, not the item before it, so the items of a list inside an item continue
-    the outer lead-in. Any other line continues the line before it, as a DOCX may split a sentence over
-    paragraphs ("... is neither" / "an asset-referenced token nor" / ...) and a PDF wraps its lines. In the
-    other formats each section is a piece.
+    the outer lead-in. A list is closed by an item that ends in a full stop after one or more items that each
+    end in a semicolon ("; and" and "; or" included). After a closed list, a line with a list marker whose
+    text reads as a heading (_heading_item, such as "(c) Reserve of assets") is judged on its own words, as a
+    heading is; the list does not end there, so the lead-in still governs the items after it. Any other line
+    continues the line before it, as a DOCX may split a sentence over paragraphs ("... is neither" / "an
+    asset-referenced token nor" / ...) and a PDF wraps its lines. In the other formats each section is a
+    piece.
     """
     if not extracted:
         return [(text.lower(), 0) for text in sections.values()]
@@ -357,10 +428,18 @@ def _regime_pieces(
     # ends in a colon or a negation, so that it governs an item that starts with a capital letter too.
     lead: str | None = None
     lead_opens = False
+    # How the last item of the current list ends so far ("semicolon", "full stop" or ""), how many items the
+    # list has, and whether each item before the last ends in a semicolon.
+    ending, items, semicolons = "", 0, True
     for text, heading in _line_units(suffix, extracted, headings):
         item = _LIST_ITEM.match(text.lstrip())
+        closed = items >= 2 and semicolons and ending == "full stop"
+        as_heading = bool(item) and lead is not None and closed and _heading_item(text.lstrip()[item.end() :])
         if heading:
             clause, lead = "", None
+        elif as_heading:
+            # Judged on its own words, as a heading is; the items after it still continue the lead-in.
+            clause = ""
         elif item:
             if lead is None:
                 lead = _continued(previous)
@@ -374,8 +453,52 @@ def _regime_pieces(
             clause = _continued(previous)
         low = text.lower()
         pieces.append((f"{clause}\n{low}", len(clause) + 1) if clause else (low, 0))
-        previous = (clause, low, heading)
+        previous = (clause, low, heading or as_heading)
+        if lead is None:
+            ending, items, semicolons = "", 0, True
+        elif item:
+            semicolons = semicolons and (items == 0 or ending == "semicolon")
+            ending, items = _ending(low), items + 1
+        elif items:
+            # A line that continues the item, as a PDF wraps it.
+            ending = _ending(low)
     return pieces
+
+
+# The end of a list item that another item follows: a semicolon, also before "and" or "or".
+_SEMICOLON_END = re.compile(r";(?:\s+(?:and|or))?$")
+
+
+def _ending(text: str) -> str:
+    """How a line of a list item ends: "semicolon" (also "; and", "; or"), "full stop" or ""."""
+    text = text.rstrip()
+    if _SEMICOLON_END.search(text):
+        return "semicolon"
+    return "full stop" if text.endswith(".") else ""
+
+
+def _heading_item(text: str) -> bool:
+    """Whether the text of a list item after its marker reads as a heading ("Reserve of assets"): its first
+    character is a capital letter, its first word is not "A" or "An" ("An e-money token" reads as an item), it
+    does not end in a colon, and it is a short label (document._is_label: at most twelve words, with no full
+    stop, exclamation mark, semicolon or comma at its end and no sentence break inside)."""
+    from micar_linter.document import _is_label
+
+    text = text.strip()
+    return (
+        text[:1].isupper()
+        and text.split(maxsplit=1)[0] not in ("A", "An")
+        and not text.endswith(":")
+        and _is_label(text)
+    )
+
+
+# The sections of the other regimes, which the document loader drops once the regime is known.
+_DROPPED_SECTIONS = {
+    WhitepaperType.ART: ("emt", "crypto_asset", "not_approved_statement"),
+    WhitepaperType.EMT: ("art", "crypto_asset"),
+    WhitepaperType.OTHER: ("art", "emt"),
+}
 
 
 def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | None) -> Whitepaper:
@@ -391,8 +514,9 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
     numbered_field_labels: dict[str, str] = {}
     extracted = ""
     headings: tuple[str, ...] = ()
-    # The whole text of the file, which COMMON.LEI_CHECK_DIGITS reads besides the sections, and the same text
-    # without what a reader cannot see, "" where the two are the same.
+    # The whole text of the file (and below, the text of the sections the regime drops), which
+    # COMMON.LEI_CHECK_DIGITS reads besides the sections, and the whole text of the file without what a reader
+    # cannot see, "" where the two are the same.
     document_text = shown_text = ""
     try:
         if suffix == ".pdf":
@@ -472,17 +596,17 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
         else:
             wp_type = WhitepaperType.OTHER
 
-    if wp_type is WhitepaperType.ART:
-        sections.pop("emt", None)
-        sections.pop("crypto_asset", None)
-        # Art. 19 MiCAR prescribes no first-page statement, so no ART rule reads one.
-        sections.pop("not_approved_statement", None)
-    elif wp_type is WhitepaperType.EMT:
-        sections.pop("art", None)
-        sections.pop("crypto_asset", None)
-    else:
-        sections.pop("art", None)
-        sections.pop("emt", None)
+    # The sections of the other regimes are dropped. Art. 19 MiCAR prescribes no first-page statement, so
+    # no ART rule reads one. COMMON.LEI_CHECK_DIGITS still reads the text of each dropped section, after
+    # the text of the file and a blank line apart from it, so it checks a code there as in a section the
+    # regime keeps (a valid code there never counts as found) and a change of the regime cannot make a draft
+    # pass: the text of the file holds text moved away or
+    # deleted that can complete a code the section shows malformed, which the text as a reader sees it
+    # (shown_text) leaves out only where that reading does not fail, and it joins to the code a tracked
+    # insertion, a content control, a field result or a smart tag that the section text leaves out.
+    dropped = [str(sections.pop(key)) for key in _DROPPED_SECTIONS[wp_type] if key in sections]
+    if dropped:
+        document_text = "\n\n".join((document_text, *dropped))
 
     title = path.stem.replace("-", " ").replace("_", " ").title()
     metadata = {

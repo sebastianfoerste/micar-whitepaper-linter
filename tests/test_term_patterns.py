@@ -256,9 +256,8 @@ def test_look_alike_words_do_not_stand_in_for_the_term(
 
 @pytest.mark.parametrize("whitepaper_type", ["art", "emt", "other"])
 def test_untouched_starter_template_passes_no_rule(tmp_path: Path, whitepaper_type: str):
-    # The linter does not treat "REPLACE:" text as a placeholder, so each placeholder stays below its
-    # rule's minimum length or leaves out one of its terms (templates/whitepaper-starter/README.md), whichever
-    # "type" the user sets: an e-money token's risk warning needs only the two scheme terms.
+    # The linter reads a section that still opens with the template's "REPLACE:" note as unanswered, so
+    # no rule passes on it, whichever "type" the user sets (templates/whitepaper-starter/README.md).
     template = json.loads(Path("templates/whitepaper-starter/whitepaper.json").read_text(encoding="utf-8"))
     path = tmp_path / "whitepaper.json"
     path.write_text(json.dumps({**template, "type": whitepaper_type}), encoding="utf-8")
