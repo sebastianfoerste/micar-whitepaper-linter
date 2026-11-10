@@ -82,6 +82,9 @@ SOURCE_MODULES = {
     "ITS": "templates.py",
     "RTS": "templates.py",
 }
+# The stated status of an example on which the rule gives no finding: a field-level rule on a draft without
+# field numbers (linter.runs_on).
+NOT_RUN = "not run"
 # Citations have not been re-read against the Official Journal since these pages were introduced,
 # except those of the rules in OJ_CHECKED.
 VERIFICATION_NOTE = (
@@ -278,8 +281,8 @@ VARIANT_NOTES = {
     ),
     "RTS.CLASSIFICATION_DATA": (
         "The register data sit in another Part of each template (Part F of Table 2, Part B of Tables 3 and 4), so "
-        "the rule anchors a draft without field numbers to the section of that Part: crypto_asset, art or emt. The "
-        "check itself is the same; it reads the fields of the regime's table."
+        "the rule anchors its finding to the section of that Part: crypto_asset, art or emt. The check itself is the "
+        "same; it reads the fields of the regime's table."
     ),
 }
 
@@ -885,26 +888,32 @@ def _numbered_example(
     return Example(title, expected, draft, note, fields)
 
 
-def _template_examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
-    """Examples of the template rules: a draft without field numbers, and numbered-field drafts."""
-    base = {"title": "Synthetic rule example", "type": regime.value}
-    absent = Example(
-        "Draft without field numbers, section absent",
-        "missing",
-        {**base, "sections": {}},
-        f"A JSON, PDF, DOCX, Markdown or heading-based XHTML draft without section {rule.section} is missing, as "
-        "on the other rules.",
-    )
-    no_fields = Example(
+def _not_run_example(rule: Rule, regime: WhitepaperType) -> Example:
+    """A field-level rule on a draft without field numbers: no finding (owner decision of 2026-11-10)."""
+    return Example(
         "Draft without field numbers",
-        "review",
+        NOT_RUN,
         _draft(rule, regime, "Synthetic section text of a draft without field numbers."),
-        "The draft has no field numbers, so the field-level check does not run; the finding says so and stays open "
-        "until the white paper is checked in the numbered-field layout.",
+        "A JSON, PDF, DOCX, Markdown or heading-based XHTML draft has no field numbers, so this check does not run. "
+        "The report has no finding for it, neither open nor passed, and one note names how many field-level checks "
+        "did not run.",
     )
+
+
+def _template_examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
+    """Examples of the template rules: numbered-field drafts, and a draft without field numbers, on which every
+    template rule but ITS.NOTIFICATION_DATE_FORMAT does not run."""
+    base = {"title": "Synthetic rule example", "type": regime.value}
+    no_fields = _not_run_example(rule, regime)
     if rule.rule_id == "ITS.NOTIFICATION_DATE_FORMAT":
         return [
-            absent,
+            Example(
+                "Draft without field numbers, section absent",
+                "missing",
+                {**base, "sections": {}},
+                f"A JSON, PDF, DOCX, Markdown or heading-based XHTML draft without section {rule.section} is "
+                "missing, as on the other rules.",
+            ),
             Example(
                 "Date in another form",
                 "review",
@@ -948,13 +957,6 @@ def _template_examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
             "import."
         )
         return [
-            Example(
-                "Draft without field numbers, sections absent",
-                "missing",
-                {**base, "sections": {}},
-                "None of the sections not_approved_statement, management_statement, risk_warning and summary has "
-                "text.",
-            ),
             no_fields,
             _numbered_example(
                 "No predefined field answered",
@@ -997,7 +999,6 @@ def _template_examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
         ]
     if rule.rule_id == "ITS.FIELD_FORMATS":
         return [
-            absent,
             no_fields,
             _numbered_example(
                 "No typed field",
@@ -1025,7 +1026,6 @@ def _template_examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
         ]
     if rule.rule_id == "ITS.CODE_LISTS":
         return [
-            absent,
             no_fields,
             _numbered_example(
                 "No field with a closed list",
@@ -1051,9 +1051,8 @@ def _template_examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
             ),
         ]
     if rule.rule_id == "RTS.CLASSIFICATION_DATA":
-        return _classification_examples(regime, absent, no_fields)
+        return _classification_examples(regime, no_fields)
     return [
-        absent,
         no_fields,
         _numbered_example(
             "Indicators not answered",
@@ -1122,12 +1121,11 @@ def _classification_rows(regime: WhitepaperType) -> tuple[tuple[str, str, str], 
     return tuple(rows)
 
 
-def _classification_examples(regime: WhitepaperType, absent: Example, no_fields: Example) -> list[Example]:
+def _classification_examples(regime: WhitepaperType, no_fields: Example) -> list[Example]:
     layout = LAYOUTS[regime]
     rows = _classification_rows(regime)
     first = layout.fields[0][1]
     return [
-        absent,
         no_fields,
         _numbered_example(
             "Register block not answered",
@@ -1219,13 +1217,16 @@ def _typed_fields_html(code_lists: bool) -> str:
     return '<ul class="plain">' + "".join(items) + "</ul>"
 
 
+_NOT_RUN_ITEM = (
+    "<li><strong>Not run</strong>: in a draft without field numbers (JSON, PDF, DOCX, Markdown, heading-based XHTML) "
+    "the check does not run. The report has no finding for this rule, neither open nor passed; one note names how "
+    "many field-level checks did not run.</li>"
+)
+
+
 def _template_status_logic(rule: Rule) -> str:
     section = f"<code>{_e(rule.section)}</code>"
-    no_fields = (
-        "<li>In a draft without field numbers (JSON, PDF, DOCX, Markdown, heading-based XHTML): <strong>Missing</strong> "
-        f"where section {section} is absent, empty or holds only a placeholder, otherwise <strong>Review</strong> with a "
-        "note that the field-level check needs the numbered-field layout. Such a draft never passes.</li>"
-    )
+    no_fields = _NOT_RUN_ITEM
     if rule.rule_id == "ITS.NOTIFICATION_DATE_FORMAT":
         return (
             '<ul class="plain"><li><strong>Missing</strong>: in a numbered-field XHTML draft, field 01 of Table 2 (I.01 '
@@ -1242,9 +1243,7 @@ def _template_status_logic(rule: Rule) -> str:
     if rule.rule_id == "ITS.PREDEFINED_TEXT":
         return (
             f'<ul class="plain"><li><strong>Missing</strong>: in a numbered-field XHTML draft, none of {TABLE_FIELDS} '
-            "(and field 05 of Table 2) holds an answer other than a placeholder; in any other draft, the sections "
-            "<code>not_approved_statement</code>, <code>management_statement</code>, <code>risk_warning</code> and "
-            "<code>summary</code> are each absent, empty or hold only a placeholder.</li>"
+            "(and field 05 of Table 2) holds an answer other than a placeholder.</li>"
             "<li><strong>Review</strong>: in a numbered-field draft, one of those fields is empty, absent, holds only a "
             "placeholder or is marked not applicable; a sentence of its predefined text is found neither in the "
             "template's English nor in its German wording; or a field whose form column has no free text holds more "
@@ -1253,8 +1252,8 @@ def _template_status_logic(rule: Rule) -> str:
             "statement of Art. 6(5), point (d), MiCAR, with or without <code>true</code>; true alone, N/A or other "
             "text goes to review, and so does false where field D.6 or G.6 is true (utility token classification). "
             "The finding names each field and quotes the start of the template sentence it misses, never the "
-            "draft. In any other draft: always, with a note that the check needs the numbered-field layout.</li>"
-            "<li><strong>Pass</strong>: every field holds its text. Words are compared without case, punctuation, "
+            "draft.</li>"
+            f"{no_fields}<li><strong>Pass</strong>: every field holds its text. Words are compared without case, punctuation, "
             "quotation marks, hyphens and spacing, with ä, ö, ü and ß read as ae, oe, ue and ss. A draft may leave out "
             "the full title of a cited act (“of the European Parliament and of the Council”), write “this” or "
             "“the” before “crypto-asset white paper”, add or leave out “that” before “any such offer”, name the "
@@ -1289,11 +1288,7 @@ def _template_status_logic(rule: Rule) -> str:
             "not (Art. 3(1)), or the other way round (Art. 3(2)); both give the same code; or neither gives a DTI, "
             "where Art. 3(3) asks for an identifier approved by ESMA, which the template has no field for. The "
             "finding names the field and the item, never the answer.</li>"
-            "<li>In a draft without field numbers (JSON, PDF, DOCX, Markdown, heading-based XHTML): "
-            "<strong>Missing</strong> where the section of the Part that carries the register data "
-            "(<code>crypto_asset</code>, <code>art</code> or <code>emt</code>) is absent, empty or holds only a "
-            "placeholder, otherwise <strong>Review</strong> with a note that the field-level check needs the "
-            "numbered-field layout. Such a draft never passes.</li>"
+            f"{no_fields}"
             "<li><strong>Pass</strong>: none of the above. Where a field gives an LEI, the finding "
             "notes that Art. 2 also asks for its inclusion in the GLEIF database, which the linter does not check.</li>"
             "</ul><p>The forms of these fields (dates, LEI, DTI, MIC, true or false) are checked by "
@@ -1321,10 +1316,10 @@ def _template_status_logic(rule: Rule) -> str:
 def _template_limitations(rule: Rule) -> list[str]:
     if rule.rule_id == "RTS.CLASSIFICATION_DATA":
         return [
-            "Reads the fields of a numbered-field XHTML draft by their numbers; text elsewhere is not considered. In a "
-            "draft without field numbers it reads the section of the Part that carries the register data "
-            "(<code>crypto_asset</code>, <code>art</code> or <code>emt</code>) only to tell whether it is absent; "
-            "finding the items in free text is not built.",
+            "Reads the fields of a numbered-field XHTML draft by their numbers; text elsewhere is not considered. It "
+            "does not run on a draft without field numbers; finding the items in free text is not built. Its "
+            "finding is anchored to the section of the Part that carries the register data "
+            "(<code>crypto_asset</code>, <code>art</code> or <code>emt</code>).",
             "Checks whether each field holds an answer, not what it says or whether it is correct; it does not "
             "check a field's label, so a draft that numbers its fields otherwise is read in the wrong fields.",
             "Art. 2 asks for each LEI to be valid and included in the GLEIF database. The check works offline and "
@@ -1348,10 +1343,10 @@ def _template_limitations(rule: Rule) -> list[str]:
             "the German text reads “gegebenenfalls” and “sofern verfügbar”. The check follows the English text and "
             "the template.",
         ]
-    reads = (
-        "Reads the fields of a numbered-field XHTML draft by their numbers; text elsewhere is not considered. "
-        f"In a draft without field numbers it reads section <code>{_e(rule.section)}</code>"
-        + (" for a date." if rule.rule_id == "ITS.NOTIFICATION_DATE_FORMAT" else " only to tell whether it is absent.")
+    reads = "Reads the fields of a numbered-field XHTML draft by their numbers; text elsewhere is not considered. " + (
+        f"In a draft without field numbers it reads section <code>{_e(rule.section)}</code> for a date."
+        if rule.rule_id == "ITS.NOTIFICATION_DATE_FORMAT"
+        else "It does not run on a draft without field numbers."
     )
     shown = (
         "Reads the text a reader sees. An Inline XBRL document can show a tagged value in another form than the value "
@@ -1506,24 +1501,11 @@ def _point_answers(point: Point, regime: WhitepaperType) -> dict[str, str | None
 
 def _point_examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
     point, regime = _point(rule)
-    fields = fields_text(point, regime)
     name = f"Annex {point.annex} Part {point.part} point {point.number}"
     answers = _point_answers(point, regime)
     blank = {**answers, **{field.number: "TBD" for field in point.fields}}
     result = [
-        Example(
-            "Draft without field numbers, section absent",
-            "missing",
-            {"title": "Synthetic rule example", "type": regime.value, "sections": {}},
-            f"A JSON, PDF, DOCX, Markdown or heading-based XHTML draft without section {rule.section} is missing.",
-        ),
-        Example(
-            "Draft without field numbers",
-            "review",
-            _draft(rule, regime, "Synthetic section text of a draft without field numbers."),
-            f"The draft has no field numbers, so {fields} cannot be read; the finding says so and stays open until "
-            "the white paper is checked in the numbered-field layout. Such a draft never passes.",
-        ),
+        _not_run_example(rule, regime),
         _numbered_example(
             "Fields hold only placeholders",
             "missing",
@@ -1635,7 +1617,6 @@ def _field_line(field: PointField, regime: WhitepaperType) -> str:
 
 def _point_status_logic(rule: Rule) -> str:
     point, regime = _point(rule)
-    section = f"<code>{_e(rule.section)}</code>"
     items = []
     for item in point.items:
         if isinstance(item, Alternative):
@@ -1645,15 +1626,14 @@ def _point_status_logic(rule: Rule) -> str:
             items.append(f"<li>{_field_line(item, regime)}</li>")
     return (
         '<ul class="plain"><li><strong>Missing</strong>: in a numbered-field XHTML draft, every field below that '
-        "applies is empty, absent or holds only a placeholder such as TBD; in any other draft, section "
-        f"{section} is absent or empty, or holds only a placeholder.</li>"
+        "applies is empty, absent or holds only a placeholder such as TBD.</li>"
         "<li><strong>Review</strong>: in a numbered-field draft, a field that applies is empty, absent or holds only a "
         "placeholder; a field that applies is marked not applicable (N/A, none, a dash) where the template does not "
         "ask for it “where applicable” or “if any”; or no field of an alternative holds an answer. A field that "
         "applies only under a condition is checked as applying when the draft does not show the condition (a flag "
         "that is neither true nor false, a code field without a template code). The finding names each field by its "
-        "number and, in English, the template's name. In any other draft: always, with a note that the point check "
-        "needs the numbered-field layout.</li>"
+        "number and, in English, the template's name.</li>"
+        f"{_NOT_RUN_ITEM}"
         "<li><strong>Pass</strong>: every field that applies holds an answer. A field that does not apply under its "
         "condition is not reported; the finding names the condition. An LEI counts as given only with valid check "
         "digits, a DTI as nine letters or digits; true and false count also as richtig and falsch, yes and no, ja "
@@ -1683,9 +1663,8 @@ def _point_limitations(rule: Rule) -> list[str]:
     numbers = {field.number for field in point.fields}
     items = [
         f"Reads the fields of a numbered-field XHTML draft by their numbers, {fields_text(point, regime)} and the "
-        "fields their conditions name; text elsewhere is not considered. In a draft without field numbers it reads "
-        f"section <code>{_e(rule.section)}</code> only to tell whether it is absent; finding the point's items in "
-        "free text is not built.",
+        "fields their conditions name; text elsewhere is not considered. It does not run on a draft without field "
+        "numbers; finding the point's items in free text is not built.",
         "Checks whether each field holds an answer, not what it says: an answer to another question passes. "
         "<code>ITS.FIELD_FORMATS</code> and <code>ITS.CODE_LISTS</code> check the formats and codes of the typed "
         "fields.",
@@ -1740,7 +1719,9 @@ def lint_example(rule: Rule, example: Example) -> str:
         sections=dict(draft["sections"]),
         metadata=metadata,
     )
-    return Linter((rule,)).lint(whitepaper)[0].status
+    findings = Linter((rule,)).lint(whitepaper)
+    # A field-level rule gives no finding on a draft without field numbers (linter.runs_on).
+    return findings[0].status if findings else NOT_RUN
 
 
 def _e(text: object) -> str:
@@ -1773,6 +1754,8 @@ def _page(title: str, description: str, body: str, *, root: str = "../") -> str:
 
 
 def _status_badge(status: str) -> str:
+    if status == NOT_RUN:
+        return '<span class="badge neutral">Not run</span>'
     return f'<span class="badge {status}">{_e(status.capitalize())}</span>'
 
 

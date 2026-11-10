@@ -42,7 +42,7 @@ Real output of `uv run micar-lint examples/incomplete.json` (a synthetic, incomp
 MiCAR Whitepaper Linter - Incomplete Synthetic EuroStable ART Draft
 Whitepaper type: ART
 ==============================================================================
-Pass: 1  |  Review: 65  |  Missing: 25  |  Blockers: 85
+Pass: 1  |  Review: 13  |  Missing: 7  |  Blockers: 16
 
 [REVIEW] [BLOCKER] COMMON.SUMMARY  Plain-language summary
            Cite:  Art. 6(7), Art. 19(6), Art. 51(6) MiCAR

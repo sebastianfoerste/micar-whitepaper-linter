@@ -8,8 +8,8 @@ rules of ADR 0005 (ANNEX_I.A.P6) or with the study's IDs (batch.py). Every regim
 follows from the regime.
 
 A draft without field numbers (JSON, PDF, DOCX, Markdown and heading-based XHTML) cannot show the fields, so
-these rules report Missing where the section they are anchored to is absent and Review otherwise, with a note
-that the field-level check needs the numbered-field layout; ITS.NOTIFICATION_DATE_FORMAT instead reads the
+these rules do not run on it (linter.runs_on): no finding, and one note in the report says how many did not
+run (owner decision of 2026-11-10, ADR 0005); ITS.NOTIFICATION_DATE_FORMAT instead reads the
 notification_date section for a date written YYYY-MM-DD. linter.py dispatches all of them by rule ID; the
 field data sit in template_types.py and predefined_texts.py, the checks in template_checks.py.
 

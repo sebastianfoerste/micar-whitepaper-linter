@@ -23,7 +23,7 @@ from micar_linter.lei import (
     reads_leis,
 )
 from micar_linter.placeholders import is_not_applicable, is_placeholder, is_template_note
-from micar_linter.point_fields import ANNEX_REGIMES, POINTS_BY_RULE, fields_text, fields_text_de, point_issues
+from micar_linter.point_fields import ANNEX_REGIMES, POINTS_BY_RULE, point_issues
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Finding, Rule, Severity
 from micar_linter.rules.points import POINT_RULE_IDS
@@ -49,6 +49,8 @@ class Report:
     findings: tuple[Finding, ...]
     warnings: tuple[str, ...] = field(default_factory=tuple)
     source_anchors: dict[str, SourceAnchor] = field(default_factory=dict)
+    # The rules of the regime that did not run (field_rules_not_run): no finding, so never passed or open.
+    not_run: tuple[Rule, ...] = field(default_factory=tuple)
 
     @property
     def passed(self) -> tuple[Finding, ...]:
@@ -78,10 +80,19 @@ class Linter:
         self.rules = rules
 
     def lint(self, whitepaper: Whitepaper) -> tuple[Finding, ...]:
-        return tuple(self._apply(rule, whitepaper) for rule in self.rules)
+        """One finding per rule that runs on the draft; the field-level rules of a draft without field numbers
+        give none (field_rules_not_run)."""
+        return tuple(self._apply(rule, whitepaper) for rule in self.rules if runs_on(rule, whitepaper))
+
+    def not_run(self, whitepaper: Whitepaper) -> tuple[Rule, ...]:
+        """The rules that give no finding on this draft (field_rules_not_run)."""
+        return field_rules_not_run(self.rules, whitepaper)
 
     @staticmethod
     def _apply(rule: Rule, whitepaper: Whitepaper) -> Finding:
+        if not runs_on(rule, whitepaper):
+            raise ValueError(f"{rule.rule_id} reads template fields and does not run on a draft without them")
+
         if rule.rule_id == "COMMON.IXBRL_TAGGING":
             return _ixbrl_finding(rule, whitepaper)
 
@@ -230,12 +241,16 @@ class Linter:
 def lint_whitepaper(whitepaper: Whitepaper) -> Report:
     """Convenience entry point: pick the right ruleset and lint."""
     rules = RULESETS[whitepaper.type]
-    findings = Linter(rules).lint(whitepaper)
+    linter = Linter(rules)
+    findings = linter.lint(whitepaper)
+    not_run = linter.not_run(whitepaper)
 
     # Check for unrecognized/misspelled sections. The LEI rules read every party section in every regime: an
     # ART white paper names the persons other than the issuer who offer the token in its offeror section.
     valid_sections = {rule.section for rule in rules} | set(PARTY_SECTIONS)
     warnings: list[str] = list(whitepaper.metadata.get("extraction_notes", ()))
+    if not_run:
+        warnings.append(not_run_note(not_run, whitepaper.language == "de"))
     for section_name in whitepaper.sections:
         if section_name not in valid_sections:
             warnings.append(
@@ -249,6 +264,7 @@ def lint_whitepaper(whitepaper: Whitepaper) -> Report:
         findings=findings,
         warnings=tuple(warnings),
         source_anchors=build_source_anchors(whitepaper, findings),
+        not_run=not_run,
     )
 
 
@@ -1083,27 +1099,65 @@ def _summary_words(text: str, whitepaper: Whitepaper) -> int:
 
 # The template rules (rules/templates.py). A numbered-field draft carries the answer and the label of every
 # field (metadata keys numbered_fields and numbered_field_labels); any other draft has no field numbers.
-_NO_FIELDS = (
-    "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of "
-    "{what} did not run. It runs on a white paper in the numbered-field layout (XHTML).",
-    "Dieser Entwurf hat keine Feldnummern der Durchführungsverordnung (EU) 2024/2984, daher lief die Prüfung "
-    "{what} auf Feldebene nicht. Sie läuft bei einem Whitepaper im Layout mit nummerierten Feldern (XHTML).",
+#
+# The rules that read nothing but template fields: the point rules built from POINTS (not the two contact
+# rules, which search their section in any draft) and the template rules other than
+# ITS.NOTIFICATION_DATE_FORMAT, which reads the notification_date section of a draft without field numbers.
+# On such a draft they do not run and give no finding; the report carries one note instead (owner decision
+# of 2026-11-10, ADR 0005).
+FIELD_TEMPLATE_RULE_IDS = frozenset(
+    {
+        "ITS.PREDEFINED_TEXT",
+        "ITS.FIELD_FORMATS",
+        "ITS.CODE_LISTS",
+        "RTS.SUSTAINABILITY_INDICATORS",
+        "RTS.CLASSIFICATION_DATA",
+    }
 )
-_WHAT = {
-    "ITS.PREDEFINED_TEXT": ("the predefined texts", "der vorgegebenen Texte"),
-    "ITS.FIELD_FORMATS": ("the data formats", "der Datenformate"),
-    "ITS.CODE_LISTS": ("the code lists", "der Codelisten"),
-    "RTS.SUSTAINABILITY_INDICATORS": (
-        "the sustainability indicators of Delegated Regulation (EU) 2025/422",
-        "der Nachhaltigkeitsindikatoren der Delegierten Verordnung (EU) 2025/422",
-    ),
-    "RTS.CLASSIFICATION_DATA": (
-        "the register classification data of Delegated Regulation (EU) 2025/421",
-        "der Daten zur Einstufung im Register nach der Delegierten Verordnung (EU) 2025/421",
-    ),
-}
-# The sections that hold the predefined texts in a draft without field numbers.
-_PREDEFINED_SECTIONS = ("not_approved_statement", "management_statement", "risk_warning", "summary")
+FIELD_ONLY_RULE_IDS = POINT_RULE_IDS | FIELD_TEMPLATE_RULE_IDS
+_NOT_RUN_NOTE = (
+    "Field-level checks of the templates of Implementing Regulation (EU) 2024/2984 and Delegated "
+    "Regulations (EU) 2025/421 and 2025/422 run only on drafts in the numbered-field layout (XHTML). This "
+    "draft has no field numbers, so {points} and {templates} did not run. They are left out of this report "
+    "and count neither as passed nor as open; check the white paper in the numbered-field layout to run "
+    "them.",
+    "Die Prüfungen auf Feldebene nach den Vorlagen der Durchführungsverordnung (EU) 2024/2984 und der "
+    "Delegierten Verordnungen (EU) 2025/421 und 2025/422 laufen nur bei Entwürfen im Layout mit nummerierten "
+    "Feldern (XHTML). Dieser Entwurf hat keine Feldnummern, daher liefen {points} und {templates} nicht. Sie "
+    "fehlen in diesem Bericht und zählen weder als bestanden noch als offen; prüfen Sie das Whitepaper im "
+    "Layout mit nummerierten Feldern, um sie auszuführen.",
+)
+
+
+def has_field_numbers(whitepaper: Whitepaper) -> bool:
+    """Whether the draft carries the numbered fields of the template (only the XHTML loader sets them)."""
+    return _numbered(whitepaper) is not None
+
+
+def runs_on(rule: Rule, whitepaper: Whitepaper) -> bool:
+    """Whether the rule runs on the draft: every rule but the field-only ones, and those on a numbered-field
+    draft."""
+    return rule.rule_id not in FIELD_ONLY_RULE_IDS or has_field_numbers(whitepaper)
+
+
+def field_rules_not_run(rules: tuple[Rule, ...], whitepaper: Whitepaper) -> tuple[Rule, ...]:
+    """The field-only rules among ``rules`` that do not run on a draft without field numbers."""
+    return tuple(rule for rule in rules if not runs_on(rule, whitepaper))
+
+
+def not_run_note(not_run: tuple[Rule, ...], is_de: bool) -> str:
+    """The one report note that names how many point and template checks did not run."""
+    points = sum(rule.rule_id in POINT_RULE_IDS for rule in not_run)
+    templates = len(not_run) - points
+    if is_de:
+        return _NOT_RUN_NOTE[1].format(
+            points=f"{points} {'Prüfung' if points == 1 else 'Prüfungen'} von Anhangspunkten",
+            templates=f"{templates} {'Vorlagenprüfung' if templates == 1 else 'Vorlagenprüfungen'}",
+        )
+    return _NOT_RUN_NOTE[0].format(
+        points=f"{points} point {'check' if points == 1 else 'checks'}",
+        templates=f"{templates} template {'check' if templates == 1 else 'checks'}",
+    )
 
 
 def _numbered(whitepaper: Whitepaper) -> tuple[dict[str, str], dict[str, str]] | None:
@@ -1115,16 +1169,13 @@ def _numbered(whitepaper: Whitepaper) -> tuple[dict[str, str], dict[str, str]] |
     return answers, labels if isinstance(labels, dict) else {}
 
 
-def _without_fields(rule: Rule, whitepaper: Whitepaper, sections: tuple[str, ...]) -> Finding:
-    """A template rule on a draft without field numbers: Missing where the sections it reads are absent or
-    hold only placeholders, otherwise Review with the note that the check needs the numbered-field layout."""
-    is_de = whitepaper.language == "de"
-    texts = [whitepaper.section(section) for section in sections]
-    if all(_absent(text, is_de) for text in texts):
-        return Finding(rule=rule, status="missing", word_count=0, issues=(_absent(texts[0], is_de) or "",))
-    english, german = _WHAT[rule.rule_id]
-    note = _NO_FIELDS[1].format(what=german) if is_de else _NO_FIELDS[0].format(what=english)
-    return Finding(rule=rule, status="review", word_count=sum(map(_count_words, texts)), issues=(note,))
+def _fields(whitepaper: Whitepaper) -> tuple[dict[str, str], dict[str, str]]:
+    """The answers and labels of the numbered-field draft a field-only rule runs on (Linter._apply refuses
+    any other draft)."""
+    numbered = _numbered(whitepaper)
+    if numbered is None:
+        raise ValueError("a field-only rule ran on a draft without field numbers")
+    return numbered
 
 
 def _notification_date_format_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
@@ -1171,10 +1222,7 @@ def _notification_date_format_finding(rule: Rule, whitepaper: Whitepaper) -> Fin
 def _predefined_text_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     """The predefined texts of the regime's table in the template's English or German wording
     (template_checks.py). Missing when none of their fields holds an answer."""
-    numbered = _numbered(whitepaper)
-    if numbered is None:
-        return _without_fields(rule, whitepaper, _PREDEFINED_SECTIONS)
-    answers, labels = numbered
+    answers, labels = _fields(whitepaper)
     issues, answered = predefined_text_issues(answers, labels, whitepaper.type, whitepaper.language == "de")
     status = "missing" if not answered else "review" if issues else "pass"
     return Finding(rule=rule, status=status, word_count=0, issues=tuple(issues))
@@ -1183,10 +1231,7 @@ def _predefined_text_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
 def _field_types_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     """The typed fields of the regime's table: data formats (ITS.FIELD_FORMATS) or code lists
     (ITS.CODE_LISTS). Missing when the draft carries none of them under its number and template name."""
-    numbered = _numbered(whitepaper)
-    if numbered is None:
-        return _without_fields(rule, whitepaper, (rule.section,))
-    answers, labels = numbered
+    answers, labels = _fields(whitepaper)
     is_de = whitepaper.language == "de"
     code_lists = rule.rule_id == "ITS.CODE_LISTS"
     issues, present = field_type_issues(answers, labels, whitepaper.type, is_de, code_lists=code_lists)
@@ -1206,10 +1251,7 @@ def _field_types_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
 def _sustainability_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     """Fields S.1 to S.16 of Delegated Regulation (EU) 2025/422 (template_checks.py). Missing when none of
     S.1 to S.9 holds an answer."""
-    numbered = _numbered(whitepaper)
-    if numbered is None:
-        return _without_fields(rule, whitepaper, (rule.section,))
-    answers, _ = numbered
+    answers, _ = _fields(whitepaper)
     issues, answered = sustainability_issues(answers, whitepaper.language == "de")
     status = "missing" if not answered else "review" if issues else "pass"
     return Finding(rule=rule, status=status, word_count=0, issues=tuple(issues))
@@ -1219,10 +1261,7 @@ def _classification_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     """The register data of Delegated Regulation (EU) 2025/421 in the fields of the regime's table
     (classification_data.py): presence and the conditions of Art. 2 and 3; formats and codes are left to
     ITS.FIELD_FORMATS and ITS.CODE_LISTS."""
-    numbered = _numbered(whitepaper)
-    if numbered is None:
-        return _without_fields(rule, whitepaper, (rule.section,))
-    answers, _ = numbered
+    answers, _ = _fields(whitepaper)
     status, issues = classification_issues(answers, whitepaper.type, whitepaper.language == "de")
     return Finding(rule=rule, status=status, word_count=0, issues=issues)
 
@@ -1239,26 +1278,9 @@ TEMPLATE_RULE_CHECKS: dict[str, Callable[[Rule, Whitepaper], Finding]] = {
 
 def _point_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     """A point rule (rules/points.py): the template fields that carry the Annex point, under the template's
-    conditions (point_fields.py). A draft without field numbers is Missing where the rule's section is absent
-    and Review otherwise, with the note that the point check needs the numbered-field layout."""
+    conditions (point_fields.py). It runs only on a numbered-field draft (runs_on)."""
     point = POINTS_BY_RULE[rule.rule_id]
+    answers, _ = _fields(whitepaper)
     regime = ANNEX_REGIMES[point.annex]
-    is_de = whitepaper.language == "de"
-    numbered = _numbered(whitepaper)
-    if numbered is None:
-        text = whitepaper.section(rule.section)
-        if absent := _absent(text, is_de):
-            return Finding(rule=rule, status="missing", word_count=0, issues=(absent,))
-        name = f"Anhang {point.annex} Teil {point.part} Nr. {point.number}"
-        note = (
-            _NO_FIELDS[1].format(what=f"von {name} ({fields_text_de(point, regime)})")
-            if is_de
-            else _NO_FIELDS[0].format(
-                what=f"Annex {point.annex} Part {point.part} point {point.number} "
-                f"({fields_text(point, regime)})"
-            )
-        )
-        return Finding(rule=rule, status="review", word_count=_count_words(text), issues=(note,))
-    answers, _ = numbered
-    status, issues, words = point_issues(point, answers, regime, is_de)
+    status, issues, words = point_issues(point, answers, regime, whitepaper.language == "de")
     return Finding(rule=rule, status=status, word_count=words, issues=issues)

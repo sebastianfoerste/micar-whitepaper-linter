@@ -284,30 +284,43 @@ def test_numbered_draft_without_template_fields_is_missing(tmp_path, regime):
 # --- Drafts without field numbers --------------------------------------------------------------------------
 
 
+FIELD_TEMPLATE_RULES = ("ITS.PREDEFINED_TEXT", "ITS.FIELD_FORMATS", "ITS.CODE_LISTS", "RTS.SUSTAINABILITY_INDICATORS")
+
+
 @pytest.mark.parametrize("regime", list(WhitepaperType))
-def test_json_draft_goes_to_review_with_a_note_and_never_passes(tmp_path, regime):
+def test_field_template_rules_do_not_run_on_a_json_draft(tmp_path, regime):
+    # Owner decision of 2026-11-10 (ADR 0005): no finding, one note, never passed.
     sections = {
         "management_statement": "Synthetic statement.",
         "offer_or_admission": "Synthetic offer.",
         "environmental_impact": "Synthetic impact.",
     }
     report = _json(tmp_path, regime, sections)
-    for rule_id in ("ITS.PREDEFINED_TEXT", "ITS.FIELD_FORMATS", "ITS.CODE_LISTS", "RTS.SUSTAINABILITY_INDICATORS"):
-        finding = _finding(report, rule_id)
-        assert finding.status == "review", rule_id
-        assert "numbered-field layout" in finding.issues[0]
+    ran = {finding.rule.rule_id for finding in report.findings}
+    not_run = {rule.rule_id for rule in report.not_run}
+    for rule_id in (*FIELD_TEMPLATE_RULES, "RTS.CLASSIFICATION_DATA"):
+        assert rule_id not in ran, rule_id
+        assert rule_id in not_run, rule_id
+    # ITS.NOTIFICATION_DATE_FORMAT reads the section and still runs.
+    assert "ITS.NOTIFICATION_DATE_FORMAT" in ran
+    notes = [warning for warning in report.warnings if warning.startswith("Field-level checks")]
+    assert len(notes) == 1
+    assert "5 template checks did not run" in notes[0]
 
 
-def test_json_draft_without_the_sections_is_missing(tmp_path):
+def test_json_draft_without_the_sections_has_no_template_field_findings(tmp_path):
     report = _json(tmp_path, OTHER, {"project": "Synthetic project."})
-    for rule_id in ("ITS.PREDEFINED_TEXT", "ITS.FIELD_FORMATS", "ITS.CODE_LISTS", "RTS.SUSTAINABILITY_INDICATORS"):
-        assert _finding(report, rule_id).status == "missing", rule_id
+    ran = {finding.rule.rule_id for finding in report.findings}
+    assert not ran & set(FIELD_TEMPLATE_RULES)
 
 
 def test_german_json_draft_gets_the_note_in_german(tmp_path):
     report = _json(tmp_path, OTHER, {"environmental_impact": "Der Konsens ist ein Beispiel."}, language="de")
-    issue = _finding(report, "RTS.SUSTAINABILITY_INDICATORS").issues[0]
-    assert issue.startswith("Dieser Entwurf hat keine Feldnummern")
+    notes = [warning for warning in report.warnings if "Feldebene" in warning]
+    assert len(notes) == 1
+    assert notes[0].startswith("Die Prüfungen auf Feldebene nach den Vorlagen der Durchführungsverordnung (EU) 2024/2984")
+    assert "5 Vorlagenprüfungen nicht" in notes[0]
+    assert not any(warning.startswith("Field-level checks") for warning in report.warnings)
 
 
 def test_a_json_draft_cannot_bring_its_own_field_answers(tmp_path):
@@ -319,7 +332,8 @@ def test_a_json_draft_cannot_bring_its_own_field_answers(tmp_path):
         numbered_fields=answers,
         numbered_field_labels={"S.1": "Name"},
     )
-    assert _finding(report, "RTS.SUSTAINABILITY_INDICATORS").status == "review"
+    assert "RTS.SUSTAINABILITY_INDICATORS" in {rule.rule_id for rule in report.not_run}
+    assert not any(f.rule.rule_id == "RTS.SUSTAINABILITY_INDICATORS" for f in report.findings)
 
 
 # --- ITS.NOTIFICATION_DATE_FORMAT --------------------------------------------------------------------------

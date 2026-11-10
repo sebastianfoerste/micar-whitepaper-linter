@@ -1124,18 +1124,27 @@ class _Field:
     unknown: list[Condition]
 
 
+def _source(condition: Condition, is_de: bool) -> str:
+    """The marker of a condition inferred from the Annex point (annex=True), which the template does not set
+    (owner decision 2A of 2026-11-10, ADR 0005); none for a condition of the template."""
+    if not condition.annex:
+        return ""
+    return " (Bedingung aus dem Anhangspunkt)" if is_de else " (a condition from the Annex point)"
+
+
 def _clause(field: _Field, is_de: bool) -> str:
-    """Why a conditional field is checked: its conditions hold, or the draft does not say."""
+    """Why a conditional field is checked: its conditions hold, or the draft does not say. A condition from
+    the Annex point says so."""
     parts = []
     if field.holding:
         joined = (
-            " und ".join(_holds(c, is_de) for c in field.holding)
+            " und ".join(_holds(c, is_de) + _source(c, is_de) for c in field.holding)
             if is_de
-            else " and ".join(_holds(c, is_de) for c in field.holding)
+            else " and ".join(_holds(c, is_de) + _source(c, is_de) for c in field.holding)
         )
         parts.append(f" Verlangt, weil {joined}." if is_de else f" Required because {joined}.")
     if field.unknown:
-        joined = "; ".join(_unknown(c, is_de) for c in field.unknown)
+        joined = "; ".join(_unknown(c, is_de) + _source(c, is_de) for c in field.unknown)
         parts.append(f" Als verlangt geprüft: {joined}." if is_de else f" Checked as required: {joined}.")
     return "".join(parts)
 
@@ -1178,17 +1187,23 @@ def _field_issue(field: _Field, is_de: bool) -> str | None:
 
 
 def _relief_note(name: str, condition: Condition, is_de: bool) -> str:
-    source = ("der Anhangpunkt", "the Annex point") if condition.annex else ("die Vorlage", "the template")
+    """A field its condition relieves; a condition from the Annex point (annex=True) says it comes from
+    there."""
     if is_de:
-        return (
-            f"Feld {name} ist nicht verlangt: {_relieves(condition, True)}; {source[0]} verlangt es nur, "
-            f"wenn "
-            f"{_holds(condition, True)}."
+        source = (
+            "die Bedingung stammt aus dem Anhangspunkt, der es nur verlangt,"
+            if condition.annex
+            else "die Vorlage verlangt es nur,"
         )
-    return (
-        f"Field {name} is not required: {_relieves(condition, False)}; {source[1]} asks for it only if "
-        f"{_holds(condition, False)}."
+        relieves, holds = _relieves(condition, True), _holds(condition, True)
+        return f"Feld {name} ist nicht verlangt: {relieves}; {source} wenn {holds}."
+    source = (
+        "the condition comes from the Annex point, which asks for it only"
+        if condition.annex
+        else "the template asks for it only"
     )
+    relieves, holds = _relieves(condition, False), _holds(condition, False)
+    return f"Field {name} is not required: {relieves}; {source} if {holds}."
 
 
 def point_issues(

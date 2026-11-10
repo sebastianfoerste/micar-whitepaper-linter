@@ -5,9 +5,8 @@ The points and their fields sit in point_fields.py; this module builds one Rule 
 (missing mandatory content is a BLOCKER where the Part rule is one; Annex I Part B is MAJOR and Part C MINOR).
 with_points places each point rule after the rules of its Part, in the order of the points, so a report lists
 ANNEX_I.A, then ANNEX_I.A.P1 to ANNEX_I.A.P10 (with ANNEX_I.A.P6, the contact details, which keeps its own
-check in contact.py). linter.py checks the fields of a numbered-field draft; in any other draft the rule is
-Missing where its section is absent and Review otherwise, with a note that the point check needs the
-numbered-field layout.
+check in contact.py). linter.py checks the fields of a numbered-field draft; in any other draft the rule does
+not run (linter.runs_on) and the report carries one note instead (owner decision of 2026-11-10, ADR 0005).
 """
 
 from __future__ import annotations

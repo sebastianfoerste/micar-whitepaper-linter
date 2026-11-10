@@ -59,7 +59,7 @@ def _lint(rule_id: str, answers: dict[str, str], language: str = "en"):
 def _json(rule_id: str, sections: dict[str, str], language: str = "en"):
     rule, regime = _rule(rule_id)
     whitepaper = Whitepaper(title="Synthetic draft", type=regime, sections=sections, metadata={"language": language})
-    return Linter((rule,)).lint(whitepaper)[0]
+    return Linter((rule,)).lint(whitepaper)
 
 
 # --- The rule set ---------------------------------------------------------------------------------------------
@@ -152,29 +152,30 @@ def test_every_field_the_template_conditions_is_mapped_with_its_condition():
 # --- Drafts without field numbers -----------------------------------------------------------------------------
 
 
-def test_a_draft_without_field_numbers_never_passes():
-    assert _json("ANNEX_I.A.P2", {}).status == "missing"
-    assert _json("ANNEX_I.A.P2", {"offeror": "TBD"}).status == "missing"
-    finding = _json("ANNEX_I.A.P2", {"offeror": "Synthetic GmbH, a fictional company."})
-    assert finding.status == "review"
-    assert finding.issues == (
-        "This draft has no field numbers of Implementing Regulation (EU) 2024/2984, so the field-level check of "
-        "Annex I Part A point 2 (field A.2 of Table 2) did not run. It runs on a white paper in the numbered-field "
-        "layout (XHTML).",
-    )
-    german = _json("ANNEX_III.E.P1", {"technology": "Synthetischer Text."}, language="de")
-    assert german.status == "review"
-    assert "von Anhang III Teil E Nr. 1 (Felder E.1, E.2 und E.3 der Tabelle 4)" in german.issues[0]
+def test_a_draft_without_field_numbers_does_not_run_a_point_rule():
+    # Owner decision of 2026-11-10 (ADR 0005): no finding, whatever the section holds.
+    for sections in ({}, {"offeror": "TBD"}, {"offeror": "Synthetic GmbH, a fictional company."}):
+        assert _json("ANNEX_I.A.P2", sections) == ()
+    rule, regime = _rule("ANNEX_I.A.P2")
+    whitepaper = Whitepaper(title="Synthetic draft", type=regime, sections={}, metadata={})
+    assert Linter((rule,)).not_run(whitepaper) == (rule,)
+    with pytest.raises(ValueError):
+        Linter._apply(rule, whitepaper)
 
 
-def test_every_point_rule_reviews_a_json_draft_with_its_section(tmp_path):
+def test_no_point_rule_but_the_contact_rules_runs_on_a_json_draft(tmp_path):
     for regime in (OTHER, ART, EMT):
         sections = {rule.section: "Synthetic section text." for rule in POINT_RULES[regime]}
         path = tmp_path / f"{regime.value}.json"
         path.write_text(json.dumps({"title": "Synthetic", "type": regime.value, "sections": sections}), "utf-8")
         report = lint_whitepaper(load_whitepaper(path))
-        statuses = {f.status for f in report.findings if f.rule.rule_id in POINT_RULE_IDS}
-        assert statuses == {"review"}
+        assert not {f.rule.rule_id for f in report.findings} & POINT_RULE_IDS
+        assert {rule.rule_id for rule in report.not_run} >= {rule.rule_id for rule in POINT_RULES[regime]}
+        contact = {"ANNEX_I.A.P6", "ANNEX_III.A.P6"} & {rule.rule_id for rule in RULESETS[regime]}
+        assert contact <= {f.rule.rule_id for f in report.findings}
+        points = len(POINT_RULES[regime])
+        note = next(warning for warning in report.warnings if warning.startswith("Field-level checks"))
+        assert f"so {points} point checks and " in note
 
 
 # --- Field states ---------------------------------------------------------------------------------------------
@@ -359,7 +360,7 @@ def test_utility_token_fields_follow_the_classification():
     )
     annex = _lint("ANNEX_I.D.P4", {"D.6": "false"})
     assert annex.status == "pass"
-    assert "the Annex point asks for it only if field D.6 is true" in annex.issues[0]
+    assert "the condition comes from the Annex point, which asks for it only if field D.6 is true" in annex.issues[0]
 
 
 def test_part_b_of_annex_i_applies_only_to_an_issuer_other_than_the_offeror():
@@ -370,8 +371,33 @@ def test_part_b_of_annex_i_applies_only_to_an_issuer_other_than_the_offeror():
     assert _lint("ANNEX_I.I.P2", {"B.1": "false"}).status == "pass"
     assert _lint("ANNEX_I.B.P1", {"B.1": "true"}).status == "missing"
     assert _lint("ANNEX_I.B.P1", {}).issues == (
-        "Field B.2 (Name) is empty or not in the draft. Checked as required: field B.1 gives neither true nor false.",
+        "Field B.2 (Name) is empty or not in the draft. Checked as required: field B.1 gives neither true nor false "
+        "(a condition from the Annex point).",
     )
+
+
+def test_a_condition_inferred_from_the_annex_point_says_so():
+    # Owner decision 2A of 2026-11-10 (ADR 0005): a condition the template does not set stays, and every finding
+    # and note that rests on it names the Annex point as its source, in English and in German.
+    required = _lint("ANNEX_I.B.P1", {"B.1": "true"})
+    assert required.issues == (
+        "Field B.2 (Name) is empty or not in the draft. Required because field B.1 is true (a condition from the "
+        "Annex point).",
+    )
+    german = _lint("ANNEX_I.B.P1", {"B.1": "true"}, language="de")
+    assert german.issues == (
+        "Feld B.2 ist leer oder fehlt. Verlangt, weil Feld B.1 richtig (true) ist (Bedingung aus dem "
+        "Anhangspunkt).",
+    )
+    relieved = _lint("ANNEX_I.D.P4", {"D.6": "false"}, language="de")
+    assert "die Bedingung stammt aus dem Anhangspunkt, der es nur verlangt, wenn" in relieved.issues[0]
+    unknown = _lint("ANNEX_I.D.P4", {}, language="de")
+    assert any("(Bedingung aus dem Anhangspunkt)" in issue for issue in unknown.issues)
+    # A condition the template sets names the template.
+    template = _lint("ANNEX_I.G.P5", {"G.6": "false"}, language="de")
+    assert "die Vorlage verlangt es nur, wenn" in template.issues[0]
+    assert "Anhangspunkt" not in template.issues[0]
+    assert "Annex point" not in _lint("ANNEX_I.E.P9", {"E.20": "true"}).issues[0]
 
 
 def test_ntav_relieves_the_oversubscription_allocation():

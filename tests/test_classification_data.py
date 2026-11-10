@@ -353,42 +353,31 @@ def test_the_check_queries_no_network(tmp_path, monkeypatch):
     assert _xhtml(tmp_path, _complete(OTHER), OTHER).status == "pass"
 
 
-def _json(tmp_path: Path, regime: WhitepaperType, sections: dict[str, str]):
+def _json(tmp_path: Path, regime: WhitepaperType, sections: dict[str, str], **metadata: object):
     path = tmp_path / "draft.json"
-    path.write_text(json.dumps({"title": "Synthetic draft", "type": regime.value, "sections": sections}))
-    report = lint_whitepaper(load_whitepaper(path))
-    return next(finding for finding in report.findings if finding.rule.rule_id == RULE_ID)
+    draft = {"title": "Synthetic draft", "type": regime.value, "sections": sections, **metadata}
+    path.write_text(json.dumps(draft), encoding="utf-8")
+    return lint_whitepaper(load_whitepaper(path))
 
 
 @pytest.mark.parametrize("regime", list(WhitepaperType))
-def test_a_draft_without_field_numbers_is_reviewed_with_a_note_and_never_passes(tmp_path, regime):
-    section = _rule(regime).section
-    finding = _json(tmp_path, regime, {section: "Synthetic characteristics and register data."})
-    assert finding.status == "review"
-    assert "register classification data of Delegated Regulation (EU) 2025/421" in finding.issues[0]
-    assert "numbered-field layout" in finding.issues[0]
-    assert _json(tmp_path, regime, {"risks": "Synthetic risks."}).status == "missing"
+def test_a_draft_without_field_numbers_does_not_run_the_check(tmp_path, regime):
+    # Owner decision of 2026-11-10 (ADR 0005): no finding, so the rule is neither open nor passed.
+    for sections in ({_rule(regime).section: "Synthetic characteristics and register data."}, {"risks": "Text."}):
+        report = _json(tmp_path, regime, sections)
+        assert RULE_ID not in {finding.rule.rule_id for finding in report.findings}
+        assert RULE_ID in {rule.rule_id for rule in report.not_run}
+        assert any("Delegated Regulations (EU) 2025/421 and 2025/422" in warning for warning in report.warnings)
 
 
 def test_a_german_draft_without_field_numbers_gets_the_german_note(tmp_path):
-    path = tmp_path / "draft.json"
-    draft = {"title": "Synthetischer Entwurf", "type": "other", "language": "de", "sections": {"crypto_asset": "Text."}}
-    path.write_text(json.dumps(draft), encoding="utf-8")
-    report = lint_whitepaper(load_whitepaper(path))
-    finding = next(finding for finding in report.findings if finding.rule.rule_id == RULE_ID)
-    assert finding.status == "review"
-    assert "Daten zur Einstufung im Register" in finding.issues[0]
+    report = _json(tmp_path, OTHER, {"crypto_asset": "Text."}, language="de")
+    assert RULE_ID not in {finding.rule.rule_id for finding in report.findings}
+    assert any("Delegierten Verordnungen (EU) 2025/421 und 2025/422" in warning for warning in report.warnings)
 
 
 def test_a_json_draft_cannot_supply_numbered_fields(tmp_path):
     # numbered_fields is reserved for the XHTML loader, so a JSON draft cannot pass the field check by itself.
-    path = tmp_path / "draft.json"
-    draft = {
-        "title": "Synthetic draft",
-        "type": "other",
-        "numbered_fields": _complete(OTHER),
-        "sections": {"crypto_asset": "Synthetic text."},
-    }
-    path.write_text(json.dumps(draft), encoding="utf-8")
-    report = lint_whitepaper(load_whitepaper(path))
-    assert next(f for f in report.findings if f.rule.rule_id == RULE_ID).status == "review"
+    report = _json(tmp_path, OTHER, {"crypto_asset": "Synthetic text."}, numbered_fields=_complete(OTHER))
+    assert RULE_ID in {rule.rule_id for rule in report.not_run}
+    assert not any(f.rule.rule_id == RULE_ID for f in report.findings)

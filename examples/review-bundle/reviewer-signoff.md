@@ -5,9 +5,15 @@ It does not certify a white paper, approve a notification or replace legal revie
 
 - Document title: Synthetic EuroStable ART White Paper
 - White paper type: art
-- Generated at: 2026-11-04T14:01:45.662579+00:00
+- Generated at: 2026-11-10T18:43:42.853691+00:00
 - Automated status: Blocked
-- Open blocker count: 72
+- Open blocker count: 3
+
+## Extraction Notes
+
+The linter recorded these notes while reading the draft. They can qualify any automated result, including a Pass, so read them before relying on the results.
+
+- Field-level checks of the templates of Implementing Regulation (EU) 2024/2984 and Delegated Regulations (EU) 2025/421 and 2025/422 run only on drafts in the numbered-field layout (XHTML). This draft has no field numbers, so 65 point checks and 5 template checks did not run. They are left out of this report and count neither as passed nor as open; check the white paper in the numbered-field layout to run them.
 
 ## Required Review Steps
 
@@ -19,77 +25,8 @@ It does not certify a white paper, approve a notification or replace legal revie
 ## Blockers
 
 - COMMON.IXBRL_TAGGING
-- ANNEX_II.A.P1
-- ANNEX_II.A.P2
-- ANNEX_II.A.P3
-- ANNEX_II.A.P4
-- ANNEX_II.A.P5
-- ANNEX_II.A.P6
-- ANNEX_II.A.P7
-- ANNEX_II.A.P8
-- ANNEX_II.A.P9
-- ANNEX_II.A.P10
-- ANNEX_II.A.P11
-- ANNEX_II.A.P12
-- ANNEX_II.B.P1
-- ANNEX_II.B.P2
-- ANNEX_II.B.P3
-- ANNEX_II.B.P4
-- ANNEX_II.B.P5
-- ANNEX_II.C.P1
-- ANNEX_II.C.P2
-- ANNEX_II.C.P3
-- ANNEX_II.C.P4
-- ANNEX_II.C.P5
-- ANNEX_II.C.P6
-- ANNEX_II.C.P7
-- ANNEX_II.C.P8
-- ANNEX_II.C.P9
-- ANNEX_II.C.P10
-- ANNEX_II.C.P11
-- ANNEX_II.C.P12
-- ANNEX_II.C.P13
-- ANNEX_II.C.P14
-- ANNEX_II.C.P15
-- ANNEX_II.D.P1
-- ANNEX_II.D.P2
-- ANNEX_II.D.P3
-- ANNEX_II.D.P4
-- ANNEX_II.D.P5
-- ANNEX_II.D.P6
-- ANNEX_II.D.P7
-- ANNEX_II.D.P8
-- ANNEX_II.D.P9
-- ANNEX_II.D.P10
-- ANNEX_II.D.P11
-- ANNEX_II.D.P12
-- ANNEX_II.D.P13
-- ANNEX_II.D.P14
-- ANNEX_II.D.P15
-- ANNEX_II.D.P16
-- ANNEX_II.D.P17
-- ANNEX_II.E.P1
-- ANNEX_II.E.P2
-- ANNEX_II.E.P3
-- ANNEX_II.E.P4
-- ANNEX_II.E.P5
-- ANNEX_II.F.P1
-- ANNEX_II.F.P2
-- ANNEX_II.F.P3
-- ANNEX_II.F.P4
-- ANNEX_II.F.P5
-- ANNEX_II.F.P6
 - ANNEX_II.G.DEPOSIT_FLOOR_REVIEW
 - ANNEX_II.G.CUSTODY
-- ANNEX_II.G.P1
-- ANNEX_II.G.P2
-- ANNEX_II.G.P3
-- ANNEX_II.G.P4
-- ANNEX_II.G.P5
-- ITS.PREDEFINED_TEXT
-- ITS.FIELD_FORMATS
-- RTS.SUSTAINABILITY_INDICATORS
-- RTS.CLASSIFICATION_DATA
 
 ## Lawyer Sign-off
 
