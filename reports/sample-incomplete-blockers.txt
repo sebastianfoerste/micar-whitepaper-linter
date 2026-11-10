@@ -1,7 +1,7 @@
 MiCAR Whitepaper Linter - Incomplete Synthetic EuroStable ART Draft
 Whitepaper type: ART
 ==============================================================================
-Pass: 1  |  Review: 13  |  Missing: 6  |  Blockers: 15
+Pass: 1  |  Review: 14  |  Missing: 6  |  Blockers: 15
 
 [REVIEW] [BLOCKER] COMMON.SUMMARY  Plain-language summary
            Cite:  Art. 6(7), Art. 19(6), Art. 51(6) MiCAR
@@ -53,6 +53,13 @@ Pass: 1  |  Review: 13  |  Missing: 6  |  Blockers: 15
            Section: 'issuer'  (0 words)
            -  No valid LEI was found in the issuer, offeror or trading_platform_operator sections, so consistency cannot be checked.
            -  Point 5 of Annex I Parts A to C and of Annex II and III Part A allows another identifier required pursuant to applicable national law in place of the LEI. Whether the draft gives one of them for each party needs checking by hand.
+
+[REVIEW] [MINOR  ] COMMON.DTI_FORMAT  Digital Token Identifiers of the crypto-asset and its functionally fungible group (ISO 24165)
+           Cite:  Art. 3(1) and (2) Regulation (EU) 2025/421; Annex, Table 3, Part B Regulation (EU) 2024/2984
+           Text:  https://eur-lex.europa.eu/eli/reg_del/2025/421/oj/eng
+           Text:  https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng
+           Section: 'art'  (4 words)
+           -  No ISO 24165 Digital Token Identifier (DTI) is given. Where no DTI is available, Art. 3(3) of Delegated Regulation (EU) 2025/421 asks for a digital token identifier approved by ESMA at Union level.
 
 [REVIEW] [BLOCKER] ANNEX_II.A  Information about the issuer of the ART (identity, management body, governance arrangements)
            Cite:  Annex II, Part A MiCAR

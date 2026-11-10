@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Digital Token Identifiers of the crypto-asset and its functionally fungible group (ISO 24165). Art. 3(1) and (2) Regulation (EU) 2025/421; Annex, Table 2, Part F Regulation (EU) 2024/2984.">
+<title>COMMON.DTI_FORMAT: MiCAR Whitepaper Linter rule</title>
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <a class="brand" href="../"><span class="brand-mark" aria-hidden="true">M</span><span>MiCAR <strong>Whitepaper Linter</strong></span></a>
+  <nav aria-label="Site"><a href="../">Overview</a><a href="../rules/">Rules</a><a href="../playground/">Playground</a><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter">Source</a></nav>
+</header>
+<main id="main">
+<p class="eyebrow">Rule · MINOR</p>
+<h1>COMMON.DTI_FORMAT</h1>
+<p class="lede">Digital Token Identifiers of the crypto-asset and its functionally fungible group (ISO 24165)</p>
+<div class="panel"><dl class="facts">
+<dt>Citation</dt><dd>Art. 3(1) and (2) Regulation (EU) 2025/421; Annex, Table 2, Part F Regulation (EU) 2024/2984 (Annex I); Art. 3(1) and (2) Regulation (EU) 2025/421; Annex, Table 3, Part B Regulation (EU) 2024/2984 (Annex II); Art. 3(1) and (2) Regulation (EU) 2025/421; Annex, Table 4, Part B Regulation (EU) 2024/2984 (Annex III)</dd>
+<dt>Canonical form</dt><dd lang="de">Art. 3 Abs. 1 und 2 VO (EU) 2025/421; Anhang Tabelle 2 Teil F VO (EU) 2024/2984 (Annex I); Art. 3 Abs. 1 und 2 VO (EU) 2025/421; Anhang Tabelle 3 Teil B VO (EU) 2024/2984 (Annex II); Art. 3 Abs. 1 und 2 VO (EU) 2025/421; Anhang Tabelle 4 Teil B VO (EU) 2024/2984 (Annex III)</dd>
+<dt>Runs for</dt><dd>Annex I · other crypto-assets; Annex II · asset-referenced tokens; Annex III · e-money tokens</dd>
+<dt>Severity if open</dt><dd>MINOR</dd>
+<dt>Section key</dt><dd><code>crypto_asset</code> (Annex I); <code>art</code> (Annex II); <code>emt</code> (Annex III)</dd>
+<dt>Minimum words</dt><dd>none: checks for a Digital Token Identifier and the DTI of its functionally fungible group</dd>
+<dt>Listed terms (English)</dt><dd>none</dd>
+<dt>Listed terms (German)</dt><dd lang="de">none</dd>
+<dt>Package version</dt><dd>1.2.1, built from source that may include unreleased changes</dd>
+<dt>Source</dt><dd><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/rules/common.py">rules/common.py</a></dd>
+</dl></div>
+<h2>How the status is set</h2>
+<ul class="plain"><li><strong>Missing</strong>: in a draft without field numbers, the section is absent or empty, holds only placeholder text such as TBD or TBC, or opens with the starter template's <code>REPLACE:</code> note. A numbered-field XHTML draft is never Missing on this rule, as both template fields are filled in where available.</li><li><strong>Review</strong>: no DTI is given (both fields empty, a placeholder or N/A, or no code after a DTI or FFG DTI label); a DTI is given without the DTI of its functionally fungible group, or the group code without a DTI of the crypto-asset; more than one group code is given; or a field, or the word after a label, holds anything other than codes of 9 letters or digits.</li><li><strong>Pass</strong>: the draft gives at least one DTI and exactly one group code, each of 9 letters or digits, the {DTI} format of Table 1 of the Annex to Implementing Regulation (EU) 2024/2984. A pass means the codes have that shape, nothing more.</li></ul><p>Each template carries the two codes in its own part: fields F.13 and F.14 of Table 2 (Part F, section crypto_asset), B.15 and B.16 of Table 3 (Part B, section art) and B.12 and B.13 of Table 4 (Part B, section emt) of Implementing Regulation (EU) 2024/2984. The check is the same for all three.</p>
+<h2>Legal basis</h2>
+<p>Art. 3(1) and (2) Regulation (EU) 2025/421; Annex, Table 2, Part F Regulation (EU) 2024/2984 (Annex I); Art. 3(1) and (2) Regulation (EU) 2025/421; Annex, Table 3, Part B Regulation (EU) 2024/2984 (Annex II); Art. 3(1) and (2) Regulation (EU) 2025/421; Annex, Table 4, Part B Regulation (EU) 2024/2984 (Annex III)</p>
+<ul class="plain"><li><a href="https://eur-lex.europa.eu/eli/reg_del/2025/421/oj/eng">https://eur-lex.europa.eu/eli/reg_del/2025/421/oj/eng</a></li><li><a href="https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng">https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng</a></li></ul>
+<p class="callout">Checked on 2026-11-10 against the Official Journal text in English of Delegated Regulation (EU) 2025/421 (OJ L, 2025/421, 24.3.2025), Art. 3 and Art. 4, and of Implementing Regulation (EU) 2024/2984 (OJ L, 2024/2984, 3.12.2024), the {DTI} format in Table 1 and fields F.13, F.14, B.15, B.16, B.12 and B.13 of Tables 2 to 4. EUR-Lex listed no amendment and no corrigendum of either act that day. The German text was not read.</p>
+<h2>Synthetic examples</h2>
+<p class="small muted">Each example is linted when this page is generated. The build fails if a result differs.</p>
+<div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>Section absent (Annex I)</strong></div><p class="small muted">The section key is missing or empty.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;sections&quot;: {}
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>Placeholder (Annex I)</strong></div><p class="small muted">A placeholder alone is no answer, so the section counts as missing.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;sections&quot;: {
+    &quot;crypto_asset&quot;: &quot;TBD&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>No DTI (Annex I)</strong></div><p class="small muted">The section gives no Digital Token Identifier. Where none is available, Art. 3(3) of Delegated Regulation (EU) 2025/421 asks for an identifier approved by ESMA, which the check cannot recognise.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;sections&quot;: {
+    &quot;crypto_asset&quot;: &quot;The crypto-asset is issued on a public permissionless network.&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>DTI without the group code (Annex I)</strong></div><p class="small muted">Art. 3(1) asks for the type 3 DTI of the functionally fungible group where a DTI is provided.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;sections&quot;: {
+    &quot;crypto_asset&quot;: &quot;DTI: SYNTHDTI1.&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>Code of the wrong length (Annex I)</strong></div><p class="small muted">A code after the DTI label has 10 characters; the {DTI} format has 9.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;sections&quot;: {
+    &quot;crypto_asset&quot;: &quot;DTI: SYNTHDTI10. FFG DTI: SYNTHFFG1.&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>Both codes (Annex I)</strong></div><p class="small muted">Both codes have the {DTI} shape. The codes here are synthetic: a pass does not show that a code is registered or belongs to the token.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;sections&quot;: {
+    &quot;crypto_asset&quot;: &quot;The crypto-asset has the DTI SYNTHDTI1; its FFG DTI is SYNTHFFG1.&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>German draft (Annex I)</strong></div><p class="small muted">German drafts are read after the acronyms DTI and FFG DTI and after the English names.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;language&quot;: &quot;de&quot;,
+  &quot;sections&quot;: {
+    &quot;crypto_asset&quot;: &quot;Der Kryptowert wird über den DTI SYNTHDTI1 identifiziert, die Gruppe über den FFG DTI SYNTHFFG1.&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>Section absent (Annex II)</strong></div><p class="small muted">The section key is missing or empty.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;art&quot;,
+  &quot;sections&quot;: {}
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>Placeholder (Annex II)</strong></div><p class="small muted">A placeholder alone is no answer, so the section counts as missing.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;art&quot;,
+  &quot;sections&quot;: {
+    &quot;art&quot;: &quot;TBD&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>No DTI (Annex II)</strong></div><p class="small muted">The section gives no Digital Token Identifier. Where none is available, Art. 3(3) of Delegated Regulation (EU) 2025/421 asks for an identifier approved by ESMA, which the check cannot recognise.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;art&quot;,
+  &quot;sections&quot;: {
+    &quot;art&quot;: &quot;The crypto-asset is issued on a public permissionless network.&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>DTI without the group code (Annex II)</strong></div><p class="small muted">Art. 3(1) asks for the type 3 DTI of the functionally fungible group where a DTI is provided.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;art&quot;,
+  &quot;sections&quot;: {
+    &quot;art&quot;: &quot;DTI: SYNTHDTI1.&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>Code of the wrong length (Annex II)</strong></div><p class="small muted">A code after the DTI label has 10 characters; the {DTI} format has 9.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;art&quot;,
+  &quot;sections&quot;: {
+    &quot;art&quot;: &quot;DTI: SYNTHDTI10. FFG DTI: SYNTHFFG1.&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>Both codes (Annex II)</strong></div><p class="small muted">Both codes have the {DTI} shape. The codes here are synthetic: a pass does not show that a code is registered or belongs to the token.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;art&quot;,
+  &quot;sections&quot;: {
+    &quot;art&quot;: &quot;The crypto-asset has the DTI SYNTHDTI1; its FFG DTI is SYNTHFFG1.&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>German draft (Annex II)</strong></div><p class="small muted">German drafts are read after the acronyms DTI and FFG DTI and after the English names.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;art&quot;,
+  &quot;language&quot;: &quot;de&quot;,
+  &quot;sections&quot;: {
+    &quot;art&quot;: &quot;Der Kryptowert wird über den DTI SYNTHDTI1 identifiziert, die Gruppe über den FFG DTI SYNTHFFG1.&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>Section absent (Annex III)</strong></div><p class="small muted">The section key is missing or empty.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;emt&quot;,
+  &quot;sections&quot;: {}
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>Placeholder (Annex III)</strong></div><p class="small muted">A placeholder alone is no answer, so the section counts as missing.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;emt&quot;,
+  &quot;sections&quot;: {
+    &quot;emt&quot;: &quot;TBD&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>No DTI (Annex III)</strong></div><p class="small muted">The section gives no Digital Token Identifier. Where none is available, Art. 3(3) of Delegated Regulation (EU) 2025/421 asks for an identifier approved by ESMA, which the check cannot recognise.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;emt&quot;,
+  &quot;sections&quot;: {
+    &quot;emt&quot;: &quot;The crypto-asset is issued on a public permissionless network.&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>DTI without the group code (Annex III)</strong></div><p class="small muted">Art. 3(1) asks for the type 3 DTI of the functionally fungible group where a DTI is provided.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;emt&quot;,
+  &quot;sections&quot;: {
+    &quot;emt&quot;: &quot;DTI: SYNTHDTI1.&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>Code of the wrong length (Annex III)</strong></div><p class="small muted">A code after the DTI label has 10 characters; the {DTI} format has 9.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;emt&quot;,
+  &quot;sections&quot;: {
+    &quot;emt&quot;: &quot;DTI: SYNTHDTI10. FFG DTI: SYNTHFFG1.&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>Both codes (Annex III)</strong></div><p class="small muted">Both codes have the {DTI} shape. The codes here are synthetic: a pass does not show that a code is registered or belongs to the token.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;emt&quot;,
+  &quot;sections&quot;: {
+    &quot;emt&quot;: &quot;The crypto-asset has the DTI SYNTHDTI1; its FFG DTI is SYNTHFFG1.&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>German draft (Annex III)</strong></div><p class="small muted">German drafts are read after the acronyms DTI and FFG DTI and after the English names.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;emt&quot;,
+  &quot;language&quot;: &quot;de&quot;,
+  &quot;sections&quot;: {
+    &quot;emt&quot;: &quot;Der Kryptowert wird über den DTI SYNTHDTI1 identifiziert, die Gruppe über den FFG DTI SYNTHFFG1.&quot;
+  }
+}</code></pre></div>
+<h2>Limitations</h2>
+<ul class="plain"><li>Reads one section key per regime, the part whose template fields carry the codes, and in a numbered-field XHTML draft only those two fields. Text elsewhere in the draft is not considered.</li><li>Works offline on the shape of each code. It does not confirm that a code is registered with the Digital Token Identifier Foundation, that it belongs to the crypto-asset, or that the group code is of type 3, and it cannot recognise the identifier approved by ESMA that Art. 3(3) of Delegated Regulation (EU) 2025/421 asks for where no DTI is available. ISO 24165 was not read, so no check character is computed.</li><li>Status and severity are fixed by the rule. A draft cannot waive or downgrade them.</li><li>In a draft without field numbers a code counts only right after a label: DTI, FFG DTI, Digital Token Identifier or functionally fungible group, with an optional colon, (DTI), (FFG), code, is, ist or lautet in between. A code introduced otherwise, a second code after the same label and a template field name used as a label (Digital token identifier code used to ...) give Review, which fails safe. German drafts are read after the acronyms and the English names only.</li></ul>
+<p class="small muted">Disagree with this rule, or missing one? <a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/issues/new?template=rule-proposal.yml">Propose a rule change</a>.</p>
+
+</main>
+<footer><span>MiCAR Whitepaper Linter 1.2.1 · MIT licence · First-pass screening, not legal advice.</span><span>Generated from the rule set by <code>scripts/build_rule_docs.py</code>.</span></footer>
+</body>
+</html>

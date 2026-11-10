@@ -10,6 +10,7 @@ from functools import partial
 
 from micar_linter.anchors import SourceAnchor, build_source_anchors
 from micar_linter.contact import CONTACT_FIELDS, has_email_address, has_period_in_days, has_telephone_number
+from micar_linter.dti import DTI_FIELDS, field_codes, labelled_codes
 from micar_linter.lei import (
     PARTY_SECTIONS,
     codes_only_as_shown,
@@ -95,6 +96,9 @@ class Linter:
 
         if rule.rule_id in CONTACT_POINT_RULE_IDS:
             return _contact_point_finding(rule, whitepaper)
+
+        if rule.rule_id == "COMMON.DTI_FORMAT":
+            return _dti_finding(rule, whitepaper)
 
         is_de = whitepaper.language == "de"
 
@@ -998,6 +1002,98 @@ def _contact_fields_finding(
         issues.append(issue[0] if is_de else issue[1])
     status = "missing" if empty == len(numbers) else "review" if issues else "pass"
     words = sum(_count_words(str(answers.get(number, ""))) for number in numbers)
+    return Finding(rule=rule, status=status, word_count=words, issues=tuple(issues))
+
+
+# COMMON.DTI_FORMAT (micar_linter.dti). English findings quote no draft text, so the rule needs no entry in
+# DRAFT_ECHO_RULES; a numbered-field finding names the field and, in English, the template's field name.
+_DTI_NONE = (
+    "No ISO 24165 Digital Token Identifier (DTI) is given. Where no DTI is available, Art. 3(3) of "
+    "Delegated Regulation (EU) 2025/421 asks for a digital token identifier approved by ESMA at Union level.",
+    "Kein Digital Token Identifier (DTI) nach ISO 24165 angegeben. Ist kein DTI verfügbar, verlangt Art. 3 "
+    "Abs. 3 VO (EU) 2025/421 eine von der ESMA auf Unionsebene anerkannte Kennung für digitale Token.",
+)
+_DTI_NO_GROUP = (
+    "A DTI is given but no DTI of type 3 for the functionally fungible group (FFG DTI); Art. 3(1) of "
+    "Delegated Regulation (EU) 2025/421 asks for it where a DTI is provided.",
+    "Ein DTI ist angegeben, aber kein DTI des Typs 3 für die funktional fungible Gruppe (FFG DTI); Art. 3 "
+    "Abs. 1 VO (EU) 2025/421 verlangt ihn, wenn ein DTI angegeben wird.",
+)
+_DTI_NO_ASSET = (
+    "An FFG DTI is given but no DTI of the crypto-asset itself; Art. 3(2) of Delegated Regulation (EU) "
+    "2025/421 asks for one for each crypto-asset the white paper relates to.",
+    "Ein FFG DTI ist angegeben, aber kein DTI des Kryptowerts selbst; Art. 3 Abs. 2 VO (EU) 2025/421 "
+    "verlangt einen für jeden Kryptowert, auf den sich das Whitepaper bezieht.",
+)
+_DTI_FORMAT_NOTE = "the {DTI} format of Implementing Regulation (EU) 2024/2984"
+_DTI_FORMAT_NOTE_DE = "Format {DTI} der VO (EU) 2024/2984"
+
+
+def _dti_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """The DTI of each crypto-asset and the FFG DTI of its group, each a code of 9 alphanumerical characters.
+
+    A numbered-field draft is read in the two template fields that carry the codes (DTI_FIELDS); both are
+    "where available", so empty fields give Review, not Missing, as a party section without an LEI does
+    (owner decision of 2026-10-27 for the LEI rules). Any other draft has no field numbers: its section is
+    searched for codes after a DTI or FFG DTI label, and Missing applies only when the section itself is.
+    Pass means the codes have the right shape, never that they are registered or belong to the token.
+    """
+    is_de = whitepaper.language == "de"
+    answers = whitepaper.metadata.get("numbered_fields")
+    numbers = DTI_FIELDS.get(whitepaper.type)
+    issues: list[str] = []
+    if isinstance(answers, dict) and numbers is not None:
+        names = FIELD_NAMES[whitepaper.type]
+        dti_number, ffg_number = numbers
+        dti, dti_other = field_codes(str(answers.get(dti_number, "")))
+        ffg, ffg_other = field_codes(str(answers.get(ffg_number, "")))
+        for number, other in ((dti_number, dti_other), (ffg_number, ffg_other)):
+            if other:
+                issues.append(
+                    f"Feld {number} enthält anderes als Codes aus 9 alphanumerischen Zeichen "
+                    f"({_DTI_FORMAT_NOTE_DE})."
+                    if is_de
+                    else f"Field {number} ({names[number]}) holds text other than codes of 9 alphanumerical "
+                    f"characters ({_DTI_FORMAT_NOTE})."
+                )
+        words = sum(_count_words(str(answers.get(number, ""))) for number in numbers)
+        malformed = {kind for kind, other in (("dti", dti_other), ("ffg", ffg_other)) if other}
+    else:
+        text = whitepaper.section(rule.section)
+        absent = _absent(text, is_de)
+        if absent:
+            return Finding(rule=rule, status="missing", word_count=0, issues=(absent,))
+        text = _collapse_whitespace(text)
+        dti, ffg, unfollowed = labelled_codes(text)
+        for kind in ("dti", "ffg"):
+            if kind in unfollowed:
+                label = "FFG DTI" if kind == "ffg" else "DTI"
+                issues.append(
+                    f"Auf eine Angabe {label} folgt kein Code aus 9 alphanumerischen Zeichen "
+                    f"({_DTI_FORMAT_NOTE_DE})."
+                    if is_de
+                    else f"A {label} label is not followed by a code of 9 alphanumerical characters "
+                    f"({_DTI_FORMAT_NOTE})."
+                )
+        words = _count_words(text)
+        malformed = unfollowed
+    if len(ffg) > 1:
+        issues.append(
+            "Mehr als ein FFG DTI angegeben; die Gruppe hat einen DTI des Typs 3 "
+            "(Art. 3 Abs. 1 VO (EU) 2025/421)."
+            if is_de
+            else "More than one FFG DTI is given; the group has one DTI of type 3 (Art. 3(1) of Delegated "
+            "Regulation (EU) 2025/421)."
+        )
+    if not dti and not ffg:
+        if not malformed:
+            issues.append(_DTI_NONE[1] if is_de else _DTI_NONE[0])
+    # A half whose field or label holds a malformed code is already named; it is not reported missing too.
+    elif not ffg and "ffg" not in malformed:
+        issues.append(_DTI_NO_GROUP[1] if is_de else _DTI_NO_GROUP[0])
+    elif not dti and "dti" not in malformed:
+        issues.append(_DTI_NO_ASSET[1] if is_de else _DTI_NO_ASSET[0])
+    status = "review" if issues else "pass"
     return Finding(rule=rule, status=status, word_count=words, issues=tuple(issues))
 
 

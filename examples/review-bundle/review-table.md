@@ -18,6 +18,7 @@ This markdown table is a local review artifact. It does not approve filing, publ
 | COMMON.IXBRL_TAGGING | Art. 2 VO (EU) 2024/2984 | missing | yes | remediation_required | yes |
 | COMMON.LEI_CHECK_DIGITS | Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, Anhang III Teil A Nr. 5 MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | COMMON.LEI_CONSISTENCY | Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, Anhang III Teil A Nr. 5 MiCAR | pass | no | pending_lawyer_confirmation | yes |
+| COMMON.DTI_FORMAT | Art. 3 Abs. 1 und 2 VO (EU) 2025/421; Anhang Tabelle 3 Teil B VO (EU) 2024/2984 | review | no | lawyer_review_required | yes |
 | ANNEX_II.A | Anhang II Teil A MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | ANNEX_II.B | Anhang II Teil B MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | ANNEX_II.C | Anhang II Teil C MiCAR | pass | no | pending_lawyer_confirmation | yes |

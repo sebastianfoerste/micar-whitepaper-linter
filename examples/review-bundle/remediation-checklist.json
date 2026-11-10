@@ -4,9 +4,9 @@
   "whitepaper_type": "art",
   "status": "BLOCKED",
   "summary": {
-    "open_items": 3,
+    "open_items": 4,
     "blockers": 3,
-    "review_items": 2,
+    "review_items": 3,
     "missing_sections": 1
   },
   "items": [
@@ -28,6 +28,26 @@
         "parser_source_type": "json",
         "stable_anchor_id": "json:ixbrl_tagging:6320a902d08da530",
         "section_length": 0
+      }
+    },
+    {
+      "rule_id": "COMMON.DTI_FORMAT",
+      "citation": "Art. 3 Abs. 1 und 2 VO (EU) 2025/421; Anhang Tabelle 3 Teil B VO (EU) 2024/2984",
+      "section": "art",
+      "label": "Digital Token Identifiers of the crypto-asset and its functionally fungible group (ISO 24165)",
+      "severity": "MINOR",
+      "status": "review",
+      "owner_role": "Draft owner",
+      "missing_evidence": false,
+      "issues": [
+        "No ISO 24165 Digital Token Identifier (DTI) is given. Where no DTI is available, Art. 3(3) of Delegated Regulation (EU) 2025/421 asks for a digital token identifier approved by ESMA at Union level."
+      ],
+      "next_action": "Review and strengthen the disclosure before sign-off.",
+      "source_anchor": {
+        "section_key": "art",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:art:6477f8e0fa8c706e",
+        "section_length": 912
       }
     },
     {

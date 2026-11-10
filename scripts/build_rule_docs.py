@@ -150,6 +150,13 @@ OJ_CHECKED = {
         "fields A.9 to A.11 carry the point without a condition, as the Publications Office served them that day. "
         "No amendment and no English or German corrigendum changes Annex III Part A point 6 or the template."
     ),
+    "COMMON.DTI_FORMAT": (
+        "Checked on 2026-11-10 against the Official Journal text in English of Delegated Regulation (EU) 2025/421 "
+        "(OJ L, 2025/421, 24.3.2025), Art. 3 and Art. 4, and of Implementing Regulation (EU) 2024/2984 (OJ L, "
+        "2024/2984, 3.12.2024), the {DTI} format in Table 1 and fields F.13, F.14, B.15, B.16, B.12 and B.13 of "
+        "Tables 2 to 4. EUR-Lex listed no amendment and no corrigendum of either act that day. The German text "
+        "was not read."
+    ),
 }
 # Rules that pass when the section holds a value of the right kind, a date, a language or contact details, at
 # any length (linter.py).
@@ -157,6 +164,7 @@ ANSWER_CHECKS = {
     "COMMON.NOTIFICATION_DATE": "a calendar date",
     "COMMON.LANGUAGE": "an official EU language",
     **dict.fromkeys(CONTACT_POINT_RULE_IDS, "a telephone number, an e-mail address and a period in days"),
+    "COMMON.DTI_FORMAT": "a Digital Token Identifier and the DTI of its functionally fungible group",
 }
 # The template fields of each point rule, by the table its regime uses (contact.py).
 POINT_TABLES = {WhitepaperType.OTHER: 2, WhitepaperType.EMT: 4}
@@ -215,6 +223,11 @@ UNTESTED_REGIMES = {
 # Why a rule runs with other terms or another minimum for some regimes. The build stops when a rule
 # ID has more than one Rule in RULESETS and no note here.
 VARIANT_NOTES = {
+    "COMMON.DTI_FORMAT": (
+        "Each template carries the two codes in its own part: fields F.13 and F.14 of Table 2 (Part F, section "
+        "crypto_asset), B.15 and B.16 of Table 3 (Part B, section art) and B.12 and B.13 of Table 4 (Part B, "
+        "section emt) of Implementing Regulation (EU) 2024/2984. The check is the same for all three."
+    ),
     "COMMON.RISK_WARNING": (
         "Art. 6(5) and Art. 19(4) MiCAR require a statement that the crypto-asset may lose its value in part "
         "or in full, may not always be transferable and may not be liquid, and that investor compensation "
@@ -470,6 +483,8 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
         ]
         if rule.rule_id in CONTACT_POINT_RULE_IDS:
             return [*absent, *_contact_examples(rule, regime)]
+        if rule.rule_id == "COMMON.DTI_FORMAT":
+            return [*absent, *_dti_examples(rule, regime)]
         if rule.rule_id == "COMMON.NOTIFICATION_DATE":
             return [
                 *absent,
@@ -652,6 +667,61 @@ def _contact_examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
     ]
 
 
+def _dti_examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
+    """The two codes in a draft without field numbers: each counts after its label."""
+    asset, group = "SYNTHDTI1", "SYNTHFFG1"
+    return [
+        Example(
+            "No DTI",
+            "review",
+            _draft(rule, regime, "The crypto-asset is issued on a public permissionless network."),
+            "The section gives no Digital Token Identifier. Where none is available, Art. 3(3) of Delegated "
+            "Regulation (EU) 2025/421 asks for an identifier approved by ESMA, which the check cannot recognise.",
+        ),
+        Example(
+            "DTI without the group code",
+            "review",
+            _draft(rule, regime, f"DTI: {asset}."),
+            "Art. 3(1) asks for the type 3 DTI of the functionally fungible group where a DTI is provided.",
+        ),
+        Example(
+            "Code of the wrong length",
+            "review",
+            _draft(rule, regime, f"DTI: {asset}0. FFG DTI: {group}."),
+            "A code after the DTI label has 10 characters; the {DTI} format has 9.",
+        ),
+        Example(
+            "Both codes",
+            "pass",
+            _draft(rule, regime, f"The crypto-asset has the DTI {asset}; its FFG DTI is {group}."),
+            "Both codes have the {DTI} shape. The codes here are synthetic: a pass does not show that a code is "
+            "registered or belongs to the token.",
+        ),
+        Example(
+            "German draft",
+            "pass",
+            _draft(rule, regime, f"Der Kryptowert wird über den DTI {asset} identifiziert, die Gruppe über den FFG DTI {group}.", language="de"),
+            "German drafts are read after the acronyms DTI and FFG DTI and after the English names.",
+        ),
+    ]
+
+
+def _dti_status_logic() -> str:
+    return (
+        '<ul class="plain"><li><strong>Missing</strong>: in a draft without field numbers, the section is absent '
+        "or empty, holds only placeholder text such as TBD or TBC, or opens with the starter template's "
+        "<code>REPLACE:</code> note. A numbered-field XHTML draft is never Missing on this rule, as both "
+        "template fields are filled in where available.</li>"
+        "<li><strong>Review</strong>: no DTI is given (both fields empty, a placeholder or N/A, or no code after "
+        "a DTI or FFG DTI label); a DTI is given without the DTI of its functionally fungible group, or the "
+        "group code without a DTI of the crypto-asset; more than one group code is given; or a field, or the "
+        "word after a label, holds anything other than codes of 9 letters or digits.</li>"
+        "<li><strong>Pass</strong>: the draft gives at least one DTI and exactly one group code, each of 9 letters "
+        "or digits, the {DTI} format of Table 1 of the Annex to Implementing Regulation (EU) 2024/2984. A pass "
+        "means the codes have that shape, nothing more.</li></ul>"
+    )
+
+
 def lint_example(rule: Rule, example: Example) -> str:
     draft = example.draft
     # The same filter as the JSON loader: a draft cannot set the reserved keys.
@@ -716,7 +786,9 @@ def status_logic(rule: Rule) -> str:
             "iXBRL viewer page. A viewer page packs the white paper into a script; the content checks read the "
             "unpacked text, and the viewer's rendering is not the XHTML document itself.</li>"
             "<li><strong>Review</strong>: the draft is any other XHTML file. The check reports namespace problems "
-            "and always adds that tag completeness was not checked.</li><li><strong>Pass</strong>: never. This is "
+            "and always adds that tag completeness was not checked. It knows the 2025 taxonomy (namespace date "
+            "2025-03-31); facts tagged in an ESMA MiCA namespace with another date, which ESMA uses for later "
+            "releases, are named as a version the check does not know.</li><li><strong>Pass</strong>: never. This is "
             "a fail-closed format gate.</li></ul>"
         )
     if rule.rule_id == "COMMON.LEI_CHECK_DIGITS":
@@ -776,6 +848,8 @@ def status_logic(rule: Rule) -> str:
         )
     if rule.rule_id in CONTACT_POINT_RULE_IDS:
         return _contact_status_logic(rule)
+    if rule.rule_id == "COMMON.DTI_FORMAT":
+        return _dti_status_logic()
     if rule.rule_id in ANSWER_CHECKS:
         missing = (
             f'<ul class="plain"><li><strong>Missing</strong>: section <code>{_e(rule.section)}</code> is absent '
@@ -988,6 +1062,9 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             else f"Reads one section key, <code>{_e(rule.section)}</code>, and in a numbered-field XHTML draft only "
             f"{_contact_fields(rule)[3]}. Text elsewhere in the draft is not considered."
             if rule.rule_id in CONTACT_POINT_RULE_IDS
+            else "Reads one section key per regime, the part whose template fields carry the codes, and in a "
+            "numbered-field XHTML draft only those two fields. Text elsewhere in the draft is not considered."
+            if rule.rule_id == "COMMON.DTI_FORMAT"
             else f"Reads one section key, <code>{_e(rule.section)}</code>. Text elsewhere in the draft is not considered."
         ),
         (
@@ -996,8 +1073,16 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             else "Checks the file format and taxonomy namespace only, not tag completeness."
             if rule.rule_id == "COMMON.IXBRL_TAGGING"
             else "Works offline on the characters of each code. It does not confirm that an LEI is registered, "
-            "current or held by the entity the draft names."
+            "current or held by the entity the draft names. Art. 2 of Delegated Regulation (EU) 2025/421, which "
+            "applies from 23 December 2025, asks that the LEI be issued in accordance with the terms of a Local "
+            "Operating Unit of the Global LEI System and included in the Global LEI database; neither is checked."
             if rule.rule_id in LEI_RULES
+            else "Works offline on the shape of each code. It does not confirm that a code is registered with the "
+            "Digital Token Identifier Foundation, that it belongs to the crypto-asset, or that the group code is of "
+            "type 3, and it cannot recognise the identifier approved by ESMA that Art. 3(3) of Delegated "
+            "Regulation (EU) 2025/421 asks for where no DTI is available. ISO 24165 was not read, so no check "
+            "character is computed."
+            if rule.rule_id == "COMMON.DTI_FORMAT"
             else "Matches the English wording only. It cannot see whether the statement is on the first page, and "
             "it does not check that the person it names is the one responsible for the white paper."
             if rule.rule_id in NOT_APPROVED_STATEMENT_RULE_IDS
@@ -1217,6 +1302,14 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             "do not count, so a draft that numbers these fields otherwise goes to review, or is reported missing "
             "where the fields with the template's numbers are each absent, empty or hold only a placeholder."
         )
+    if rule.rule_id == "COMMON.DTI_FORMAT":
+        limitations.append(
+            "In a draft without field numbers a code counts only right after a label: DTI, FFG DTI, Digital Token "
+            "Identifier or functionally fungible group, with an optional colon, (DTI), (FFG), code, is, ist or "
+            "lautet in between. A code introduced otherwise, a second code after the same label and a template "
+            "field name used as a label (Digital token identifier code used to ...) give Review, which fails safe. "
+            "German drafts are read after the acronyms and the English names only."
+        )
     if rule.rule_id == "COMMON.SUMMARY":
         limitations.append(
             "Outside field 07 of Table 2 (I.04 of Table 3, I.05 of Table 4) of a numbered-field XHTML draft, only "
@@ -1279,11 +1372,11 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
 <h1>{_e(rule.rule_id)}</h1>
 <p class="lede">{_e(rule.label)}</p>
 <div class="panel"><dl class="facts">
-<dt>Citation</dt><dd>{_e(citation_en)}</dd>
-<dt>Canonical form</dt><dd lang="de">{_e(rule.citation)}</dd>
+<dt>Citation</dt><dd>{by_regime(lambda r: _e(citations.to_english(r.citation)))}</dd>
+<dt>Canonical form</dt><dd lang="de">{by_regime(lambda r: _e(r.citation))}</dd>
 <dt>Runs for</dt><dd>{_e("; ".join(REGIME_NAMES[r] for r in regimes))}</dd>
 <dt>Severity if open</dt><dd>{_e(rule.severity.label)}</dd>
-<dt>Section key</dt><dd>{"none: checks the file format" if rule.rule_id in FORMAT_GATE else "all sections; anchored to <code>issuer</code>" if rule.rule_id in LEI_RULES else f"<code>{_e(rule.section)}</code>"}</dd>
+<dt>Section key</dt><dd>{"none: checks the file format" if rule.rule_id in FORMAT_GATE else "all sections; anchored to <code>issuer</code>" if rule.rule_id in LEI_RULES else by_regime(lambda r: f"<code>{_e(r.section)}</code>")}</dd>
 <dt>Minimum words</dt><dd>{f"none: checks for {ANSWER_CHECKS[rule.rule_id]}" if rule.rule_id in ANSWER_CHECKS else by_regime(lambda r: str(r.min_words))}</dd>
 <dt>Listed terms (English)</dt><dd>{by_regime(lambda r: _terms(r.required_terms, r.required_patterns))}</dd>
 <dt>Listed terms (German)</dt><dd lang="de">{by_regime(lambda r: _terms(r.required_terms_de, r.required_patterns_de))}</dd>
@@ -1293,7 +1386,7 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
 <h2>How the status is set</h2>
 {status_logic(rule)}{variant_note}
 <h2>Legal basis</h2>
-<p>{_e(citation_en)}</p>
+<p>{by_regime(lambda r: _e(citations.to_english(r.citation)))}</p>
 <ul class="plain">{sources}</ul>
 <p class="callout">{_e(LEI_VERIFICATION_NOTE if rule.rule_id in LEI_RULES else verification_note(rule.rule_id))}</p>
 <h2>Synthetic examples</h2>

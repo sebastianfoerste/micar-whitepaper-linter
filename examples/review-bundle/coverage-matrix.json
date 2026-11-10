@@ -1,12 +1,12 @@
 {
   "schema": "micar-whitepaper-linter.coverage-matrix.v1",
-  "generated_at": "2026-10-29T06:57:48.094210+00:00",
+  "generated_at": "2026-11-10T21:27:00.657402+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "summary": {
-    "total": 20,
+    "total": 21,
     "pass": 17,
-    "review": 2,
+    "review": 3,
     "missing": 1,
     "blockers": 3
   },
@@ -145,6 +145,23 @@
         "parser_source_type": "json",
         "stable_anchor_id": "json:issuer:dff196932bf49acb",
         "section_length": 738
+      }
+    },
+    {
+      "rule_id": "COMMON.DTI_FORMAT",
+      "annex": "COMMON",
+      "section": "art",
+      "citation": "Art. 3 Abs. 1 und 2 VO (EU) 2025/421; Anhang Tabelle 3 Teil B VO (EU) 2024/2984",
+      "severity": "MINOR",
+      "status": "review",
+      "word_count": 143,
+      "blocker": false,
+      "next_action": "Strengthen the disclosure before sign-off.",
+      "source_anchor": {
+        "section_key": "art",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:art:6477f8e0fa8c706e",
+        "section_length": 912
       }
     },
     {
@@ -359,5 +376,5 @@
   ],
   "warnings": [],
   "review_notice": "Coverage matrix is a deterministic disclosure checklist. It is not legal advice, a signature, a notification, or filing approval.",
-  "digest": "a8dc5245ffa31917b9ebd8cd3dc986ddc9a6a64a3e7985cdadd1d6f5f3d6508e"
+  "digest": "dc47afe4f9adfe9a444d00526fa800f29a3fc0c44050c67efe506f780d1ca477"
 }
