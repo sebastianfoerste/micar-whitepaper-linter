@@ -70,7 +70,7 @@ Rank = Impact × evidence weight (Observed 3, Claimed 2, Inferred 1) ÷ effort (
 | H5 | Browser DOCX import | 3 | pass | M | Inferred | differentiator | 1.5 | Spec; kill test pending |
 | H9 | Arelle formula assertions (CLI extra) | 3 | fail (this run: new extra changes `pyproject.toml`/`uv.lock`; see Needs owner decision) | L | Observed | differentiator | 2.25 | Proposed ADR |
 | D4 | Load progress and "format gate only" state | 2 | pass | S | Inferred | polish | 2 | Spec |
-| H4 | English citations in the browser | 4 | fail (`displayCitation` is `TODO(human)`; see Needs owner decision) | S | Observed (CLI already renders them) | table stakes | — | Owner decision (`TODO(human)`) |
+| H4 | English citations in the browser | 4 | fail (`displayCitation` was `TODO(human)`; see Needs owner decision) | S | Observed (CLI already renders them) | table stakes | — | **Built** 2026-11-10, after the decision under the owner's delegation |
 
 Budget: 4 items built, all Fit = pass, effort S or M. Since 2026-10-21 these are 3 features (H1, H2, H11) and 1 design upgrade (H6): the owner swapped dark mode (H7) for H11, which restores rank order.
 
@@ -148,9 +148,9 @@ An optional CLI-only extra that runs the taxonomy's existence and value assertio
 
 Vendor `python_docx-1.2.0-py3-none-any.whl` under `docs/playground/vendor/`, load `lxml` and `typing-extensions` from Pyodide on first DOCX import, then `micropip.install(<same-origin URL>, deps=False)`. Kill if `examples/sample-draft.docx` costs more than 1.5 MB gzip or 5 s extra. Not measured in this run.
 
-### F8. English citations in the browser (H4), owner decision
+### F8. English citations in the browser (H4), built 2026-11-10
 
-`displayCitation` in `docs/playground/model.mjs` is reserved for the owner (`TODO(human)`) and was not edited. The engine already emits `citation_en` in the JSON report, so the smallest change is:
+`displayCitation` in `docs/playground/model.mjs` was reserved for the owner (`TODO(human)`). On 2026-11-10 the owner delegated the decision, and the proposal below was accepted and built as written: the engine already emits `citation_en` in the JSON report, so the smallest change was:
 
 ```diff
 -export function displayCitation(citation) {
@@ -163,7 +163,7 @@ Vendor `python_docx-1.2.0-py3-none-any.whl` under `docs/playground/vendor/`, loa
 +}
 ```
 
-with call sites passing the finding instead of `finding.citation`, and a test (to add when the owner accepts) asserting `displayCitation({citation: "Art. 6 Abs. 7 MiCAR", citation_en: "Art. 6(7) MiCAR"}) === "Art. 6(7) MiCAR"`.
+with call sites passing the finding instead of `finding.citation` (`renderFindings` in `app.mjs` and the search in `selectFindings`, which matches both forms). `tests/playground/model.test.mjs` checks that a finding shows `citation_en`, falls back to `citation` without it, stays searchable in both forms, and that on every rule page the English citation keeps the canonical form's numbers. The `TODO(human)` marker is gone. Exports still write the report as the engine produced it.
 
 ## Design upgrades
 
@@ -182,7 +182,7 @@ with call sites passing the finding instead of `finding.citation`, and a test (t
 | H1 | modified (built) | https://github.com/github/docs/blob/666463860bec200da6c8db9cb9334e7335d9b753/content/code-security/reference/code-scanning/sarif-files/sarif-support.md; https://github.com/reviewdog/reviewdog/blob/73c79487a087e1696b3e70a0ae5d2a7233343567/README.md | Built with summary and annotations on by default and SARIF opt-in; format gate kept out of annotations; `helpUri` kept for other SARIF consumers although GitHub does not document it |
 | H2 | confirmed (built) | https://github.com/eslint/eslint/blob/449724e95bfa013fa32c29375925b4111d3924e4/tools/check-rule-examples.js; https://github.com/astral-sh/ruff/blob/3e3f22dcc47a534d5bb6668817464b02c6e6e133/crates/ruff_dev/src/generate_docs.rs; https://github.com/DataQualityCommittee/dqc_us_rules/blob/64abefd357c34ef45f9f4336a1e3171984d76601/docs/DQC_US_0001/DQC_0001.md | Examples executed in tests, not only rendered |
 | H3 | parked | https://github.com/astral-sh/ruff/blob/3e3f22dcc47a534d5bb6668817464b02c6e6e133/playground/ruff/src/Editor/settings.ts | Effort L; needs the editor ADR decision |
-| H4 | parked (owner) | https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/ee156930df78b515d5a61397467c24439b61fecd/docs/playground/model.mjs | `displayCitation` is reserved for the owner (`TODO(human)`); diff above |
+| H4 | confirmed (built 2026-11-10) | https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/ee156930df78b515d5a61397467c24439b61fecd/docs/playground/model.mjs | `displayCitation` was reserved for the owner (`TODO(human)`); the diff above was accepted under the owner's delegation and built |
 | H5 | parked | https://github.com/pyodide/pyodide/releases/download/0.28.2/pyodide-0.28.2.tar.bz2 (no python-docx in the distribution) | Size and time kill test not yet run |
 | H6 | confirmed (built) | none external (Inferred) | Gives the Pages root a home and states limits |
 | H7 | built, then removed | https://github.com/astral-sh/ruff/blob/3e3f22dcc47a534d5bb6668817464b02c6e6e133/playground/ruff/src/Editor/settings.ts (theme setting persisted there; not here) | Removed at the owner's request (2026-10-21) in favour of H11 |
@@ -193,7 +193,7 @@ with call sites passing the finding instead of `finding.citation`, and a test (t
 
 ## Needs owner decision
 
-1. **H4**: accept the `displayCitation` diff above, or keep German citations in the browser.
+1. **H4**: decided 2026-11-10 under the owner's delegation: the `displayCitation` diff above is accepted and built (F8). The browser shows the English EU citation that the CLI's text report prints, so both surfaces cite alike, and the canonical form stays in the exports and in search.
 2. **H9 never-pass**: if Arelle assertions are added, confirm `COMMON.IXBRL_TAGGING` stays never-pass and assertion failures add issues rather than new statuses.
 3. **H10 labels**: the 150 study cells need human review before any accuracy figure; nobody else can enter them.
 4. **`setup-uv` pin**: decided 2026-10-26. The owner moved the Action to `v10.3.0` (node24), recorded in ADR 0001, with `enable-cache: 'false'`. The `action` job in CI runs it; the starter repo itself has not been run against it.

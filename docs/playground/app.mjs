@@ -288,7 +288,7 @@ function renderFindings() {
     summary.append(node("span", `badge ${finding.status}`, finding.status === "missing" ? "Missing" : finding.status === "review" ? "Review" : "Pass"));
     const heading = node("div");
     // The citation sits in the collapsed row so the legal basis can be scanned without opening each finding.
-    heading.append(node("span", "finding-label", finding.label), node("span", "finding-citation", displayCitation(finding.citation)),
+    heading.append(node("span", "finding-label", finding.label), node("span", "finding-citation", displayCitation(finding)),
       node("span", "finding-id", finding.rule_id));
     summary.append(heading);
     const body = node("div", "finding-body");

@@ -27,6 +27,7 @@ The citations in the entries marked (#17) were first read in the copy of the EUR
 - Starter template: the workflow runs with read-only permissions and a 10-minute timeout, checks out with `actions/checkout` pinned to v7.0.1 by commit and without persisted credentials, and a Dependabot file proposes updates of its Actions. These come from pull request #2 of the public template repository and are now in `templates/whitepaper-starter/`, the template's source, so the next export carries them. `docs/WHITEPAPER_STARTER_RELEASE.md` says to publish an export through a pull request into the public `main`, merged with a merge commit.
 - The GitHub Action pins `astral-sh/setup-uv` to v10.3.3 (`68559e99cc807c1eb7e9238fd43a15bba460eec2`) and `github/codeql-action/upload-sarif` to v4.39.3 (`33d7b85da1a04171e211befe2c739303b9a4c066`), recorded in ADR 0001. `@v1` users get them with the next release.
 - ADR 0008 is accepted: the exit codes that 1.2.0 gave `--coverage --strict` and strict directory runs stay as released. `--strict` exits 1 on open BLOCKER findings also with `--coverage`, and a strict directory run exits 1 when a file could not be linted or no file was linted.
+- Playground: a finding shows its citation in the English EU style that the CLI's text report prints ("Art. 6(7) MiCAR"), from the `citation_en` field of the JSON report; before, it showed the canonical German form ("Art. 6 Abs. 7 MiCAR"). Search finds a finding by either form, and the JSON and text downloads are unchanged.
 
 ### Fixed
 
