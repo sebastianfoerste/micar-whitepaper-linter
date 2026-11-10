@@ -142,7 +142,7 @@ New IDs under a separate namespace (`ANNEX_I.A.P<n>`, distinct from `ANNEX_II.G.
 
 ### F6. Arelle formula assertions (H9), Proposed
 
-An optional CLI-only extra that runs the taxonomy's existence and value assertions with `--internetConnectivity offline` against a taxonomy package the user supplies. Not for the browser (lxml pin conflict). `COMMON.IXBRL_TAGGING` stays never-pass: assertion results become issues under it or under new rule IDs. See [ADR 0004](../adr/0004-arelle-optional-extra.md).
+An optional CLI-only extra that runs the taxonomy's existence and value assertions with `--internetConnectivity offline` against a taxonomy package the user supplies. Not for the browser (lxml pin conflict). `COMMON.IXBRL_TAGGING` stays never-pass, and assertion failures become issues under it, not new statuses (decided 2026-11-10, item 2 of Needs owner decision). See [ADR 0004](../adr/0004-arelle-optional-extra.md).
 
 ### F7. Browser DOCX import (H5), spec only
 
@@ -194,7 +194,7 @@ with call sites passing the finding instead of `finding.citation` (`renderFindin
 ## Needs owner decision
 
 1. **H4**: decided 2026-11-10 under the owner's delegation: the `displayCitation` diff above is accepted and built (F8). The browser shows the English EU citation that the CLI's text report prints, so both surfaces cite alike, and the canonical form stays in the exports and in search.
-2. **H9 never-pass**: if Arelle assertions are added, confirm `COMMON.IXBRL_TAGGING` stays never-pass and assertion failures add issues rather than new statuses.
+2. **H9 never-pass**: decided 2026-11-10 under the owner's delegation (ADR 0004): if Arelle assertions are added, `COMMON.IXBRL_TAGGING` stays never-pass and assertion failures add issues to it, not new statuses. A clean assertion run does not show on its own that the format of Art. 2 of Implementing Regulation (EU) 2024/2984 is met, and a new status would change every output that reads the three statuses. Nothing is built; whether to add the extra stays open with ADR 0004.
 3. **H10 labels**: the 150 study cells need human review before any accuracy figure; nobody else can enter them.
 4. **`setup-uv` pin**: decided 2026-10-26. The owner moved the Action to `v10.3.0` (node24), recorded in ADR 0001, with `enable-cache: 'false'`. The `action` job in CI runs it; the starter repo itself has not been run against it.
 5. **Annotations and summary on by default** under `@v1`: decided 2026-10-26. The owner kept both on by default for the 1.2.0 release, which every existing consumer sees when `v1` moves.
