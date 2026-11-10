@@ -71,5 +71,7 @@
       }
     }
   ],
-  "warnings": []
+  "warnings": [
+    "Field-level checks of the templates of Implementing Regulation (EU) 2024/2984 and Delegated Regulations (EU) 2025/421 and 2025/422 run only on drafts in the numbered-field layout (XHTML). This draft has no field numbers, so 65 point checks and 5 template checks did not run. They are left out of this report and count neither as passed nor as open; check the white paper in the numbered-field layout to run them."
+  ]
 }

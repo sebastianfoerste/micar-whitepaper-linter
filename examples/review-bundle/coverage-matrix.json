@@ -1,11 +1,11 @@
 {
   "schema": "micar-whitepaper-linter.coverage-matrix.v1",
-  "generated_at": "2026-10-29T06:57:48.094210+00:00",
+  "generated_at": "2026-11-10T18:43:42.853691+00:00",
   "title": "Synthetic EuroStable ART White Paper",
   "whitepaper_type": "art",
   "summary": {
-    "total": 20,
-    "pass": 17,
+    "total": 21,
+    "pass": 18,
     "review": 2,
     "missing": 1,
     "blockers": 3
@@ -69,14 +69,14 @@
       "citation": "Art. 6 Abs. 8, Art. 19 Abs. 7, Art. 51 Abs. 7 MiCAR",
       "severity": "MAJOR",
       "status": "pass",
-      "word_count": 17,
+      "word_count": 15,
       "blocker": false,
       "next_action": "Keep disclosure under lawyer review before external use.",
       "source_anchor": {
         "section_key": "notification_date",
         "parser_source_type": "json",
-        "stable_anchor_id": "json:notification_date:d015fb69bd078a74",
-        "section_length": 109
+        "stable_anchor_id": "json:notification_date:1797439646d525bf",
+        "section_length": 107
       }
     },
     {
@@ -350,6 +350,23 @@
         "stable_anchor_id": "json:redemption:f30c1426e8222ca8",
         "section_length": 892
       }
+    },
+    {
+      "rule_id": "ITS.NOTIFICATION_DATE_FORMAT",
+      "annex": "ITS",
+      "section": "notification_date",
+      "citation": "Anhang Tabelle 2 Feld 01, Tabelle 3 Feld I.01, Tabelle 4 Feld I.01 VO (EU) 2024/2984",
+      "severity": "BLOCKER",
+      "status": "pass",
+      "word_count": 15,
+      "blocker": false,
+      "next_action": "Keep disclosure under lawyer review before external use.",
+      "source_anchor": {
+        "section_key": "notification_date",
+        "parser_source_type": "json",
+        "stable_anchor_id": "json:notification_date:3bbdc9d8be42de60",
+        "section_length": 107
+      }
     }
   ],
   "blockers": [
@@ -357,7 +374,81 @@
     "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
     "ANNEX_II.G.CUSTODY"
   ],
-  "warnings": [],
+  "warnings": [
+    "Field-level checks of the templates of Implementing Regulation (EU) 2024/2984 and Delegated Regulations (EU) 2025/421 and 2025/422 run only on drafts in the numbered-field layout (XHTML). This draft has no field numbers, so 65 point checks and 5 template checks did not run. They are left out of this report and count neither as passed nor as open; check the white paper in the numbered-field layout to run them."
+  ],
+  "not_run": [
+    "ANNEX_II.A.P1",
+    "ANNEX_II.A.P2",
+    "ANNEX_II.A.P3",
+    "ANNEX_II.A.P4",
+    "ANNEX_II.A.P5",
+    "ANNEX_II.A.P6",
+    "ANNEX_II.A.P7",
+    "ANNEX_II.A.P8",
+    "ANNEX_II.A.P9",
+    "ANNEX_II.A.P10",
+    "ANNEX_II.A.P11",
+    "ANNEX_II.A.P12",
+    "ANNEX_II.B.P1",
+    "ANNEX_II.B.P2",
+    "ANNEX_II.B.P3",
+    "ANNEX_II.B.P4",
+    "ANNEX_II.B.P5",
+    "ANNEX_II.C.P1",
+    "ANNEX_II.C.P2",
+    "ANNEX_II.C.P3",
+    "ANNEX_II.C.P4",
+    "ANNEX_II.C.P5",
+    "ANNEX_II.C.P6",
+    "ANNEX_II.C.P7",
+    "ANNEX_II.C.P8",
+    "ANNEX_II.C.P9",
+    "ANNEX_II.C.P10",
+    "ANNEX_II.C.P11",
+    "ANNEX_II.C.P12",
+    "ANNEX_II.C.P13",
+    "ANNEX_II.C.P14",
+    "ANNEX_II.C.P15",
+    "ANNEX_II.D.P1",
+    "ANNEX_II.D.P2",
+    "ANNEX_II.D.P3",
+    "ANNEX_II.D.P4",
+    "ANNEX_II.D.P5",
+    "ANNEX_II.D.P6",
+    "ANNEX_II.D.P7",
+    "ANNEX_II.D.P8",
+    "ANNEX_II.D.P9",
+    "ANNEX_II.D.P10",
+    "ANNEX_II.D.P11",
+    "ANNEX_II.D.P12",
+    "ANNEX_II.D.P13",
+    "ANNEX_II.D.P14",
+    "ANNEX_II.D.P15",
+    "ANNEX_II.D.P16",
+    "ANNEX_II.D.P17",
+    "ANNEX_II.E.P1",
+    "ANNEX_II.E.P2",
+    "ANNEX_II.E.P3",
+    "ANNEX_II.E.P4",
+    "ANNEX_II.E.P5",
+    "ANNEX_II.F.P1",
+    "ANNEX_II.F.P2",
+    "ANNEX_II.F.P3",
+    "ANNEX_II.F.P4",
+    "ANNEX_II.F.P5",
+    "ANNEX_II.F.P6",
+    "ANNEX_II.G.P1",
+    "ANNEX_II.G.P2",
+    "ANNEX_II.G.P3",
+    "ANNEX_II.G.P4",
+    "ANNEX_II.G.P5",
+    "ITS.PREDEFINED_TEXT",
+    "ITS.FIELD_FORMATS",
+    "ITS.CODE_LISTS",
+    "RTS.SUSTAINABILITY_INDICATORS",
+    "RTS.CLASSIFICATION_DATA"
+  ],
   "review_notice": "Coverage matrix is a deterministic disclosure checklist. It is not legal advice, a signature, a notification, or filing approval.",
-  "digest": "a8dc5245ffa31917b9ebd8cd3dc986ddc9a6a64a3e7985cdadd1d6f5f3d6508e"
+  "digest": "5c6e7107bd08f844e8d3a869fd1c9d446912d9b46bdc9e2a449741f59418b487"
 }

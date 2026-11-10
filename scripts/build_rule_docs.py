@@ -19,12 +19,50 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from micar_linter import __version__, citations
+from micar_linter.classification_data import AUTHORITY_ITEMS, ITEMS, LAYOUTS, UNMAPPED_FIELDS
 from micar_linter.contact import CONTACT_FIELDS
 from micar_linter.lei import check_digits_for
-from micar_linter.linter import CONTACT_POINT_RULE_IDS, EU_LANGUAGES, NOT_APPROVED_STATEMENT_RULE_IDS, Linter
+from micar_linter.linter import (
+    CONTACT_POINT_RULE_IDS,
+    EU_LANGUAGES,
+    NOT_APPROVED_STATEMENT_RULE_IDS,
+    TEMPLATE_RULE_CHECKS,
+    Linter,
+)
+from micar_linter.point_fields import (
+    ANNEX_REGIMES,
+    CODE,
+    FLAG,
+    NO_DTI,
+    NO_LEI,
+    POINTS_BY_RULE,
+    Alternative,
+    Condition,
+    Point,
+    PointField,
+    fields_text,
+)
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Rule
+from micar_linter.rules.points import POINT_RULE_IDS
 from micar_linter.template_fields import FIELD_NAMES
+from micar_linter.template_types import (
+    AMOUNT,
+    CODE_LIST_KINDS,
+    CODES,
+    CURRENCY,
+    CURRENCY_OR_DTI,
+    DATE,
+    DECIMAL,
+    DTI,
+    DURATION,
+    FIELD_TYPES,
+    INTEGER,
+    LEI,
+    MEMBER_STATES,
+    MIC,
+    TABLE_NUMBERS,
+)
 from micar_linter.whitepaper import _RESERVED_METADATA_KEYS, Whitepaper, WhitepaperType
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -41,7 +79,12 @@ SOURCE_MODULES = {
     "ANNEX_I": "annex_i.py",
     "ANNEX_II": "annex_ii.py",
     "ANNEX_III": "annex_iii.py",
+    "ITS": "templates.py",
+    "RTS": "templates.py",
 }
+# The stated status of an example on which the rule gives no finding: a field-level rule on a draft without
+# field numbers (linter.runs_on).
+NOT_RUN = "not run"
 # Citations have not been re-read against the Official Journal since these pages were introduced,
 # except those of the rules in OJ_CHECKED.
 VERIFICATION_NOTE = (
@@ -198,6 +241,10 @@ def verification_note(rule_id: str) -> str:
     """Which reading of the Regulation the rule's citation rests on."""
     if rule_id in OJ_CHECKED:
         return OJ_CHECKED[rule_id]
+    if rule_id in POINT_RULE_IDS:
+        return _point_verification(POINTS_BY_RULE[rule_id])
+    if rule_id in TEMPLATE_VERIFICATION:
+        return TEMPLATE_VERIFICATION[rule_id]
     if rule_id in NOT_APPROVED_STATEMENT_RULE_IDS:
         return STATEMENT_VERIFICATION_NOTE
     return VERIFICATION_NOTE
@@ -211,6 +258,14 @@ NEVER_PASS = {"COMMON.IXBRL_TAGGING", "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW"}
 UNTESTED_REGIMES = {
     "ANNEX_II": "The Annex II rules have not yet been run against a real ART white paper.",
     "ANNEX_III": "The Annex III rules have not yet been run against a real EMT white paper.",
+    "ITS": (
+        "The template checks have not yet been run against a real notified white paper; for Tables 3 and 4 they "
+        "follow the Official Journal text only."
+    ),
+    "RTS": (
+        "The checks of the Delegated Regulations (sustainability indicators, register classification data) have not "
+        "yet been run against a real notified white paper."
+    ),
 }
 # Why a rule runs with other terms or another minimum for some regimes. The build stops when a rule
 # ID has more than one Rule in RULESETS and no note here.
@@ -221,7 +276,13 @@ VARIANT_NOTES = {
         "and deposit guarantee schemes do not cover it; the listed terms come from that wording. Art. 51(4) "
         "asks an e-money token white paper only for the two scheme warnings, so EMT drafts are checked for "
         "those, and only wording that turns them around sends an EMT warning to review. The utility-token "
-        "statement of Art. 6(5)(d) applies to utility tokens only and is not checked."
+        "statement of Art. 6(5)(d) applies to utility tokens only and is not checked here; in a numbered-field "
+        "draft, ITS.PREDEFINED_TEXT checks it in field 05 of Table 2."
+    ),
+    "RTS.CLASSIFICATION_DATA": (
+        "The register data sit in another Part of each template (Part F of Table 2, Part B of Tables 3 and 4), so "
+        "the rule anchors its finding to the section of that Part: crypto_asset, art or emt. The check itself is the "
+        "same; it reads the fields of the regime's table."
     ),
 }
 
@@ -232,6 +293,8 @@ class Example:
     expected: str
     draft: dict
     note: str
+    # A numbered-field draft as the XHTML loader reads it: (number, label, answer) per field.
+    fields: tuple[tuple[str, str, str], ...] = ()
 
 
 def regimes_by_rule() -> dict[str, list[WhitepaperType]]:
@@ -297,6 +360,10 @@ def _responsibility(person: str) -> str:
 
 
 def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
+    if rule.rule_id in POINT_RULE_IDS:
+        return _point_examples(rule, regime)
+    if rule.rule_id in TEMPLATE_RULES:
+        return _template_examples(rule, regime)
     if rule.rule_id == "COMMON.IXBRL_TAGGING":
         return [
             Example(
@@ -651,6 +718,987 @@ def _contact_examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
         ),
     ]
 
+# --- The template rules (rules/templates.py) ------------------------------------------------------------------
+
+TEMPLATE_RULES = set(TEMPLATE_RULE_CHECKS)
+TABLE_FIELDS = (
+    "fields 02 to 07 of Table 2, I.02 to I.04 and I.06 of Table 3 and I.02 to I.05 and I.07 of Table 4"
+)
+_TEMPLATE_OJ = (
+    "Checked on 2026-11-04 against the English and German Official Journal text of Implementing Regulation (EU) "
+    "2024/2984 (OJ L, 2024/2984, 3.12.2024) as the Publications Office Cellar served it{also}. No amendment or "
+    "corrigendum was searched for."
+)
+TEMPLATE_VERIFICATION = {
+    "ITS.NOTIFICATION_DATE_FORMAT": _TEMPLATE_OJ.format(also=": the form column of field 01 of Table 2 and I.01 of Tables 3 and 4"),
+    "ITS.PREDEFINED_TEXT": _TEMPLATE_OJ.format(
+        also=", and the management body's statement against Art. 6(6), Art. 19(5) and Art. 51(5) of the English and "
+        "German Official Journal text of MiCAR (OJ L 150, 9.6.2023)"
+    ),
+    "ITS.FIELD_FORMATS": _TEMPLATE_OJ.format(also=": the legend of Table 1 and the form column of Tables 2 to 4"),
+    "ITS.CODE_LISTS": _TEMPLATE_OJ.format(also=": the form column of Tables 2 to 4"),
+    "RTS.SUSTAINABILITY_INDICATORS": (
+        "Checked on 2026-11-04 against the English and German Official Journal text of Delegated Regulation (EU) "
+        "2025/422 (OJ L, 2025/422, 31.3.2025) as the Publications Office Cellar served it: Art. 4(1) and (2) and "
+        "Tables 1 to 3 of its Annex. No amendment or corrigendum was searched for."
+    ),
+    "RTS.CLASSIFICATION_DATA": (
+        "Checked against the OJ on 2026-11-04: Art. 1 to 4 and items 1 to 29 of the Annex against the English and "
+        "German Official Journal text of Delegated Regulation (EU) 2025/421 (OJ L, 2025/421, 24.3.2025), and the "
+        "fields that carry them against the English and German Official Journal text of Implementing Regulation (EU) "
+        "2024/2984 (OJ L, 2024/2984, 3.12.2024), both as the Publications Office Cellar served them. No amendment or "
+        "corrigendum was searched for."
+    ),
+}
+TEMPLATE_ANSWERS = {
+    "ITS.NOTIFICATION_DATE_FORMAT": "a date written YYYY-MM-DD",
+    "ITS.PREDEFINED_TEXT": "the template's predefined wording",
+    "ITS.FIELD_FORMATS": "the template's data types",
+    "ITS.CODE_LISTS": "codes of the template's closed lists",
+    "RTS.SUSTAINABILITY_INDICATORS": "the indicators and their formats",
+    "RTS.CLASSIFICATION_DATA": "the register data and the identifier conditions",
+}
+_KIND_NAMES = {
+    "date": "a date YYYY-MM-DD",
+    "lei": "an LEI (ISO 17442, check digits checked)",
+    "dti": "a DTI (ISO 24165, nine letters or digits)",
+    "currency": "an ISO 4217 currency code",
+    "currency_or_dti": "an ISO 4217 currency code or a DTI",
+    "mic": "a MIC (ISO 10383, four capital letters or digits)",
+    "duration": "a number of days of up to three digits",
+    "amount": "an amount {DECIMAL-18/3} or a whole number",
+    "integer": "a whole number {INTEGER-n}",
+    "decimal": "a number {DECIMAL-18/3}",
+    "flag": "true or false",
+    "member_states": "EU Member States",
+}
+# The utility-token statement of field 05 of Table 2, for the examples.
+UTILITY_STATEMENT_EN = (
+    "The utility token referred to in this white paper may not be exchangeable against the good or service "
+    "promised in this white paper, especially in the case of a failure or discontinuation of the crypto-asset "
+    "project."
+)
+_SCHEMES = (
+    "is not covered by the investor compensation schemes under Directive 97/9/EC of the European Parliament and of "
+    "the Council or the deposit guarantee schemes under Directive 2014/49/EU of the European Parliament and of the "
+    "Council."
+)
+TABLE_2_TEXTS = (
+    ("01", "Date of notification", "2026-03-02"),
+    ("02", "Statement in accordance with Article 6(3) of Regulation (EU) 2023/1114", f"{STATEMENT_APPROVAL} {_responsibility('offeror')}"),
+    (
+        "03",
+        "Compliance statement in accordance with Article 6(6) of Regulation (EU) 2023/1114",
+        "This crypto-asset white paper complies with Title II of Regulation (EU) 2023/1114 of the European Parliament "
+        "and of the Council and, to the best of the knowledge of the management body, the information presented in "
+        "the crypto-asset white paper is fair, clear and not misleading and the crypto-asset white paper makes no "
+        "omission likely to affect its import.",
+    ),
+    (
+        "04",
+        "Statement in accordance with Article 6(5), points (a), (b), (c), of Regulation (EU) 2023/1114",
+        "The crypto-asset referred to in this crypto-asset white paper may lose its value in part or in full, may not "
+        "always be transferable and may not be liquid.",
+    ),
+    ("05", "Statement in accordance with Article 6(5), point (d), of Regulation (EU) 2023/1114", "false"),
+    (
+        "06",
+        "Statement in accordance with Article 6(5), points (e) and (f), of Regulation (EU) 2023/1114",
+        f"The crypto-asset referred to in this white paper {_SCHEMES}",
+    ),
+    ("07", "Warning in accordance with Article 6(7), second subparagraph, of Regulation (EU) 2023/1114", SUMMARY_WARNING),
+)
+TABLE_2_GERMAN = (
+    ("01", "Datum der Mitteilung", "2026-03-02"),
+    (
+        "02",
+        "Erklärung gemäß Artikel 6 Absatz 3 der Verordnung (EU) 2023/1114",
+        "Dieses Kryptowerte-Whitepaper wurde von keiner zuständigen Behörde eines Mitgliedstaats der Europäischen "
+        "Union genehmigt. Der Anbieter des Kryptowerts trägt die alleinige Verantwortung für den Inhalt dieses "
+        "Kryptowerte-Whitepapers.",
+    ),
+    (
+        "03",
+        "Konformitätserklärung gemäß Artikel 6 Absatz 6 der Verordnung (EU) 2023/1114",
+        "Dieses Kryptowerte-Whitepaper erfüllt Titel II der Verordnung (EU) 2023/1114 des Europäischen Parlaments und "
+        "des Rates und es wird bestätigt, dass die in ihm enthaltenen Informationen nach bestem Wissen des "
+        "Leitungsorgans redlich, eindeutig und nicht irreführend sind und dass das Kryptowerte-Whitepaper keine "
+        "Auslassungen aufweist, die seine Aussagekraft beeinträchtigen könnten.",
+    ),
+    (
+        "04",
+        "Erklärung gemäß Artikel 6 Absatz 5 Buchstaben a, b und c der Verordnung (EU) 2023/1114",
+        "Der in diesem Kryptowerte-Whitepaper genannte Kryptowert kann seinen Wert ganz oder teilweise verlieren, ist "
+        "möglicherweise nicht immer übertragbar und ist möglicherweise nicht liquide.",
+    ),
+    ("05", "Erklärung gemäß Artikel 6 Absatz 5 Buchstabe d der Verordnung (EU) 2023/1114", "falsch"),
+    (
+        "06",
+        "Erklärung gemäß Artikel 6 Absatz 5 Buchstaben e und f der Verordnung (EU) 2023/1114",
+        "Der in diesem Whitepaper genannte Kryptowert fällt nicht unter die Systeme für die Entschädigung der Anleger "
+        "gemäß der Richtlinie 97/9/EG des Europäischen Parlaments und des Rates oder die Einlagensicherungssysteme "
+        "gemäß der Richtlinie 2014/49/EU des Europäischen Parlaments und des Rates.",
+    ),
+    (
+        "07",
+        "Warnhinweis gemäß Artikel 6 Absatz 7 Unterabsatz 2 der Verordnung (EU) 2023/1114",
+        "Warnhinweis: Diese Zusammenfassung ist als Einführung in das Kryptowerte-Whitepaper zu lesen. Der potenzielle "
+        "Inhaber sollte jede Entscheidung über den Kauf des Kryptowerts auf der Grundlage des Inhalts des gesamten "
+        "Kryptowerte-Whitepapers und nicht allein auf der Grundlage der Zusammenfassung treffen. Das öffentliche "
+        "Angebot dieses Kryptowerts stellt kein Angebot und keine Aufforderung zum Kauf von Finanzinstrumenten dar "
+        "und ein solches Angebot oder eine solche Aufforderung kann nur mittels eines Prospekts oder anderer im "
+        "geltenden nationalen Recht vorgesehener Angebotsunterlagen erfolgen. Dieses Kryptowerte-Whitepaper stellt "
+        "keinen Prospekt im Sinne der Verordnung (EU) 2017/1129 des Europäischen Parlaments und des Rates und kein "
+        "anderes Angebotsdokument im Sinne von Unionsrecht oder nationalem Recht dar.",
+    ),
+)
+TABLE_2_TYPED = (
+    ("A.1", "Name", "Synthetic Offeror GmbH, a fictional company"),
+    ("A.5", "Registration date", "2021-04-01"),
+    ("A.6", "Legal entity identifier", SYNTHETIC_LEI),
+    ("E.1", "Public offering or admission to trading", "ATTR"),
+    ("E.3", "Fundraising target", "5000000"),
+    ("E.13", "Targeted holders", "RETL"),
+    ("F.4", "Type of crypto-asset white paper", "OTHR"),
+    ("F.18", "Home Member State", "DE"),
+)
+INDICATORS = (
+    ("S.1", "Name", "Synthetic Offeror GmbH, a fictional company"),
+    ("S.2", "Relevant legal entity identifier", SYNTHETIC_LEI),
+    ("S.3", "Name of the crypto-asset", "Synthetic token"),
+    ("S.4", "Consensus Mechanism", "Proof of stake, see field H.4."),
+    ("S.5", "Incentive Mechanisms and Applicable Fees", "Staking rewards, see field H.5."),
+    ("S.6", "Beginning of the period to which the disclosed information relates", "2025-01-01"),
+    ("S.7", "End of the period to which the disclosed information relates", "2025-12-31"),
+    ("S.8", "Energy consumption", "1234.5 kWh"),
+    ("S.9", "Energy consumption sources and methodologies", "A synthetic estimate from the number of validator nodes."),
+)
+
+
+def _replaced(rows: tuple[tuple[str, str, str], ...], number: str, answer: str) -> tuple[tuple[str, str, str], ...]:
+    found = any(n == number for n, _, _ in rows)
+    replaced = tuple((n, label, answer if n == number else text) for n, label, text in rows)
+    return replaced if found else (*rows, (number, "", answer))
+
+
+def _numbered_example(
+    title: str, expected: str, regime: WhitepaperType, fields: tuple[tuple[str, str, str], ...], note: str, **metadata: object
+) -> Example:
+    draft = {"title": "Synthetic rule example", "type": regime.value, **metadata, "sections": {}}
+    return Example(title, expected, draft, note, fields)
+
+
+def _not_run_example(rule: Rule, regime: WhitepaperType) -> Example:
+    """A field-level rule on a draft without field numbers: no finding (owner decision of 2026-11-10)."""
+    return Example(
+        "Draft without field numbers",
+        NOT_RUN,
+        _draft(rule, regime, "Synthetic section text of a draft without field numbers."),
+        "A JSON, PDF, DOCX, Markdown or heading-based XHTML draft has no field numbers, so this check does not run. "
+        "The report has no finding for it, neither open nor passed, and one note names how many field-level checks "
+        "did not run.",
+    )
+
+
+def _template_examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
+    """Examples of the template rules: numbered-field drafts, and a draft without field numbers, on which every
+    template rule but ITS.NOTIFICATION_DATE_FORMAT does not run."""
+    base = {"title": "Synthetic rule example", "type": regime.value}
+    no_fields = _not_run_example(rule, regime)
+    if rule.rule_id == "ITS.NOTIFICATION_DATE_FORMAT":
+        return [
+            Example(
+                "Draft without field numbers, section absent",
+                "missing",
+                {**base, "sections": {}},
+                f"A JSON, PDF, DOCX, Markdown or heading-based XHTML draft without section {rule.section} is "
+                "missing, as on the other rules.",
+            ),
+            Example(
+                "Date in another form",
+                "review",
+                _draft(rule, regime, "Date of notification: 2 March 2026"),
+                "COMMON.NOTIFICATION_DATE passes this date; the template asks for YYYY-MM-DD.",
+            ),
+            Example(
+                "Date in the template's form",
+                "pass",
+                _draft(rule, regime, "Date of notification: 2026-03-02"),
+                "A draft without field numbers passes once its section holds a valid date written YYYY-MM-DD.",
+            ),
+            _numbered_example(
+                "Field 01 in another form",
+                "review",
+                regime,
+                (("01", "Date of notification", "02.03.2026"),),
+                "In a numbered-field draft the field must hold the date and nothing else.",
+            ),
+            _numbered_example(
+                "Field 01 empty",
+                "missing",
+                regime,
+                (("01", "Date of notification", "TBD"),),
+                "A placeholder is no answer.",
+            ),
+            _numbered_example(
+                "Field 01 as YYYY-MM-DD",
+                "pass",
+                regime,
+                (("01", "Date of notification", "2026-03-02"),),
+                "The field holds one valid date in the template's form. The check does not confirm that it is the "
+                "date of notification.",
+            ),
+        ]
+    if rule.rule_id == "ITS.PREDEFINED_TEXT":
+        drafted = (
+            "This crypto-asset white paper complies with Title III of Regulation (EU) 2023/1114 and, to the best of "
+            "the knowledge of the management body, the information presented in the crypto-asset white paper is "
+            "fair, clear and not misleading and the crypto-asset white paper makes no omission likely to affect its "
+            "import."
+        )
+        return [
+            no_fields,
+            _numbered_example(
+                "No predefined field answered",
+                "missing",
+                regime,
+                (("02", TABLE_2_TEXTS[1][1], "TBD"), ("A.1", "Name", "Synthetic Offeror GmbH, a fictional company")),
+                "Fields 02 to 07 are empty, absent or hold only a placeholder.",
+            ),
+            _numbered_example(
+                "Compliance statement of another Title",
+                "review",
+                regime,
+                _replaced(TABLE_2_TEXTS, "03", drafted),
+                "Field 03 names Title III, which governs asset-referenced tokens; the template's text names Title II. "
+                "Leaving out the act's full title (“of the European Parliament and of the Council”) alone would pass.",
+            ),
+            _numbered_example(
+                "Utility token without its statement",
+                "review",
+                regime,
+                (*TABLE_2_TEXTS, ("D.6", "Utility Token Classification", "true")),
+                "Field D.6 classifies the token as a utility token, so field 05 must be true with the statement of "
+                "Art. 6(5), point (d), MiCAR.",
+            ),
+            _numbered_example(
+                "Template wording in English",
+                "pass",
+                regime,
+                _replaced(TABLE_2_TEXTS, "05", f"true {UTILITY_STATEMENT_EN}"),
+                "Every field holds its predefined text; field 05 is true and holds the utility-token statement.",
+            ),
+            _numbered_example(
+                "Template wording in German",
+                "pass",
+                regime,
+                TABLE_2_GERMAN,
+                "The German wording of the Official Journal counts as well; field 05 is false (falsch).",
+                language="de",
+            ),
+        ]
+    if rule.rule_id == "ITS.FIELD_FORMATS":
+        return [
+            no_fields,
+            _numbered_example(
+                "No typed field",
+                "missing",
+                regime,
+                (("A.1", "Name", "Synthetic Offeror GmbH, a fictional company"),),
+                "The draft carries none of the fields the template types under its number.",
+            ),
+            _numbered_example(
+                "German number and a written-out date",
+                "review",
+                regime,
+                _replaced(_replaced(TABLE_2_TYPED, "E.3", "5.000.000,00"), "A.5", "1 April 2021"),
+                "Field E.3 uses a comma as decimal separator; the template's decimal has a full stop. Field A.5 is "
+                "not written YYYY-MM-DD.",
+            ),
+            _numbered_example(
+                "Typed fields in the template's formats",
+                "pass",
+                regime,
+                TABLE_2_TYPED,
+                "Each typed field holds its type. The LEI's check digits are checked offline; nothing is looked up "
+                "in a registry.",
+            ),
+        ]
+    if rule.rule_id == "ITS.CODE_LISTS":
+        return [
+            no_fields,
+            _numbered_example(
+                "No field with a closed list",
+                "missing",
+                regime,
+                (("A.1", "Name", "Synthetic Offeror GmbH, a fictional company"),),
+                "The draft carries none of the fields with a closed list under its number.",
+            ),
+            _numbered_example(
+                "Words instead of codes",
+                "review",
+                regime,
+                _replaced(_replaced(TABLE_2_TYPED, "E.1", "Admission to trading"), "F.4", "ARTW"),
+                "Field E.1 describes the code instead of giving it, and ARTW is the code of an ART white paper, not "
+                "the OTHR of Table 2.",
+            ),
+            _numbered_example(
+                "Codes of the lists",
+                "pass",
+                regime,
+                _replaced(TABLE_2_TYPED, "E.1", "ATTR - admission to trading"),
+                "A code may be followed by its description. A Member State counts by name or two-letter code.",
+            ),
+        ]
+    if rule.rule_id == "RTS.CLASSIFICATION_DATA":
+        return _classification_examples(regime, no_fields)
+    return [
+        no_fields,
+        _numbered_example(
+            "Indicators not answered",
+            "missing",
+            regime,
+            tuple((number, label, "TBD") for number, label, _ in INDICATORS),
+            "Fields S.1 to S.9 hold only placeholders.",
+        ),
+        _numbered_example(
+            "Above 500 000 kWh without Table 3",
+            "review",
+            regime,
+            _replaced(INDICATORS, "S.8", "750000 kWh"),
+            "S.8 exceeds 500 000 kWh, so Art. 4(2) of Delegated Regulation (EU) 2025/422 asks for S.10 to S.16, "
+            "which the draft does not give.",
+        ),
+        _numbered_example(
+            "Energy in MWh",
+            "review",
+            regime,
+            _replaced(INDICATORS, "S.8", "1.2 MWh"),
+            "The template reports the energy consumption in kWh.",
+        ),
+        _numbered_example(
+            "Mandatory indicators in the template's formats",
+            "pass",
+            regime,
+            INDICATORS,
+            "S.1 to S.9 are answered, the period is given as two dates YYYY-MM-DD and the energy consumption is a "
+            "number in kWh below 500 000. The check does not test how the figure was calculated.",
+        ),
+    ]
+
+
+SYNTHETIC_FFG = "SYNTH0FG2"
+SYNTHETIC_WEBSITE = "https://synthetic-issuer.example"
+
+
+def _classification_rows(regime: WhitepaperType) -> tuple[tuple[str, str, str], ...]:
+    """A complete register block of the regime's table, with the issuer's LEI, for the examples."""
+    layout = LAYOUTS[regime]
+    names = FIELD_NAMES[regime]
+    values = {
+        1: {WhitepaperType.OTHER: "OTHR", WhitepaperType.ART: "ARTW", WhitepaperType.EMT: "EMTW"}[regime],
+        25: "NEWT",
+        13: SYNTHETIC_WEBSITE,
+        16: "2026-04-01",
+        20: "2026-03-20",
+        22: "English",
+        29: "false",
+        14: "DE",
+        15: "AT",
+    }
+    rows = [
+        (layout.issuer.name, names[layout.issuer.name], "Synthetic Issuer GmbH, a fictional company"),
+        (layout.issuer.lei, names[layout.issuer.lei], SYNTHETIC_LEI),
+        (layout.offer_field, names[layout.offer_field], "OTPC"),
+    ]
+    if layout.other_issuer is not None:
+        rows.append(("B.1", names["B.1"], "false"))
+    rows += [(field, names[field], values[item]) for item, field in layout.fields]
+    rows += [
+        (layout.dti_field, names[layout.dti_field], SYNTHETIC_DTI),
+        (layout.ffg_field, names[layout.ffg_field], SYNTHETIC_FFG),
+    ]
+    return tuple(rows)
+
+
+def _classification_examples(regime: WhitepaperType, no_fields: Example) -> list[Example]:
+    layout = LAYOUTS[regime]
+    rows = _classification_rows(regime)
+    first = layout.fields[0][1]
+    return [
+        no_fields,
+        _numbered_example(
+            "Register block not answered",
+            "missing",
+            regime,
+            tuple((number, label, "TBD") for number, label, _ in rows),
+            "Every field that carries an item of the Annex without “where available” holds only a placeholder.",
+        ),
+        _numbered_example(
+            "DTI without the group identifier",
+            "review",
+            regime,
+            _replaced(rows, layout.ffg_field, "N/A"),
+            f"Field {layout.dti_field} gives a DTI, so Art. 3(1) asks for the identifier of type 3 of the group in "
+            f"field {layout.ffg_field} as well.",
+        ),
+        _numbered_example(
+            "No DTI at all",
+            "review",
+            regime,
+            _replaced(_replaced(rows, layout.dti_field, "N/A"), layout.ffg_field, "N/A"),
+            "Without an ISO 24165 DTI, Art. 3(3) asks for an identifier approved by ESMA at Union level; the template "
+            "has no field for it, so a reviewer confirms how the white paper identifies the crypto-assets.",
+        ),
+        _numbered_example(
+            "Admission to trading without a MIC",
+            "review",
+            regime,
+            _replaced(rows, layout.offer_field, "ATTR"),
+            f"Field {layout.offer_field} seeks admission to trading, so item 8 asks for the market identifier code "
+            f"of the trading platform in field {layout.mic_field}.",
+        ),
+        _numbered_example(
+            "Mandatory field marked not applicable",
+            "review",
+            regime,
+            _replaced(rows, first, "N/A"),
+            f"Field {first} carries an item that the Annex lists without “where available”.",
+        ),
+        _numbered_example(
+            "Register block answered",
+            "pass",
+            regime,
+            rows,
+            "Every item the Annex lists without “where available” is answered; the LEI carries the legal form and "
+            "the address, and both identifiers are given. The finding notes that the LEI's inclusion in the GLEIF "
+            "database (Art. 2(b)) is not checked.",
+        ),
+    ]
+
+
+def _classification_table() -> str:
+    """The items of the Annex to Delegated Regulation (EU) 2025/421 and the fields that carry them."""
+    head = "".join(f"<th>Table {TABLE_NUMBERS[regime]}</th>" for regime in TABLE_NUMBERS)
+    rows = []
+    for item in ITEMS:
+        if item.number in AUTHORITY_ITEMS:
+            cells = '<td colspan="3">not carried: the sending competent authority assigns it</td>'
+        else:
+            cells = "".join(f"<td>{_e(item.carried[regime]) or 'no field'}</td>" for regime in TABLE_NUMBERS)
+        rows.append(f"<tr><td>{item.number}</td><td>{_e(item.name)}</td>{cells}</tr>")
+    unmapped = "; ".join(
+        f"Table {TABLE_NUMBERS[regime]}: {', '.join(fields)}" for regime, fields in UNMAPPED_FIELDS.items()
+    )
+    return (
+        f'<table><thead><tr><th>Item</th><th>Data of the Annex</th>{head}</tr></thead><tbody>{"".join(rows)}'
+        f"</tbody></table><p>Fields of the register block without an item of the Annex: {_e(unmapped)} (the "
+        "characteristics, the voluntary data flag of Table 2 and the LEI eligibility). Items given “where "
+        "available” or “where applicable” (4 to 7, 9, 11, 12, 17 to 19, 27 and 28) are not required; item 15 and "
+        "item 8 are.</p>"
+    )
+
+
+def _typed_fields_html(code_lists: bool) -> str:
+    items = []
+    for regime, table in TABLE_NUMBERS.items():
+        by_kind: dict[str, list[str]] = {}
+        for number, field in FIELD_TYPES[regime].items():
+            if (field.kind in CODE_LIST_KINDS) is not code_lists:
+                continue
+            kind = (
+                f"a code of {', '.join(code for code in field.codes if code != 'ERROR')}"
+                if field.kind == "codes"
+                else _KIND_NAMES[field.kind]
+            )
+            by_kind.setdefault(kind, []).append(number)
+        listed = "; ".join(f"{_e(kind)}: {', '.join(numbers)}" for kind, numbers in by_kind.items())
+        items.append(f"<li>Table {table} ({_e(REGIME_NAMES[regime].split(' · ')[1])}): {listed}.</li>")
+    return '<ul class="plain">' + "".join(items) + "</ul>"
+
+
+_NOT_RUN_ITEM = (
+    "<li><strong>Not run</strong>: in a draft without field numbers (JSON, PDF, DOCX, Markdown, heading-based XHTML) "
+    "the check does not run. The report has no finding for this rule, neither open nor passed; one note names how "
+    "many field-level checks did not run.</li>"
+)
+
+
+def _template_status_logic(rule: Rule) -> str:
+    section = f"<code>{_e(rule.section)}</code>"
+    no_fields = _NOT_RUN_ITEM
+    if rule.rule_id == "ITS.NOTIFICATION_DATE_FORMAT":
+        return (
+            '<ul class="plain"><li><strong>Missing</strong>: in a numbered-field XHTML draft, field 01 of Table 2 (I.01 '
+            "of Tables 3 and 4) is empty, absent or holds only a placeholder; in any other draft, section "
+            f"{section} is absent or empty or holds only a placeholder.</li>"
+            "<li><strong>Review</strong>: the field holds anything but one valid calendar date written YYYY-MM-DD, "
+            "such as <code>02.03.2026</code>, <code>2 March 2026</code>, <code>2026-02-30</code>, N/A or a date with "
+            "words around it; in any other draft, the section holds no valid date written YYYY-MM-DD.</li>"
+            "<li><strong>Pass</strong>: the field holds exactly such a date (quotation marks and a final full stop "
+            "aside, and the template's field name where it runs into the answer), or the section of a draft without "
+            "field numbers holds one anywhere. <code>COMMON.NOTIFICATION_DATE</code> checks that a date is given at "
+            "all; this rule checks its form.</li></ul>"
+        )
+    if rule.rule_id == "ITS.PREDEFINED_TEXT":
+        return (
+            f'<ul class="plain"><li><strong>Missing</strong>: in a numbered-field XHTML draft, none of {TABLE_FIELDS} '
+            "(and field 05 of Table 2) holds an answer other than a placeholder.</li>"
+            "<li><strong>Review</strong>: in a numbered-field draft, one of those fields is empty, absent, holds only a "
+            "placeholder or is marked not applicable; a sentence of its predefined text is found neither in the "
+            "template's English nor in its German wording; or a field whose form column has no free text holds more "
+            "than 20 letters and digits besides the text and a heading such as “Warning” or “Regarding offerors”. "
+            "Field 05 of Table 2 must be <code>false</code> (<code>falsch</code>) or hold the utility-token "
+            "statement of Art. 6(5), point (d), MiCAR, with or without <code>true</code>; true alone, N/A or other "
+            "text goes to review, and so does false where field D.6 or G.6 is true (utility token classification). "
+            "The finding names each field and quotes the start of the template sentence it misses, never the "
+            "draft.</li>"
+            f"{no_fields}<li><strong>Pass</strong>: every field holds its text. Words are compared without case, punctuation, "
+            "quotation marks, hyphens and spacing, with ä, ö, ü and ß read as ae, oe, ue and ss. A draft may leave out "
+            "the full title of a cited act (“of the European Parliament and of the Council”), write “this” or "
+            "“the” before “crypto-asset white paper”, add or leave out “that” before “any such offer”, name the "
+            "token as crypto-asset, asset-referenced token or e-money token in the summary warning, and use either "
+            "German wording of the summary warning. Field 02 of Table 2 counts in each of its three wordings (offeror, "
+            "person seeking admission to trading, operator of the trading platform). Fields I.06 of Table 3 and I.07 "
+            "of Table 4 may go on in free text after the predefined sentence.</li></ul>"
+        )
+    if rule.rule_id in ("ITS.FIELD_FORMATS", "ITS.CODE_LISTS"):
+        code_lists = rule.rule_id == "ITS.CODE_LISTS"
+        what = "with a closed list" if code_lists else "with a data type"
+        return (
+            f'<ul class="plain"><li><strong>Missing</strong>: in a numbered-field XHTML draft, no field {what} is '
+            "present under its number with the template's English or German name as its label, or with no label.</li>"
+            "<li><strong>Review</strong>: such a field holds an answer that is not of its type (below). An empty field, "
+            "a placeholder and an answer marked not applicable are not checked here; the other rules report missing "
+            "answers. The finding names the field and the expected type, never the answer.</li>"
+            f"{no_fields}<li><strong>Pass</strong>: every such field the draft carries holds its type.</li></ul>"
+            f"<p>The fields {what}, from the form column of each table:</p>{_typed_fields_html(code_lists)}"
+        )
+    if rule.rule_id == "RTS.CLASSIFICATION_DATA":
+        return (
+            '<ul class="plain"><li><strong>Missing</strong>: in a numbered-field XHTML draft, every field that carries '
+            "an item the Annex lists without “where available” is empty, absent or holds only a placeholder.</li>"
+            "<li><strong>Review</strong>: one of those fields is empty, absent, holds only a placeholder or is marked "
+            "not applicable: the type of white paper, the type of submission, the website, the starting date, the "
+            "publication date, the languages, the personal data flag and the home and host Member States, the "
+            "issuer's name, and its legal form and registered address unless its LEI field gives an LEI with valid "
+            "check digits. In Table 2 the issuer is read from Part B where field B.1 is true (or, where B.1 says "
+            "neither, where B.2 names one), otherwise from Part A. Also: the offer field gives ATTR and the market "
+            "identifier code field is not answered (item 8); the DTI field is answered and the group DTI field is "
+            "not (Art. 3(1)), or the other way round (Art. 3(2)); both give the same code; or neither gives a DTI, "
+            "where Art. 3(3) asks for an identifier approved by ESMA, which the template has no field for. The "
+            "finding names the field and the item, never the answer.</li>"
+            f"{no_fields}"
+            "<li><strong>Pass</strong>: none of the above. Where a field gives an LEI, the finding "
+            "notes that Art. 2 also asks for its inclusion in the GLEIF database, which the linter does not check.</li>"
+            "</ul><p>The forms of these fields (dates, LEI, DTI, MIC, true or false) are checked by "
+            '<a href="ITS.FIELD_FORMATS.html">ITS.FIELD_FORMATS</a> and their codes (white paper type, submission '
+            'type, Member States) by <a href="ITS.CODE_LISTS.html">ITS.CODE_LISTS</a>; '
+            '<a href="COMMON.LANGUAGE.html">COMMON.LANGUAGE</a> looks for an official EU language. This rule does not '
+            "report those defects again. The items of the Annex and the fields that carry them:</p>"
+            f"{_classification_table()}"
+        )
+    return (
+        '<ul class="plain"><li><strong>Missing</strong>: in a numbered-field XHTML draft, none of fields S.1 to S.9 '
+        "holds an answer other than a placeholder.</li>"
+        "<li><strong>Review</strong>: one of S.1 to S.9 is empty, absent, holds only a placeholder or is marked not "
+        "applicable (Art. 4(1)); S.6 or S.7 is not one date written YYYY-MM-DD, or S.6 is later than S.7; S.8 is not "
+        "one number in kWh of up to 18 digits with up to 5 decimals and a full stop as decimal separator "
+        "({DECIMAL-18/5}; “per year” may follow); S.8 exceeds 500 000 kWh and one of S.10 to S.16 is empty, absent, "
+        "a placeholder or marked not applicable (Art. 4(2)); S.8 cannot be read and one of S.10 to S.16 is not "
+        "answered; or an answered S.10 is not a percentage {DECIMAL-11/10} or an answered S.11 to S.14 is not an "
+        "amount {DECIMAL-18/5}, with up to five words for its unit. An amount in MWh, GWh or TWh is converted for "
+        "the threshold and still goes to review.</li>"
+        f"{no_fields}<li><strong>Pass</strong>: none of the above.</li></ul>"
+    )
+
+
+def _template_limitations(rule: Rule) -> list[str]:
+    if rule.rule_id == "RTS.CLASSIFICATION_DATA":
+        return [
+            "Reads the fields of a numbered-field XHTML draft by their numbers; text elsewhere is not considered. It "
+            "does not run on a draft without field numbers; finding the items in free text is not built. Its "
+            "finding is anchored to the section of the Part that carries the register data "
+            "(<code>crypto_asset</code>, <code>art</code> or <code>emt</code>).",
+            "Checks whether each field holds an answer, not what it says or whether it is correct; it does not "
+            "check a field's label, so a draft that numbers its fields otherwise is read in the wrong fields.",
+            "Art. 2 asks for each LEI to be valid and included in the GLEIF database. The check works offline and "
+            "queries no registry: <code>ITS.FIELD_FORMATS</code> checks the LEI's form and ISO 17442 check digits, and "
+            "the finding asks a reviewer to confirm that the LEI is listed and current.",
+            "Does not check a DTI's check character, its type (an identifier of type 3 for the group) or the DTI "
+            "registry, and cannot tell whether an identifier given in free text is one ESMA approved under Art. 3(3).",
+            "Items 23, 24 and 26 are assigned by the competent authority and items 18 and 19 have no field, so they "
+            "are not checked. Item 21 asks for the date and time of the latest notification in UTC; the template "
+            "carries a date in field 01 (I.01), which <code>ITS.NOTIFICATION_DATE_FORMAT</code> checks, and Art. 1(3) "
+            "lets the data be given in the white paper's own format. The legal form is not checked against the ISO "
+            "20275 list of entity legal forms.",
+            "The optional items (4 to 7, 9, 11, 12, 17, 27 and 28) are not required; the template's own conditions on "
+            "fields such as F.7 (commercial name where no DTI is given) are checked by the point rules "
+            '(<a href="ANNEX_I.F.P2.html">ANNEX_I.F.P2</a>, <a href="ANNEX_II.B.P2.html">ANNEX_II.B.P2</a>, '
+            '<a href="ANNEX_III.B.P2.html">ANNEX_III.B.P2</a>), which also report a blank field of the register '
+            "block under the Annex point.",
+            "A host Member State field marked not applicable goes to review, as the Annex lists item 15 without "
+            "“where available”; where the crypto-asset is offered in no host Member State, a reviewer confirms that.",
+            "The English text gives item 20 (publication date) without a condition and item 17 “where applicable”; "
+            "the German text reads “gegebenenfalls” and “sofern verfügbar”. The check follows the English text and "
+            "the template.",
+        ]
+    reads = "Reads the fields of a numbered-field XHTML draft by their numbers; text elsewhere is not considered. " + (
+        f"In a draft without field numbers it reads section <code>{_e(rule.section)}</code> for a date."
+        if rule.rule_id == "ITS.NOTIFICATION_DATE_FORMAT"
+        else "It does not run on a draft without field numbers."
+    )
+    shown = (
+        "Reads the text a reader sees. An Inline XBRL document can show a tagged value in another form than the value "
+        "it reports, through a transformation; the check does not read the tags, so a reviewer confirms the tagged "
+        "value of each field it reports."
+    )
+    items = [reads]
+    if rule.rule_id != "ITS.PREDEFINED_TEXT":
+        items.append(shown)
+    if rule.rule_id == "ITS.NOTIFICATION_DATE_FORMAT":
+        items.append("Checks the form only. It does not confirm that the date is the date of notification.")
+    if rule.rule_id == "ITS.PREDEFINED_TEXT":
+        items += [
+            "Compares the English and the German wording only; a white paper in another official language goes to "
+            "review.",
+            "Table 4 field I.03 leaves out “complete” (“vollständig”), which Art. 51(5) MiCAR has the management "
+            "body confirm; the check accepts the statement with or without the word. Table 3 field I.02 misspells "
+            "“asset-refenced token” in its second sentence; both spellings pass.",
+            "Up to 20 letters and digits besides the text pass, to allow a label that the loader could not split "
+            "off; a short addition may therefore go unnoticed. It cannot see whether the statements stand on the "
+            "first page, and it cannot tell which wording of field 02 fits the person who drew up the white paper.",
+            "Does not check the wording of the reimbursement notice (field E.15 of Table 2, C.10 of Table 3), which the "
+            "template also predefines, nor field 09 of Table 2, which applies only where field 05 is true; "
+            '<a href="ANNEX_I.E.P7.html">ANNEX_I.E.P7</a>, <a href="ANNEX_II.C.P5.html">ANNEX_II.C.P5</a> and '
+            '<a href="ANNEX_I.G.P4.html">ANNEX_I.G.P4</a> check that these fields are filled.',
+        ]
+    if rule.rule_id in ("ITS.FIELD_FORMATS", "ITS.CODE_LISTS"):
+        items.append(
+            "Skips a field whose label is not the template's English or German name for its number: the draft numbers "
+            "its fields otherwise. A field without a label is checked by its number alone, so a draft that renumbers "
+            "and leaves out labels can be checked against the wrong type."
+        )
+    if rule.rule_id == "ITS.FIELD_FORMATS":
+        items += [
+            "Not checked: the legal form (ISO 20275), the registered address and head office (ISO 3166-1 codes with "
+            "free text), the offer expenses, the referenced assets and the closed lists of languages, competent "
+            "authorities and applicable laws, which the Official Journal does not print. The Official Journal "
+            "types field D.2 of Table 3 (“Planned functionalities use”) as a date; the check follows it.",
+            "A number may set commas, spaces or apostrophes between groups of three digits, up to two words such as "
+            "a unit and, for an amount, a currency code or sign; a comma as decimal separator goes to review. A "
+            "duration counts as up to three digits, optionally with “days” or “Tage”; “5 business days” goes to "
+            "review. True or false counts also as richtig or falsch and with the template's gloss (“true \u2013 Yes”); "
+            "yes or no goes to review.",
+            "A DTI counts as nine letters or digits; its check character and the DTI registry are not checked. LEI "
+            "check digits are verified offline. The ISO 4217 list was compiled offline and may miss a recent change.",
+        ]
+    if rule.rule_id == "ITS.CODE_LISTS":
+        items += [
+            "A code counts in any case at the start of the field, before a description after a dash, colon or "
+            "bracket; several codes joined by commas or “and” pass. The German Official Journal writes the "
+            "submission code EROR as ERROR; both pass.",
+            "A Member State counts by its English or German name, its ISO 3166-1 alpha-2 code or EL; Iceland, "
+            "Liechtenstein and Norway count too, and so do phrases such as “all EU Member States”. The taxonomy's "
+            "closed list itself is not printed in the Official Journal.",
+        ]
+    if rule.rule_id == "RTS.SUSTAINABILITY_INDICATORS":
+        items += [
+            "Checks S.1 to S.16 only. The optional indicators S.17 to S.36 of Table 4 of Delegated Regulation (EU) "
+            "2025/422 and their sources are not checked, nor the content of any indicator, the calculation guidance "
+            "of Art. 6 or whether S.1 to S.5 agree with the fields of Implementing Regulation (EU) 2024/2984 they "
+            "refer to.",
+            "S.8 of exactly 500 000 kWh does not exceed the threshold of Art. 4(2).",
+        ]
+    return items
+
+
+# --- The point rules (rules/points.py, point_fields.py) ---------------------------------------------------------
+
+_POINT_OJ = (
+    "Checked against the OJ on 2026-11-04: the point against the English and German Official Journal text of "
+    "Regulation (EU) 2023/1114 (OJ L 150, 9.6.2023), and {fields}, {their} names and conditions against the English "
+    "and German Official Journal text of Implementing Regulation (EU) 2024/2984 (OJ L, 2024/2984, 3.12.2024), both as "
+    "the Publications Office Cellar served them. No amendment or corrigendum was searched for."
+)
+# Synthetic values for typed fields: a DTI is nine letters or digits; SYNTH marks it as fictitious.
+SYNTHETIC_DTI = "SYNTH0001"
+
+
+def _point(rule: Rule) -> tuple[Point, WhitepaperType]:
+    point = POINTS_BY_RULE[rule.rule_id]
+    return point, ANNEX_REGIMES[point.annex]
+
+
+def _point_verification(point: Point) -> str:
+    regime = ANNEX_REGIMES[point.annex]
+    return _POINT_OJ.format(fields=fields_text(point, regime), their="its" if len(point.fields) == 1 else "their")
+
+
+def _typed_value(number: str, regime: WhitepaperType) -> str:
+    """A synthetic answer of the field's type, or a sentence for a free-text field."""
+    field = FIELD_TYPES[regime].get(number)
+    kind = field.kind if field else ""
+    values = {
+        LEI: SYNTHETIC_LEI,
+        DTI: SYNTHETIC_DTI,
+        DATE: "2026-03-02",
+        FLAG: "true",
+        MEMBER_STATES: "DE",
+        CURRENCY: "EUR",
+        CURRENCY_OR_DTI: "EUR",
+        MIC: "XSYN",
+        DURATION: "5",
+        AMOUNT: "1000000",
+        INTEGER: "1000000",
+        DECIMAL: "1000000",
+    }
+    if kind == CODES and field is not None:
+        return field.codes[0]
+    return values.get(kind, f"Synthetic answer for field {number}.")
+
+
+def _holding_value(condition: Condition) -> str | None:
+    """A value of the controlling field under which the condition holds; None leaves the field out."""
+    if condition.kind in (NO_LEI, NO_DTI):
+        return None
+    if condition.kind in (FLAG, CODE):
+        return condition.value
+    return f"Synthetic answer for field {condition.field}."
+
+
+def _relieving_value(condition: Condition, regime: WhitepaperType) -> str:
+    """A value of the controlling field under which the condition relieves its fields."""
+    if condition.kind == NO_LEI:
+        return SYNTHETIC_LEI
+    if condition.kind == NO_DTI:
+        return SYNTHETIC_DTI
+    if condition.kind == FLAG:
+        return "false" if condition.value == "true" else "true"
+    if condition.kind == CODE:
+        return next(code for code in FIELD_TYPES[regime][condition.field].codes if code != condition.value)
+    return "N/A"
+
+
+def _point_rows(point: Point, regime: WhitepaperType, answers: dict[str, str | None]) -> tuple[tuple[str, str, str], ...]:
+    """The fields of an example, controlling fields outside the point first; None leaves a field out."""
+    names = FIELD_NAMES[regime]
+    return tuple((number, names.get(number, ""), answer) for number, answer in answers.items() if answer is not None)
+
+
+def _point_answers(point: Point, regime: WhitepaperType) -> dict[str, str | None]:
+    """Every field of the point answered, and the conditions on them holding."""
+    own = {field.number for field in point.fields}
+    answers: dict[str, str | None] = {}
+    for field in point.fields:
+        for condition in field.conditions:
+            if condition.field not in own and condition.field not in answers:
+                answers[condition.field] = _holding_value(condition)
+    for field in point.fields:
+        answers[field.number] = _typed_value(field.number, regime)
+    return answers
+
+
+def _point_examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
+    point, regime = _point(rule)
+    name = f"Annex {point.annex} Part {point.part} point {point.number}"
+    answers = _point_answers(point, regime)
+    blank = {**answers, **{field.number: "TBD" for field in point.fields}}
+    result = [
+        _not_run_example(rule, regime),
+        _numbered_example(
+            "Fields hold only placeholders",
+            "missing",
+            regime,
+            _point_rows(point, regime, blank),
+            f"Every field that carries {name} holds only a placeholder, so the point counts as missing.",
+        ),
+        _numbered_example(
+            "Every field answered",
+            "pass",
+            regime,
+            _point_rows(point, regime, answers),
+            "Each field that applies holds an answer. A pass shows only that the fields are filled, not that the "
+            "answers are correct or complete.",
+        ),
+    ]
+    conditional = next((field for field in point.fields if field.conditions), None)
+    if conditional is not None:
+        condition = conditional.conditions[0]
+        relieved = {**answers, condition.field: _relieving_value(condition, regime)}
+        for field in point.fields:
+            if condition in field.conditions:
+                relieved[field.number] = None
+        source = "the Annex point" if condition.annex else "the template"
+        result.append(
+            _numbered_example(
+                "Field not required under its condition",
+                "pass",
+                regime,
+                _point_rows(point, regime, relieved),
+                f"Field {conditional.number} applies only if {_condition_words(condition)} ({source}). Here it does "
+                "not apply, so the field is not reported although the draft leaves it out; the finding names the "
+                "condition.",
+            )
+        )
+    standalone = next(
+        (item for item in point.items if isinstance(item, PointField) and not item.optional), None
+    )
+    alternative = next((item for item in point.items if isinstance(item, Alternative)), None)
+    if standalone is not None:
+        marked = {**answers, standalone.number: "N/A"}
+        why = (
+            "the template sets no condition on it"
+            if not standalone.conditions
+            else "its condition holds, so it applies"
+        )
+        result.append(
+            _numbered_example(
+                "Field marked not applicable",
+                "review",
+                regime,
+                _point_rows(point, regime, marked),
+                f"Field {standalone.number} reads N/A, but {why}; a reviewer checks it.",
+            )
+        )
+    elif alternative is not None:
+        marked = {**answers, **{field.number: "N/A" for field in alternative.fields}}
+        numbers = " and ".join(field.number for field in alternative.fields)
+        result.append(
+            _numbered_example(
+                "No field of the alternative answered",
+                "review",
+                regime,
+                _point_rows(point, regime, marked),
+                f"The point is answered by one of fields {numbers}; both read N/A.",
+            )
+        )
+    else:
+        marked = {**answers, **{field.number: "N/A" for field in point.fields}}
+        result.append(
+            _numbered_example(
+                "Fields marked not applicable",
+                "pass",
+                regime,
+                _point_rows(point, regime, marked),
+                "The template asks for these fields where applicable, so N/A is an answer.",
+            )
+        )
+    return result
+
+
+def _condition_words(condition: Condition) -> str:
+    field, value = condition.field, condition.value
+    if condition.kind == NO_LEI:
+        return f"field {field} gives no LEI"
+    if condition.kind == NO_DTI:
+        return f"field {field} gives no DTI"
+    if condition.kind == FLAG:
+        return f"field {field} is {value}"
+    if condition.kind == CODE:
+        return f"field {field} gives {value}"
+    return f"field {field} holds an answer other than “not applicable”"
+
+
+def _field_line(field: PointField, regime: WhitepaperType) -> str:
+    name = FIELD_NAMES[regime].get(field.number)
+    parts = [f"<code>{_e(field.number)}</code>" + (f" ({_e(name)})" if name else "")]
+    if field.conditions:
+        parts.append(
+            ": only if "
+            + " and ".join(
+                _e(_condition_words(c)) + (" (from the Annex point)" if c.annex else "") for c in field.conditions
+            )
+        )
+    if field.optional:
+        parts.append("; “not applicable” is an answer")
+    return "".join(parts)
+
+
+def _point_status_logic(rule: Rule) -> str:
+    point, regime = _point(rule)
+    items = []
+    for item in point.items:
+        if isinstance(item, Alternative):
+            members = " or ".join(_field_line(field, regime) for field in item.fields)
+            items.append(f"<li>One of {members}</li>")
+        else:
+            items.append(f"<li>{_field_line(item, regime)}</li>")
+    return (
+        '<ul class="plain"><li><strong>Missing</strong>: in a numbered-field XHTML draft, every field below that '
+        "applies is empty, absent or holds only a placeholder such as TBD.</li>"
+        "<li><strong>Review</strong>: in a numbered-field draft, a field that applies is empty, absent or holds only a "
+        "placeholder; a field that applies is marked not applicable (N/A, none, a dash) where the template does not "
+        "ask for it “where applicable” or “if any”; or no field of an alternative holds an answer. A field that "
+        "applies only under a condition is checked as applying when the draft does not show the condition (a flag "
+        "that is neither true nor false, a code field without a template code). The finding names each field by its "
+        "number and, in English, the template's name.</li>"
+        f"{_NOT_RUN_ITEM}"
+        "<li><strong>Pass</strong>: every field that applies holds an answer. A field that does not apply under its "
+        "condition is not reported; the finding names the condition. An LEI counts as given only with valid check "
+        "digits, a DTI as nine letters or digits; true and false count also as richtig and falsch, yes and no, ja "
+        "and nein.</li></ul>"
+        f"<p>The fields of Table {TABLE_NUMBERS[regime]} of Implementing Regulation (EU) 2024/2984 that carry the "
+        f'point:</p><ul class="plain">{"".join(items)}</ul>'
+    )
+
+
+# Notes on single fields, read in the Official Journal text.
+_POINT_FIELD_NOTES = {
+    (WhitepaperType.EMT, "E.1"): (
+        "Field E.1 of Table 4 applies “only if a DTI is not provided in field B.13” in the English and the German "
+        "text, although B.13 holds the functionally fungible group DTI and B.1 and B.2 refer to B.12, the DTI. The "
+        "check follows the Official Journal and reads B.13."
+    ),
+}
+_ALTERNATIVE_NOTE = (
+    "The financial condition is checked as an alternative of two fields. The template's flag between them is "
+    "named “Newly established” but asks “whether [the person] has been established for the past three years”, "
+    "so true reads both ways; the check does not choose a field by it."
+)
+
+
+def _point_limitations(rule: Rule) -> list[str]:
+    point, regime = _point(rule)
+    numbers = {field.number for field in point.fields}
+    items = [
+        f"Reads the fields of a numbered-field XHTML draft by their numbers, {fields_text(point, regime)} and the "
+        "fields their conditions name; text elsewhere is not considered. It does not run on a draft without field "
+        "numbers; finding the point's items in free text is not built.",
+        "Checks whether each field holds an answer, not what it says: an answer to another question passes. "
+        "<code>ITS.FIELD_FORMATS</code> and <code>ITS.CODE_LISTS</code> check the formats and codes of the typed "
+        "fields.",
+        "Does not check a field's label, so a draft that numbers its fields otherwise is read in the wrong fields.",
+    ]
+    annex = [field.number for field in point.fields if any(c.annex for c in field.conditions)]
+    if annex:
+        items.append(
+            (f"The conditions on fields {', '.join(annex[:-1])} and {annex[-1]} come" if len(annex) > 1 else
+             f"The condition on field {annex[0]} comes")
+            + " from the wording of the Annex point, not from the template, which sets none there."
+        )
+    for (note_regime, number), note in _POINT_FIELD_NOTES.items():
+        if note_regime is regime and number in numbers:
+            items.append(note)
+    if any(isinstance(item, Alternative) for item in point.items) and point.number != 5:
+        items.append(_ALTERNATIVE_NOTE if point.part == "A" else (
+            "Fields E.8 (issue price) and E.11 (offer price determination method) are checked as alternatives, "
+            "as the point asks for the price “or” the method."
+        ))
+    if rule.rule_id.split(".")[0] not in UNTESTED_REGIMES:
+        items.append("The point rules have not yet been run against a real notified white paper.")
+    return items
+
+
+def _shown_draft(example: Example) -> str:
+    """The draft as an example shows it: JSON, or the numbered fields of an XHTML draft, one per line."""
+    if not example.fields:
+        return json.dumps(example.draft, indent=2, ensure_ascii=False)
+    table = TABLE_NUMBERS[WhitepaperType(example.draft["type"])]
+    lines = [f"Numbered-field XHTML draft (Table {table}), as the loader reads its fields:"]
+    lines += [f"{number} | {label} | {answer}" for number, label, answer in example.fields]
+    return "\n".join(lines)
+
 
 def lint_example(rule: Rule, example: Example) -> str:
     draft = example.draft
@@ -661,13 +1709,19 @@ def lint_example(rule: Rule, example: Example) -> str:
         if k not in ("title", "type", "sections") and k not in _RESERVED_METADATA_KEYS
     }
     metadata["ixbrl_validated"] = False
+    if example.fields:
+        # The keys the XHTML loader sets for a numbered-field draft (whitepaper.py).
+        metadata["numbered_fields"] = {number: answer for number, _, answer in example.fields}
+        metadata["numbered_field_labels"] = {number: label for number, label, _ in example.fields}
     whitepaper = Whitepaper(
         title=draft["title"],
         type=WhitepaperType(draft["type"]),
         sections=dict(draft["sections"]),
         metadata=metadata,
     )
-    return Linter((rule,)).lint(whitepaper)[0].status
+    findings = Linter((rule,)).lint(whitepaper)
+    # A field-level rule gives no finding on a draft without field numbers (linter.runs_on).
+    return findings[0].status if findings else NOT_RUN
 
 
 def _e(text: object) -> str:
@@ -700,6 +1754,8 @@ def _page(title: str, description: str, body: str, *, root: str = "../") -> str:
 
 
 def _status_badge(status: str) -> str:
+    if status == NOT_RUN:
+        return '<span class="badge neutral">Not run</span>'
     return f'<span class="badge {status}">{_e(status.capitalize())}</span>'
 
 
@@ -710,6 +1766,10 @@ def _terms(terms: tuple[str, ...], patterns: tuple[str, ...] = ()) -> str:
 
 
 def status_logic(rule: Rule) -> str:
+    if rule.rule_id in POINT_RULE_IDS:
+        return _point_status_logic(rule)
+    if rule.rule_id in TEMPLATE_RULES:
+        return _template_status_logic(rule)
     if rule.rule_id == "COMMON.IXBRL_TAGGING":
         return (
             '<ul class="plain"><li><strong>Missing</strong>: the draft is JSON, DOCX, PDF or Markdown, or a saved '
@@ -1004,7 +2064,8 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             else "Looks for a calendar date only. It does not confirm that the date is the date of notification "
             "or that it is plausible, and it does not check the table of contents that the same provisions "
             "require. Since 23 December 2025 the template of Implementing Regulation (EU) 2024/2984 has the "
-            "date reported as YYYY-MM-DD; the check accepts the other formats above as well and does not test that form."
+            "date reported as YYYY-MM-DD; the check accepts the other formats above as well and does not test that "
+            "form. <code>ITS.NOTIFICATION_DATE_FORMAT</code> does."
             if rule.rule_id == "COMMON.NOTIFICATION_DATE"
             else "Looks for a language name only. The cited paragraphs require the white paper to be drawn up in "
             "an official language of the home Member State or in a language customary in the sphere of "
@@ -1026,6 +2087,10 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
         ),
         "Status and severity are fixed by the rule. A draft cannot waive or downgrade them.",
     ]
+    if rule.rule_id in TEMPLATE_RULES:
+        limitations = [*_template_limitations(rule), limitations[-1]]
+    if rule.rule_id in POINT_RULE_IDS:
+        limitations = [*_point_limitations(rule), limitations[-1]]
     if family in UNTESTED_REGIMES:
         limitations.append(UNTESTED_REGIMES[family])
     if rule.rule_id == "COMMON.LEI_CHECK_DIGITS":
@@ -1245,7 +2310,8 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
         )
         limitations.append(
             "A German draft never passes: the German wording has not been checked against the German Official "
-            "Journal."
+            f"Journal. In a numbered-field draft, <code>ITS.PREDEFINED_TEXT</code> compares field {field} with the "
+            "template's English and German wording."
         )
     if rule.rule_id == "ANNEX_II.I":
         limitations.append(
@@ -1273,7 +2339,7 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             example_html.append(
                 f'<div class="example"><div class="example-head">{_status_badge(example.expected)}'
                 f'<strong>{_e(title)}</strong></div><p class="small muted">{_e(example.note)}</p>'
-                f"<pre><code>{_e(json.dumps(example.draft, indent=2, ensure_ascii=False))}</code></pre></div>"
+                f"<pre><code>{_e(_shown_draft(example))}</code></pre></div>"
             )
     body = f"""<p class="eyebrow">Rule · {_e(rule.severity.label)}</p>
 <h1>{_e(rule.rule_id)}</h1>
@@ -1283,12 +2349,12 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
 <dt>Canonical form</dt><dd lang="de">{_e(rule.citation)}</dd>
 <dt>Runs for</dt><dd>{_e("; ".join(REGIME_NAMES[r] for r in regimes))}</dd>
 <dt>Severity if open</dt><dd>{_e(rule.severity.label)}</dd>
-<dt>Section key</dt><dd>{"none: checks the file format" if rule.rule_id in FORMAT_GATE else "all sections; anchored to <code>issuer</code>" if rule.rule_id in LEI_RULES else f"<code>{_e(rule.section)}</code>"}</dd>
-<dt>Minimum words</dt><dd>{f"none: checks for {ANSWER_CHECKS[rule.rule_id]}" if rule.rule_id in ANSWER_CHECKS else by_regime(lambda r: str(r.min_words))}</dd>
+<dt>Section key</dt><dd>{"none: checks the file format" if rule.rule_id in FORMAT_GATE else "all sections; anchored to <code>issuer</code>" if rule.rule_id in LEI_RULES else by_regime(lambda r: f"<code>{_e(r.section)}</code>")}</dd>
+<dt>Minimum words</dt><dd>{f"none: checks for {ANSWER_CHECKS[rule.rule_id]}" if rule.rule_id in ANSWER_CHECKS else f"none: checks for {TEMPLATE_ANSWERS[rule.rule_id]}" if rule.rule_id in TEMPLATE_RULES else "none: checks whether the template fields that carry the point hold an answer" if rule.rule_id in POINT_RULE_IDS else by_regime(lambda r: str(r.min_words))}</dd>
 <dt>Listed terms (English)</dt><dd>{by_regime(lambda r: _terms(r.required_terms, r.required_patterns))}</dd>
 <dt>Listed terms (German)</dt><dd lang="de">{by_regime(lambda r: _terms(r.required_terms_de, r.required_patterns_de))}</dd>
 {prohibited}<dt>Package version</dt><dd>{_e(__version__)}, built from source that may include unreleased changes</dd>
-<dt>Source</dt><dd><a href="{REPO}/blob/main/src/micar_linter/rules/{SOURCE_MODULES[family]}">rules/{SOURCE_MODULES[family]}</a></dd>
+<dt>Source</dt><dd>{source_links(rule)}</dd>
 </dl></div>
 <h2>How the status is set</h2>
 {status_logic(rule)}{variant_note}
@@ -1304,6 +2370,22 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
 <p class="small muted">Disagree with this rule, or missing one? <a href="{REPO}/issues/new?template=rule-proposal.yml">Propose a rule change</a>.</p>
 """
     return _page(f"{rule.rule_id}: MiCAR Whitepaper Linter rule", f"{rule.label}. {citation_en}.", body)
+
+
+def source_links(rule: Rule) -> str:
+    """The module that defines the rule; for a point rule also the module that maps its fields."""
+    if rule.rule_id in POINT_RULE_IDS:
+        return (
+            f'<a href="{REPO}/blob/main/src/micar_linter/rules/points.py">rules/points.py</a> and '
+            f'<a href="{REPO}/blob/main/src/micar_linter/point_fields.py">point_fields.py</a>'
+        )
+    if rule.rule_id == "RTS.CLASSIFICATION_DATA":
+        return (
+            f'<a href="{REPO}/blob/main/src/micar_linter/rules/templates.py">rules/templates.py</a> and '
+            f'<a href="{REPO}/blob/main/src/micar_linter/classification_data.py">classification_data.py</a>'
+        )
+    module = SOURCE_MODULES[rule.rule_id.split(".")[0]]
+    return f'<a href="{REPO}/blob/main/src/micar_linter/rules/{module}">rules/{module}</a>'
 
 
 def index_page(rules: list[Rule], regimes: dict[str, list[WhitepaperType]]) -> str:

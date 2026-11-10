@@ -9,6 +9,7 @@ from datetime import date
 from functools import partial
 
 from micar_linter.anchors import SourceAnchor, build_source_anchors
+from micar_linter.classification_data import classification_issues
 from micar_linter.contact import CONTACT_FIELDS, has_email_address, has_period_in_days, has_telephone_number
 from micar_linter.lei import (
     PARTY_SECTIONS,
@@ -22,9 +23,20 @@ from micar_linter.lei import (
     reads_leis,
 )
 from micar_linter.placeholders import is_not_applicable, is_placeholder, is_template_note
+from micar_linter.point_fields import ANNEX_REGIMES, POINTS_BY_RULE, point_issues
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Finding, Rule, Severity
+from micar_linter.rules.points import POINT_RULE_IDS
+from micar_linter.template_checks import (
+    field_type_issues,
+    is_iso_date,
+    iso_dates_in,
+    predefined_text_issues,
+    strip_name,
+    sustainability_issues,
+)
 from micar_linter.template_fields import FIELD_NAMES
+from micar_linter.template_types import NOTIFICATION_DATE_FIELDS, NOTIFICATION_DATE_NAMES
 from micar_linter.whitepaper import Whitepaper, WhitepaperType
 
 
@@ -37,6 +49,8 @@ class Report:
     findings: tuple[Finding, ...]
     warnings: tuple[str, ...] = field(default_factory=tuple)
     source_anchors: dict[str, SourceAnchor] = field(default_factory=dict)
+    # The rules of the regime that did not run (field_rules_not_run): no finding, so never passed or open.
+    not_run: tuple[Rule, ...] = field(default_factory=tuple)
 
     @property
     def passed(self) -> tuple[Finding, ...]:
@@ -66,10 +80,19 @@ class Linter:
         self.rules = rules
 
     def lint(self, whitepaper: Whitepaper) -> tuple[Finding, ...]:
-        return tuple(self._apply(rule, whitepaper) for rule in self.rules)
+        """One finding per rule that runs on the draft; the field-level rules of a draft without field numbers
+        give none (field_rules_not_run)."""
+        return tuple(self._apply(rule, whitepaper) for rule in self.rules if runs_on(rule, whitepaper))
+
+    def not_run(self, whitepaper: Whitepaper) -> tuple[Rule, ...]:
+        """The rules that give no finding on this draft (field_rules_not_run)."""
+        return field_rules_not_run(self.rules, whitepaper)
 
     @staticmethod
     def _apply(rule: Rule, whitepaper: Whitepaper) -> Finding:
+        if not runs_on(rule, whitepaper):
+            raise ValueError(f"{rule.rule_id} reads template fields and does not run on a draft without them")
+
         if rule.rule_id == "COMMON.IXBRL_TAGGING":
             return _ixbrl_finding(rule, whitepaper)
 
@@ -95,6 +118,12 @@ class Linter:
 
         if rule.rule_id in CONTACT_POINT_RULE_IDS:
             return _contact_point_finding(rule, whitepaper)
+
+        if rule.rule_id in TEMPLATE_RULE_CHECKS:
+            return TEMPLATE_RULE_CHECKS[rule.rule_id](rule, whitepaper)
+
+        if rule.rule_id in POINT_RULE_IDS:
+            return _point_finding(rule, whitepaper)
 
         is_de = whitepaper.language == "de"
 
@@ -212,12 +241,16 @@ class Linter:
 def lint_whitepaper(whitepaper: Whitepaper) -> Report:
     """Convenience entry point: pick the right ruleset and lint."""
     rules = RULESETS[whitepaper.type]
-    findings = Linter(rules).lint(whitepaper)
+    linter = Linter(rules)
+    findings = linter.lint(whitepaper)
+    not_run = linter.not_run(whitepaper)
 
     # Check for unrecognized/misspelled sections. The LEI rules read every party section in every regime: an
     # ART white paper names the persons other than the issuer who offer the token in its offeror section.
     valid_sections = {rule.section for rule in rules} | set(PARTY_SECTIONS)
     warnings: list[str] = list(whitepaper.metadata.get("extraction_notes", ()))
+    if not_run:
+        warnings.append(not_run_note(not_run, whitepaper.language == "de"))
     for section_name in whitepaper.sections:
         if section_name not in valid_sections:
             warnings.append(
@@ -231,6 +264,7 @@ def lint_whitepaper(whitepaper: Whitepaper) -> Report:
         findings=findings,
         warnings=tuple(warnings),
         source_anchors=build_source_anchors(whitepaper, findings),
+        not_run=not_run,
     )
 
 
@@ -1061,3 +1095,192 @@ def _summary_words(text: str, whitepaper: Whitepaper) -> int:
                 start = text.rfind("\n", 0, index) + 1
                 text = text[:start] + text[index + len(part) :]
     return _count_words(_SUMMARY_WARNING.sub(" ", _collapse_whitespace(text)))
+
+
+# The template rules (rules/templates.py). A numbered-field draft carries the answer and the label of every
+# field (metadata keys numbered_fields and numbered_field_labels); any other draft has no field numbers.
+#
+# The rules that read nothing but template fields: the point rules built from POINTS (not the two contact
+# rules, which search their section in any draft) and the template rules other than
+# ITS.NOTIFICATION_DATE_FORMAT, which reads the notification_date section of a draft without field numbers.
+# On such a draft they do not run and give no finding; the report carries one note instead (owner decision
+# of 2026-11-10, ADR 0005).
+FIELD_TEMPLATE_RULE_IDS = frozenset(
+    {
+        "ITS.PREDEFINED_TEXT",
+        "ITS.FIELD_FORMATS",
+        "ITS.CODE_LISTS",
+        "RTS.SUSTAINABILITY_INDICATORS",
+        "RTS.CLASSIFICATION_DATA",
+    }
+)
+FIELD_ONLY_RULE_IDS = POINT_RULE_IDS | FIELD_TEMPLATE_RULE_IDS
+_NOT_RUN_NOTE = (
+    "Field-level checks of the templates of Implementing Regulation (EU) 2024/2984 and Delegated "
+    "Regulations (EU) 2025/421 and 2025/422 run only on drafts in the numbered-field layout (XHTML). This "
+    "draft has no field numbers, so {points} and {templates} did not run. They are left out of this report "
+    "and count neither as passed nor as open; check the white paper in the numbered-field layout to run "
+    "them.",
+    "Die Prüfungen auf Feldebene nach den Vorlagen der Durchführungsverordnung (EU) 2024/2984 und der "
+    "Delegierten Verordnungen (EU) 2025/421 und 2025/422 laufen nur bei Entwürfen im Layout mit nummerierten "
+    "Feldern (XHTML). Dieser Entwurf hat keine Feldnummern, daher liefen {points} und {templates} nicht. Sie "
+    "fehlen in diesem Bericht und zählen weder als bestanden noch als offen; prüfen Sie das Whitepaper im "
+    "Layout mit nummerierten Feldern, um sie auszuführen.",
+)
+
+
+def has_field_numbers(whitepaper: Whitepaper) -> bool:
+    """Whether the draft carries the numbered fields of the template (only the XHTML loader sets them)."""
+    return _numbered(whitepaper) is not None
+
+
+def runs_on(rule: Rule, whitepaper: Whitepaper) -> bool:
+    """Whether the rule runs on the draft: every rule but the field-only ones, and those on a numbered-field
+    draft."""
+    return rule.rule_id not in FIELD_ONLY_RULE_IDS or has_field_numbers(whitepaper)
+
+
+def field_rules_not_run(rules: tuple[Rule, ...], whitepaper: Whitepaper) -> tuple[Rule, ...]:
+    """The field-only rules among ``rules`` that do not run on a draft without field numbers."""
+    return tuple(rule for rule in rules if not runs_on(rule, whitepaper))
+
+
+def not_run_note(not_run: tuple[Rule, ...], is_de: bool) -> str:
+    """The one report note that names how many point and template checks did not run."""
+    points = sum(rule.rule_id in POINT_RULE_IDS for rule in not_run)
+    templates = len(not_run) - points
+    if is_de:
+        return _NOT_RUN_NOTE[1].format(
+            points=f"{points} {'Prüfung' if points == 1 else 'Prüfungen'} von Anhangspunkten",
+            templates=f"{templates} {'Vorlagenprüfung' if templates == 1 else 'Vorlagenprüfungen'}",
+        )
+    return _NOT_RUN_NOTE[0].format(
+        points=f"{points} point {'check' if points == 1 else 'checks'}",
+        templates=f"{templates} template {'check' if templates == 1 else 'checks'}",
+    )
+
+
+def _numbered(whitepaper: Whitepaper) -> tuple[dict[str, str], dict[str, str]] | None:
+    """The answers and labels of a numbered-field draft, or None for a draft without field numbers."""
+    answers = whitepaper.metadata.get("numbered_fields")
+    if not isinstance(answers, dict):
+        return None
+    labels = whitepaper.metadata.get("numbered_field_labels")
+    return answers, labels if isinstance(labels, dict) else {}
+
+
+def _fields(whitepaper: Whitepaper) -> tuple[dict[str, str], dict[str, str]]:
+    """The answers and labels of the numbered-field draft a field-only rule runs on (Linter._apply refuses
+    any other draft)."""
+    numbered = _numbered(whitepaper)
+    if numbered is None:
+        raise ValueError("a field-only rule ran on a draft without field numbers")
+    return numbered
+
+
+def _notification_date_format_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """Field 01 of Table 2 (I.01 of Tables 3 and 4) holds exactly a date written YYYY-MM-DD. A draft without
+    field numbers passes once its notification_date section holds a date in that form."""
+    is_de = whitepaper.language == "de"
+    numbered = _numbered(whitepaper)
+    if numbered is None:
+        text = whitepaper.section(rule.section)
+        if absent := _absent(text, is_de):
+            return Finding(rule=rule, status="missing", word_count=0, issues=(absent,))
+        if iso_dates_in(text):
+            return Finding(rule=rule, status="pass", word_count=_count_words(text))
+        msg = (
+            "Der Abschnitt enthält kein gültiges Datum in der Form JJJJ-MM-TT, die die Vorlage der "
+            "Durchführungsverordnung (EU) 2024/2984 für das Datum der Mitteilung verlangt (etwa 2026-03-02)."
+            if is_de
+            else "The section holds no valid date written YYYY-MM-DD, the form the template of Implementing "
+            "Regulation (EU) 2024/2984 requires for the date of notification (for example 2026-03-02)."
+        )
+        return Finding(rule=rule, status="review", word_count=_count_words(text), issues=(msg,))
+    answers, _ = numbered
+    number = NOTIFICATION_DATE_FIELDS[whitepaper.type]
+    answer = strip_name(str(answers.get(number, "")), NOTIFICATION_DATE_NAMES)
+    name = number if is_de else f"{number} (Date of notification)"
+    if not answer.strip() or is_placeholder(answer):
+        msg = (
+            f"Feld {name} ist leer, fehlt oder enthält nur einen Platzhalter."
+            if is_de
+            else f"Field {name} is empty, not in the draft or holds only a placeholder."
+        )
+        return Finding(rule=rule, status="missing", word_count=0, issues=(msg,))
+    if is_iso_date(answer):
+        return Finding(rule=rule, status="pass", word_count=_count_words(answer))
+    msg = (
+        f"Feld {name} enthält nicht genau ein gültiges Datum in der Form JJJJ-MM-TT (etwa 2026-03-02)."
+        if is_de
+        else f"Field {name} does not hold exactly one valid date written YYYY-MM-DD (for example "
+        "2026-03-02)."
+    )
+    return Finding(rule=rule, status="review", word_count=_count_words(answer), issues=(msg,))
+
+
+def _predefined_text_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """The predefined texts of the regime's table in the template's English or German wording
+    (template_checks.py). Missing when none of their fields holds an answer."""
+    answers, labels = _fields(whitepaper)
+    issues, answered = predefined_text_issues(answers, labels, whitepaper.type, whitepaper.language == "de")
+    status = "missing" if not answered else "review" if issues else "pass"
+    return Finding(rule=rule, status=status, word_count=0, issues=tuple(issues))
+
+
+def _field_types_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """The typed fields of the regime's table: data formats (ITS.FIELD_FORMATS) or code lists
+    (ITS.CODE_LISTS). Missing when the draft carries none of them under its number and template name."""
+    answers, labels = _fields(whitepaper)
+    is_de = whitepaper.language == "de"
+    code_lists = rule.rule_id == "ITS.CODE_LISTS"
+    issues, present = field_type_issues(answers, labels, whitepaper.type, is_de, code_lists=code_lists)
+    if not present:
+        what = ("Codelisten", "code lists") if code_lists else ("Datentypen", "data types")
+        msg = (
+            f"Kein Feld mit einem der {what[0]} der Vorlage wurde unter seiner Nummer und seinem Namen in "
+            "der Vorlage gefunden."
+            if is_de
+            else f"No field with one of the template's {what[1]} was found under its number and template "
+            "name."
+        )
+        return Finding(rule=rule, status="missing", word_count=0, issues=(msg,))
+    return Finding(rule=rule, status="review" if issues else "pass", word_count=0, issues=tuple(issues))
+
+
+def _sustainability_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """Fields S.1 to S.16 of Delegated Regulation (EU) 2025/422 (template_checks.py). Missing when none of
+    S.1 to S.9 holds an answer."""
+    answers, _ = _fields(whitepaper)
+    issues, answered = sustainability_issues(answers, whitepaper.language == "de")
+    status = "missing" if not answered else "review" if issues else "pass"
+    return Finding(rule=rule, status=status, word_count=0, issues=tuple(issues))
+
+
+def _classification_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """The register data of Delegated Regulation (EU) 2025/421 in the fields of the regime's table
+    (classification_data.py): presence and the conditions of Art. 2 and 3; formats and codes are left to
+    ITS.FIELD_FORMATS and ITS.CODE_LISTS."""
+    answers, _ = _fields(whitepaper)
+    status, issues = classification_issues(answers, whitepaper.type, whitepaper.language == "de")
+    return Finding(rule=rule, status=status, word_count=0, issues=issues)
+
+
+TEMPLATE_RULE_CHECKS: dict[str, Callable[[Rule, Whitepaper], Finding]] = {
+    "ITS.NOTIFICATION_DATE_FORMAT": _notification_date_format_finding,
+    "ITS.PREDEFINED_TEXT": _predefined_text_finding,
+    "ITS.FIELD_FORMATS": _field_types_finding,
+    "ITS.CODE_LISTS": _field_types_finding,
+    "RTS.SUSTAINABILITY_INDICATORS": _sustainability_finding,
+    "RTS.CLASSIFICATION_DATA": _classification_finding,
+}
+
+
+def _point_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """A point rule (rules/points.py): the template fields that carry the Annex point, under the template's
+    conditions (point_fields.py). It runs only on a numbered-field draft (runs_on)."""
+    point = POINTS_BY_RULE[rule.rule_id]
+    answers, _ = _fields(whitepaper)
+    regime = ANNEX_REGIMES[point.annex]
+    status, issues, words = point_issues(point, answers, regime, whitepaper.language == "de")
+    return Finding(rule=rule, status=status, word_count=words, issues=issues)
