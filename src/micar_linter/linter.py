@@ -21,7 +21,7 @@ from micar_linter.lei import (
     other_person_leis,
     reads_leis,
 )
-from micar_linter.placeholders import is_not_applicable, is_placeholder
+from micar_linter.placeholders import is_not_applicable, is_placeholder, is_template_note
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Finding, Rule, Severity
 from micar_linter.template_fields import FIELD_NAMES
@@ -394,6 +394,12 @@ def _absent(text: str, is_de: bool) -> str | None:
     """The issue that makes a section Missing (empty, or placeholders such as TBD only), else None."""
     if not text.strip():
         return "Abschnitt ist leer oder fehlt." if is_de else "Section is empty or absent."
+    if is_template_note(text):
+        return (
+            "Abschnitt enthält noch den Hinweis REPLACE: der Vorlage."
+            if is_de
+            else "Section still holds the template's REPLACE: note."
+        )
     if is_placeholder(text):
         return (
             "Abschnitt enthält nur Platzhalter wie TBD oder TBC."

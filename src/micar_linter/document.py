@@ -419,7 +419,9 @@ class DocumentSections:
     deletion included). The sections and the extracted text of a DOCX hold only the runs and hyperlinks
     directly in a body paragraph (python-docx's paragraph text). It also reads the same text without what a
     reader cannot see (shown_text: _docx_texts for a DOCX, _pdf_lines for a PDF), which is empty where it
-    equals document_text.
+    equals document_text. For a DOCX, heading_positions gives each heading's place among the paragraphs
+    directly in the body (python-docx's Document.paragraphs, empty ones included), which the change sets of
+    collaboration_workspace.py use to place a change under its heading.
     """
 
     sections: dict[str, str]
@@ -427,6 +429,7 @@ class DocumentSections:
     text: str = ""
     document_text: str = ""
     shown_text: str = ""
+    heading_positions: tuple[int, ...] = ()
 
 
 def _words(text: str) -> list[str]:
@@ -1261,7 +1264,10 @@ def parse_docx(path: Path) -> DocumentSections:
     opener: str | None = None
     opener_number: str | None = None
     section_level: float | None = None
-    paragraphs = [(para, para.text.strip()) for para in doc.paragraphs if para.text.strip()]
+    body_paragraphs = doc.paragraphs
+    paragraphs = [(para, para.text.strip()) for para in body_paragraphs if para.text.strip()]
+    positions = [position for position, para in enumerate(body_paragraphs) if para.text.strip()]
+    heading_positions: list[int] = []
     paragraph_texts = [text for _, text in paragraphs]
     statement_end = 0
 
@@ -1300,6 +1306,7 @@ def parse_docx(path: Path) -> DocumentSections:
             continue
 
         headings.append(text)
+        heading_positions.append(positions[index])
         keys = match_heading_to_section(text)
         kind = _template_kind(text)
         number = _outline_number(text)
@@ -1329,6 +1336,7 @@ def parse_docx(path: Path) -> DocumentSections:
         "\n".join(texts),
         document_text,
         shown_text if shown_text != document_text else "",
+        tuple(heading_positions),
     )
 
 
