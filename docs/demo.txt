@@ -1,7 +1,7 @@
 MiCAR Whitepaper Linter - Incomplete Synthetic EuroStable ART Draft
 Whitepaper type: ART
 ==============================================================================
-Pass: 1  |  Review: 13  |  Missing: 6  |  Blockers: 15
+Pass: 1  |  Review: 13  |  Missing: 7  |  Blockers: 16
 
 [REVIEW] [BLOCKER] COMMON.SUMMARY  Plain-language summary
            Cite:  Art. 6(7), Art. 19(6), Art. 51(6) MiCAR
@@ -135,6 +135,15 @@ Pass: 1  |  Review: 13  |  Missing: 6  |  Blockers: 15
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'redemption'  (0 words)
            -  Section is empty or absent.
+
+[MISS  ] [BLOCKER] ITS.NOTIFICATION_DATE_FORMAT  Date of notification written as YYYY-MM-DD, the template's format
+           Cite:  Annex, Table 2, field 01, Table 3, field I.01, Table 4, field I.01 Regulation (EU) 2024/2984
+           Text:  https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng
+           Section: 'notification_date'  (0 words)
+           -  Section holds only placeholder text such as TBD or TBC.
+
+Warnings:
+  -  Field-level checks of the templates of Implementing Regulation (EU) 2024/2984 and Delegated Regulations (EU) 2025/421 and 2025/422 run only on drafts in the numbered-field layout (XHTML). This draft has no field numbers, so 65 point checks and 5 template checks did not run. They are left out of this report and count neither as passed nor as open; check the white paper in the numbered-field layout to run them.
 
 ==============================================================================
 First-pass screening only. The draft is not package-ready. The white paper notification or submission for approval (Art. 8(1), Art. 16(2), second subparagraph, Art. 17(1), point (a), Art. 18(2), point (k), Art. 51(11) MiCAR) should not enter an external review or filing workflow until BLOCKER items are cured and a lawyer has signed off.

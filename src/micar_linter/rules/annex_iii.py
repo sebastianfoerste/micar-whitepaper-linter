@@ -16,9 +16,10 @@ received; no Annex III item asks the white paper to describe their
 safeguarding.
 
 Scaffold note: rules below cover each Part of Annex III at the Part level.
-ANNEX_III.A.P6 is the one point rule (ADR 0005), for the contact details of
-Part A point 6. Other point-level extensions are the practitioner's
-contribution.
+ANNEX_III.A.P6 is the point rule (ADR 0005) for the contact details of Part A
+point 6; the point rules for the other points that a field of Table 4 of
+Implementing Regulation (EU) 2024/2984 carries are built in rules/points.py
+from point_fields.py and placed after their Part rule in RULESETS.
 """
 
 from __future__ import annotations
