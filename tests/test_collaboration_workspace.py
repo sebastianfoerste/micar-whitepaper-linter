@@ -181,8 +181,13 @@ def test_change_set_built_from_a_docx_inserts_each_change_under_its_heading(tmp_
     # #59: a change built from a draft used the rule label as its original text, so none of the changes of
     # examples/sample-draft.docx was placed. It now replaces nothing and names the heading of its section.
     source = Path("examples/sample-draft.docx")
-    change_set = build_change_set(build_whitepaper_workspace([source]))
+    workspace = build_whitepaper_workspace([source])
+    change_set = build_change_set(workspace)
     assert {change["original_text"] for change in change_set["changes"]} == {""}
+    # A rule that passed gets no change.
+    passed = {row["rule_id"] for row in workspace["review_table"]["rows"] if row["status"] == "pass"}
+    assert passed
+    assert not passed & {change["locator"] for change in change_set["changes"]}
     under: dict[str, list[str]] = {}
     for change in change_set["changes"]:
         # A text of its own for each change, so the test sees which heading each one went under.

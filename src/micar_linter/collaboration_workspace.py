@@ -222,7 +222,7 @@ def build_change_set(workspace: dict[str, Any]) -> dict[str, Any]:
     headings: dict[str, dict[str, tuple[str, int]]] = {}
     changes = []
     for row in workspace["review_table"]["rows"]:
-        if row["status"] == "PASS":
+        if row["status"] == "pass":
             continue
         document_id = row["document_id"]
         if document_id not in headings:
