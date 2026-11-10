@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-The citations in the entries marked (#17) were checked against the EUR-Lex texts of Regulation (EU) 2023/1114 (CELEX 32023R1114) and Implementing Regulation (EU) 2024/2984 (CELEX 32024R2984) as mirrored in legalize-dev/legalize-eu, not on EUR-Lex itself. The German statement and responsibility wording they mention has not been checked against the German Official Journal.
+The citations in the entries marked (#17) were first read in the copy of the EUR-Lex texts in legalize-dev/legalize-eu. On 2026-11-10 they were checked again on EUR-Lex itself, against the Official Journal texts of Regulation (EU) 2023/1114 (CELEX 32023R1114) and Implementing Regulation (EU) 2024/2984 (CELEX 32024R2984) in English, and for the first-page statement also in German. None needed correcting. EUR-Lex lists one amendment of 2023/1114, which adds Art. 110a, and English and German corrigenda that do not change the cited provisions; it lists no amendment or corrigendum of 2024/2984.
 
 ### Added
 
