@@ -1,4 +1,4 @@
-import { FORMATS, MAX_BYTES, MAX_XHTML_BYTES, REGIMES, displayCitation, draftFormat, findingScope, formatDraft, inspectableSection,
+import { FORMATS, MAX_BYTES, MAX_XHTML_BYTES, REGIMES, checksLabel, displayCitation, draftFormat, findingScope, formatDraft, inspectableSection,
   parseDraft, reportIsCurrent, ruleDocHref, sectionSelection, selectFindings, validateDraft } from "./model.mjs";
 
 const $ = id => document.getElementById(id);
@@ -231,7 +231,7 @@ function renderReport() {
   $("empty").hidden = true;
   $("results").hidden = false;
   $("report-title").textContent = report.title;
-  $("report-regime").textContent = `${REGIMES[report.whitepaper_type]} · ${report.summary.total} checks`;
+  $("report-regime").textContent = `${REGIMES[report.whitepaper_type]} · ${checksLabel(report)}`;
   for (const key of ["blockers", "missing", "review", "pass"]) $("count-" + key).textContent = report.summary[key];
   $("review-boundary").textContent = report.summary.blockers
     ? "Open blockers require attention. Substantive lawyer review is required before any filing decision."

@@ -3,8 +3,14 @@
 - **Document Title**: Synthetic EuroStable ART White Paper
 - **Regime/Type**: ART
 - **Source File**: examples/art-stablecoin.json
-- **SHA-256 Checksum**: `e8969fa1d2b061343085e85b22eec491f0b7adde670f9abfa937f2737fbb46ff`
-- **Review Timestamp**: 2026-10-29 06:57:48
+- **SHA-256 Checksum**: `eb1fa481e730137719b20c81986c85a1a5343fc350f8e149ef1c55402df01024`
+- **Review Timestamp**: 2026-11-10 18:43:42
+
+## Extraction Notes
+
+The linter recorded these notes while reading the draft. They can qualify any automated result, including a Pass, so read them before relying on the results.
+
+- Field-level checks of the templates of Implementing Regulation (EU) 2024/2984 and Delegated Regulations (EU) 2025/421 and 2025/422 run only on drafts in the numbered-field layout (XHTML). This draft has no field numbers, so 65 point checks and 5 template checks did not run. They are left out of this report and count neither as passed nor as open; check the white paper in the numbered-field layout to run them.
 
 ## Rule Compliance Checklist
 
@@ -30,10 +36,11 @@
 | `ANNEX_II.G.VALUATION_AUDIT` | Anhang II Teil D Nr. 10 MiCAR | Referenced assets and valuation of the components of the claim (Annex II Part D No. 10 MiCAR) | BLOCKER | **PASS** | [x] |
 | `ANNEX_II.H` | Art. 19 Abs. 1 UAbs. 1 Buchst. h MiCAR i.V.m. Art. 4 VO (EU) 2025/422; Anhang Tabelle 3 Teil H VO (EU) 2024/2984 | Principal adverse environmental and climate-related impact of the consensus mechanism | MAJOR | **PASS** | [x] |
 | `ANNEX_II.I` | Anhang II Teil D Nr. 9, 14, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39, Art. 46 Abs. 1 UAbs. 3 Buchst. c und Art. 46 Abs. 4 MiCAR | Redemption rights and procedure (timing, fees, suspension conditions) | BLOCKER | **PASS** | [x] |
+| `ITS.NOTIFICATION_DATE_FORMAT` | Anhang Tabelle 2 Feld 01, Tabelle 3 Feld I.01, Tabelle 4 Feld I.01 VO (EU) 2024/2984 | Date of notification written as YYYY-MM-DD, the template's format | BLOCKER | **PASS** | [x] |
 
 ## Summary of Findings
 
-- **Passed Checks**: 17
+- **Passed Checks**: 18
 - **Under Review**: 2
 - **Missing Sections**: 1
 - **BLOCKER Issues**: 3

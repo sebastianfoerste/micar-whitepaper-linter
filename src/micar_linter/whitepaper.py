@@ -86,9 +86,11 @@ _RESERVED_METADATA_KEYS = (
     # Set by the XHTML loader for a saved iXBRL viewer page; the iXBRL message reads it.
     "script_packed_source",
     # Set by the XHTML loader for a numbered-field draft: the fields of each section that hold only a
-    # placeholder, which the shared checks name, and the answer of every field, which the point rules read.
+    # placeholder, which the shared checks name, the answer of every field, which the point rules read, and
+    # each field's label, which the checks of the template's data types compare with the template's names.
     "placeholder_fields",
     "numbered_fields",
+    "numbered_field_labels",
     # Set by the document loaders: the whole text of the file, headings, tables and text in no section
     # included, and the text of each section the regime drops, which COMMON.LEI_CHECK_DIGITS reads besides the
     # sections, and the whole text of the file without what a reader cannot see (DOCX, PDF, XHTML and HTML;
@@ -509,6 +511,7 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
     extraction_notes: tuple[str, ...] = ()
     placeholder_fields: dict[str, tuple[str, ...]] = {}
     numbered_fields: dict[str, str] | None = None
+    numbered_field_labels: dict[str, str] = {}
     extracted = ""
     headings: tuple[str, ...] = ()
     # The whole text of the file (and below, the text of the sections the regime drops), which
@@ -538,6 +541,7 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
             from micar_linter.numbered_fields import (
                 extract_numbered_fields,
                 field_answers,
+                field_labels,
                 is_numbered_layout,
                 sections_from_numbered_fields,
             )
@@ -560,6 +564,7 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
                     fields, whitepaper_type
                 )
                 numbered_fields = field_answers(fields, whitepaper_type)
+                numbered_field_labels = field_labels(fields, whitepaper_type)
             else:
                 sections = load_from_xhtml(source)
             if script_packed:
@@ -619,6 +624,7 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
     # Only a numbered-field draft carries the key, so a point rule can tell which layout it reads.
     if numbered_fields is not None:
         metadata["numbered_fields"] = numbered_fields
+        metadata["numbered_field_labels"] = numbered_field_labels
 
     return Whitepaper(
         title=title,

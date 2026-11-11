@@ -95,6 +95,14 @@ export function selectFindings(findings, filter = "open", search = "") {
   });
 }
 
+// The count line of a report. A draft without field numbers runs no field-level check: the report
+// lists those rules under not_run, with no finding, so they count neither as passed nor as open.
+export function checksLabel(report) {
+  const notRun = Array.isArray(report.not_run) ? report.not_run.length : 0;
+  const checks = `${report.summary.total} ${report.summary.total === 1 ? "check" : "checks"}`;
+  return notRun ? `${checks} · ${notRun} field-level ${notRun === 1 ? "check" : "checks"} not run` : checks;
+}
+
 export function reportIsCurrent(report, checkedText, currentText) {
   return Boolean(report) && checkedText === currentText;
 }

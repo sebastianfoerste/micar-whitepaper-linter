@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
-import { MAX_BYTES, MAX_XHTML_BYTES, displayCitation, draftFormat, findingScope, inspectableSection, validateDraft, formatDraft, parseDraft, reportIsCurrent, ruleDocHref, sectionSelection, selectFindings } from "../../docs/playground/model.mjs";
+import { MAX_BYTES, MAX_XHTML_BYTES, checksLabel, displayCitation, draftFormat, findingScope, inspectableSection, validateDraft, formatDraft, parseDraft, reportIsCurrent, ruleDocHref, sectionSelection, selectFindings } from "../../docs/playground/model.mjs";
 
 const valid = { type: "art", sections: { summary: "A synthetic draft." } };
 const parse = data => parseDraft(JSON.stringify(data));
@@ -191,4 +191,13 @@ test("links a finding to its rule page beside the playground", () => {
   assert.equal(ruleDocHref("COMMON.SUMMARY", page + "index.html"),
     "https://example.test/micar-whitepaper-linter/rules/COMMON.SUMMARY.html");
   assert.equal(ruleDocHref("A/B?#", page), "https://example.test/micar-whitepaper-linter/rules/A%2FB%3F%23.html");
+});
+
+test("counts the field-level checks that did not run apart from the findings", () => {
+  // A JSON draft has no field numbers: those rules have no finding and are named under not_run only.
+  assert.equal(checksLabel({ summary: { total: 21 }, not_run: ["ANNEX_II.A.P1", "ITS.CODE_LISTS"] }),
+    "21 checks · 2 field-level checks not run");
+  assert.equal(checksLabel({ summary: { total: 99 }, not_run: [] }), "99 checks");
+  assert.equal(checksLabel({ summary: { total: 1 } }), "1 check");
+  assert.equal(checksLabel({ summary: { total: 5 }, not_run: ["ITS.CODE_LISTS"] }), "5 checks · 1 field-level check not run");
 });

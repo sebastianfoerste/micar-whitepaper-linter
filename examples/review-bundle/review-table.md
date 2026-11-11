@@ -8,6 +8,12 @@ This markdown table is a local review artifact. It does not approve filing, publ
 - Export gate: blocked
 - External action allowed: False
 
+## Extraction Notes
+
+The linter recorded these notes while reading the draft. They can qualify any automated result, including a Pass, so read them before relying on the results.
+
+- Field-level checks of the templates of Implementing Regulation (EU) 2024/2984 and Delegated Regulations (EU) 2025/421 and 2025/422 run only on drafts in the numbered-field layout (XHTML). This draft has no field numbers, so 65 point checks and 5 template checks did not run. They are left out of this report and count neither as passed nor as open; check the white paper in the numbered-field layout to run them.
+
 | Rule ID | Citation | Status | Blocker | Reviewer decision | Anchor verified |
 | --- | --- | --- | --- | --- | --- |
 | COMMON.SUMMARY | Art. 6 Abs. 7, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR | pass | no | pending_lawyer_confirmation | yes |
@@ -30,6 +36,7 @@ This markdown table is a local review artifact. It does not approve filing, publ
 | ANNEX_II.G.VALUATION_AUDIT | Anhang II Teil D Nr. 10 MiCAR | pass | no | pending_lawyer_confirmation | yes |
 | ANNEX_II.H | Art. 19 Abs. 1 UAbs. 1 Buchst. h MiCAR i.V.m. Art. 4 VO (EU) 2025/422; Anhang Tabelle 3 Teil H VO (EU) 2024/2984 | pass | no | pending_lawyer_confirmation | yes |
 | ANNEX_II.I | Anhang II Teil D Nr. 9, 14, 15 und 16, Teil G Nr. 3 i.V.m. Art. 39, Art. 46 Abs. 1 UAbs. 3 Buchst. c und Art. 46 Abs. 4 MiCAR | pass | no | pending_lawyer_confirmation | yes |
+| ITS.NOTIFICATION_DATE_FORMAT | Anhang Tabelle 2 Feld 01, Tabelle 3 Feld I.01, Tabelle 4 Feld I.01 VO (EU) 2024/2984 | pass | no | pending_lawyer_confirmation | yes |
 
 ## Review Gate
 
