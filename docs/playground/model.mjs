@@ -50,10 +50,10 @@ export function parseDraft(text) {
   return draft;
 }
 
-// Display only: exports keep the engine's citation strings unchanged.
-export function displayCitation(citation) {
-  // TODO(human): render the engine's German-style citation in the English house style.
-  return citation;
+// Display only: exports keep the engine's citation strings unchanged. The JSON report carries the canonical
+// citation and its English EU form (citation_en, from citations.to_english), which the CLI's text report prints.
+export function displayCitation(finding) {
+  return finding.citation_en ?? finding.citation;
 }
 
 // iXBRL is a file-format check; adding a JSON section cannot satisfy it.
@@ -86,7 +86,7 @@ export function selectFindings(findings, filter = "open", search = "") {
   const statusOrder = { missing: 0, review: 1, pass: 2 };
   return findings.filter(f => {
     const matches = filter === "all" || (filter === "open" ? f.status !== "pass" : f.status === filter);
-    return matches && [f.rule_id, f.label, f.citation, displayCitation(f.citation), f.section, f.severity, ...f.issues]
+    return matches && [f.rule_id, f.label, f.citation, displayCitation(f), f.section, f.severity, ...f.issues]
       .join(" ").toLowerCase().includes(query);
   }).sort((a, b) => {
     const aBlocker = a.status !== "pass" && a.severity === "BLOCKER";
