@@ -501,9 +501,29 @@ _DROPPED_SECTIONS = {
 }
 
 
+def _inferred_type(
+    suffix: str, sections: dict[str, str], extracted: str, headings: tuple[str, ...]
+) -> WhitepaperType:
+    """The regime the wording of a draft names: ART, then EMT, otherwise other (_ART_MARKERS,
+    _EMT_MARKERS)."""
+    pieces = _regime_pieces(suffix, sections, extracted, headings)
+    if _names_regime(pieces, _ART_MARKERS):
+        return WhitepaperType.ART
+    if _names_regime(pieces, _EMT_MARKERS):
+        return WhitepaperType.EMT
+    return WhitepaperType.OTHER
+
+
 def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | None) -> Whitepaper:
     if not path.exists():
         raise SystemExit(f"File not found: {path}")
+    from micar_linter.declared_type import (
+        NUMBER_OF_CODE,
+        confirm_numbered,
+        declared_type_notes,
+        problem_sentence,
+        read_declared_type,
+    )
 
     ixbrl_issues = []
     ixbrl_validated = False
@@ -518,6 +538,10 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
     # COMMON.LEI_CHECK_DIGITS reads besides the sections, and the whole text of the file without what a reader
     # cannot see, "" where the two are the same.
     document_text = shown_text = ""
+    # Whether the draft is in the numbered-field layout, and the type it declares in its type field (ADR
+    # 0009): the XHTML loader reads it itself, before it reads the fields under the regime.
+    numbered = False
+    declared = None
     try:
         if suffix == ".pdf":
             from micar_linter.document import parse_pdf
@@ -550,21 +574,27 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
             script_packed = is_script_packed(path)
             source = _unpack_viewer_page(path) if script_packed else path
             document_text, shown_text = document_texts(source)
+            declared = read_declared_type(document_text, shown_text)
             fields = extract_numbered_fields(source)
             if is_numbered_layout(fields):
-                # The template wording names every regime ("not an asset-referenced token"),
-                # so the regime of a numbered white paper is never inferred from its text.
-                if whitepaper_type is None:
+                numbered = True
+                if declared.type is not None:
+                    answer = field_answers(fields, declared.type).get(NUMBER_OF_CODE[declared.code], "")
+                    declared = confirm_numbered(declared, answer)
+                # The template wording names every regime ("not an asset-referenced token"), so the regime of
+                # a numbered white paper is never inferred from its text: it is stated, or the draft declares
+                # it in its type field.
+                regime = whitepaper_type or declared.type
+                if regime is None:
                     subject = f"The white paper packed in {path.name}" if script_packed else path.name
+                    reason = f" {problem_sentence(declared)}" if declared.problems else ""
                     raise SystemExit(
                         f"{subject} uses the numbered fields of Implementing Regulation (EU) 2024/2984. "
-                        "State the regime explicitly: other, art or emt."
+                        f"State the regime explicitly: other, art or emt.{reason}"
                     )
-                sections, extraction_notes, placeholder_fields = sections_from_numbered_fields(
-                    fields, whitepaper_type
-                )
-                numbered_fields = field_answers(fields, whitepaper_type)
-                numbered_field_labels = field_labels(fields, whitepaper_type)
+                sections, extraction_notes, placeholder_fields = sections_from_numbered_fields(fields, regime)
+                numbered_fields = field_answers(fields, regime)
+                numbered_field_labels = field_labels(fields, regime)
             else:
                 sections = load_from_xhtml(source)
             if script_packed:
@@ -583,18 +613,24 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
 
     # The regime of a PDF or DOCX is inferred from its extracted text (for a DOCX the runs and hyperlinks
     # directly in the paragraphs of its body): a heading ("Reserve of Assets"), which is not section body, or
-    # text in no section may be all that names it. A negated marker does not count. A given regime is not
-    # inferred, so the text is not read for it.
+    # text in no section may be all that names it. A negated marker does not count.
+    # The order (ADR 0009): a stated regime (--type), then the type the draft declares in the type field of
+    # the template, then the wording. A stated regime is not inferred, so the wording is not read for it.
+    # Where the draft declares its type, the wording of a draft that is not in the numbered-field layout is
+    # read too, and the note on the declared type says where the two differ; the checks run under the
+    # declared type, exactly as with --type stated as it.
+    if declared is None:
+        declared = read_declared_type(document_text, shown_text, markdown=suffix == ".md")
+    inferred = None
     if whitepaper_type is not None:
         wp_type = whitepaper_type
+    elif declared.type is not None:
+        wp_type = declared.type
+        if not numbered:
+            inferred = _inferred_type(suffix, sections, extracted, headings)
     else:
-        pieces = _regime_pieces(suffix, sections, extracted, headings)
-        if _names_regime(pieces, _ART_MARKERS):
-            wp_type = WhitepaperType.ART
-        elif _names_regime(pieces, _EMT_MARKERS):
-            wp_type = WhitepaperType.EMT
-        else:
-            wp_type = WhitepaperType.OTHER
+        wp_type = _inferred_type(suffix, sections, extracted, headings)
+    extraction_notes = (*extraction_notes, *declared_type_notes(declared, whitepaper_type, inferred))
 
     # The sections of the other regimes are dropped. Art. 19 MiCAR prescribes no first-page statement, so
     # no ART rule reads one. COMMON.LEI_CHECK_DIGITS still reads the text of each dropped section, after
