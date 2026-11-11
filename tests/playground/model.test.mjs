@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 import { MAX_BYTES, MAX_XHTML_BYTES, checksLabel, displayCitation, draftFormat, findingScope, inspectableSection, validateDraft, formatDraft, parseDraft, reportIsCurrent, ruleDocHref, sectionSelection, selectFindings } from "../../docs/playground/model.mjs";
 
@@ -134,15 +134,40 @@ test("a draft that opens with markup is XHTML and states no regime of its own", 
   assert.throws(() => validateDraft(`<html>${" ".repeat(MAX_XHTML_BYTES)}</html>`), /up to 8 MB/);
 });
 
+test("findings show the engine's English citation, and both forms are searchable", () => {
+  // The JSON report carries the canonical citation and, in citation_en, the English EU form the CLI prints.
+  const finding = {
+    rule_id: "S", status: "review", severity: "BLOCKER", label: "Summary", section: "summary", issues: [],
+    citation: "Art. 6 Abs. 7, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR",
+    citation_en: "Art. 6(7), Art. 19(6), Art. 51(6) MiCAR",
+  };
+  assert.equal(displayCitation(finding), "Art. 6(7), Art. 19(6), Art. 51(6) MiCAR");
+  assert.deepEqual(selectFindings([finding], "open", "art. 19(6)").map(f => f.rule_id), ["S"]);
+  assert.deepEqual(selectFindings([finding], "open", "19 Abs. 6").map(f => f.rule_id), ["S"]);
+  // Display only: the finding, which the exports write, keeps both strings unchanged.
+  assert.equal(finding.citation, "Art. 6 Abs. 7, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR");
+});
+
+test("a finding without an English citation shows the canonical one", () => {
+  assert.equal(displayCitation({ citation: "Art. 6 Abs. 7 MiCAR" }), "Art. 6 Abs. 7 MiCAR");
+  assert.equal(displayCitation({ citation: "Art. 6 Abs. 7 MiCAR", citation_en: null }), "Art. 6 Abs. 7 MiCAR");
+});
+
+const decode = text => text.replaceAll("&quot;", '"').replaceAll("&#x27;", "'").replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&amp;", "&");
+
 test("display citations never alter a pinpoint", () => {
-  const citations = [
-    "Art. 6 Abs. 5, Art. 19 Abs. 4, Art. 51 Abs. 4 MiCAR",
-    "Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d, Art. 45 Abs. 3 und Art. 45 Abs. 7 Buchst. b MiCAR",
-    "Art. 6 Abs. 1 UAbs. 1 Buchst. j MiCAR i.V.m. Art. 4 VO (EU) 2025/422; Anhang Tabelle 2 Teil J VO (EU) 2024/2984",
-    "Art. 54 MiCAR i.V.m. Art. 7 EMD2 (Richtlinie 2009/110/EG)",
-  ];
-  for (const citation of citations) {
-    assert.deepEqual(displayCitation(citation).match(/\d+/g), citation.match(/\d+/g));
+  // Each rule page states the English citation and the canonical form, both from the rule (citations.to_english,
+  // which also fills citation_en in the JSON report). "UAbs. 1" becomes "first subparagraph", so its digit is
+  // spelled out, as tests/test_citations.py allows.
+  const pages = readdirSync(new URL("../../docs/rules/", import.meta.url)).filter(name => name !== "index.html");
+  assert.ok(pages.length >= 42);
+  for (const name of pages) {
+    const page = repoFile(`docs/rules/${name}`);
+    const english = decode(page.match(/<dt>Citation<\/dt><dd>([^<]+)<\/dd>/)[1]);
+    const canonical = decode(page.match(/<dt>Canonical form<\/dt><dd lang="de">([^<]+)<\/dd>/)[1]);
+    const shown = displayCitation({ citation: canonical, citation_en: english });
+    assert.equal(shown, english, name);
+    assert.deepEqual(shown.match(/\d+/g), canonical.replace(/UAbs\. \d/g, "").match(/\d+/g), name);
   }
 });
 

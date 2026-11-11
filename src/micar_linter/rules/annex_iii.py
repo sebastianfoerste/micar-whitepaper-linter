@@ -24,13 +24,18 @@ from point_fields.py and placed after their Part rule in RULESETS.
 
 from __future__ import annotations
 
-from micar_linter.rules.annex_i import NOT_APPROVED_STATEMENT_EN, NOT_APPROVED_STATEMENT_LABEL
+from micar_linter.rules.annex_i import (
+    NOT_APPROVED_STATEMENT_DE,
+    NOT_APPROVED_STATEMENT_EN,
+    NOT_APPROVED_STATEMENT_LABEL,
+)
 from micar_linter.rules.base import Rule, Severity
 from micar_linter.rules.terms import ADDRESS_DE, ADDRESS_EN, COURT_DE
 
 ANNEX_III_RULES: tuple[Rule, ...] = (
     Rule(
-        # Art. 51(3) MiCAR: the same first-page statement, naming the issuer. Art. 19 MiCAR
+        # Art. 51(3) MiCAR: the same first-page statement, naming the issuer ("Der Emittent des
+        # Kryptowerts" in German, as in Table 4 field I.02 of 2024/2984). Art. 19 MiCAR
         # prescribes no such statement for an ART white paper, so Annex II has no
         # counterpart: Table 3 field I.02 of Implementing Regulation (EU) 2024/2984 holds
         # the Art. 19(4) statement instead. Approval is not the reason: the white paper of an
@@ -44,6 +49,11 @@ ANNEX_III_RULES: tuple[Rule, ...] = (
             NOT_APPROVED_STATEMENT_EN,
             "the issuer of the crypto-asset is solely responsible for the content of this "
             "crypto-asset white paper",
+        ),
+        required_terms_de=(
+            NOT_APPROVED_STATEMENT_DE,
+            "der emittent des kryptowerts trägt die alleinige verantwortung für den inhalt dieses "
+            "kryptowerte-whitepapers",
         ),
         min_words=0,
         severity=Severity.BLOCKER,

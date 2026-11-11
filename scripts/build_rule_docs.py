@@ -174,6 +174,19 @@ OJ_CHECKED = {
         "consolidated version of 13 January 2018. No amendment and no English or German corrigendum changes "
         "Art. 54 or Annex III Part D."
     ),
+    "ANNEX_I.NOT_APPROVED_STATEMENT": (
+        "Checked on 2026-11-10 on EUR-Lex against the Official Journal text in English and German (OJ L 150, "
+        "9.6.2023) and against field 02 of Table 2 of Implementing Regulation (EU) 2024/2984 in English and German, "
+        "which prints the responsibility sentence for each person. The only amending act EUR-Lex lists, Regulation "
+        "(EU) 2023/2869, adds Art. 110a; no English or German corrigendum changes Art. 6(3), and 2024/2984 has no "
+        "amendment or corrigendum."
+    ),
+    "ANNEX_III.NOT_APPROVED_STATEMENT": (
+        "Checked on 2026-11-10 on EUR-Lex against the Official Journal text in English and German (OJ L 150, "
+        "9.6.2023) and against field I.02 of Table 4 of Implementing Regulation (EU) 2024/2984 in English and "
+        "German. The only amending act EUR-Lex lists, Regulation (EU) 2023/2869, adds Art. 110a; no English or "
+        "German corrigendum changes Art. 51(3), and 2024/2984 has no amendment or corrigendum."
+    ),
     "COMMON.SUMMARY": (
         "Checked on 2026-10-30 against the Official Journal text in English and German (OJ L 150, 9.6.2023), the "
         "consolidated version of 9 January 2024, which differs there only in a footnote number, and the predefined "
@@ -229,12 +242,6 @@ LEI_VERIFICATION_NOTE = (
     "required pursuant to applicable national law, and Art. 2(1)(b) and (c) of Implementing Regulation (EU) "
     "2024/2984 ask for the LEI where available."
 )
-# The first-page statement rules were added after the other pages, with their wording checked.
-STATEMENT_VERIFICATION_NOTE = (
-    "The citation and the English wording the rule checks were read in the EUR-Lex text of Art. 6(3) and "
-    "Art. 51(3) MiCAR as mirrored in legalize-dev/legalize-eu (CELEX 32023R1114), not on EUR-Lex itself, "
-    "which was unreachable from the build environment. The German wording has not been checked."
-)
 
 
 def verification_note(rule_id: str) -> str:
@@ -245,8 +252,6 @@ def verification_note(rule_id: str) -> str:
         return _point_verification(POINTS_BY_RULE[rule_id])
     if rule_id in TEMPLATE_VERIFICATION:
         return TEMPLATE_VERIFICATION[rule_id]
-    if rule_id in NOT_APPROVED_STATEMENT_RULE_IDS:
-        return STATEMENT_VERIFICATION_NOTE
     return VERIFICATION_NOTE
 
 
@@ -254,6 +259,13 @@ STATEMENT_APPROVAL = (
     "This crypto-asset white paper has not been approved by any competent authority in any Member State of "
     "the European Union."
 )
+# The German statement as Art. 6 Abs. 3 and Art. 51 Abs. 3 MiCAR and the templates of Implementing Regulation (EU)
+# 2024/2984 word it (Table 2 field 02, Table 4 field I.02).
+STATEMENT_APPROVAL_DE = (
+    "Dieses Kryptowerte-Whitepaper wurde von keiner zuständigen Behörde eines Mitgliedstaats der Europäischen "
+    "Union genehmigt."
+)
+STATEMENT_CLAUSE_DE = "trägt die alleinige Verantwortung für den Inhalt dieses Kryptowerte-Whitepapers."
 NEVER_PASS = {"COMMON.IXBRL_TAGGING", "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW"}
 UNTESTED_REGIMES = {
     "ANNEX_II": "The Annex II rules have not yet been run against a real ART white paper.",
@@ -501,16 +513,23 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
                 "of the trading platform; this statement names the issuer.",
             ),
             Example(
-                "German draft",
+                "German statement in other words",
                 "review",
                 _draft(
                     rule,
                     regime,
-                    "Synthetischer deutscher Beispieltext. Er gibt nicht den Wortlaut des Amtsblatts wieder.",
+                    f"{STATEMENT_APPROVAL_DE} Der Anbieter des Kryptowerts {STATEMENT_CLAUSE_DE}"
+                    if emt
+                    else f"{STATEMENT_APPROVAL_DE} Die Person, die die Zulassung zum Handel beantragt, "
+                    f"{STATEMENT_CLAUSE_DE}",
                     language="de",
                 ),
-                "The German wording has not been checked against the German Official Journal, so a German "
-                "statement goes to review whatever it says.",
+                "Art. 51 Abs. 3 MiCAR names the issuer (“Der Emittent des Kryptowerts”), so the responsibility "
+                "sentence is not found."
+                if emt
+                else "Art. 6 Abs. 3 UAbs. 2 MiCAR names the person seeking admission to trading but prints no German "
+                "sentence for it. Field 02 of Table 2 prints “Die Person, die die Zulassung des Kryptowerts zum "
+                "Handel beantragt, trägt …”, and only that sentence passes for this person.",
             ),
             Example(
                 "Statement in the checked wording",
@@ -518,6 +537,24 @@ def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
                 _draft(rule, regime, f"{STATEMENT_APPROVAL} {_responsibility(named)}"),
                 "Both sentences in the English wording the rule checks. A pass says the words matched; the check "
                 "cannot see whether the statement is on the first page.",
+            ),
+            Example(
+                "German statement in the checked wording",
+                "pass",
+                _draft(
+                    rule,
+                    regime,
+                    f"{STATEMENT_APPROVAL_DE} Der {'Emittent' if emt else 'Anbieter'} des Kryptowerts "
+                    f"{STATEMENT_CLAUSE_DE}",
+                    language="de",
+                ),
+                "Both sentences in the German wording of the Official Journal, which a German draft is checked for."
+                + (
+                    ""
+                    if emt
+                    else " The sentences for the person seeking admission to trading and the operator of the "
+                    "trading platform, as field 02 of Table 2 prints them, pass too."
+                ),
             ),
         ]
     if rule.rule_id in ANSWER_CHECKS:
@@ -1882,23 +1919,29 @@ def status_logic(rule: Rule) -> str:
         emt = rule.rule_id.startswith("ANNEX_III.")
         roles = "“offeror”, “person seeking admission to trading” or “operator of the trading platform”"
         clause = "“of the crypto-asset is solely responsible”"
+        roles_de = (
+            "“Anbieter des Kryptowerts”, “Person, die die Zulassung des Kryptowerts zum Handel beantragt,” or "
+            "“Betreiber der Handelsplattform des Kryptowerts”"
+        )
+        clause_de = "“trägt die alleinige Verantwortung”"
         return (
             f'<ul class="plain">{missing}'
-            "<li><strong>Review</strong>: the draft is German, because the German wording has not been checked "
-            "against the German Official Journal; the section holds only a yes or no value; a listed English "
-            "term does not appear"
+            "<li><strong>Review</strong>: the section holds only a yes or no value; a listed term of the draft's "
+            "language does not appear (the English terms for an English draft, the German terms for a German one)"
             + (
                 ""
                 if emt
-                else f"; or {clause} appears without {roles} directly before it, as where the statement names the "
-                "issuer or puts the offeror's name in between (“The offeror, Example AG, of the crypto-asset”)"
+                else f"; or the person is not the one the statement names: in an English draft, {clause} appears "
+                f"without {roles} directly before it, as where the statement names the issuer or puts the offeror's "
+                "name in between (“The offeror, Example AG, of the crypto-asset”); in a German draft, "
+                f"{clause_de} appears without {roles_de} directly before it"
             )
-            + ".</li><li><strong>Pass</strong>: an English draft holds both listed terms"
+            + ".</li><li><strong>Pass</strong>: the draft holds both listed terms of its language"
             + (
                 ""
                 if emt
-                else f", and somewhere in the section {roles} comes directly before {clause}. Another person "
-                "named elsewhere in the section is not checked"
+                else f", and somewhere in the section {roles} comes directly before {clause} (in German, {roles_de} "
+                f"before {clause_de}). Another person named elsewhere in the section is not checked"
             )
             + ". Matching ignores case and reads any run of spaces and line breaks as one space. A compound broken "
             "after its hyphen at a line end keeps the hyphen, so “crypto-” and “asset” on two lines match "
@@ -2060,8 +2103,9 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             else "Works offline on the characters of each code. It does not confirm that an LEI is registered, "
             "current or held by the entity the draft names."
             if rule.rule_id in LEI_RULES
-            else "Matches the English wording only. It cannot see whether the statement is on the first page, and "
-            "it does not check that the person it names is the one responsible for the white paper."
+            else "Matches the English and German wording only. The draft's language decides which, so a statement "
+            "in the other of the two, or in a third language, goes to review. It cannot see whether the statement is on the "
+            "first page, and it does not check that the person it names is the one responsible for the white paper."
             if rule.rule_id in NOT_APPROVED_STATEMENT_RULE_IDS
             else "Looks for a calendar date only. It does not confirm that the date is the date of notification "
             "or that it is plausible, and it does not check the table of contents that the same provisions "
@@ -2300,19 +2344,28 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
         field = "I.02" if emt else "02"
         limitations.append(
             "PDF, DOCX, Markdown and heading-based XHTML drafts fill the section from a heading such as “Statement "
-            f"in accordance with Article {'51' if emt else '6'}(3)”, the label of field {field} of Table "
-            f"{'4' if emt else '2'} of Implementing Regulation (EU) 2024/2984, where the label is set as one (a "
-            "Markdown “#” heading, an XHTML h1 to h6 or bold label, a DOCX heading or bold or capitals label, a PDF "
-            "heading or field line), or, without one, from a line or paragraph that opens with the statement's "
-            "first words, also where they wrap onto the next lines. Text after the statement in its last line "
+            f"in accordance with Article {'51' if emt else '6'}(3)” or “Erklärung gemäß Artikel {'51' if emt else '6'} "
+            f"Absatz 3”, the English and German labels of field {field} of Table {'4' if emt else '2'} of "
+            "Implementing Regulation (EU) 2024/2984, where the label is set as one (a Markdown “#” heading, an XHTML "
+            "h1 to h6 or bold label, a DOCX heading or bold or capitals label, a PDF heading or field line), or, "
+            "without one, from a line or paragraph that opens with the statement's first words in English or "
+            "German, also where they wrap onto the next lines. Text after the statement in its last line "
             "or paragraph, such as the management body's statement written in the same paragraph, stays in this "
             f"section and is missing from its own. Numbered-field XHTML fills it from field {field}. Table cells are not read in DOCX, nor "
             "in heading-based XHTML where the text sits directly in a td or th element rather than in a p, div, li "
             "or bold element inside it, so a statement kept only there is reported missing."
         )
         limitations.append(
-            "A German draft never passes: the German wording has not been checked against the German Official "
-            f"Journal. In a numbered-field draft, <code>ITS.PREDEFINED_TEXT</code> compares field {field} with the "
+            (
+                "A German statement passes only in the words of Art. 51 Abs. 3 MiCAR, which field I.02 of Table 4 "
+                "prints unchanged."
+                if emt
+                else "A German statement passes only with a responsibility sentence that field 02 of Table 2 prints. "
+                "Art. 6 Abs. 3 UAbs. 2 MiCAR names the “Person, die die Zulassung zum Handel beantragt” but prints no "
+                "German sentence for it, so a sentence in those words, without “des Kryptowerts”, goes to review, as "
+                "does any other German wording."
+            )
+            + f" In a numbered-field draft, <code>ITS.PREDEFINED_TEXT</code> compares field {field} with the "
             "template's English and German wording."
         )
     if rule.rule_id == "ANNEX_II.I":

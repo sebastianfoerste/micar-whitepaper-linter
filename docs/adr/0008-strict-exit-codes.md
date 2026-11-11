@@ -1,6 +1,6 @@
 # 0008. Exit codes of `--coverage --strict` and strict directory runs
 
-Status: Proposed (2026-11-02). **Needs owner decision: confirm or revert.** The behaviour described below is built and released; it was never decided by the owner as an exit-code change.
+Status: Accepted (2026-11-10). Proposed on 2026-11-02 because the behaviour below was built and released without an owner decision. On 2026-11-10 the owner delegated the decision, and option 1 was taken for all three changes.
 
 ## Context
 
@@ -34,15 +34,22 @@ Since ADR 0009 (2026-11-11), a numbered-field draft that declares its type in th
 
 ## Decision
 
-None yet. The code keeps the released behaviour of option 1 until the owner decides; nothing here approves it. The owner confirms or reverts each of the three changes: `--coverage --strict`, a strict directory run with a file that could not be linted, and a strict directory run that linted no file.
+Option 1, for each of the three changes: `--coverage --strict`, a strict directory run with a file that could not be linted, and a strict directory run that linted no file. Decided on 2026-11-10 under the owner's delegation.
+
+Reasons:
+
+- `--strict` is the gate a CI job relies on. It has to fail when blockers are open, when a file given to it could not be linted and when nothing was linted. The earlier codes let a run pass that gate with open BLOCKER findings (`--coverage --strict`), with a file it could not lint, or with no file linted at all, and `--coverage` in the Action's `extra-args` also dropped the CI output files.
+- Releases 1.2.0 and 1.2.1 already behave this way, and `@v1` users of the Action run them. A revert would be a second exit-code change for those users within the same major version, this time in the fail-open direction.
+- Without `--strict` no exit code changed: those runs exit 0 as before.
 
 ## Consequences
 
-- If confirmed: change this record's status to Accepted with the date; no code changes.
-- If reverted, in whole or in part: change `main` and `_run_batch` in `src/micar_linter/cli.py`, the tests that pin the current codes in `tests/test_fail_closed_fixes.py` (`test_coverage_keeps_strict_and_output_files`, `test_batch_counts_files_it_could_not_lint_and_strict_fails_on_them`, `test_strict_batch_fails_when_no_file_was_linted`), the `--strict` and `--coverage` help texts, `docs/API.md`, `docs/SETUP.md`, the commands in section 3 of `AGENTS.md`, `CHANGELOG.md` and the playground wheel. A revert is itself an exit-code change for 1.2.x users.
+- No code changes. The tests in `tests/test_fail_closed_fixes.py` (`test_coverage_keeps_strict_and_output_files`, `test_batch_counts_files_it_could_not_lint_and_strict_fails_on_them`, `test_strict_batch_fails_when_no_file_was_linted`) keep pinning the three exit codes, and `docs/API.md` already describes them.
+- `CHANGELOG.md` keeps the entries under 1.2.0 "Fixed". The commands in section 3 of `AGENTS.md` and item 11 of "Needs owner decision" in `docs/research/adaptation-plan.md` now point to this decision.
+- Changing any of the three later would need a new record: it would be an exit-code change for `@v1` users.
 
 ## Non-negotiables check
 
-- Exit codes: this record asks for the owner's decision and changes none.
-- Fail closed: option 1 keeps the strict gate closed when output files are requested with `--coverage` and when a directory run checked nothing; options 2 and 3 open it again in the cases they revert.
+- Exit codes: this record confirms the released codes and changes none.
+- Fail closed: option 1 keeps the strict gate closed when output files are requested with `--coverage` and when a directory run checked nothing; options 2 and 3 would have opened it again in the cases they revert.
 - No model and no network in the checking path; synthetic examples only.
