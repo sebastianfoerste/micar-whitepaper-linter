@@ -22,6 +22,8 @@ Measured with `python -m micar_linter` on the source before 06d0f46 and on `main
 | Empty directory, `--batch-output b.json --strict` | exit 0 | exit 1 |
 | Either directory without `--strict` | exit 0 | unchanged |
 
+Since ADR 0009 (2026-11-11), a numbered-field draft that declares its type in the type field of the template (F.4 OTHR, B.7 ARTW, B.4 EMTW) is linted without `--type`, also in a directory run, so it no longer counts in `failed_files`; the rows above concern a numbered-field draft without such a field, as `examples/numbered-other-draft.xhtml` is, and their exit codes are unchanged.
+
 `--coverage` with `--review-bundle-dir` never took the early return and is unchanged. In the GitHub Action, `strict: 'true'` with `--coverage` in `extra-args`, or a directory input that holds a numbered-field draft or no supported draft, now fails the job; the starter template sets `strict: 'false'`.
 
 ## Options

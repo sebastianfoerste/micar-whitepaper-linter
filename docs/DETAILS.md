@@ -38,7 +38,7 @@ Generate a review bundle from synthetic data:
 uv run --extra dev python -m micar_linter examples/incomplete.json --review-bundle-dir /tmp/micar-incomplete-review-bundle
 ```
 
-Check an XHTML white paper in the numbered-field layout of Implementing Regulation (EU) 2024/2984 ("A.1 Name", "A.2 Legal form"). State the regime, because it is not inferred from the text of such a file:
+Check an XHTML white paper in the numbered-field layout of Implementing Regulation (EU) 2024/2984 ("A.1 Name", "A.2 Legal form"). State the regime, because it is not inferred from the wording of such a file; a draft that declares its type in its type field (F.4 OTHR, B.7 ARTW or B.4 EMTW, ADR 0009) is linted under that type without `--type`, and the sample has no such field:
 
 ```bash
 uv run micar-lint examples/numbered-other-draft.xhtml --type other
