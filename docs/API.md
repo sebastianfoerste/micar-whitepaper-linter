@@ -12,7 +12,7 @@ micar-lint <file_path> [options]
 
 Supported options:
 
-- `--json`: print the validation report as JSON. Its `not_run` list names the rules that did not run: on a draft without field numbers, the point rules and the field-only template rules, which run only on drafts in the numbered-field layout. They have no entry in `findings` and count in no summary figure; one entry in `warnings` says how many point and template checks did not run. The `--coverage` table carries the same `not_run` list.
+- `--json`: print the validation report as JSON. Its `not_run` list names the rules that did not run: on a draft without field numbers, the point rules and the field-only template rules, which run only on drafts in the numbered-field layout. They have no entry in `findings` and count in no summary figure; one entry in `warnings` says how many point and template checks did not run. The coverage matrix that `--coverage-output` writes carries the same `not_run` list; the `--coverage` console table does not list these rules.
 - `--citation-style en|de`: citation style in the text report, English EU style (`Art. 6(7) MiCAR`, default) or the canonical German form (`Art. 6 Abs. 7 MiCAR`). JSON output always carries both.
 - `--type other|art|emt`: regime of a single PDF, DOCX, Markdown or XHTML draft. Required for XHTML in the numbered-field layout, whose regime is never inferred. A JSON draft states its own `type`.
 - `--strict`: exit with status `1` when blocker findings are open. For a directory, also when a file could not be linted or no file was linted ([ADR 0008](adr/0008-strict-exit-codes.md)).
