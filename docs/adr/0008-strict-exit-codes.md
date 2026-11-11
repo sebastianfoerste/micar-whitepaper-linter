@@ -36,8 +36,8 @@ Re-run on 2026-11-11 with the same commands on `main` at 361ebde: the six rows g
 
 Option 1: all three changes are confirmed, `--coverage --strict`, a strict directory run with a file that could not be linted, and a strict directory run that linted no file. Decided on 2026-11-10 in a Claude Code session, on the owner's instruction to answer the open decisions; the owner did not review the detail, and a later ADR can reverse it. The reasons:
 
-- The changes move in the fail-closed direction, the repository's first rule: a false Review is acceptable, a false Pass is not. Each of them turns a run that checked less than it was asked to into a failure instead of a pass.
-- They have been in releases 1.2.0 and 1.2.1 since 2026-10-26 and 2026-10-27, so `@v1` users run them. A revert would itself be an exit-code change for those users.
+- The changes move in the fail-closed direction, the repository's first rule: a false Review is acceptable, a false Pass is not. Each of them turns a strict run that used to pass without doing what it was asked into a failure: `--coverage --strict` checked every rule but returned 0 before applying the strict gate and writing the output files, and a strict directory run passed when a file could not be linted or no file was linted.
+- They have been in releases 1.2.0 and 1.2.1, both published on 2026-10-27, so `@v1` users run them. A revert would itself be an exit-code change for those users.
 - A revert would reopen the gap in which `--coverage` in the Action's `extra-args` silently switched off the strict gate and the CI outputs, and in which "nothing was checked" passed a strict gate.
 - The same direction was taken for `micar-lint-batch` in #100, merged on 2026-11-10: it exits 1 and writes neither its JSON nor its CSV when it processed no document.
 
