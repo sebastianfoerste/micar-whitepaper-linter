@@ -10,5 +10,6 @@
 | [0006](0006-shared-site-tokens.md) | Shared site tokens (light theme; dark theme removed 2026-10-21) | Accepted |
 | [0007](0007-lei-rules.md) | LEI check-digit and consistency rules | Accepted |
 | [0008](0008-strict-exit-codes.md) | Exit codes of `--coverage --strict` and strict directory runs | Accepted (2026-11-10) |
+| [0009](0009-declared-white-paper-type.md) | Read the declared white-paper type before inferring it from the prose | Accepted (decided 2026-11-10 in a Claude Code session on the owner's instruction to answer the open decisions) |
 
 Each record has Status, Context, Options, Decision, Consequences and a non-negotiables check. "Accepted" records describe code in this repository; "Proposed" records describe nothing built yet, except ADR 0005, whose point rules are built for every Annex point that a template field carries.

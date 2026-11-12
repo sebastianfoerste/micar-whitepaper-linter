@@ -69,8 +69,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--type",
         choices=[item.value for item in WhitepaperType],
         help=(
-            "Regime of a single PDF, DOCX, Markdown or XHTML draft. Required for white papers "
-            "in the numbered-field layout; a JSON draft states its own type."
+            "Regime of a single PDF, DOCX, Markdown or XHTML draft; it overrides the type a draft declares "
+            "in the type field of the template (F.4 OTHR, B.7 ARTW, B.4 EMTW). Required for white papers in "
+            "the numbered-field layout that declare no type; a JSON draft states its own type."
         ),
     )
     parser.add_argument(
