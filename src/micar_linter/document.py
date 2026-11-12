@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 from micar_linter.placeholders import is_not_applicable, is_placeholder
-from micar_linter.rules.annex_i import NOT_APPROVED_STATEMENT_EN
+from micar_linter.rules.annex_i import NOT_APPROVED_STATEMENT_DE, NOT_APPROVED_STATEMENT_EN
 
 # The start of a redemption pattern: a heading that names a risk, in English or German ("Redemption risk",
 # "Rücknahmerisiko", "Risiken beim Rücktausch"), heads a risk and does not open the redemption section, so
@@ -135,8 +135,7 @@ SECTION_PATTERNS = {
 
 
 # Art. 6(3) and Art. 51(3) MiCAR put the statement on the first page without a heading of
-# its own, so a paragraph that opens with it is routed by its content. The German opening
-# is a routing heuristic only; the rule does not treat it as verified statutory wording.
+# its own, so a paragraph that opens with it, in English or German, is routed by its content.
 _STATEMENT_START = re.compile(
     r"^\W*(?:this\s+crypto-asset\s+white\s+paper\s+has\s+not\s+been\s+approved"
     r"|dieses\s+kryptowerte-whitepaper\s+wurde\s+von\s+keiner)\b",
@@ -146,8 +145,8 @@ _STATEMENT_START = re.compile(
 # responsible for the content. Each is about 20 words in Art. 6(3) and Art. 51(3).
 _RESPONSIBILITY = re.compile(r"\b(?:responsib|verantwort)\w*", re.IGNORECASE)
 # The responsibility sentence as Art. 6(3) and Art. 51(3) word it: the person it names, then the clause
-# "is solely responsible for the content of this crypto-asset white paper". The German pair is a
-# routing heuristic, like the German opening.
+# "is solely responsible for the content of this crypto-asset white paper" ("trägt die alleinige
+# Verantwortung für den Inhalt dieses Kryptowerte-Whitepapers").
 _RESPONSIBILITY_CLAUSE = re.compile(
     r"\bsolely\s+responsible\s+for\s+the\s+content\b|\balleinige\s+verantwortung\s+für\s+den\s+inhalt\b",
     re.IGNORECASE,
@@ -332,8 +331,8 @@ def paragraph_statement_extent(
     """statement_extent for a loader that reads paragraphs (DOCX, XHTML) rather than wrapped lines.
 
     An opening paragraph without a full stop was cut off, unless the paragraphs after it carry on the
-    English opening sentence word for word, as a statement set a line per paragraph does. So the paragraph
-    after a cut-off opening is not taken in, whatever its first sentence.
+    English or German opening sentence word for word, as a statement set a line per paragraph does. So the
+    paragraph after a cut-off opening is not taken in, whatever its first sentence.
     """
     end = statement_extent(paragraphs, start, is_heading)
     for index in range(start + 1, end):
@@ -341,7 +340,10 @@ def paragraph_statement_extent(
             break
         joined = re.sub(r"-[ \t]*\n\s*", "-", "\n".join(paragraphs[start : index + 1]))
         joined = re.sub(r"^\W+", "", " ".join(joined.split()).lower())
-        if not (NOT_APPROVED_STATEMENT_EN.startswith(joined) or joined.startswith(NOT_APPROVED_STATEMENT_EN)):
+        if not any(
+            opening.startswith(joined) or joined.startswith(opening)
+            for opening in (NOT_APPROVED_STATEMENT_EN, NOT_APPROVED_STATEMENT_DE)
+        ):
             return index
     return end
 

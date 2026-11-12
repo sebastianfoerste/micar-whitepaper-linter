@@ -281,11 +281,12 @@ def _collapse_whitespace(text: str) -> str:
     return _WHITESPACE_RUN.sub(" ", _LINE_END_HYPHEN.sub("-", text)).strip()
 
 
-# Art. 6(3) and Art. 51(3) MiCAR prescribe the first-page statement word for word. The
-# English wording was checked against the EUR-Lex text of Art. 6(3) and 51(3) MiCAR as
-# mirrored in legalize-dev/legalize-eu (CELEX 32023R1114). The German wording has not been
-# checked against the German Official Journal text, so a German draft is referred to review
-# and never passes.
+# Art. 6(3) and Art. 51(3) MiCAR prescribe the first-page statement word for word. Its English
+# and German wording, and the sentence that Table 2 field 02 and Table 4 field I.02 of
+# Implementing Regulation (EU) 2024/2984 print for each person, were read in the Official
+# Journal texts on EUR-Lex on 2026-11-10 (CELEX 32023R1114 and 32024R2984). The generic checks
+# take the draft's language: an English draft is checked for the English sentences, a German
+# draft for the German ones.
 NOT_APPROVED_STATEMENT_RULE_IDS = frozenset(
     {"ANNEX_I.NOT_APPROVED_STATEMENT", "ANNEX_III.NOT_APPROVED_STATEMENT"}
 )
@@ -312,13 +313,6 @@ def _not_approved_statement_finding(rule: Rule, whitepaper: Whitepaper) -> Findi
             "Check the wording and its first-page placement manually."
         )
         return Finding(rule=rule, status="review", word_count=words, issues=(msg,))
-    if is_de:
-        msg = (
-            f"Der deutsche Wortlaut der Erklärung nach {article_de} MiCAR ist in diesem Linter "
-            "noch nicht gegen die deutsche Fassung im Amtsblatt geprüft. Wortlaut und "
-            "Platzierung auf der ersten Seite manuell mit dem Amtsblatt abgleichen."
-        )
-        return Finding(rule=rule, status="review", word_count=words, issues=(msg,))
     return None
 
 
@@ -329,6 +323,14 @@ _TITLE_II_RESPONSIBILITY_CLAUSE = "of the crypto-asset is solely responsible"
 _TITLE_II_RESPONSIBLE_PERSON = re.compile(
     r"\b(?:offeror|person seeking admission to trading|operator of the trading platform) "
     + _TITLE_II_RESPONSIBILITY_CLAUSE
+)
+# The German sentences of Table 2 field 02. Art. 6 Abs. 3 UAbs. 2 MiCAR names the "Person, die die Zulassung
+# zum Handel beantragt" but prints no German sentence for it; the template's sentence places "des Kryptowerts"
+# inside the relative clause, so only the template's words pass and other words go to review.
+_TITLE_II_RESPONSIBILITY_CLAUSE_DE = "trägt die alleinige verantwortung"
+_TITLE_II_RESPONSIBLE_PERSON_DE = re.compile(
+    r"\b(?:anbieter des kryptowerts|person, die die zulassung des kryptowerts zum handel beantragt,"
+    r"|betreiber der handelsplattform des kryptowerts) " + _TITLE_II_RESPONSIBILITY_CLAUSE_DE
 )
 
 # Art. 49(4) MiCAR has an e-money token redeemed "at par value" ("zum Nennwert"); an ART issuer redeems
@@ -387,6 +389,17 @@ def _rule_specific_issues(rule: Rule, text: str, normalized: str, is_de: bool) -
             "(Art. 39(2) MiCAR). Check whether the section ties the token's redemption to par value; the "
             "note also appears where par value refers to the reserve of assets or to issuance."
         ]
+    if rule.rule_id == "ANNEX_I.NOT_APPROVED_STATEMENT" and is_de:
+        names_clause = _TITLE_II_RESPONSIBILITY_CLAUSE_DE in normalized
+        if names_clause and not _TITLE_II_RESPONSIBLE_PERSON_DE.search(normalized):
+            return [
+                "Nach Art. 6 Abs. 3 MiCAR und Feld 02 der Tabelle 2 der Durchführungsverordnung (EU) "
+                "2024/2984 steht unmittelbar vor „trägt die alleinige Verantwortung“ „Der Anbieter des "
+                "Kryptowerts“, „Die Person, die die Zulassung des Kryptowerts zum Handel beantragt,“ oder "
+                "„Der Betreiber der Handelsplattform des Kryptowerts“; in dieser Erklärung stehen dort "
+                "andere Worte, etwa eine andere Person, ein Name oder „Die Person, die die Zulassung zum "
+                "Handel beantragt,“ ohne „des Kryptowerts“."
+            ]
     if rule.rule_id == "ANNEX_I.NOT_APPROVED_STATEMENT" and not is_de:
         names_clause = _TITLE_II_RESPONSIBILITY_CLAUSE in normalized
         if names_clause and not _TITLE_II_RESPONSIBLE_PERSON.search(normalized):

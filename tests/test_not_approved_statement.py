@@ -1,18 +1,19 @@
 """The first-page statement that no competent authority has approved the white paper.
 
-The English fixture text is the statement as Art. 6(3) and Art. 51(3) MiCAR word it,
-and as Table 2 field 02 and Table 4 field I.02 of the Annex to Implementing Regulation
-(EU) 2024/2984 print it ("Predefined alphanumerical text"). Source read: the EUR-Lex
-texts CELEX 32023R1114 and 32024R2984 as mirrored in legalize-dev/legalize-eu. Art. 19 MiCAR
-prescribes no such statement for an ART white paper (Table 3 field I.02 of 2024/2984
-holds the Art. 19(4) statement instead), so the ART ruleset carries no such rule. That is
-not because every ART white paper is approved: that of an authorised issuer is deemed
-approved (Art. 21(1)) and that of a credit institution is approved (Art. 17(1)(a)), but an
-issuer exempt under Art. 16(2) only notifies it.
+The fixture text is the statement as Art. 6(3) and Art. 51(3) MiCAR word it, and as Table 2
+field 02 and Table 4 field I.02 of the Annex to Implementing Regulation (EU) 2024/2984 print it
+("Predefined alphanumerical text", "Vorgegebener alphanumerischer Text"), in English and in
+German. Source read: the Official Journal texts on EUR-Lex, CELEX 32023R1114 and 32024R2984,
+in English and German, on 2026-11-10. Art. 19 MiCAR prescribes no such statement for an ART
+white paper (Table 3 field I.02 of 2024/2984 holds the Art. 19(4) statement instead), so the
+ART ruleset carries no such rule. That is not because every ART white paper is approved: that
+of an authorised issuer is deemed approved (Art. 21(1)) and that of a credit institution is
+approved (Art. 17(1)(a)), but an issuer exempt under Art. 16(2) only notifies it.
 
-The German wording has not been checked against the German Official Journal text. German
-drafts are therefore referred to review and never pass; the German sentence below is only
-a routing fixture, not a statement of the statutory wording.
+Art. 6 Abs. 3 UAbs. 2 MiCAR has the statement refer to the "Person, die die Zulassung zum
+Handel beantragt" or the "Betreiber der Handelsplattform" instead of the "Anbieter", but prints
+no German sentence for them. Table 2 field 02 of 2024/2984 prints one for each person, and only
+those sentences pass in a German draft.
 """
 
 import re
@@ -128,21 +129,114 @@ def test_art_document_draft_with_the_statement_gets_no_section_key_warning(tmp_p
     assert not [w for w in lint_whitepaper(whitepaper).warnings if "not_approved_statement" in w]
 
 
-GERMAN_ROUTING_FIXTURE = (
-    "Dieses Kryptowerte-Whitepaper wurde von keiner zuständigen Behörde eines Mitgliedstaats "
-    "der Europäischen Union genehmigt. Der Anbieter des Kryptowerts trägt die alleinige "
-    "Verantwortung für den Inhalt dieses Kryptowerte-Whitepapers."
+# The German statement: the opening sentence of Art. 6 Abs. 3 and Art. 51 Abs. 3 MiCAR, then the
+# responsibility sentence that Table 2 field 02 of Implementing Regulation (EU) 2024/2984 prints for each
+# person ("In Bezug auf die Anbieter", "... die Personen, die die Zulassung zum Handel beantragen", "... die
+# Betreiber von Handelsplattformen") and Table 4 field I.02 for the issuer of an e-money token, as in the
+# German Official Journal texts on EUR-Lex (CELEX 32023R1114 and 32024R2984, read on 2026-11-10).
+GERMAN_OPENING = (
+    "Dieses Kryptowerte-Whitepaper wurde von keiner zuständigen Behörde eines Mitgliedstaats der "
+    "Europäischen Union genehmigt."
 )
+GERMAN_CLAUSE = "trägt die alleinige Verantwortung für den Inhalt dieses Kryptowerte-Whitepapers."
+GERMAN_RESPONSIBILITY = {
+    "anbieter": (WhitepaperType.OTHER, f"Der Anbieter des Kryptowerts {GERMAN_CLAUSE}"),
+    "person": (
+        WhitepaperType.OTHER,
+        f"Die Person, die die Zulassung des Kryptowerts zum Handel beantragt, {GERMAN_CLAUSE}",
+    ),
+    "betreiber": (WhitepaperType.OTHER, f"Der Betreiber der Handelsplattform des Kryptowerts {GERMAN_CLAUSE}"),
+    "emittent": (WhitepaperType.EMT, f"Der Emittent des Kryptowerts {GERMAN_CLAUSE}"),
+}
+# The statement as Art. 6 Abs. 3 UAbs. 1 MiCAR words it, naming the offeror.
+GERMAN_STATEMENT = f"{GERMAN_OPENING} {GERMAN_RESPONSIBILITY['anbieter'][1]}"
+
+
+@pytest.mark.parametrize("person", sorted(GERMAN_RESPONSIBILITY))
+def test_german_statement_in_the_official_journal_wording_passes(person: str):
+    wp_type, sentence = GERMAN_RESPONSIBILITY[person]
+    rule_id = EMT if wp_type is WhitepaperType.EMT else TITLE_II
+    finding = _finding(wp_type, rule_id, {"not_approved_statement": f"{GERMAN_OPENING} {sentence}"}, language="de")
+    assert finding.status == "pass", finding.issues
+    assert finding.rule.severity is Severity.BLOCKER
+
+
+def test_german_statement_passes_where_the_draft_is_detected_as_german():
+    # No language stated: the statement's own words make the draft German.
+    finding = _finding(WhitepaperType.OTHER, TITLE_II, {"not_approved_statement": GERMAN_STATEMENT})
+    assert finding.status == "pass", finding.issues
+
+
+def test_german_title_ii_statement_naming_the_issuer_is_referred_to_review():
+    # Art. 6 Abs. 3 MiCAR and Table 2 field 02 name the offeror, the person seeking admission to trading or
+    # the operator of the trading platform, never the issuer.
+    statement = f"{GERMAN_OPENING} {GERMAN_RESPONSIBILITY['emittent'][1]}"
+    finding = _finding(WhitepaperType.OTHER, TITLE_II, {"not_approved_statement": statement}, language="de")
+    assert finding.status == "review"
+    assert any("Betreiber der Handelsplattform des Kryptowerts" in issue for issue in finding.issues)
+
+
+@pytest.mark.parametrize(
+    "subject",
+    [
+        # The words of Art. 6 Abs. 3 UAbs. 2 MiCAR, without "des Kryptowerts", which Table 2 field 02 adds.
+        "Die Person, die die Zulassung zum Handel beantragt,",
+        # A name between the person and the rest of the sentence.
+        "Der Anbieter, Example AG, des Kryptowerts",
+        "Die Example AG",
+    ],
+)
+def test_german_title_ii_statement_in_other_words_is_referred_to_review(subject: str):
+    statement = f"{GERMAN_OPENING} {subject} {GERMAN_CLAUSE}"
+    finding = _finding(WhitepaperType.OTHER, TITLE_II, {"not_approved_statement": statement}, language="de")
+    assert finding.status == "review"
+    assert any("unmittelbar vor „trägt die alleinige Verantwortung“" in issue for issue in finding.issues)
+
+
+def test_german_emt_statement_naming_the_offeror_is_referred_to_review():
+    finding = _finding(WhitepaperType.EMT, EMT, {"not_approved_statement": GERMAN_STATEMENT}, language="de")
+    assert finding.status == "review"
+    assert any(
+        "der emittent des kryptowerts trägt die alleinige verantwortung" in issue for issue in finding.issues
+    )
 
 
 @pytest.mark.parametrize("wp_type, rule_id", [(WhitepaperType.OTHER, TITLE_II), (WhitepaperType.EMT, EMT)])
-def test_german_statement_is_referred_to_review_until_the_wording_is_verified(
-    wp_type: WhitepaperType, rule_id: str
-):
-    finding = _finding(wp_type, rule_id, {"not_approved_statement": GERMAN_ROUTING_FIXTURE}, language="de")
+def test_german_paraphrase_is_referred_to_review(wp_type: WhitepaperType, rule_id: str):
+    paraphrase = (
+        "Keine Aufsichtsbehörde hat dieses Dokument geprüft. Der Emittent des Kryptowerts trägt die alleinige "
+        "Verantwortung für den Inhalt dieses Kryptowerte-Whitepapers."
+    )
+    finding = _finding(wp_type, rule_id, {"not_approved_statement": paraphrase}, language="de")
     assert finding.status == "review"
-    assert finding.rule.severity is Severity.BLOCKER
-    assert any("nicht gegen die deutsche Fassung im Amtsblatt geprüft" in issue for issue in finding.issues)
+    assert any("von keiner zuständigen behörde eines mitgliedstaats" in issue for issue in finding.issues)
+
+
+@pytest.mark.parametrize("wp_type, rule_id", [(WhitepaperType.OTHER, TITLE_II), (WhitepaperType.EMT, EMT)])
+def test_german_opening_without_the_responsibility_sentence_is_referred_to_review(wp_type, rule_id):
+    finding = _finding(wp_type, rule_id, {"not_approved_statement": GERMAN_OPENING}, language="de")
+    assert finding.status == "review"
+    assert any(issue.startswith("Fehlende Begriffe: ") for issue in finding.issues)
+
+
+@pytest.mark.parametrize(
+    ("wp_type", "rule_id", "subject"),
+    [(WhitepaperType.OTHER, TITLE_II, "The offeror"), (WhitepaperType.EMT, EMT, "The issuer")],
+)
+def test_statement_in_the_other_language_than_the_draft_is_referred_to_review(wp_type, rule_id, subject):
+    # The draft's language decides which wording the rule checks.
+    english = _finding(wp_type, rule_id, {"not_approved_statement": _statement(subject)}, language="de")
+    assert english.status == "review"
+    assert any(issue.startswith("Fehlende Begriffe: ") for issue in english.issues)
+    german = _finding(wp_type, rule_id, {"not_approved_statement": GERMAN_STATEMENT}, language="en")
+    assert german.status == "review"
+
+
+@pytest.mark.parametrize("value", ["ja", "Nein"])
+def test_a_german_yes_no_field_value_is_not_read_as_the_statement(value: str):
+    finding = _finding(WhitepaperType.OTHER, TITLE_II, {"not_approved_statement": value}, language="de")
+    assert finding.status == "review"
+    assert any("nur einen Ja/Nein-Wert" in issue for issue in finding.issues)
 
 
 def test_absent_german_statement_still_fails_closed():
@@ -281,15 +375,16 @@ def test_abbreviated_and_german_headings_route_to_the_statement(tmp_path: Path, 
     assert whitepaper.section("not_approved_statement") == "Statement text."
 
 
-def test_german_first_paragraph_is_routed_and_referred_to_review(tmp_path: Path):
+def test_german_first_paragraph_is_routed_and_passes(tmp_path: Path):
     path = tmp_path / "entwurf.md"
     path.write_text(
-        f"{GERMAN_ROUTING_FIXTURE}\n\n# Zusammenfassung\nDie wesentlichen Informationen.\n", encoding="utf-8"
+        f"{GERMAN_STATEMENT}\n\n# Zusammenfassung\nDie wesentlichen Informationen.\n", encoding="utf-8"
     )
     whitepaper = load_whitepaper(path, WhitepaperType.OTHER)
+    assert whitepaper.language == "de"
     statement = next(f for f in lint_whitepaper(whitepaper).findings if f.rule.rule_id == TITLE_II)
-    assert statement.status == "review"
-    assert statement.word_count > 0
+    assert statement.status == "pass", statement.issues
+    assert whitepaper.section("not_approved_statement") == GERMAN_STATEMENT
 
 
 @patch("pypdf.PdfReader")
@@ -782,7 +877,7 @@ def test_pdf_statement_cut_off_after_a_connective_ends_at_the_heading(mock_reade
 
 
 # A statement field left as a placeholder is reported missing, as any placeholder-only section is,
-# also in a German draft, whose real statement is referred to review.
+# also in a German draft.
 @pytest.mark.parametrize("text", ["TBD", "[\u25cf]", "noch offen"])
 @pytest.mark.parametrize(
     ("wp_type", "rule_id"), [(WhitepaperType.OTHER, TITLE_II), (WhitepaperType.EMT, EMT)]
@@ -1526,24 +1621,8 @@ def test_statement_whose_opening_wraps_before_approved_is_found(tmp_path: Path, 
 
 
 # Table 2 field 02 and Table 4 field I.02 of Implementing Regulation (EU) 2024/2984 word the German
-# responsibility sentence for each person. Set apart in bold a line per paragraph, every line stays in the
-# statement, which German drafts send to review.
-GERMAN_OPENING = (
-    "Dieses Kryptowerte-Whitepaper wurde von keiner zuständigen Behörde eines Mitgliedstaats der "
-    "Europäischen Union genehmigt."
-)
-GERMAN_CLAUSE = "trägt die alleinige Verantwortung für den Inhalt dieses Kryptowerte-Whitepapers."
-GERMAN_RESPONSIBILITY = {
-    "anbieter": (WhitepaperType.OTHER, f"Der Anbieter des Kryptowerts {GERMAN_CLAUSE}"),
-    "person": (
-        WhitepaperType.OTHER,
-        f"Die Person, die die Zulassung des Kryptowerts zum Handel beantragt, {GERMAN_CLAUSE}",
-    ),
-    "betreiber": (WhitepaperType.OTHER, f"Der Betreiber der Handelsplattform des Kryptowerts {GERMAN_CLAUSE}"),
-    "emittent": (WhitepaperType.EMT, f"Der Emittent des Kryptowerts {GERMAN_CLAUSE}"),
-}
-
-
+# responsibility sentence for each person (GERMAN_RESPONSIBILITY above). Set apart in bold a line per
+# paragraph, every line stays in the statement.
 @pytest.mark.parametrize("fmt", ["docx", "xhtml"])
 @pytest.mark.parametrize("person", sorted(GERMAN_RESPONSIBILITY))
 def test_german_responsibility_sentence_set_in_bold_a_line_per_paragraph_stays_in_the_statement(
@@ -1650,3 +1729,120 @@ def test_separator_line_above_the_statement_is_not_part_of_it(tmp_path: Path, fm
     blocks = [("plain", "* * *"), ("plain", STATUTORY), ("heading", "Summary"), ("plain", SUMMARY_BODY)]
     whitepaper = load_whitepaper(_draft(tmp_path, fmt, blocks), WhitepaperType.OTHER)
     assert " ".join(whitepaper.section("not_approved_statement").split()) == STATUTORY
+
+
+# A German draft carries the German statement (GERMAN_RESPONSIBILITY above), and its loaders find it as they find
+# the English one. The German body text is synthetic; it makes the draft read as German.
+GERMAN_SUMMARY_BODY = " ".join(
+    ["Die Zusammenfassung gibt wesentliche Informationen über das Angebot und den Kryptowert."] * 12
+)
+
+
+@pytest.mark.parametrize("fmt", FORMATS)
+@pytest.mark.parametrize("width", [40, 50])
+@pytest.mark.parametrize("person", sorted(GERMAN_RESPONSIBILITY))
+def test_german_statement_whose_opening_wraps_before_genehmigt_is_found(tmp_path: Path, fmt, width, person):
+    # A narrow column, a box or a statement set a line per paragraph breaks the opening sentence before
+    # "genehmigt", and "Kryptowerte-" / "Whitepaper" after its hyphen.
+    wp_type, sentence = GERMAN_RESPONSIBILITY[person]
+    rule_id = EMT if wp_type is WhitepaperType.EMT else TITLE_II
+    statement = f"{GERMAN_OPENING} {sentence}"
+    lines = textwrap.wrap(statement, width)
+    assert "genehmigt" not in lines[0]
+    blocks = [("plain", line) for line in lines] + [("heading", "Zusammenfassung"), ("plain", GERMAN_SUMMARY_BODY)]
+    whitepaper = load_whitepaper(_draft(tmp_path, fmt, blocks), wp_type)
+    assert whitepaper.language == "de"
+    finding = _section_findings(whitepaper)[rule_id]
+    assert finding.status == "pass", finding.issues
+    # Read as the checks read it: a word broken after its hyphen at a line end is joined.
+    joined = re.sub(r"-[ \t]*\n\s*", "-", whitepaper.section("not_approved_statement"))
+    assert " ".join(joined.split()) == statement
+    # A PDF wraps the body over lines.
+    assert " ".join(whitepaper.section("summary").split()) == GERMAN_SUMMARY_BODY
+
+
+@pytest.mark.parametrize("fmt", FORMATS)
+@pytest.mark.parametrize(
+    ("wp_type", "rule_id", "label"),
+    [
+        (WhitepaperType.OTHER, TITLE_II, "Erklärung gemäß Artikel 6 Absatz 3 der Verordnung (EU) 2023/1114"),
+        (WhitepaperType.EMT, EMT, "Erklärung gemäß Artikel 51 Absatz 3 der Verordnung (EU) 2023/1114"),
+    ],
+    ids=["title-ii", "emt"],
+)
+def test_german_statement_under_its_german_label_passes(tmp_path: Path, fmt, wp_type, rule_id, label):
+    # The German labels of Table 2 field 02 and Table 4 field I.02.
+    person = "emittent" if wp_type is WhitepaperType.EMT else "betreiber"
+    statement = f"{GERMAN_OPENING} {GERMAN_RESPONSIBILITY[person][1]}"
+    blocks = [
+        ("heading", label),
+        *[("plain", line) for line in textwrap.wrap(statement, 60)],
+        ("heading", "Zusammenfassung"),
+        ("plain", GERMAN_SUMMARY_BODY),
+    ]
+    whitepaper = load_whitepaper(_draft(tmp_path, fmt, blocks), wp_type)
+    finding = _section_findings(whitepaper)[rule_id]
+    assert finding.status == "pass", finding.issues
+    # A PDF wraps the body over lines.
+    assert " ".join(whitepaper.section("summary").split()) == GERMAN_SUMMARY_BODY
+
+
+# Regression guard for the German opening: a paragraph cut off before its full stop takes in the paragraph after it
+# only while that one carries on the opening sentence word for word.
+GERMAN_CUT_OPENING = "Dieses Kryptowerte-Whitepaper wurde von keiner zuständigen Behörde eines"
+
+
+@pytest.mark.parametrize("fmt", ["docx", "xhtml"])
+def test_cut_off_german_opening_leaves_the_next_paragraph(tmp_path: Path, fmt):
+    body = "Wesentliche Informationen über das Angebot und den Kryptowert."
+    blocks = [("heading", "Zusammenfassung"), ("plain", GERMAN_CUT_OPENING), ("plain", body)]
+    whitepaper = load_whitepaper(_draft(tmp_path, fmt, blocks), WhitepaperType.OTHER)
+    assert whitepaper.section("not_approved_statement") == GERMAN_CUT_OPENING
+    assert whitepaper.section("summary") == body
+    assert _section_findings(whitepaper)[TITLE_II].status == "review"
+
+
+@pytest.mark.parametrize(
+    ("wp_type", "rule_id", "number", "label", "person"),
+    [
+        (
+            WhitepaperType.OTHER,
+            TITLE_II,
+            "02",
+            "Erklärung gemäß Artikel 6 Absatz 3 der Verordnung (EU) 2023/1114",
+            "person",
+        ),
+        (
+            WhitepaperType.EMT,
+            EMT,
+            "I.02",
+            "Erklärung gemäß Artikel 51 Absatz 3 der Verordnung (EU) 2023/1114",
+            "emittent",
+        ),
+    ],
+    ids=["title-ii", "emt"],
+)
+def test_german_statement_in_a_numbered_field_draft_passes(tmp_path: Path, wp_type, rule_id, number, label, person):
+    statement = f"{GERMAN_OPENING} {GERMAN_RESPONSIBILITY[person][1]}"
+    rows = [
+        (number, label, statement),
+        ("A.1", "Name", "Beispiel Kryptowerte GmbH, eine erfundene Gesellschaft."),
+        ("E.1", "Öffentliches Angebot oder Zulassung zum Handel", "Öffentliches Angebot der Token."),
+        ("F.1", "Art des Kryptowerts", "Ein Utility-Token, der nur in diesem Beispiel vorkommt."),
+    ]
+    cells = "".join(f"<tr><td>{n}</td><td>{field}</td><td>{answer}</td></tr>" for n, field, answer in rows)
+    path = tmp_path / "entwurf.xhtml"
+    path.write_text(f"<html><body><table>{cells}</table></body></html>", encoding="utf-8")
+    whitepaper = load_whitepaper(path, wp_type)
+    assert statement in whitepaper.section("not_approved_statement")
+    finding = _section_findings(whitepaper)[rule_id]
+    assert finding.status == "pass", finding.issues
+
+
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_german_opening_broken_after_its_hyphen_is_read_whole(tmp_path: Path, fmt):
+    lines = ["Dieses Kryptowerte-", *textwrap.wrap(GERMAN_STATEMENT.removeprefix("Dieses Kryptowerte-"), 60)]
+    blocks = [*[("plain", line) for line in lines], ("heading", "Zusammenfassung"), ("plain", GERMAN_SUMMARY_BODY)]
+    whitepaper = load_whitepaper(_draft(tmp_path, fmt, blocks), WhitepaperType.OTHER)
+    finding = _section_findings(whitepaper)[TITLE_II]
+    assert finding.status == "pass", finding.issues
