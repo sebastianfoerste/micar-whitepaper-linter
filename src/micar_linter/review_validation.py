@@ -616,7 +616,7 @@ def _count(number: int, noun: str) -> str:
 # changes a label.
 INTERNAL_SCHEMA_VERSION = "micar-study-human-validation-internal.v1"
 ANALYSIS_PLAN_FILENAME = "analysis-plan.md"
-# analysis-plan.md section 9: B = 10,000 replicates and seed 20261014, and the draft "[10]%" limit
+# analysis-plan.md section 9: B = 10,000 replicates and seed 20261014, and the 10% limit
 # above which the bootstrap interval is reported as unstable and the Wilson interval is the headline.
 BOOTSTRAP_REPLICATES = 10_000
 BOOTSTRAP_SEED = 20261014
@@ -640,8 +640,8 @@ BLIND_WHILE_PENDING = (
 # analysis-plan.md section 4: an in-sample calibration document's cells "carry the note
 # `calibration`". A document is the calibration document when every one of its cells' notes has it.
 _CALIBRATION_NOTE = re.compile(r"(?<![\w-])calibration(?![\w-])", re.IGNORECASE)
-# The Detector row of analysis-plan.md section 2 ends "detector commit: [SHA, see step 0.4 ...]"
-# until the reviewer names the commit.
+# The Detector row of analysis-plan.md section 2 reads "detector commit:" and then the commit, or
+# "not recorded" while it names none, as under the plan's detector decision.
 _PLAN_COMMIT = re.compile(
     r"^\|\s*Detector\s*\|.*?detector commit:\s*`?(?P<sha>[0-9a-f]{7,40})`?(?![0-9a-zA-Z])",
     re.MULTILINE,
@@ -1116,7 +1116,7 @@ def detector_identity(
     if match is None:
         identity["commit_status"] = (
             f"not recorded: {findings_name} names no detector commit, and the Detector row of "
-            f"{plan_name} section 2 names no detector commit yet (step 0.4)"
+            f"{plan_name} section 2 names no detector commit (step 0.4)"
         )
         return identity
     identity.update(

@@ -135,8 +135,8 @@ def test_study_documents_type_no_precision_or_recall_figure():
         assert match is None, (name, match.group(0))
 
 
-# The analysis plan's parameters as this test reads them. Square brackets mark open draft values
-# ("[10]%"); they are optional so that the test keeps reading the plan after adoption removes them.
+# The analysis plan's parameters as this test reads them. Square brackets marked open draft values
+# (such as "[10]%" before it was decided); they are optional, so the test reads either form.
 PLAN_PATTERNS = {
     "bootstrap": (r"B = ([\d,]+) replicates; seed `?(\d+)`?", "B and the seed (section 9)"),
     "z": (r"z = \[?(\d\.\d+)\]?", "the Wilson z (section 9)"),
@@ -193,11 +193,12 @@ def test_analysis_plan_parameters_equal_the_code():
         assert analysed["analyses"][analysis]["cells"] == int(expected)
 
 
-def test_plan_patterns_read_the_adopted_wording():
-    # Adoption removes the brackets around open draft values; the patterns must still match.
+def test_plan_patterns_read_the_bracketed_and_the_plain_wording():
+    # A draft value is bracketed until it is decided ("[10]%"); the patterns read both forms.
     plan = PLAN.read_text(encoding="utf-8")
-    adopted = plan.replace("more than [10]%", "more than 10%")
-    assert int(_plan_match(adopted, "dropped").group(1)) == int(_plan_match(plan, "dropped").group(1))
+    assert "more than 10% of bootstrap replicates" in plan
+    bracketed = plan.replace("more than 10%", "more than [10]%")
+    assert int(_plan_match(bracketed, "dropped").group(1)) == int(_plan_match(plan, "dropped").group(1)) == 10
     # A section 7 row without the fallback note still gives the default count.
     row = "| Primary | the 10 processed documents without WP-007 | 135 | Headline precision and recall |"
     assert _plan_match(row, "primary").groups() == ("135", None)
