@@ -6,15 +6,19 @@ import re
 import pytest
 
 from micar_linter import citations
-from micar_linter.rules import annex_i, annex_ii, annex_iii, common
+from micar_linter.rules import RULESETS, annex_i, annex_ii, annex_iii, common, templates
 
 
 def _all_citations() -> set[str]:
     found = set()
-    for module in (annex_i, annex_ii, annex_iii, common):
+    for module in (annex_i, annex_ii, annex_iii, common, templates):
         for value in vars(module).values():
+            if isinstance(value, dict):
+                value = tuple(value.values())
             if isinstance(value, (list, tuple)):
                 found.update(r.citation for r in value if hasattr(r, "citation"))
+    # The rule sets also hold the point rules and the per-regime rules (rules/points.py, CLASSIFICATION_RULES).
+    found.update(rule.citation for rules in RULESETS.values() for rule in rules)
     return found
 
 
@@ -46,14 +50,47 @@ def _all_citations() -> set[str]:
             "Art. 54 MiCAR in conjunction with Art. 7 EMD2 (Directive 2009/110/EC)",
         ),
         ("Anhang II Teil D Nr. 10 Buchst. c MiCAR", "Annex II, Part D, point 10(c) MiCAR"),
+        (
+            "Anhang Tabelle 2 Felder 02 bis 07, Tabelle 3 Felder I.02 bis I.04 und I.06, Tabelle 4 Felder I.02 bis "
+            "I.05 und I.07 VO (EU) 2024/2984",
+            "Annex, Table 2, fields 02 to 07, Table 3, fields I.02 to I.04 and I.06, Table 4, fields I.02 to I.05 "
+            "and I.07 Regulation (EU) 2024/2984",
+        ),
+        (
+            "Anhang Tabelle 2 Feld 01, Tabelle 3 Feld I.01, Tabelle 4 Feld I.01 VO (EU) 2024/2984",
+            "Annex, Table 2, field 01, Table 3, field I.01, Table 4, field I.01 Regulation (EU) 2024/2984",
+        ),
+        ("Anhang Tabellen 1 bis 4 VO (EU) 2024/2984", "Annex, Tables 1 to 4 Regulation (EU) 2024/2984"),
+        (
+            "Art. 4 Abs. 1 und 2 i.V.m. Anhang Tabellen 2 und 3 VO (EU) 2025/422",
+            "Art. 4(1) and (2) in conjunction with Annex, Tables 2 and 3 Regulation (EU) 2025/422",
+        ),
+        (
+            "Art. 2 und 3 i.V.m. Anhang VO (EU) 2025/421",
+            "Art. 2 and 3 in conjunction with Annex to Regulation (EU) 2025/421",
+        ),
     ],
 )
 def test_known_conversions(german: str, english: str) -> None:
     assert citations.to_english(german) == english
 
 
+def test_delegated_regulation_2025_421_links_to_its_own_act() -> None:
+    citation = _rule_citation("RTS.CLASSIFICATION_DATA")
+    assert citation in _all_citations()
+    url = "https://eur-lex.europa.eu/eli/reg_del/2025/421/oj/eng"
+    assert citations.ACT_URLS["VO (EU) 2025/421"] == url
+    assert citations.source_urls(citation) == [url]
+    # "Anhang VO" is the Annex to the act, not Annex V.
+    assert "Annex V" not in citations.to_english(citation)
+
+
 def _rule_citation(rule_id: str) -> str:
-    for module in (annex_i, annex_ii, annex_iii, common):
+    for rules in RULESETS.values():
+        for rule in rules:
+            if rule.rule_id == rule_id:
+                return rule.citation
+    for module in (annex_i, annex_ii, annex_iii, common, templates):
         for value in vars(module).values():
             if isinstance(value, (list, tuple)):
                 for rule in value:
@@ -83,7 +120,7 @@ def test_corrected_rule_citations_render_in_english(rule_id: str, english: str) 
 def test_every_rule_citation_converts_cleanly(citation: str) -> None:
     english = citations.to_english(citation)
     # No German drafting terms left, no doubled punctuation.
-    for term in ("Abs.", "UAbs.", "Buchst.", "Anhang", "Teil ", "Nr.", "i.V.m.", " VO ", " und "):
+    for term in ("Abs.", "UAbs.", "Buchst.", "Anhang", "Teil ", "Nr.", "i.V.m.", " VO ", " und ", "Tabelle", "Feld", " bis "):
         assert term not in english, (term, english)
     assert ",," not in english and ", ," not in english
     # Every article and annex number survives the conversion.

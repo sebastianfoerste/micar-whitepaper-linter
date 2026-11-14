@@ -158,6 +158,9 @@ def build_sarif(report: Report, source_path: Path) -> dict:
                     "whitepaper_type": report.whitepaper_type.value,
                     "summary": _summary_counts(report),
                     "notice": "First-pass screening. Not legal advice. A pass means a check matched.",
+                    # Field-level rules that did not run on a draft without field numbers: not in the rules
+                    # list and without results, so code scanning shows them neither open nor passed.
+                    "not_run": [rule.rule_id for rule in report.not_run],
                 },
             }
         ],
@@ -213,6 +216,14 @@ def render_summary(report: Report, source_path: Path) -> str:
                 "tag completeness needs a taxonomy validator. "
                 f"[Rule page]({rule_doc_url(finding.rule.rule_id)})"
             )
+    if report.not_run:
+        # A fixed sentence with a count: no draft text, so the summary stays byte-reproducible.
+        out += [
+            "",
+            f"{len(report.not_run)} field-level checks did not run: this draft has no field numbers of "
+            "Implementing Regulation (EU) 2024/2984. They run only on drafts in the numbered-field layout "
+            "and are neither counted nor listed here.",
+        ]
     passed = [f.rule.rule_id for f in report.findings if f.passed]
     if passed:
         out += [

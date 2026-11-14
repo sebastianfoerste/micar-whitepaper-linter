@@ -35,17 +35,39 @@ _FIELD_ID = re.compile(
 # platform ..." runs to 40 words), also in German ("Teil B \u2013 Informationen über den Emittenten, ...").
 # Table 3 prints Part AA without "Part" ("AA- information on other persons ...", "AA \u2013 Gemäß Artikel 19
 # ..."), so that form needs the first word of the title: "AA-rated bonds" is body text.
+# "Gemäß", also as Swiss and Liechtenstein German and capitals write it ("Gemäss", "GEMÄSS").
+_GEMAESS = r"gem(?:ä|ae)(?:ß|ss)"
 _PART_TITLE = re.compile(
     r"^(?:(?:part|teil)\s+(?:[A-Z]|(?-i:AA))\s*[.:)\u2013\u2014-]\s*\S"
-    r"|(?-i:AA)\s*[.:)\u2013\u2014-]\s*(?:information|gemäß))",
+    rf"|(?-i:AA)\s*[.:)\u2013\u2014-]\s*(?:information|{_GEMAESS}))",
     re.I,
 )
 # A short line that opens a part without a dash ("Part B", "Part AA", "B. Issuer"); a longer line that starts
 # with a letter and a full stop is body text.
 _PART_HEADING = re.compile(r"^(?:(?:part|teil)\s+(?:[A-Z]|(?-i:AA))\b|[A-Z]\.\s+\S)", re.I)
+# A block that opens a part and so ends the field before it: a bare "Part B" or "Teil AA", or a title worded
+# as the template words it ("Part B - Information about ...", "Teil B \u2013 Informationen ...",
+# "AA \u2013 Gemäß ..."), the letter in capitals. It must fill its block (_part_opening): "Part E" in "see
+# <b>Part E</b> of this white paper" is a cross-reference, as is a line "Part E of this white paper ..." or
+# "Teil G gemäß Anhang I".
+_PART_OPENING = re.compile(
+    r"^(?:(?:part|teil)\s+(?P<letter>(?-i:AA|[A-Z]))"
+    rf"(?:\W*$|\s*[.:)\u2013\u2014-]?\s*information|\s*[.:)\u2013\u2014-]\s*{_GEMAESS})"
+    rf"|(?P<aa>(?-i:AA))\s*[.:)\u2013\u2014-]\s*(?:information|{_GEMAESS}))",
+    re.I,
+)
 # Some authors run several fields together in one paragraph ("A.1 Name: N/A A.2 Legal form: N/A").
-# The colon requirement keeps cross-references such as "see F.14" from opening a field.
-_INLINE_FIELD = re.compile(r"(?<=\s)(?=[A-Z]\.\d{1,2}\s+(?:(?![A-Z]\.\d)[^:]){1,120}:)")
+# The colon requirement keeps cross-references such as "see F.14" from opening a field. A part title of the
+# template's wording run into such a paragraph is split off too, as the opening of its part.
+_INLINE_FIELD = re.compile(
+    r"(?<=\s)(?=[A-Z]\.\d{1,2}\s+(?:(?![A-Z]\.\d)[^:]){1,120}:"
+    rf"|(?:Part|Teil)\s+(?:AA|[A-Z])\s*[.:)\u2013\u2014-]\s*(?:Information|{_GEMAESS.capitalize()}))"
+)
+# Elements that hold a block of text, and the field number a part opening never contains.
+_TEXT_BLOCKS = {
+    "p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "li", "td", "th", "dt", "dd", "caption", "pre"
+}
+_LETTERED_NUMBER = re.compile(r"(?<![\w.])[A-Z]{1,2}\.\d{1,2}(?![\w.])")
 # nav and footer hold site chrome when a white paper is published as a web page.
 _SKIPPED_TAGS = {"head", "script", "style", "noscript", "ix:header", "nav", "footer"}
 
@@ -97,7 +119,7 @@ _PART_SECTIONS: dict[WhitepaperType, dict[str, tuple[str, ...]]] = {
 # Leading fields -> section key. Table 2 numbers them 00 to 10; Tables 3 and 4 print
 # I.00 to I.07 and I.00 to I.08, which _field_id reduces to the two digits. Field 02 of
 # Table 2 and I.02 of Table 4 hold the Art. 6(3) and Art. 51(3) statement; I.02 of
-# Table 3 is the Art. 19(4) warning, because Art. 19 MiCAR prescribes no such statement.
+# Table 3 is the Art. 19(4) statement: Art. 19 MiCAR prescribes no first-page statement for an ART.
 _SUMMARY_SECTIONS: dict[WhitepaperType, dict[str, tuple[str, ...]]] = {
     WhitepaperType.OTHER: {
         "01": ("notification_date",),
@@ -205,19 +227,56 @@ def _field_id(match: re.Match[str]) -> str:
     return f"{match.group('part')}.{int(number)}"
 
 
+@dataclass(frozen=True)
+class _PartOpening:
+    """A block that opens the part with this letter ("B", "AA")."""
+
+    letter: str
+
+
+def _part_opening(element: etree._Element) -> _PartOpening | None:
+    """The part a block of text opens, if its whole text is a part opening (_PART_OPENING) and it holds no
+    other block and no field number."""
+    if _tag(element) not in _TEXT_BLOCKS:
+        return None
+    if any(_tag(inner) in _TEXT_BLOCKS for inner in element.iterdescendants()):
+        return None
+    text = element_text(element)
+    match = _PART_OPENING.match(text)
+    if match is None or _LETTERED_NUMBER.search(text):
+        return None
+    return _PartOpening(match["letter"] or match["aa"])
+
+
 def _text_nodes(
     element: etree._Element, table_rows: dict[etree._Element, NumberedField]
-) -> Iterator[str | NumberedField]:
-    """Yield text fragments in document order, with each table field row as one item.
+) -> Iterator[str | NumberedField | _PartOpening]:
+    """Yield text fragments in document order, with each table field row as one item and each block that
+    opens a part as a _PartOpening.
 
     Fragments break where text_fragments breaks them, so a word that a PDF conversion split with an
     empty spacer span comes out whole.
     """
-    for node in text_fragments([element], lambda child: child in table_rows or _tag(child) in _SKIPPED_TAGS):
+    openings: dict[etree._Element, _PartOpening] = {}
+
+    def stop(child: etree._Element) -> bool:
+        if child in table_rows or _tag(child) in _SKIPPED_TAGS:
+            return True
+        if opening := _part_opening(child):
+            openings[child] = opening
+            return True
+        return False
+
+    for node in text_fragments([element], stop):
         if isinstance(node, str):
-            yield from _INLINE_FIELD.split(node)
+            for index, piece in enumerate(_INLINE_FIELD.split(node)):
+                # A part title that the split set apart from the fields run together before it.
+                opening = _PART_OPENING.match(piece) if index else None
+                yield _PartOpening(opening["letter"] or opening["aa"]) if opening else piece
         elif node in table_rows:
             yield table_rows[node]
+        elif node in openings:
+            yield openings[node]
 
 
 def _is_part_heading(text: str) -> bool:
@@ -240,6 +299,14 @@ def extract_numbered_fields(source: Path | bytes) -> list[NumberedField]:
     contents: dict[str, list[str]] = {}
     current: str | None = None
     for node in _text_nodes(root, table_rows):
+        if isinstance(node, _PartOpening):
+            # The opening of another part ends the field before it, so an introduction between the title
+            # and the part's first field does not answer that field. The title of the field's own part, a
+            # page header that a PDF conversion repeats between a label and its answer, does not. The S
+            # fields come after the title of the last part, whatever its letter.
+            if current and current.split(".")[0] not in {node.letter, "S"}:
+                current = None
+            continue
         if isinstance(node, NumberedField):
             labels.setdefault(node.field_id, node.label)
             contents.setdefault(node.field_id, []).append(node.content)
@@ -545,3 +612,18 @@ def field_answers(fields: list[NumberedField], whitepaper_type: WhitepaperType) 
 def _printed_number(field_id: str, whitepaper_type: WhitepaperType) -> str:
     """The field number as its table prints it: Tables 3 and 4 number the leading fields I.00 to I.08."""
     return f"I.{field_id}" if whitepaper_type is not WhitepaperType.OTHER and field_id.isdigit() else field_id
+
+
+def field_labels(fields: list[NumberedField], whitepaper_type: WhitepaperType) -> dict[str, str]:
+    """The label of each field by its number as the table prints it, with the template's name split off as in
+    field_answers; "" where the field has no label. The first label of a field that occurs twice counts.
+
+    The checks of the template's data types read a field only where its label is the template's name for its
+    number, or where it has none, so a draft that numbers its fields otherwise is not checked against the
+    wrong type.
+    """
+    labels: dict[str, str] = {}
+    for field in map(_with_template_label, fields):
+        labels.setdefault(_printed_number(field.field_id, whitepaper_type), field.label.strip())
+    return labels
+

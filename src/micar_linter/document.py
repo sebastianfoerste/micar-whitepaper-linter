@@ -5,15 +5,18 @@ from __future__ import annotations
 import math
 import re
 import statistics
+from bisect import bisect_right
 from collections import Counter
 from collections.abc import Callable, Iterable
+from contextlib import suppress
 from dataclasses import dataclass, replace
 from functools import partial
 from itertools import pairwise
 from pathlib import Path
+from typing import NamedTuple
 
 from micar_linter.placeholders import is_not_applicable, is_placeholder
-from micar_linter.rules.annex_i import NOT_APPROVED_STATEMENT_EN
+from micar_linter.rules.annex_i import NOT_APPROVED_STATEMENT_DE, NOT_APPROVED_STATEMENT_EN
 
 # The start of a redemption pattern: a heading that names a risk, in English or German ("Redemption risk",
 # "Rücknahmerisiko", "Risiken beim Rücktausch"), heads a risk and does not open the redemption section, so
@@ -40,7 +43,7 @@ SECTION_PATTERNS = {
         r"\bleitungsorgan\w*",
         r"\bmanagement\s+statement\b",
         r"\bstatement\b.*\bmanagement\b",
-        # Field 03 of the summary of the Implementing Regulation (EU) 2024/2984 template, "Compliance
+        # Field 03 of Table 2 of the Implementing Regulation (EU) 2024/2984 template, "Compliance
         # statement in accordance with Article 6(6)", holds the statement of the management body.
         r"\bcompliance\s+statement\b",
     ],
@@ -132,8 +135,7 @@ SECTION_PATTERNS = {
 
 
 # Art. 6(3) and Art. 51(3) MiCAR put the statement on the first page without a heading of
-# its own, so a paragraph that opens with it is routed by its content. The German opening
-# is a routing heuristic only; the rule does not treat it as verified statutory wording.
+# its own, so a paragraph that opens with it, in English or German, is routed by its content.
 _STATEMENT_START = re.compile(
     r"^\W*(?:this\s+crypto-asset\s+white\s+paper\s+has\s+not\s+been\s+approved"
     r"|dieses\s+kryptowerte-whitepaper\s+wurde\s+von\s+keiner)\b",
@@ -143,8 +145,8 @@ _STATEMENT_START = re.compile(
 # responsible for the content. Each is about 20 words in Art. 6(3) and Art. 51(3).
 _RESPONSIBILITY = re.compile(r"\b(?:responsib|verantwort)\w*", re.IGNORECASE)
 # The responsibility sentence as Art. 6(3) and Art. 51(3) word it: the person it names, then the clause
-# "is solely responsible for the content of this crypto-asset white paper". The German pair is a
-# routing heuristic, like the German opening.
+# "is solely responsible for the content of this crypto-asset white paper" ("trägt die alleinige
+# Verantwortung für den Inhalt dieses Kryptowerte-Whitepapers").
 _RESPONSIBILITY_CLAUSE = re.compile(
     r"\bsolely\s+responsible\s+for\s+the\s+content\b|\balleinige\s+verantwortung\s+für\s+den\s+inhalt\b",
     re.IGNORECASE,
@@ -154,14 +156,19 @@ _RESPONSIBLE_PERSON = re.compile(
     re.IGNORECASE,
 )
 # The words the statutory sentence puts between the person and the clause: "of the crypto-asset is",
-# "seeking admission to trading of the crypto-asset is", "of the e-money token is", "des Kryptowerts
-# trägt die". A person named elsewhere, as in a part title above a sentence with a subject of its own
-# ("Example AG is solely responsible ..."), is not the one the clause makes responsible.
+# "seeking admission to trading of the crypto-asset is", "of the trading platform of the crypto-asset is",
+# "des Kryptowerts trägt die", ", die die Zulassung des Kryptowerts zum Handel beantragt, trägt die" and
+# "der Handelsplattform des Kryptowerts trägt die" (Table 2 field 02 and Table 4 field I.02 of Implementing
+# Regulation (EU) 2024/2984), with MiCAR's own ", die die Zulassung zum Handel beantragt," (Art. 6 Abs. 3
+# UAbs. 2). Drafting variants such as "of the e-money token is" count too. A person named elsewhere, as in
+# a part title above a sentence with a subject of its own ("Example AG is solely responsible ..."), is not
+# the one the clause makes responsible.
 _PERSON_TO_CLAUSE = re.compile(
     r"(?:\s+(?:seeking\s+admission\s+to\s+trading|of\s+the\s+trading\s+platform))?"
     r"(?:\s+of\s+the\s+[\w-]+(?:(?<=-)\s+[\w-]+)?(?:\s+tokens?)?)?\s+is\s+"
-    r"|(?:\s+(?:des|der)\s+[\w-]+(?:(?<=-)\s+[\w-]+)?)?"
-    r"(?:,\s+die\s+die\s+zulassung\s+zum\s+handel\s+beantragt,)?\s+trägt\s+die\s+",
+    r"|(?:\s+(?:des|der)\s+[\w-]+(?:(?<=-)\s+[\w-]+)?){0,2}"
+    r"(?:,\s+die\s+die\s+zulassung(?:\s+des\s+[\w-]+)?\s+zum\s+handel\s+beantragt,)?"
+    r"(?:\s+des\s+[\w-]+)?\s+trägt\s+die\s+",
     re.IGNORECASE,
 )
 # The words that end the clause, "of this crypto-asset white paper" ("dieses Kryptowerte-Whitepapers"), with
@@ -191,6 +198,20 @@ def is_statement_start(text: str) -> bool:
     return bool(_STATEMENT_START.match(text))
 
 
+# A narrow column, a box or a statement set a line per paragraph can wrap its opening words
+# ("This crypto-asset white paper has not been" / "approved by ...") over the next lines.
+_STATEMENT_START_LINES = 4
+
+
+def opens_statement(texts: list[str], index: int) -> bool:
+    """True where texts[index] opens the statement, read with the lines its opening words wrap onto."""
+    if not re.search(r"\w", texts[index]):
+        # A separator line ("---", "* * *") or a bullet above the statement is not part of it.
+        return False
+    window = "\n".join(texts[index : index + _STATEMENT_START_LINES])
+    return is_statement_start(re.sub(r"-[ \t]*\n\s*", "-", window))
+
+
 def looks_like_heading(text: str) -> bool:
     """True for a Markdown heading, or a short line without closing punctuation that names a section."""
     stripped = text.strip()
@@ -209,7 +230,8 @@ def statement_extent(lines: list[str], start: int, is_heading: Callable[[int], b
     heading heuristics would otherwise read as new section headings. The statement ends
     with its opening sentence, or with the next sentence where that one is short and says
     who is responsible. It never runs past a heading, so an incomplete or reworded
-    statement cannot swallow the sections that follow it.
+    statement cannot swallow the sections that follow it. It takes whole lines: text after
+    the statement in its last line stays with it.
 
     is_heading(index) reports a heading the loader reads from the layout, such as a DOCX
     paragraph in a Heading style or a PDF line in a heading font. A statement may be set
@@ -274,7 +296,8 @@ def statement_extent(lines: list[str], start: int, is_heading: Callable[[int], b
             return start + i
     last = line_at(first_end) if first else None
     # A responsibility sentence with every statutory word, right after the opening one, ends the statement
-    # with its last word, whatever follows it: no stop, a heading, a label, a note or a run-on.
+    # with the line of its last word, whatever follows it there or after it: no stop, a heading, a label, a
+    # note or a run-on.
     if (
         complete
         and (last is None or own.start <= last + 1)
@@ -308,15 +331,19 @@ def paragraph_statement_extent(
     """statement_extent for a loader that reads paragraphs (DOCX, XHTML) rather than wrapped lines.
 
     An opening paragraph without a full stop was cut off, unless the paragraphs after it carry on the
-    English opening sentence word for word, as a statement set a line per paragraph does. So the paragraph
-    after a cut-off opening is not taken in, whatever its first sentence.
+    English or German opening sentence word for word, as a statement set a line per paragraph does. So the
+    paragraph after a cut-off opening is not taken in, whatever its first sentence.
     """
     end = statement_extent(paragraphs, start, is_heading)
     for index in range(start + 1, end):
         if _STATEMENT_SENTENCE_END.search(" ".join(paragraphs[start:index])):
             break
-        joined = re.sub(r"^\W+", "", " ".join(" ".join(paragraphs[start : index + 1]).split()).lower())
-        if not (NOT_APPROVED_STATEMENT_EN.startswith(joined) or joined.startswith(NOT_APPROVED_STATEMENT_EN)):
+        joined = re.sub(r"-[ \t]*\n\s*", "-", "\n".join(paragraphs[start : index + 1]))
+        joined = re.sub(r"^\W+", "", " ".join(joined.split()).lower())
+        if not any(
+            opening.startswith(joined) or joined.startswith(opening)
+            for opening in (NOT_APPROVED_STATEMENT_EN, NOT_APPROVED_STATEMENT_DE)
+        ):
             return index
     return end
 
@@ -345,6 +372,8 @@ _SENTENCE_END = re.compile(r"[.!;,]$")
 # A word of four or more letters, a full stop and a capitalised word: "Risks. Holders may lose ...".
 # "A.1 Name", "5.2 Risks" and "Ledger S.A. Risks" have no such word.
 _SENTENCE_BREAK = re.compile(r"([^\W\d_]{4,})[.!?]\s+([^\W\d_])")
+# The same, from the first letter of a word only (see _sentence_breaks).
+_WORD_SENTENCE_BREAK = re.compile(rf"(?<![^\W\d_]){_SENTENCE_BREAK.pattern}")
 # Abbreviations that keep their full stop inside a heading: "5. Risks (incl. Liquidity Risks)",
 # "Quillmoor Corp. Risk Factors", "Risiken bzgl. des Tokens".
 _ABBREVIATIONS = frozenset(
@@ -380,17 +409,29 @@ _QUOTES = "\"'\u2018\u2019\u201c\u201d"
 
 @dataclass(frozen=True)
 class DocumentSections:
-    """The section texts of a DOCX or PDF draft and, apart from them, the text of its headings and its
-    whole extracted text.
+    """The section texts of a DOCX or PDF draft and, apart from them, the text of its headings, its
+    extracted text and the whole text of its file.
 
     Heading text is not section body, and some text sits in no section (before the first heading, or
-    after a line that ends a section). Regime inference reads the whole text: a heading such as
-    "Reserve of Assets" may be the only place that names the regime.
+    after a line that ends a section). Regime inference reads the extracted text (text): a heading such
+    as "Reserve of Assets" may be the only place that names the regime. COMMON.LEI_CHECK_DIGITS reads
+    the whole text of the file (document_text): for a PDF that is the extracted text, for a DOCX every w:t
+    of the body and of the headers and footers (_docx_texts: the paragraphs of tables and text boxes, tracked
+    insertions, content controls, text moved away under tracked changes and any w:t inside a tracked
+    deletion included). The sections and the extracted text of a DOCX hold only the runs and hyperlinks
+    directly in a body paragraph (python-docx's paragraph text). It also reads the same text without what a
+    reader cannot see (shown_text: _docx_texts for a DOCX, _pdf_lines for a PDF), which is empty where it
+    equals document_text. For a DOCX, heading_positions gives each heading's place among the paragraphs
+    directly in the body (python-docx's Document.paragraphs, empty ones included), which the change sets of
+    collaboration_workspace.py use to place a change under its heading.
     """
 
     sections: dict[str, str]
     headings: tuple[str, ...]
     text: str = ""
+    document_text: str = ""
+    shown_text: str = ""
+    heading_positions: tuple[int, ...] = ()
 
 
 def _words(text: str) -> list[str]:
@@ -404,10 +445,30 @@ def _max_words(text: str, marked: bool = False) -> int:
     return _MAX_MARKED_HEADING_WORDS if marked or _NUMBERING.match(text) else _MAX_HEADING_WORDS
 
 
+def _sentence_breaks(text: str) -> list[tuple[str, str]]:
+    """_SENTENCE_BREAK.findall(text), in time linear in the length of text.
+
+    findall tries a match at every letter of a word, and each try reads the word to its end before it
+    fails, so a long run of letters took time in the square of its length (a line of 40 000 letters took
+    18 s). A match runs to the end of the word it starts in, so a later letter of a word can start one only
+    where the word's first letter can: the search starts at the first letter of a word only, except right
+    after a match, which ends with the first letter of the next word, so findall goes on inside that word.
+    """
+    breaks: list[tuple[str, str]] = []
+    position = 0
+    while True:
+        found = (_SENTENCE_BREAK.match(text, position) if position else None) or _WORD_SENTENCE_BREAK.search(
+            text, position
+        )
+        if found is None:
+            return breaks
+        breaks.append((found.group(1), found.group(2)))
+        position = found.end()
+
+
 def _has_sentence_break(text: str) -> bool:
     return any(
-        letter.isupper() and word.lower() not in _ABBREVIATIONS
-        for word, letter in _SENTENCE_BREAK.findall(text)
+        letter.isupper() and word.lower() not in _ABBREVIATIONS for word, letter in _sentence_breaks(text)
     )
 
 
@@ -1009,7 +1070,7 @@ def _line_sections(lines: list[_Line], statement: bool = False) -> DocumentSecti
 
     for index, line in enumerate(lines):
         if statement and (
-            index < statement_end or index in statement_starts or is_statement_start(line.text)
+            index < statement_end or index in statement_starts or opens_statement(line_texts, index)
         ):
             if index >= statement_end:
                 statement_end = statement_extent(
@@ -1083,7 +1144,7 @@ def _line_sections(lines: list[_Line], statement: bool = False) -> DocumentSecti
             for key in current_keys if answer else ():
                 sections.setdefault(key, []).append(answer)
         previous, previous_role, previous_styled = line.text, role, styled[index]
-    return DocumentSections({k: "\n".join(v) for k, v in sections.items()}, tuple(headings), text)
+    return DocumentSections({k: "\n".join(v) for k, v in sections.items()}, tuple(headings), text, text)
 
 
 def sections_from_lines(lines: Iterable[str]) -> dict[str, str]:
@@ -1205,13 +1266,16 @@ def parse_docx(path: Path) -> DocumentSections:
     opener: str | None = None
     opener_number: str | None = None
     section_level: float | None = None
-    paragraphs = [(para, para.text.strip()) for para in doc.paragraphs if para.text.strip()]
+    body_paragraphs = doc.paragraphs
+    paragraphs = [(para, para.text.strip()) for para in body_paragraphs if para.text.strip()]
+    positions = [position for position, para in enumerate(body_paragraphs) if para.text.strip()]
+    heading_positions: list[int] = []
     paragraph_texts = [text for _, text in paragraphs]
     statement_end = 0
 
     for index, (para, text) in enumerate(paragraphs):
         texts.append(text)
-        if index < statement_end or is_statement_start(text):
+        if index < statement_end or opens_statement(paragraph_texts, index):
             if index >= statement_end:
                 # A heading as parse_docx reads one below: a Heading style, an outline level, or a label
                 # that is entirely bold or in capitals. A label marked as the statement's first paragraph
@@ -1244,6 +1308,7 @@ def parse_docx(path: Path) -> DocumentSections:
             continue
 
         headings.append(text)
+        heading_positions.append(positions[index])
         keys = match_heading_to_section(text)
         kind = _template_kind(text)
         number = _outline_number(text)
@@ -1266,7 +1331,462 @@ def parse_docx(path: Path) -> DocumentSections:
             current_keys, opener, section_level = [], kind, level
             opener_number = _opening_number(number, opener_number)
 
-    return DocumentSections({k: "\n".join(v) for k, v in sections.items()}, tuple(headings), "\n".join(texts))
+    document_text, shown_text = _docx_document_texts(doc)
+    return DocumentSections(
+        {k: "\n".join(v) for k, v in sections.items()},
+        tuple(headings),
+        "\n".join(texts),
+        document_text,
+        shown_text if shown_text != document_text else "",
+        tuple(heading_positions),
+    )
+
+
+# A colour channel at least this bright (of 1) is white or nearly so, in a DOCX run colour and a PDF fill or
+# stroke colour alike.
+_WHITE = 0.95
+
+# What hidden text that still takes up its room on the page leaves in the text as a reader sees it: a zero-width
+# space. The LEI reading takes this format character for nothing between two groups, so the groups on either
+# side read as a code split into groups ("9999SYNTH 0000ZZQ0263" as the page shows it), not as one code, and gaps
+# side by side read as one.
+_GAP = "\u200b"
+# How a DOCX run is hidden (_DocxLook.run_hidden): not at all, left out of the page (w:vanish), or laid out but
+# not seen (white, under 1 pt), which leaves a _GAP.
+_LEFT_OUT, _NOT_SEEN = 1, 2
+
+
+def _white_hex(value: str) -> bool:
+    """Whether a DOCX colour value ("FFFFFF", "auto") is white or nearly so: each channel at least _WHITE."""
+    if len(value) != 6:
+        return False
+    try:
+        return all(int(value[i : i + 2], 16) >= _WHITE * 255 for i in (0, 2, 4))
+    except ValueError:
+        return False
+
+
+# The theme colours of DrawingML (a:clrScheme) by the name WordprocessingML gives them, and the names that
+# the document settings map (w:clrSchemeMapping, Word's defaults here) onto those.
+_THEME_SLOTS = {
+    "dark1": "dk1", "light1": "lt1", "dark2": "dk2", "light2": "lt2", "accent1": "accent1",
+    "accent2": "accent2", "accent3": "accent3", "accent4": "accent4", "accent5": "accent5",
+    "accent6": "accent6", "hyperlink": "hlink", "followedHyperlink": "folHlink",
+}
+_THEME_MAPPED = {"background1": "light1", "text1": "dark1", "background2": "light2", "text2": "dark2"}
+# Word's default theme where a document has none: its light 1 is white and its dark 1 black.
+_DEFAULT_THEME = {"dk1": "000000", "lt1": "FFFFFF"}
+
+
+def _mixed(value: str, tint: str | None, shade: str | None) -> str:
+    """A hex colour with a theme tint (mixed with white: FF keeps it, 00 makes it white) or a theme shade (mixed
+    with black: FF keeps it, 00 makes it black) applied, each channel on its own."""
+    try:
+        channels = [int(value[i : i + 2], 16) for i in (0, 2, 4)]
+        if tint is not None:
+            share = int(tint, 16) / 255
+            channels = [round(255 - (255 - c) * share) for c in channels]
+        if shade is not None:
+            share = int(shade, 16) / 255
+            channels = [round(c * share) for c in channels]
+    except ValueError:
+        return value
+    return "".join(f"{c:02X}" for c in channels)
+
+
+class _DocxLook:
+    """Whether a DOCX run can be seen.
+
+    A run is hidden where w:vanish is on, where its font is under 1 pt or its characters are scaled to under
+    1 pt wide (w:sz under 2 half-points, or w:sz times the character scale w:w under 2 half-points at 100 %;
+    10 pt where no w:sz is set), or where its colour is white or nearly so (w:color, each channel at least
+    _WHITE) and no background sits behind it: a highlight (w:highlight other than none and white), run
+    shading or the shading of the table cell it stands in (w:shd: the fill of clear and patterned shading,
+    the colour of solid shading, automatic standing for black there; nil, no fill and white or nearly white
+    are no background), or, in a nested table, the shading of the cell around. A colour, fill or pattern
+    colour that names a theme colour (w:themeColor, w:themeFill, with its tint or shade, see _mixed) takes
+    it from the document's theme (light 1 is white and dark 1 black without one; a comment or processing
+    instruction in its colour scheme is passed over). A run hidden by w:vanish is left out of the page; one
+    too small or white is laid out but not seen, so it leaves a gap where it stands (_GAP).
+
+    Each property counts as set on the run, else in its character style, else in its paragraph's style (the
+    default paragraph style for a paragraph without one), else in the run properties of the table style of
+    the table it stands in (the default table style for a table without one), else in the document
+    defaults, each style with the styles it is based on. The table style counts after the paragraph style as
+    well, and the run is hidden if either order hides it. w:vanish set in any style or in the defaults
+    hides the run unless the run sets it off itself: Word toggles it, so a style that sets it off does not
+    show the run, and two styles that set it on show it in Word but not here. A cell's shading is its own
+    w:shd, else that of its table style; only a cell that has neither (no w:shd at all) shows the shading of
+    the cell around a nested table, so a nested cell's own fill, white or nil included, is its background.
+    The shading of a paragraph or a table, conditional table formatting (w:tblStylePr) and the page colour
+    are not looked at, so white text there counts as hidden."""
+
+    def __init__(self, doc) -> None:
+        from docx.oxml.ns import qn
+
+        self._qn = qn
+        self._tags = {
+            qn("w:vanish"): "vanish",
+            qn("w:sz"): "size",
+            qn("w:w"): "scale",
+            qn("w:color"): "color",
+            qn("w:highlight"): "highlight",
+            qn("w:shd"): "shading",
+        }
+        self._theme = self._theme_colours(doc)
+        styles = doc.styles.element
+        # Each style's run properties, the style it is based on and, for a table style, its cell shading.
+        self._styles: dict[str, tuple[dict[str, object], str | None, bool | None]] = {}
+        self._default: dict[str, str | None] = {"paragraph": None, "table": None}
+        for style in styles.iterchildren(qn("w:style")):
+            style_id = style.get(qn("w:styleId"))
+            if style_id is None:
+                continue
+            based_on = style.find(qn("w:basedOn"))
+            shading = style.find(f"{qn('w:tcPr')}/{qn('w:shd')}")
+            self._styles[style_id] = (
+                self._properties(style.find(qn("w:rPr"))),
+                based_on.get(qn("w:val")) if based_on is not None else None,
+                self._background(shading) if shading is not None else None,
+            )
+            kind = style.get(qn("w:type"))
+            # The last default style of a type is the default, as the standard has it.
+            if kind in self._default and style.get(qn("w:default")) in ("1", "true", "on"):
+                self._default[kind] = style_id
+        defaults = styles.find(f"{qn('w:docDefaults')}/{qn('w:rPrDefault')}/{qn('w:rPr')}")
+        self._defaults = self._properties(defaults)
+        self._resolved: dict[str | None, tuple[dict[str, object], bool, bool | None]] = {None: ({}, False, None)}
+        self._hidden: dict[tuple[object, ...], int] = {}
+
+    def _theme_colours(self, doc) -> dict[str, str]:
+        """The theme colours of a document by the names WordprocessingML gives them, as hex."""
+        from docx.opc.constants import RELATIONSHIP_TYPE
+        from docx.oxml import parse_xml
+
+        colours = dict(_DEFAULT_THEME)
+        try:
+            scheme = parse_xml(doc.part.part_related_by(RELATIONSHIP_TYPE.THEME).blob).find(
+                ".//{http://schemas.openxmlformats.org/drawingml/2006/main}clrScheme"
+            )
+        except Exception:
+            scheme = None
+        for slot in scheme if scheme is not None else ():
+            # A comment or a processing instruction in the scheme is no colour.
+            if not isinstance(slot.tag, str):
+                continue
+            name = slot.tag.rsplit("}", 1)[-1]
+            for colour in slot:
+                if not isinstance(colour.tag, str):
+                    continue
+                kind = colour.tag.rsplit("}", 1)[-1]
+                value = colour.get("val") if kind == "srgbClr" else colour.get("lastClr") if kind == "sysClr" else None
+                if kind == "sysClr" and value is None:
+                    value = {"window": "FFFFFF", "windowText": "000000"}.get(colour.get("val", ""))
+                if value is not None:
+                    colours[name] = value
+        mapping = dict(_THEME_MAPPED)
+        with suppress(Exception):
+            element = doc.settings.element.find(self._qn("w:clrSchemeMapping"))
+            if element is not None:
+                for name in mapping:
+                    key = {"background1": "bg1", "text1": "t1", "background2": "bg2", "text2": "t2"}[name]
+                    if (target := element.get(self._qn(f"w:{key}"))) in _THEME_SLOTS:
+                        mapping[name] = target
+        named = {name: colours[slot] for name, slot in _THEME_SLOTS.items() if slot in colours}
+        named |= {name: named[target] for name, target in mapping.items() if target in named}
+        return named
+
+    def _colour(self, element, value: str, theme: str, tint: str, shade: str) -> str:
+        """The colour an element's attributes give: the theme colour where one is named, else the value."""
+        qn = self._qn
+        if (name := element.get(qn(theme))) is not None and name in self._theme:
+            return _mixed(self._theme[name], element.get(qn(tint)), element.get(qn(shade)))
+        return element.get(qn(value), "")
+
+    def _background(self, shading) -> bool:
+        """Whether a w:shd puts a background behind text that is neither missing nor white (see the class)."""
+        pattern = shading.get(self._qn("w:val"), "")
+        if pattern == "nil":
+            return False
+        if pattern == "solid":
+            colour = self._colour(shading, "w:color", "w:themeColor", "w:themeTint", "w:themeShade")
+            return colour in ("", "auto") or not _white_hex(colour)
+        fill = self._colour(shading, "w:fill", "w:themeFill", "w:themeFillTint", "w:themeFillShade")
+        return fill not in ("", "auto") and not _white_hex(fill)
+
+    def _properties(self, run_properties) -> dict[str, object]:
+        """The properties of a w:rPr that can hide a run."""
+        found: dict[str, object] = {}
+        if run_properties is None:
+            return found
+        val = self._qn("w:val")
+        for child in run_properties:
+            name = self._tags.get(child.tag)
+            if name == "vanish":
+                found[name] = child.get(val, "true").lower() not in ("0", "false", "off")
+            elif name in ("size", "scale"):
+                with suppress(ValueError):
+                    found[name] = int(child.get(val, "").removesuffix("%"))
+            elif name == "color":
+                found[name] = self._colour(child, "w:val", "w:themeColor", "w:themeTint", "w:themeShade")
+            elif name == "highlight":
+                found[name] = child.get(val, "none") not in ("none", "white")
+            elif name == "shading":
+                found[name] = self._background(child)
+        return found
+
+    def _style(self, style_id: str | None) -> tuple[dict[str, object], bool, bool | None]:
+        """The run properties of a style and the styles it is based on (the style's own first, the chain
+        stopping before a style it has passed), whether any of them sets w:vanish on, and the cell shading of
+        the nearest that sets one.
+
+        Every style on the chain is resolved once: the chain is walked up to a style resolved before, and
+        resolved back down from there, so a long chain of styles each based on the one before takes linear
+        time. A chain that comes back to a style on it (a cycle) is walked round twice from its end, so that
+        each style of the cycle gets the walk that starts at it."""
+        chain: list[str] = []
+        position: dict[str, int] = {}
+        current = style_id
+        while current not in self._resolved and current not in position and current in self._styles:
+            position[current] = len(chain)
+            chain.append(current)
+            current = self._styles[current][1]
+        start = position.get(current, len(chain))
+        resolved = self._resolved.get(current, ({}, False, None)) if start == len(chain) else ({}, False, None)
+        for name in reversed(chain + chain[start:]):
+            properties, _, shading = self._styles[name]
+            resolved = (
+                {**resolved[0], **properties},
+                resolved[1] or bool(properties.get("vanish")),
+                shading if shading is not None else resolved[2],
+            )
+            self._resolved[name] = resolved
+        return self._resolved.setdefault(style_id, resolved)
+
+    def paragraph_style(self, paragraph) -> str | None:
+        """The style of a w:p: its w:pStyle, or the default paragraph style."""
+        qn = self._qn
+        style = paragraph.find(f"{qn('w:pPr')}/{qn('w:pStyle')}")
+        return style.get(qn("w:val")) if style is not None else self._default["paragraph"]
+
+    def table_style(self, table) -> str | None:
+        """The style of a w:tbl: its w:tblStyle, or the default table style."""
+        qn = self._qn
+        style = table.find(f"{qn('w:tblPr')}/{qn('w:tblStyle')}")
+        return style.get(qn("w:val")) if style is not None else self._default["table"]
+
+    def cell_background(self, cell, table_style: str | None, around: bool) -> bool:
+        """Whether a w:tc has a background behind its text (see the class); around is that of the cell around a
+        nested table, which counts only where the cell and its table style set no shading."""
+        qn = self._qn
+        shading = cell.find(f"{qn('w:tcPr')}/{qn('w:shd')}")
+        own = self._background(shading) if shading is not None else self._style(table_style)[2]
+        return around if own is None else own
+
+    def run_hidden(self, run, paragraph_style: str | None, table_style: str | None, background: bool) -> int:
+        """Whether a w:r is hidden (see the class), in a paragraph of the style, in a table of the style or none,
+        on a cell background or not: 0 where it is shown, _LEFT_OUT for w:vanish, else _NOT_SEEN."""
+        qn = self._qn
+        run_properties = run.find(qn("w:rPr"))
+        character = run_properties.find(qn("w:rStyle")) if run_properties is not None else None
+        character_style = character.get(qn("w:val")) if character is not None else None
+        direct = self._properties(run_properties)
+        key = (character_style, paragraph_style, table_style, background, *sorted(direct.items()))
+        if (hidden := self._hidden.get(key)) is None:
+            paragraph, paragraph_vanish, _ = self._style(paragraph_style)
+            character_properties, character_vanish, _ = self._style(character_style)
+            table, table_vanish, _ = self._style(table_style)
+            if "vanish" in direct:
+                vanish = bool(direct["vanish"])
+            else:
+                vanish = bool(self._defaults.get("vanish")) or paragraph_vanish or character_vanish or table_vanish
+            if vanish:
+                hidden = _LEFT_OUT
+            elif any(
+                self._unseen({**self._defaults, **first, **second, **character_properties, **direct}, background)
+                for first, second in ((table, paragraph), (paragraph, table))
+            ):
+                hidden = _NOT_SEEN
+            else:
+                hidden = 0
+            self._hidden[key] = hidden
+        return hidden
+
+    @staticmethod
+    def _unseen(properties: dict[str, object], background: bool) -> bool:
+        """Whether merged run properties make a run too small or white on no background."""
+        size = properties.get("size", 20)
+        scale = properties.get("scale", 100)
+        if isinstance(size, int) and (size < 2 or (isinstance(scale, int) and size * scale < 200)):
+            return True
+        return (
+            _white_hex(str(properties.get("color", "")))
+            and not properties.get("highlight")
+            and not properties.get("shading")
+            and not background
+        )
+
+    def mark_hidden(self, paragraph) -> bool:
+        """Whether the mark of a w:p is deleted, moved away or hidden (w:vanish on the mark itself), so that
+        Word runs the paragraph on into the next one."""
+        qn = self._qn
+        mark = paragraph.find(f"{qn('w:pPr')}/{qn('w:rPr')}")
+        if mark is None:
+            return False
+        if mark.find(qn("w:del")) is not None or mark.find(qn("w:moveFrom")) is not None:
+            return True
+        return bool(self._properties(mark).get("vanish"))
+
+
+class _PlainLook:
+    """A _DocxLook that finds every run shown, for a document whose look cannot be read (_docx_document_texts)."""
+
+    def paragraph_style(self, paragraph) -> None:
+        return None
+
+    def table_style(self, table) -> None:
+        return None
+
+    def cell_background(self, cell, table_style: str | None, around: bool) -> bool:
+        return False
+
+    def run_hidden(self, run, paragraph_style: str | None, table_style: str | None, background: bool) -> int:
+        return 0
+
+    def mark_hidden(self, paragraph) -> bool:
+        return False
+
+
+def _docx_texts(element, look: _DocxLook | _PlainLook) -> tuple[str, str]:
+    """The text of an element, a paragraph per line, and the same text as Word shows it with every tracked
+    change accepted.
+
+    The first is every w:t (tracked insertions, hyperlinks, content controls and the paragraphs of tables and
+    text boxes included), tabs, line breaks and non-breaking hyphens. Deleted text as Word writes it
+    (w:delText) and field codes are not read. Text moved away under tracked changes (a w:t inside w:moveFrom)
+    and a w:t inside w:del, which Word does not show as the accepted text, are read too.
+
+    The second leaves out what the first reads inside a w:del or a w:moveFrom and in a run that _DocxLook
+    finds hidden (with everything in it, such as a text box), and runs a paragraph whose mark is deleted,
+    moved away or hidden on into the next. A run that is laid out but not seen (_NOT_SEEN) leaves a _GAP in
+    place of its text, as it still takes up its room on the line. What stays joins as Word shows it, so a code
+    split between a run and a content control, a tracked insertion, a field result or a smart tag reads as
+    one."""
+    from docx.oxml.ns import qn
+    from lxml import etree
+
+    text, tab, breaks, hyphen, paragraph, run, removal, table, cell = (
+        qn("w:t"),
+        qn("w:tab"),
+        (qn("w:br"), qn("w:cr")),
+        qn("w:noBreakHyphen"),
+        qn("w:p"),
+        qn("w:r"),
+        (qn("w:del"), qn("w:moveFrom")),
+        qn("w:tbl"),
+        qn("w:tc"),
+    )
+    parts: list[str] = []
+    shown: list[str] = []
+    # The open w:del and w:moveFrom elements and hidden runs, the style of each open paragraph and table,
+    # whether each open cell has a background and whether each open run is hidden. gap: the open hidden run
+    # that hides the rest is laid out but not seen, and has left no _GAP yet.
+    unseen = 0
+    gap = False
+    styles: list[str | None] = []
+    tables: list[str | None] = []
+    backgrounds: list[bool] = []
+    runs: list[bool] = []
+    for event, node in etree.iterwalk(element, events=("start", "end")):
+        tag = node.tag
+        if event == "end":
+            if tag == paragraph:
+                styles.pop()
+                parts.append("\n")
+                if not unseen and not look.mark_hidden(node):
+                    shown.append("\n")
+            elif tag == run:
+                unseen -= runs.pop()
+                gap = gap and bool(unseen)
+            elif tag in removal:
+                unseen -= 1
+            elif tag == table:
+                tables.pop()
+            elif tag == cell:
+                backgrounds.pop()
+            continue
+        if tag == paragraph:
+            styles.append(look.paragraph_style(node))
+            continue
+        if tag == table:
+            tables.append(look.table_style(node))
+            continue
+        if tag == cell:
+            around = bool(backgrounds) and backgrounds[-1]
+            backgrounds.append(look.cell_background(node, tables[-1] if tables else None, around))
+            continue
+        if tag == run:
+            hidden = 0 if unseen else look.run_hidden(
+                node,
+                styles[-1] if styles else None,
+                tables[-1] if tables else None,
+                bool(backgrounds) and backgrounds[-1],
+            )
+            runs.append(bool(hidden))
+            unseen += bool(hidden)
+            gap = gap or hidden == _NOT_SEEN
+            continue
+        if tag in removal:
+            unseen += 1
+            continue
+        if tag == text:
+            piece = node.text or ""
+        elif tag == tab:
+            piece = "\t"
+        elif tag in breaks:
+            piece = "\n"
+        elif tag == hyphen:
+            piece = "-"
+        else:
+            continue
+        parts.append(piece)
+        if not unseen:
+            shown.append(piece)
+        elif gap and piece:
+            shown.append(_GAP)
+            gap = False
+    return "".join(parts), "".join(shown)
+
+
+def _docx_document_texts(doc) -> tuple[str, str]:
+    """The whole text of a DOCX, and the same text as Word shows it (_docx_texts): its body, then the headers
+    and footers that each section defines.
+
+    The text as Word shows it only ever adds issues. Where reading it fails for any reason, the whole text is
+    read alone (with _PlainLook) and returned as both, so the file is read as it would be without it."""
+    try:
+        return _docx_document_texts_by(doc, _DocxLook(doc))
+    except Exception:
+        text, _ = _docx_document_texts_by(doc, _PlainLook())
+        return text, text
+
+
+def _docx_document_texts_by(doc, look: _DocxLook | _PlainLook) -> tuple[str, str]:
+    """_docx_document_texts with the look given."""
+    texts = [_docx_texts(doc.element.body, look)]
+    for section in doc.sections:
+        for part in (
+            section.header,
+            section.first_page_header,
+            section.even_page_header,
+            section.footer,
+            section.first_page_footer,
+            section.even_page_footer,
+        ):
+            # A part linked to the previous section's has no definition of its own.
+            if not part.is_linked_to_previous:
+                texts.append(_docx_texts(part._element, look))
+    return "\n".join(text for text, _ in texts), "\n".join(shown for _, shown in texts)
 
 
 def load_from_docx(path: Path) -> dict[str, str]:
@@ -1311,17 +1831,459 @@ def _record_run(runs: list[tuple[str, _RunStyle | None]], text, cm, tm, font, si
     runs.append((str(text), _font_style(cm, tm, font, size)))
 
 
-def _pdf_lines(reader) -> list[_Line]:
-    """The non-empty text lines of a PDF, with the font and height of each where pypdf reports them.
+_IDENTITY = (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+# The text-showing operators, and the index of the string or array operand each shows.
+_SHOWS_TEXT = {b"Tj": 0, b"TJ": 0, b"'": 0, b'"': 2}
+# The device colour spaces, by the number of components that sets a colour in each.
+_DEVICE_SPACES = {"/DeviceGray": 1, "/DeviceRGB": 3, "/DeviceCMYK": 4}
+
+
+def _multiply(first, second) -> tuple[float, ...]:
+    """The product of two PDF matrices [a b c d e f], first then second."""
+    a, b, c, d, e, f = first
+    g, h, i, j, k, m = second
+    return (a * g + b * i, a * h + b * j, c * g + d * i, c * h + d * j, e * g + f * i + k, e * h + f * j + m)
+
+
+def _ink_white(space: str, components: tuple[float, ...]) -> bool:
+    """Whether a colour in a device colour space is white or nearly so: each grey or RGB component at least
+    _WHITE, each CMYK component at most 1 - _WHITE. A colour in any other space is not."""
+    if _DEVICE_SPACES.get(space) != len(components):
+        return False
+    if space == "/DeviceCMYK":
+        return all(value <= 1 - _WHITE for value in components)
+    return all(value >= _WHITE for value in components)
+
+
+def _device_space(value) -> str:
+    """The device colour space a colour space stands for: a device space itself, an ICC-based space by its
+    number of components (/N), a calibrated grey or RGB space as /DeviceGray or /DeviceRGB; the family name of
+    any other space."""
+    value = _resolved(value)
+    if isinstance(value, list) and value:
+        family = str(_resolved(value[0]))
+        if family == "/ICCBased" and len(value) > 1:
+            components = _resolved(_resolved(value[1]).get("/N"))
+            return {1: "/DeviceGray", 3: "/DeviceRGB", 4: "/DeviceCMYK"}.get(components, family)
+        return {"/CalGray": "/DeviceGray", "/CalRGB": "/DeviceRGB"}.get(family, family)
+    return str(value)
+
+
+def _reference(value) -> tuple[int, int] | None:
+    """The object number and generation of an indirect reference, or of the object it was read from."""
+    reference = value if hasattr(value, "idnum") else getattr(value, "indirect_reference", None)
+    return (reference.idnum, reference.generation) if hasattr(reference, "idnum") else None
+
+
+class _OptionalContent:
+    """Which optional content (layers) the default configuration of a PDF shows: an optional content group
+    (/OCG) is off where the configuration's /OFF array names it, or where its /BaseState is /OFF and its /ON
+    array does not name it; a membership dictionary (/OCMD) is shown as its visibility expression (/VE: /And,
+    /Or, /Not) or else its policy (/P: /AllOn, /AnyOn by default, /AnyOff, /AllOff) over its groups (/OCGs)
+    says. Anything else, and an expression nested deeper than _OC_DEPTH or read through more than
+    _OC_BUDGET times, counts as shown. Each group, membership dictionary, /OCGs array (with its policy) and
+    /VE expression is read once (_once), and each array inside a /VE expression once for each depth it is
+    reached at (_sub_expression), also where many membership dictionaries share it, so content that names the
+    same ones again and again takes linear time."""
+
+    _OC_DEPTH = 32
+    # The most groups and operators one membership dictionary is read through, so that expressions that share
+    # arrays cannot take exponential time; beyond it the content counts as shown.
+    _OC_BUDGET = 10_000
+
+    def __init__(self, reader) -> None:
+        self._budget = 0
+        self._off: set[tuple[int, int]] = set()
+        self._on: set[tuple[int, int]] = set()
+        self._base_off = False
+        # What has been read (_once), by what was read and how, with the object read, so that the identity of
+        # a direct object stays its own.
+        self._read: dict[tuple[object, str], tuple[object, bool]] = {}
+        # The expressions read (_sub_expression), by what was read and the depth, with their operands read in
+        # full so far.
+        self._arrays: dict[tuple[object, int], tuple[object, list[int], list[bool], list[bool]]] = {}
+        with suppress(Exception):
+            config = _resolved(_resolved(_resolved(reader.trailer["/Root"]).get("/OCProperties")).get("/D"))
+            self._base_off = str(config.get("/BaseState", "/ON")) == "/OFF"
+            for key, found in (("/OFF", self._off), ("/ON", self._on)):
+                for group in _resolved(config.get(key)) or ():
+                    if (reference := _reference(group)) is not None:
+                        found.add(reference)
+
+    def shown(self, value, depth: int = 0) -> bool:
+        """Whether content marked with this optional content group or membership dictionary is shown."""
+        self._budget = self._OC_BUDGET
+        try:
+            return self._once(value, "", lambda target: self._shown_as(target, depth))
+        except Exception:
+            return True
+
+    def _once(self, value, how: str, read: Callable[[object], bool]) -> bool:
+        """read(value), read once for each object (an indirect object by its object number, a direct one by
+        its identity) and how."""
+        target = _resolved(value)
+        reference = _reference(value)
+        key = (reference if reference is not None else id(target), how)
+        if key not in self._read:
+            self._read[key] = (target, read(value))
+        return self._read[key][1]
+
+    def _group_shown(self, value) -> bool:
+        reference = _reference(value)
+        if reference is None:
+            return True
+        return reference not in self._off and (not self._base_off or reference in self._on)
+
+    def _shown_as(self, value, depth: int) -> bool:
+        target = _resolved(value)
+        kind = str(target.get("/Type", "")) if hasattr(target, "get") else ""
+        if kind != "/OCMD":
+            return self._group_shown(value) if kind == "/OCG" else True
+        if target.get("/VE") is not None:
+            # Read from depth + 1 with the whole budget each time, so it reads the same each time.
+            return self._once(target.get("/VE"), "/VE", lambda expression: self._expression(expression, depth + 1))
+        policy = str(target.get("/P", "/AnyOn"))
+        return self._once(target.get("/OCGs"), policy, lambda groups: self._policy(groups, policy))
+
+    def _policy(self, value, policy: str) -> bool:
+        groups = _resolved(value)
+        groups = list(groups) if isinstance(groups, list) else [] if groups is None else [groups]
+        states = [self._group_shown(group) for group in groups if _resolved(group) is not None]
+        if not states:
+            return True
+        if policy == "/AllOn":
+            return all(states)
+        if policy == "/AnyOff":
+            return not all(states)
+        if policy == "/AllOff":
+            return not any(states)
+        return any(states)
+
+    def _expression(self, value, depth: int) -> bool:
+        """A visibility expression read from this depth, each group and operator it reads through taking one
+        from the budget. An expression (an array) is read once for each depth (_sub_expression)."""
+        self._budget -= 1
+        if depth > self._OC_DEPTH or self._budget < 0:
+            return True
+        expression = _resolved(value)
+        if not isinstance(expression, list):
+            return self._group_shown(value)
+        if not expression:
+            return True
+        return self._sub_expression(value, expression, depth)
+
+    def _sub_expression(self, value, expression: list, depth: int) -> bool:
+        """What an expression's operator (/Not, /And, /Or; any other counts as shown) gives for its operands,
+        read in order, each taking from the budget what it takes; once the budget is spent, every operand
+        left counts as shown, as reading it would give.
+
+        An expression is read once for each depth (also where many membership dictionaries share it, as
+        [/And 8 0 R] with 8 0 R a long array): the operands read in full are kept, in order, with the budget
+        each took and the value of the operator so far, and a later reading takes as many of them as the
+        budget left holds (a binary search) and reads on from there. So each operand is read in full once for
+        each depth; beyond that, a reading reads in each array at most the one operand in which the budget
+        runs out; and an expression reads as a reading from scratch would."""
+        reference = _reference(value)
+        key = (reference if reference is not None else id(expression), depth)
+        if key not in self._arrays:
+            # The expression (so that the identity of a direct one stays its own), the budget its first n
+            # operands took, whether all and whether any of them are shown, and whether the first is.
+            self._arrays[key] = (expression, [0], [True], [False])
+        _, took, every, some = self._arrays[key]
+        count = len(expression) - 1
+        read = bisect_right(took, self._budget) - 1
+        self._budget -= took[read]
+        all_shown, any_shown = every[read], some[read]
+        first = some[1] if read else True
+        while read < count and self._budget >= 0:
+            before = self._budget
+            shown = self._expression(expression[read + 1], depth + 1)
+            if read == len(took) - 1 and self._budget >= 0:
+                took.append(took[-1] + before - self._budget)
+                every.append(every[-1] and shown)
+                some.append(some[-1] or shown)
+            all_shown, any_shown = all_shown and shown, any_shown or shown
+            first = shown if read == 0 else first
+            read += 1
+        operator = str(_resolved(expression[0]))
+        if operator == "/Not":
+            return not first if count else True
+        if operator == "/And":
+            return all_shown
+        if operator == "/Or":
+            return any_shown or read < count if count else True
+        return True
+
+
+class _Ink(NamedTuple):
+    """The part of a PDF graphics state that decides whether text can be seen."""
+
+    mode: int = 0
+    size: float = 0.0
+    scale: float = 1.0
+    fill_space: str = "/DeviceGray"
+    fill: tuple[float, ...] = (0.0,)
+    stroke_space: str = "/DeviceGray"
+    stroke: tuple[float, ...] = (0.0,)
+    ctm: tuple[float, ...] = _IDENTITY
+
+
+class _PdfInk:
+    """Follows the graphics state of a PDF page through pypdf's operator visitors, to tell text that cannot be
+    seen: drawn in text render mode 3 or 7 (invisible, or a clipping path only); painted only in white or
+    nearly white (each colour the render mode paints: the fill for modes 0 and 4, the stroke for 1 and 5,
+    both for 2 and 6; a colour set with g, rg or k and their stroke forms, or with sc or scn in a device
+    colour space or one that stands for one, _device_space, named directly or through the /ColorSpace
+    resources, see _ink_white); drawn with glyphs under 1 pt high or wide on the page (the Tf size, for the
+    width times the horizontal scaling Tz, scaled by the text matrix, the current transformation matrix and
+    the matrix of each form XObject it is drawn in; the height measured across the baseline); or inside
+    marked content (BDC with the /OC tag) or a form XObject (its /OC entry) whose optional content the
+    document's default configuration does not show (_OptionalContent).
+
+    Text that is transparent, under other content, clipped away, off the page, in a pattern or in a colour
+    space other than those is not told apart. An operator whose operands this cannot read (a number too large
+    for a float among them) changes nothing here; where pypdf itself cannot read it, pypdf stops the
+    extraction. A form XObject is drawn with the state saved and restored after it, also where its entries
+    cannot be read (a /Matrix that is not an array of six numbers leaves the matrix as it was), so nothing its content sets
+    outlasts it. The visitors never raise: anything else that goes wrong sets failed, and from then on they do
+    nothing, so pypdf's own reading goes on as without them. With hide, the text of each text-showing operator
+    that cannot be seen is replaced by a _GAP before pypdf reads it (pypdf calls the visitor with the operands
+    it then reads, and builds them afresh for each extraction), so the page's text leaves it out but keeps a
+    gap where it takes up its room on the page."""
+
+    def __init__(self, resources, hide: bool, optional: _OptionalContent) -> None:
+        self.hide = hide
+        self.hidden = False
+        self.failed = False
+        self._optional = optional
+        self._state = _Ink()
+        self._saved: list[_Ink] = []
+        self._resources: list = [resources]
+        # The marked content sequences open in the content being read, whether each is optional content
+        # that is not shown, and how many of them are not shown.
+        self._marked: list[bool] = []
+        self._off = 0
+        # For each XObject being drawn: the state, the stack, the marked content and the count of sequences
+        # not shown to restore after it.
+        self._forms: list[tuple[_Ink, list[_Ink], list[bool], int]] = []
+
+    def before(self, operator: bytes, operands: list, cm, tm) -> None:
+        if not self.failed:
+            try:
+                self._before(operator, operands, tm)
+            except Exception:
+                self.failed = True
+
+    def after(self, operator: bytes, operands: list, cm, tm) -> None:
+        if not self.failed:
+            try:
+                self._after(operator)
+            except Exception:
+                self.failed = True
+
+    def _before(self, operator: bytes, operands: list, tm) -> None:
+        if operator in (b"BDC", b"BMC"):
+            off = False
+            if operator == b"BDC":
+                with suppress(Exception):
+                    off = str(operands[0]) == "/OC" and not self._optional.shown(self._marked_content(operands[1]))
+            self._marked.append(off)
+            self._off += off
+            return
+        if operator == b"EMC":
+            if self._marked:
+                self._off -= self._marked.pop()
+            return
+        state = self._state
+        try:
+            if operator in _SHOWS_TEXT:
+                if self._unseen(tm):
+                    self.hidden = True
+                    if self.hide:
+                        from pypdf.generic import ArrayObject, TextStringObject
+
+                        index = _SHOWS_TEXT[operator]
+                        if index < len(operands):
+                            gap = TextStringObject(_GAP)
+                            operands[index] = ArrayObject([gap]) if operator == b"TJ" else gap
+            elif operator == b"q":
+                self._saved.append(state)
+            elif operator == b"Q":
+                if self._saved:
+                    self._state = self._saved.pop()
+            elif operator == b"cm":
+                self._state = state._replace(ctm=_multiply(tuple(map(float, operands[:6])), state.ctm))
+            elif operator == b"Tr":
+                self._state = state._replace(mode=int(operands[0]))
+            elif operator == b"Tf":
+                self._state = state._replace(size=float(operands[1]))
+            elif operator == b"Tz":
+                self._state = state._replace(scale=float(operands[0]) / 100)
+            elif operator in (b"g", b"rg", b"k", b"G", b"RG", b"K"):
+                space = {1: "/DeviceGray", 3: "/DeviceRGB", 4: "/DeviceCMYK"}[len(operands)]
+                self._paint(operator.islower(), space, tuple(map(float, operands)))
+            elif operator in (b"cs", b"CS"):
+                space = self._space(operands[0])
+                initial = (0.0, 0.0, 0.0, 1.0) if space == "/DeviceCMYK" else (0.0,) * _DEVICE_SPACES.get(space, 1)
+                self._paint(operator == b"cs", space, initial)
+            elif operator in (b"sc", b"scn", b"SC", b"SCN"):
+                fills = operator.islower()
+                numbers = tuple(float(value) for value in operands if isinstance(value, int | float))
+                # A pattern name among the operands paints a pattern, which is not white.
+                self._paint(
+                    fills,
+                    state.fill_space if fills else state.stroke_space,
+                    numbers if len(numbers) == len(operands) else (),
+                )
+            elif operator == b"Do":
+                self._enter_form(operands[0])
+        except Exception:
+            # An operand this cannot read (a number too large for a float, a missing resource) leaves the state
+            # as it was: each branch changes it only once it has read all it needs (Do saves the state first,
+            # so that it is restored after the XObject, _enter_form).
+            pass
+
+    def _after(self, operator: bytes) -> None:
+        if operator == b"Do" and self._forms:
+            self._state, self._saved, self._marked, self._off = self._forms.pop()
+            self._resources.pop()
+
+    def _marked_content(self, properties):
+        """The optional content a BDC names: its property list, inline or named in the /Properties resources."""
+        if hasattr(properties, "keys"):
+            return properties
+        resources = _resolved(self._resources[-1]) or {}
+        named = _resolved(resources.get("/Properties")) or {}
+        return named.raw_get(properties) if hasattr(named, "raw_get") else named.get(properties)
+
+    def _space(self, name) -> str:
+        """The colour space a cs or CS operand names (_device_space), through the /ColorSpace resources."""
+        name = str(name)
+        if name in _DEVICE_SPACES or name == "/Pattern":
+            return name
+        resources = _resolved(self._resources[-1]) or {}
+        spaces = _resolved(resources.get("/ColorSpace")) or {}
+        value = spaces.get(name)
+        return name if value is None else _device_space(value)
+
+    def _paint(self, fills: bool, space: str, components: tuple[float, ...]) -> None:
+        if fills:
+            self._state = self._state._replace(fill_space=space, fill=components)
+        else:
+            self._state = self._state._replace(stroke_space=space, stroke=components)
+
+    def _enter_form(self, name) -> None:
+        """Before an XObject: the state is saved first, before anything of the XObject is read, so that after
+        it the state is restored whatever its content set, also where its entries cannot be read (an image
+        draws no content, and leaves the state as it was). A form's content draws with its own resources and
+        matrix, and is not shown where its optional content is not. An entry that cannot be read changes
+        nothing for its content: resources that cannot be read (not a dictionary, or empty) are those of the content
+        around it, and a matrix that is not an array of six numbers leaves the matrix as it was."""
+        self._forms.append((self._state, self._saved, self._marked, self._off))
+        self._saved = []
+        self._marked = []
+        outer = self._resources[-1]
+        self._resources.append(outer)
+        resources = _resolved(outer) or {}
+        xobject = _resolved(_resolved(resources.get("/XObject")).get(name))
+        own = _resolved(xobject.get("/Resources"))
+        # Resources that cannot be read (not a dictionary, or empty) are those of the content around it.
+        self._resources[-1] = own if isinstance(own, dict) and own else outer
+        off = xobject.get("/OC") is not None and not self._optional.shown(xobject.raw_get("/OC"))
+        self._marked = [off]
+        self._off += off
+        matrix = _resolved(xobject.get("/Matrix")) or _IDENTITY
+        # A matrix that is not an array of six numbers (a string of six digits is none) cannot be read, and is
+        # not read any further.
+        if not isinstance(matrix, (list, tuple)) or len(matrix) != len(_IDENTITY):
+            raise ValueError("a form matrix is an array of six numbers")
+        numbers = [_resolved(value) for value in matrix]
+        if not all(isinstance(value, (int, float)) and not isinstance(value, bool) for value in numbers):
+            raise ValueError("a form matrix is an array of six numbers")
+        self._state = self._state._replace(ctm=_multiply(tuple(map(float, numbers)), self._state.ctm))
+
+    def _unseen(self, tm) -> bool:
+        state = self._state
+        if self._off or state.mode in (3, 7):
+            return True
+        a, b, c, d, _, _ = _multiply(tuple(map(float, tm)), state.ctm)
+        along = math.hypot(a, b)
+        # The glyphs' width along the baseline and their height across it.
+        if abs(state.size * state.scale) * along < 1 or abs(state.size) * abs(a * d - b * c) < along:
+            return True
+        painted = []
+        if state.mode in (0, 2, 4, 6):
+            painted.append(_ink_white(state.fill_space, state.fill))
+        if state.mode in (1, 2, 5, 6):
+            painted.append(_ink_white(state.stroke_space, state.stroke))
+        return bool(painted) and all(painted)
+
+
+# Whitespace and gaps at either end of a line.
+_LINE_EDGES = re.compile(rf"^[\s{_GAP}]+|[\s{_GAP}]+$")
+
+
+def _shown_lines(text: str) -> list[str]:
+    """The lines of a page's text as shown, without whitespace and gaps (_GAP) at either end; a line of only
+    those is left out, as an empty one is."""
+    return [line for raw in text.splitlines() if (line := _LINE_EDGES.sub("", raw))]
+
+
+def _page_resources(page):
+    """The resources of a page, its own or those it inherits from the page tree; None where a /Parent is no
+    dictionary."""
+    node = page
+    for _ in range(64):
+        if not isinstance(node, dict):
+            break
+        if "/Resources" in node:
+            return node["/Resources"]
+        node = _resolved(node.get("/Parent"))
+    return None
+
+
+def _pdf_lines(reader) -> tuple[list[_Line], str]:
+    """The non-empty text lines of a PDF, with the font and height of each where pypdf reports them, and the
+    same text without what cannot be seen (_PdfInk), or "" where nothing on any page is hidden.
 
     The text visitor of pypdf reports each run of text with its font and position. Where the runs do not
     add up to the extracted page text (form XObjects, right-to-left text), that page goes by line shape
-    alone.
+    alone. A page that draws text that cannot be seen is read a second time, without that text.
+
+    The text without what cannot be seen only ever adds issues. Where reading it fails for any reason (a
+    visitor fails, or the second reading raises), it is dropped for the whole file and the pages that follow
+    are read without the visitors, so the file is read as it would be without it.
     """
     lines: list[_Line] = []
+    shown: list[str] = []
+    any_hidden = failed = False
+    optional = _OptionalContent(reader)
     for number, page in enumerate(reader.pages):
         runs: list[tuple[str, _RunStyle | None]] = []
-        text = page.extract_text(visitor_text=partial(_record_run, runs)) or ""
+        ink = None
+        if not failed:
+            try:
+                ink = _PdfInk(_page_resources(page), False, optional)
+            except Exception:
+                failed = True
+        visitors = {} if ink is None else {"visitor_operand_before": ink.before, "visitor_operand_after": ink.after}
+        text = page.extract_text(visitor_text=partial(_record_run, runs), **visitors) or ""
+        failed = ink is None or ink.failed
+        if not failed and ink is not None:
+            try:
+                if ink.hidden:
+                    any_hidden = True
+                    hiding = _PdfInk(_page_resources(page), True, optional)
+                    page_shown = (
+                        page.extract_text(visitor_operand_before=hiding.before, visitor_operand_after=hiding.after)
+                        or ""
+                    )
+                    failed = hiding.failed
+                    shown.extend(_shown_lines(page_shown))
+                else:
+                    shown.extend(raw.strip() for raw in text.splitlines() if raw.strip())
+            except Exception:
+                failed = True
         styles = (
             [style for run, style in runs for _ in run] if "".join(run for run, _ in runs) == text else []
         )
@@ -1337,7 +2299,7 @@ def _pdf_lines(reader) -> list[_Line]:
                 lines.append(_Line(raw.strip(), size, bold, number, letters[0][2]))
             else:
                 lines.append(_Line(raw.strip(), page=number))
-    return lines
+    return lines, "\n".join(shown) if any_hidden and not failed else ""
 
 
 def parse_pdf(path: Path) -> DocumentSections:
@@ -1358,7 +2320,8 @@ def parse_pdf(path: Path) -> DocumentSections:
             "PDF support requires the optional 'pdf' extra: pip install micar-whitepaper-linter[pdf]"
         ) from exc
 
-    return _line_sections(_pdf_lines(pypdf.PdfReader(path)), statement=True)
+    lines, shown_text = _pdf_lines(pypdf.PdfReader(path))
+    return replace(_line_sections(lines, statement=True), shown_text=shown_text)
 
 
 def load_from_pdf(path: Path) -> dict[str, str]:
@@ -1378,7 +2341,7 @@ def load_from_markdown(path: Path) -> dict[str, str]:
     statement_end = 0
 
     for index, line_clean in enumerate(lines):
-        if index < statement_end or is_statement_start(line_clean):
+        if index < statement_end or opens_statement(lines, index):
             if index >= statement_end:
                 statement_end = statement_extent(lines, index)
             sections.setdefault("not_approved_statement", []).append(line_clean)

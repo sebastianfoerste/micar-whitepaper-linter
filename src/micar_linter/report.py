@@ -82,6 +82,8 @@ def render_json(report: Report) -> str:
             "total": len(report.findings),
         },
         "warnings": list(report.warnings),
+        # The rules that did not run on this draft (field-level rules without field numbers): no finding.
+        "not_run": [rule.rule_id for rule in report.not_run],
         "findings": [
             {
                 "rule_id": f.rule.rule_id,

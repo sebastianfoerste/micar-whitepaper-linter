@@ -8,6 +8,7 @@ import hashlib
 import json
 import re
 import sys
+from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -822,6 +823,17 @@ def main_study_batch(argv: list[str] | None = None) -> int:
         annex=args.annex,
         sample_size=args.sample_size,
     )
+    if not payload["results"]:
+        # A run that processed no document (most often a missing cache) writes nothing, so it cannot
+        # replace committed findings with an empty sample.
+        reasons = Counter(str(item.get("exclusion_reason", "")) for item in payload["excluded_documents"])
+        listed = ", ".join(f"{reason} ({count})" for reason, count in sorted(reasons.items())) or "none"
+        print(
+            f"No document was processed, so no findings were written. Exclusion reasons: {listed}. "
+            "Check that --cache points to the cached white papers.",
+            file=sys.stderr,
+        )
+        return 1
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(render_study_findings_json(payload), encoding="utf-8")
     csv_path = args.out.with_suffix(".csv")
