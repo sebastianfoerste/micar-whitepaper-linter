@@ -51,8 +51,8 @@ MATRIX_NAME = "human-review-matrix.csv"
 BLINDED_NAME = "human-review-blinded.csv"
 SECOND_NAME = "human-review-second.csv"
 ADJUDICATION_NAME = "human-review-adjudication.csv"
-# The seed and the share of non-flagged cells for --second-sheet, as the draft analysis plan
-# (section 6) proposes them; the adopted plan fixes both before any label is entered.
+# The command's own defaults for --second-sheet, not the plan's: analysis-plan.md section 6 decides
+# --second-all, or --fraction 0.2 with a seed from the commit that records the completed first review.
 DEFAULT_SEED = 20261014
 DEFAULT_FRACTION = Fraction(1, 5)
 
