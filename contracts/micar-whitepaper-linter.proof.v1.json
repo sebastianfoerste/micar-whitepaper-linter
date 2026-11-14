@@ -1,7 +1,7 @@
 {
   "schema": "micar-whitepaper-linter.proof.v1",
   "productId": "micar-whitepaper-linter",
-  "proofGeneratedOn": "2026-10-26",
+  "proofGeneratedOn": "2026-11-02",
   "capabilities": [
     "deterministic-whitepaper-lint",
     "review-table-export",
@@ -16,6 +16,7 @@
     "micar-lint-batch",
     "micar-study-report",
     "micar-review-summary",
+    "micar-study-verify-cache",
     "action.yml"
   ],
   "outputContract": "micar-whitepaper-linter.review-control-profile.v1",

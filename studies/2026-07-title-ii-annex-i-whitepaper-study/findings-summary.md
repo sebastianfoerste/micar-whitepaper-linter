@@ -65,7 +65,7 @@ The study checks 15 deterministic controls: 12 high-signal Annex I disclosure fi
 
 ## Human validation gate
 
-The 150 document-rule cells are listed in `human-review-matrix.csv`. No precision, recall, false-positive, or false-negative claim is made until qualified reviewers label every cell under `review-protocol.md` and `micar-review-summary --require-complete` exits successfully.
+Reviewers label the 150 document-rule cells in `human-review-blinded.csv`, which omits the detector outcomes, following `REVIEWING.md`. `human-review-matrix.csv` already holds the detector outcomes, so reviewers do not open it while labelling; `scripts/build_review_matrix.py --merge-blinded` copies the labels into it once every blinded cell is labelled. No precision, recall, false-positive, or false-negative claim is made until qualified reviewers label every cell under `review-protocol.md` and `micar-review-summary --require-complete` exits successfully.
 
 Document byte hashes and extraction metadata are recorded in `document-provenance.json`.
 
@@ -83,6 +83,9 @@ Document byte hashes and extraction metadata are recorded in `document-provenanc
 | `ANNEX_I_PART_A_08_MANAGEMENT_BODY` | 1 |
 | `ANNEX_I_PART_D_03_IMPLEMENTATION_PERSONS` | 1 |
 | `ANNEX_I_PART_F_02_CHARACTERISTICS_FUNCTIONALITY` | 1 |
+| `ARTICLE_6_05_MANDATORY_WARNINGS` | 1 |
+| `ARTICLE_6_06_MANAGEMENT_BODY_STATEMENT` | 1 |
+| `ARTICLE_6_07_SUMMARY` | 1 |
 
 ## Excluded documents
 

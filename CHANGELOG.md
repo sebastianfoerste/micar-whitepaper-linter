@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- `micar-study-verify-cache` checks offline that the cached source files of the Title II study are the bytes recorded in `document-provenance.json`: exit 0 when every document matches, 1 when one differs, 3 when none differs but one is missing. It writes nothing unless given `--json-out`. The proof contract names it.
+- `codebook.md` and `analysis-plan.md` in the Title II study are unsigned drafts of the review codebook and the analysis plan, with the signing order for adopting them on `main`. They record the decisions of 10 November 2026 (detector freeze, legal readings checked against the Official Journal, second review, label publication), which become final only with the owner's adoption commit. They follow the labelling path of `REVIEWING.md` and defer the reference standard to the owner's record in `review-protocol.md`.
+
+### Fixed
+- `micar-study-report` lists every flagged rule under "Most frequent detector flags"; before, the table stopped at ten rows and left out the three Article 6 rules. Its "Human validation gate" paragraph takes the cell count from the findings and names `human-review-blinded.csv`, `REVIEWING.md` and `build_review_matrix.py --merge-blinded`. `findings-summary.md` is re-rendered, and a test now fails when it differs from a fresh render. The playground wheel is rebuilt.
+
 ## 1.3.0 - 2026-11-13
 
 The tag `v1.3.0` marks the PyPI package and the GitHub Action, and `v1` moves to it. Compared with `1.2.1`, this release aligns rule terms and citations with EUR-Lex Official Journal checks across MiCAR, Implementing Regulation (EU) 2024/2984 and Delegated Regulations (EU) 2025/421 and 2025/422, adds first-page statement and contact-detail checks in English and German, adds field-level template, sustainability and ESMA-classification rules for numbered-field XHTML drafts, unpacks saved iXBRL viewer pages in memory, and hardens LEI, regime-inference, placeholder and tracked-DOCX handling.
