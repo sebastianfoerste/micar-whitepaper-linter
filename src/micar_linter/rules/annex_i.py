@@ -4,11 +4,12 @@ Reference: Anhang I VO (EU) 2023/1114 i.V.m. Art. 6 MiCAR.
 
 Annex I is structured as Parts A through I. Each Part bundles point-level
 disclosure requirements. The rules below are scaffolded at the Part level.
-ANNEX_I.A.P6, for the contact details of Part A point 6, is the first point
-rule (ADR 0005); other point-level granularity (e.g. Annex I, Part D,
-point 5) is left as a deliberate extension point - those interpretive calls
-are the practising lawyer's contribution and are tracked in the project
-issues.
+ANNEX_I.A.P6, for the contact details of Part A point 6, has its own check
+(ADR 0005); the point rules for the other points that a field of Table 2 of
+Implementing Regulation (EU) 2024/2984 carries are built in rules/points.py
+from point_fields.py and placed after their Part rule in RULESETS. They check
+whether the fields are filled; whether the content meets a point remains the
+practising lawyer's call.
 
 ANNEX_I.J covers the sustainability disclosure under Art. 6(1), first
 subparagraph, point (j) MiCAR, which the template in Implementing Regulation
@@ -22,16 +23,23 @@ from micar_linter.rules.terms import ADDRESS_DE, ADDRESS_EN, COURT_DE, OFFER_DE,
 
 # Art. 6(3) MiCAR prescribes this first-page statement word for word. "Offeror" is
 # replaced by "person seeking admission to trading" or "operator of the trading
-# platform" where that person drew up the white paper, so the English check takes the
-# part of the sentence common to all three. The English wording was checked against the
-# EUR-Lex texts of Art. 6(3) and 51(3) MiCAR and of Table 2 field 02 and Table 4 field
-# I.02 of Implementing Regulation (EU) 2024/2984 (CELEX 32023R1114 and 32024R2984, as
-# mirrored in legalize-dev/legalize-eu). The linter cannot see page placement. The German
-# wording is not yet verified, so German drafts go to review
-# (linter.NOT_APPROVED_STATEMENT_RULE_IDS).
+# platform" where that person drew up the white paper, so the check takes the part of the
+# responsibility sentence common to all three, and linter.py checks the person before it.
+# Table 2 field 02 of Implementing Regulation (EU) 2024/2984 prints the sentence for each
+# person, in German too: "Der Anbieter des Kryptowerts", "Die Person, die die Zulassung des
+# Kryptowerts zum Handel beantragt," and "Der Betreiber der Handelsplattform des
+# Kryptowerts" each "trägt die alleinige Verantwortung für den Inhalt dieses
+# Kryptowerte-Whitepapers". Both wordings were read in the Official Journal texts of
+# Art. 6(3) and 51(3) MiCAR and of Table 2 field 02 and Table 4 field I.02 of 2024/2984, in
+# English and German, on EUR-Lex on 2026-11-10 (CELEX 32023R1114 and 32024R2984). The
+# linter cannot see page placement.
 NOT_APPROVED_STATEMENT_EN = (
     "this crypto-asset white paper has not been approved by any competent authority "
     "in any member state of the european union"
+)
+NOT_APPROVED_STATEMENT_DE = (
+    "dieses kryptowerte-whitepaper wurde von keiner zuständigen behörde eines "
+    "mitgliedstaats der europäischen union genehmigt"
 )
 NOT_APPROVED_STATEMENT_LABEL = (
     "First-page statement that no competent authority has approved the white paper "
@@ -47,6 +55,10 @@ ANNEX_I_RULES: tuple[Rule, ...] = (
         required_terms=(
             NOT_APPROVED_STATEMENT_EN,
             "of the crypto-asset is solely responsible for the content of this crypto-asset white paper",
+        ),
+        required_terms_de=(
+            NOT_APPROVED_STATEMENT_DE,
+            "trägt die alleinige verantwortung für den inhalt dieses kryptowerte-whitepapers",
         ),
         min_words=0,
         severity=Severity.BLOCKER,

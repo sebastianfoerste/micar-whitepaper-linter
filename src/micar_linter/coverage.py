@@ -33,6 +33,7 @@ def build_coverage_matrix(report: Report, generated_at: datetime | None = None) 
         "coverage": rows,
         "blockers": blockers,
         "warnings": list(report.warnings),
+        "not_run": [rule.rule_id for rule in report.not_run],
         "review_notice": (
             "Coverage matrix is a deterministic disclosure checklist. "
             "It is not legal advice, a signature, a notification, or filing approval."

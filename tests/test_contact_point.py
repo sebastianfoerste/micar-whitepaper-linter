@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 from micar_linter.contact import has_email_address, has_period_in_days, has_telephone_number
-from micar_linter.linter import lint_whitepaper
+from micar_linter.linter import CONTACT_POINT_RULE_IDS, lint_whitepaper
 from micar_linter.numbered_fields import NumberedField, field_answers
 from micar_linter.rules import RULESETS
 from micar_linter.template_fields import FIELD_NAMES
@@ -68,12 +68,13 @@ def _finding(report, rule_id: str):
     return next(finding for finding in report.findings if finding.rule.rule_id == rule_id)
 
 
-def test_the_point_rules_run_for_annex_i_and_iii_only():
+def test_the_contact_point_rules_run_for_annex_i_and_iii_only():
     ids = {regime: {rule.rule_id for rule in rules} for regime, rules in RULESETS.items()}
     assert "ANNEX_I.A.P6" in ids[OTHER]
     assert "ANNEX_III.A.P6" in ids[EMT]
-    # Annex II Part A has no such point.
-    assert not any(rule_id.endswith(".P6") for rule_id in ids[WhitepaperType.ART])
+    # Annex II Part A has no contact point; its point 6 is the parent company (rules/points.py).
+    assert not CONTACT_POINT_RULE_IDS & ids[WhitepaperType.ART]
+    assert "ANNEX_II.A.P6" in ids[WhitepaperType.ART]
 
 
 @pytest.mark.parametrize(

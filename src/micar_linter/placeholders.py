@@ -26,11 +26,25 @@ _NOT_APPLICABLE = re.compile(
 )
 
 
+# The starter template's note to the drafter ("REPLACE: Plain-language summary with ..."): the section is
+# still to be written, however many words the note has.
+_TEMPLATE_NOTE = re.compile(r"\s*REPLACE:")
+
+
+def is_template_note(text: str) -> bool:
+    """True if the text opens with the starter template's "REPLACE:" marker (in capitals, as the template
+    writes it)."""
+    return bool(_TEMPLATE_NOTE.match(text))
+
+
 def is_placeholder(text: str) -> bool:
-    """True if the text holds a placeholder and nothing else but punctuation: "TBD.", "[●]", "TBC / TBA".
+    """True if the text holds a placeholder and nothing else but punctuation: "TBD.", "[●]", "TBC / TBA",
+    or is still the starter template's note to the drafter ("REPLACE: ...", is_template_note).
 
     A short real answer is not one: "TBC Bank", "XXL Logistics", "Date of notification: TBD" keep words.
     """
+    if is_template_note(text):
+        return True
     return bool(_PLACEHOLDER.search(text)) and not re.search(r"\w", _PLACEHOLDER.sub("", text))
 
 

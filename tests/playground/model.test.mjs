@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
-import { MAX_BYTES, MAX_XHTML_BYTES, displayCitation, draftFormat, validateDraft, formatDraft, parseDraft, reportIsCurrent, ruleDocHref, sectionSelection, selectFindings } from "../../docs/playground/model.mjs";
+import { MAX_BYTES, MAX_XHTML_BYTES, checksLabel, displayCitation, draftFormat, findingScope, inspectableSection, validateDraft, formatDraft, parseDraft, reportIsCurrent, ruleDocHref, sectionSelection, selectFindings } from "../../docs/playground/model.mjs";
 
 const valid = { type: "art", sections: { summary: "A synthetic draft." } };
 const parse = data => parseDraft(JSON.stringify(data));
@@ -76,6 +76,24 @@ test("section navigation works on the draft as written and follows JSON's last-d
   assert.deepEqual(member(shadowed, sectionSelection(shadowed, "summary")), { summary: "used" });
 });
 
+test("LEI findings point to no section, wherever the LEI is", () => {
+  // As the engine reports them for a draft whose only LEI is in "offeror" and that has no "issuer" section:
+  // both LEI rules are anchored to "issuer" with 0 words.
+  const text = JSON.stringify({ type: "other", sections: { offeror: "Synthetic Offeror GmbH. LEI: 9999SYNTH0000ZZQ0166." } });
+  const lei = ["COMMON.LEI_CHECK_DIGITS", "COMMON.LEI_CONSISTENCY"].map(rule_id => ({ rule_id, status: "pass", section: "issuer", word_count: 0 }));
+  assert.equal(sectionSelection(text, "issuer"), null);
+  for (const finding of lei) {
+    assert.equal(inspectableSection(finding, "json"), null);
+    assert.equal(findingScope(finding), "every section");
+  }
+  // Other rules keep their section; the format gate and XHTML drafts have none to select.
+  const summary = { rule_id: "COMMON.SUMMARY", status: "review", section: "summary", word_count: 12 };
+  assert.equal(inspectableSection(summary, "json"), "summary");
+  assert.equal(findingScope(summary), "summary");
+  assert.equal(inspectableSection(summary, "xhtml"), null);
+  assert.equal(inspectableSection({ rule_id: "COMMON.IXBRL_TAGGING", status: "missing", section: "ixbrl_tagging", word_count: 0 }, "json"), null);
+});
+
 test("formatting changes whitespace only", () => {
   const samples = JSON.parse(readFileSync(new URL("../../docs/playground/samples.json", import.meta.url), "utf8"));
   for (const sample of Object.values(samples)) {
@@ -116,15 +134,40 @@ test("a draft that opens with markup is XHTML and states no regime of its own", 
   assert.throws(() => validateDraft(`<html>${" ".repeat(MAX_XHTML_BYTES)}</html>`), /up to 8 MB/);
 });
 
+test("findings show the engine's English citation, and both forms are searchable", () => {
+  // The JSON report carries the canonical citation and, in citation_en, the English EU form the CLI prints.
+  const finding = {
+    rule_id: "S", status: "review", severity: "BLOCKER", label: "Summary", section: "summary", issues: [],
+    citation: "Art. 6 Abs. 7, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR",
+    citation_en: "Art. 6(7), Art. 19(6), Art. 51(6) MiCAR",
+  };
+  assert.equal(displayCitation(finding), "Art. 6(7), Art. 19(6), Art. 51(6) MiCAR");
+  assert.deepEqual(selectFindings([finding], "open", "art. 19(6)").map(f => f.rule_id), ["S"]);
+  assert.deepEqual(selectFindings([finding], "open", "19 Abs. 6").map(f => f.rule_id), ["S"]);
+  // Display only: the finding, which the exports write, keeps both strings unchanged.
+  assert.equal(finding.citation, "Art. 6 Abs. 7, Art. 19 Abs. 6, Art. 51 Abs. 6 MiCAR");
+});
+
+test("a finding without an English citation shows the canonical one", () => {
+  assert.equal(displayCitation({ citation: "Art. 6 Abs. 7 MiCAR" }), "Art. 6 Abs. 7 MiCAR");
+  assert.equal(displayCitation({ citation: "Art. 6 Abs. 7 MiCAR", citation_en: null }), "Art. 6 Abs. 7 MiCAR");
+});
+
+const decode = text => text.replaceAll("&quot;", '"').replaceAll("&#x27;", "'").replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&amp;", "&");
+
 test("display citations never alter a pinpoint", () => {
-  const citations = [
-    "Art. 6 Abs. 5, Art. 19 Abs. 4, Art. 51 Abs. 4 MiCAR",
-    "Anhang II Teil G i.V.m. Art. 35 Abs. 4, Art. 36 Abs. 4 Buchst. d, Art. 45 Abs. 3 und Art. 45 Abs. 7 Buchst. b MiCAR",
-    "Art. 6 Abs. 1 UAbs. 1 Buchst. j MiCAR i.V.m. Art. 4 VO (EU) 2025/422; Anhang Tabelle 2 Teil J VO (EU) 2024/2984",
-    "Art. 54 MiCAR i.V.m. Art. 7 EMD2 (Richtlinie 2009/110/EG)",
-  ];
-  for (const citation of citations) {
-    assert.deepEqual(displayCitation(citation).match(/\d+/g), citation.match(/\d+/g));
+  // Each rule page states the English citation and the canonical form, both from the rule (citations.to_english,
+  // which also fills citation_en in the JSON report). "UAbs. 1" becomes "first subparagraph", so its digit is
+  // spelled out, as tests/test_citations.py allows.
+  const pages = readdirSync(new URL("../../docs/rules/", import.meta.url)).filter(name => name !== "index.html");
+  assert.ok(pages.length >= 42);
+  for (const name of pages) {
+    const page = repoFile(`docs/rules/${name}`);
+    const english = decode(page.match(/<dt>Citation<\/dt><dd>([^<]+)<\/dd>/)[1]);
+    const canonical = decode(page.match(/<dt>Canonical form<\/dt><dd lang="de">([^<]+)<\/dd>/)[1]);
+    const shown = displayCitation({ citation: canonical, citation_en: english });
+    assert.equal(shown, english, name);
+    assert.deepEqual(shown.match(/\d+/g), canonical.replace(/UAbs\. \d/g, "").match(/\d+/g), name);
   }
 });
 
@@ -148,4 +191,13 @@ test("links a finding to its rule page beside the playground", () => {
   assert.equal(ruleDocHref("COMMON.SUMMARY", page + "index.html"),
     "https://example.test/micar-whitepaper-linter/rules/COMMON.SUMMARY.html");
   assert.equal(ruleDocHref("A/B?#", page), "https://example.test/micar-whitepaper-linter/rules/A%2FB%3F%23.html");
+});
+
+test("counts the field-level checks that did not run apart from the findings", () => {
+  // A JSON draft has no field numbers: those rules have no finding and are named under not_run only.
+  assert.equal(checksLabel({ summary: { total: 21 }, not_run: ["ANNEX_II.A.P1", "ITS.CODE_LISTS"] }),
+    "21 checks · 2 field-level checks not run");
+  assert.equal(checksLabel({ summary: { total: 99 }, not_run: [] }), "99 checks");
+  assert.equal(checksLabel({ summary: { total: 1 } }), "1 check");
+  assert.equal(checksLabel({ summary: { total: 5 }, not_run: ["ITS.CODE_LISTS"] }), "5 checks · 1 field-level check not run");
 });

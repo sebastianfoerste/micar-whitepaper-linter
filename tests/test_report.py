@@ -18,10 +18,10 @@ from pathlib import Path
 import pytest
 
 from micar_linter.cli import main
-from micar_linter.linter import Report, lint_whitepaper
+from micar_linter.linter import Report, lint_whitepaper, not_run_note
 from micar_linter.numbered_fields import MERGED_LABELS_NOTE
 from micar_linter.report import _TITLE_BAR, render_audit_log, render_text
-from micar_linter.review_bundle import render_signoff_page
+from micar_linter.review_bundle import render_signoff_page, write_review_bundle
 from micar_linter.review_table import build_review_table, render_review_table_markdown
 from micar_linter.rules import RULESETS
 from micar_linter.rules.base import Finding, Severity
@@ -355,8 +355,10 @@ def test_review_table_and_signoff_page_list_the_same_notes_before_their_results(
 
 
 def test_review_bundle_without_warnings_has_no_extraction_notes_section(tmp_path):
+    # A JSON draft always carries the note on the field-level checks that did not run, so drop the warnings.
     bundle = tmp_path / "bundle"
-    assert main([str(INCOMPLETE), "--review-bundle-dir", str(bundle)]) == 0
+    report = replace(lint_whitepaper(load_whitepaper(INCOMPLETE)), warnings=())
+    write_review_bundle(report, source_path=INCOMPLETE, directory=bundle)
 
     for name in ("compliance-checklist.md", "review-table.md", "reviewer-signoff.md"):
         assert "Extraction Notes" not in (bundle / name).read_text(encoding="utf-8"), name
@@ -381,14 +383,16 @@ def test_extraction_notes_show_a_section_key_from_the_draft_as_written(tmp_path)
         r"\<b\>\*y\*\</b\> \[z\](w) \`v\` \_u\_ \~t\~ \& \\' in draft sections. "
         "Ensure it matches required section keys."
     )
+    # The note on the field-level checks that did not run comes first; it is fixed text.
+    notes = [f"- {not_run_note(lint_whitepaper(load_whitepaper(INCOMPLETE)).not_run, False)}", escaped]
     log = log_path.read_text(encoding="utf-8")
-    assert _extraction_notes(log) == [escaped]
+    assert _extraction_notes(log) == notes
     assert _log_alert(log) == "> [!WARNING]\n" + LOG_BLOCKER
     _assert_sign_off_section_closes(log)
     table = (bundle / "review-table.md").read_text(encoding="utf-8")
-    assert _extraction_notes(table, REVIEW_TABLE_RESULTS) == [escaped]
+    assert _extraction_notes(table, REVIEW_TABLE_RESULTS) == notes
     signoff = (bundle / "reviewer-signoff.md").read_text(encoding="utf-8")
-    assert _extraction_notes(signoff, SIGNOFF_RESULTS) == [escaped]
+    assert _extraction_notes(signoff, SIGNOFF_RESULTS) == notes
     assert signoff.splitlines().count(SIGN_OFF_HEADING) == 1
 
 
@@ -417,6 +421,7 @@ def test_review_files_show_the_draft_title_as_written(tmp_path):
     assert _log_alert(log) == "> [!WARNING]\n" + LOG_BLOCKER
     assert _headings(log) == [
         "# MiCAR Whitepaper Compliance Review Log",
+        NOTES_HEADING,
         "## Rule Compliance Checklist",
         "## Summary of Findings",
         SIGN_OFF_HEADING,
@@ -424,11 +429,12 @@ def test_review_files_show_the_draft_title_as_written(tmp_path):
     _assert_sign_off_section_closes(log)
     table = (bundle / "review-table.md").read_text(encoding="utf-8")
     assert f"- Title: {escaped}" in table.splitlines()
-    assert _headings(table) == ["# MiCAR White Paper Review Table", "## Review Gate"]
+    assert _headings(table) == ["# MiCAR White Paper Review Table", NOTES_HEADING, "## Review Gate"]
     signoff = (bundle / "reviewer-signoff.md").read_text(encoding="utf-8")
     assert f"- Document title: {escaped}" in signoff.splitlines()
     assert _headings(signoff) == [
         "# MiCAR White Paper Reviewer Sign-off",
+        NOTES_HEADING,
         SIGNOFF_RESULTS,
         "## Blockers",
         SIGN_OFF_HEADING,

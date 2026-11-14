@@ -8,8 +8,11 @@ information are mandatory. The reserve composition rule (Annex II Part G Nos. 1 
 typically where draft white papers fail in practice.
 
 Scaffold note: this ruleset hits each Part of Annex II at the Part level. The
-practitioner extends with the point-level checks that reflect the firm's
-internal interpretation of BaFin and EBA guidance.
+point rules (ADR 0005) for the points that a field of Table 3 of Implementing
+Regulation (EU) 2024/2984 carries are built in rules/points.py from
+point_fields.py and placed after their Part rule in RULESETS; they check
+whether the fields are filled. The practitioner extends with the checks that
+reflect the firm's internal interpretation of BaFin and EBA guidance.
 """
 
 from __future__ import annotations
