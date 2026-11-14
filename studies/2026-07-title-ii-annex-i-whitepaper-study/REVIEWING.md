@@ -2,7 +2,7 @@
 
 This file sets out the order of work for labelling the 150 document-rule cells and producing precision and recall. `review-protocol.md` governs; where the two differ, follow the protocol. Run every command from the repository root after `uv sync --extra dev`.
 
-The checklist covers the first review and a single-reviewed result. The protocol's default goes further: a second qualified reviewer independently assesses every flagged cell, every `uncertain`, `extraction_failure` or `not_applicable` cell and at least 20% of randomly selected non-flagged cells, and disagreements are adjudicated ("Second review and adjudication"). Single review is the fallback the protocol allows: "If no second reviewer is available, the report must state that the labels are single-reviewed."
+The checklist covers the first review and a single-reviewed result, and step 3a the second review. The protocol's default is that second review: a second qualified reviewer independently assesses every flagged cell, every `uncertain`, `extraction_failure` or `not_applicable` cell and at least 20% of randomly selected non-flagged cells, and disagreements are adjudicated ("Second review and adjudication"). Single review is the fallback the protocol allows: "If no second reviewer is available, the report must state that the labels are single-reviewed."
 
 ## 0. Before you start
 
@@ -81,15 +81,27 @@ Apply the reference standard recorded under step 2, not the detector's pattern. 
 
 For a rule with a difference, label against the standard recorded under step 2. Where the other standard would give a different label, say so in `review_note`, for example "against Art. 6(5) as a whole: missing, no liquidity statement found".
 
+## 3a. Second review and adjudication
+
+For a single-reviewed result, skip this step. Otherwise, once `human-review-blinded.csv` is complete, build the second reviewer's sheet:
+
+```bash
+uv run python studies/2026-07-title-ii-annex-i-whitepaper-study/scripts/build_review_matrix.py --second-sheet
+```
+
+`human-review-second.csv` then holds the cells the protocol has the second reviewer assess: the 21 flagged cells, every cell the first review labelled `uncertain`, `extraction_failure` or `not_applicable`, and at least 26 of the 129 non-flagged cells, drawn by a SHA-256 ranking under `--seed` and `--fraction` (at least 0.2). Pass the seed and fraction that `analysis-plan.md` section 6 fixes, or `--second-all` for all 150 cells. The second reviewer labels that sheet as in step 3, under their own reviewer identifier, without opening `human-review-blinded.csv` or the files listed in step 0.
+
+Once both sheets are complete, the same command with `--disagreements` writes `human-review-adjudication.csv`: one row for each cell whose two labels differ, with both reviews and no detector column. The adjudicator fills `final_label`, `adjudicated_by`, `adjudicated_at` (no earlier than the last review), `final_pinpoint` (needed for `present`) and `adjudication_reason`. The script accepts both reviewers by consensus (`reviewer-a+reviewer-b`) or a person who made neither review, and refuses one of the two alone, as the draft `analysis-plan.md` section 6 decides; the protocol says only "a qualified reviewer". While the second sheet exists, the merge in step 4 stops until it is complete and every disagreement is adjudicated. It then gives each adjudicated cell the adjudicator's label, date and pinpoint and a note naming both labels, and every other cell the first review. `micar-review-summary` (step 5) does not check adjudication.
+
 ## 4. Merge the labels into the matrix
 
 ```bash
 uv run python studies/2026-07-title-ii-annex-i-whitepaper-study/scripts/build_review_matrix.py --merge-blinded
 ```
 
-The merge copies the reviewer columns into `human-review-matrix.csv`. It stops, and writes nothing, while any blinded cell is pending, has an unsupported label, lacks a field that publication gate item 2 or "First review" steps 6 and 7 require, has a date that is not `YYYY-MM-DD` or lies after today or before the detector run on 2026-07-06, appears in more than one filled row, or differs from a value the matrix already holds. Fix what it lists in the blinded sheet and run it again. Plain `python3` cannot import `micar_linter`; the merge then stops and gives the `uv run` command.
+The merge copies the reviewer columns into `human-review-matrix.csv`. It stops, and writes nothing, while any blinded cell is pending, has an unsupported label, lacks a field that publication gate item 2 or "First review" steps 6 and 7 require, has a date that is not `YYYY-MM-DD` or lies after today or before the detector run on 2026-07-06, appears in more than one filled row, or differs from a value the matrix already holds. Fix what it lists in the blinded sheet, or in the step 3a file it names, and run it again. Plain `python3` cannot import `micar_linter`; the merge then stops and gives the `uv run` command.
 
-After the merge the matrix shows the detector status, so a label changed after that point is no longer blind. Make any such correction in `human-review-matrix.csv`, not in the blinded sheet, and record it in the cell's `review_note` and in the report. A further merge refuses every cell where the blinded sheet and the matrix differ. Such a correction is checked only by the summary in step 5, which checks the earliest permitted date only when given `--findings`.
+After the merge the matrix shows the detector status, so a label changed after that point is no longer blind. Make any such correction in `human-review-matrix.csv`, not in the blinded sheet, and record it in the cell's `review_note` and in the report. A further merge refuses every cell where the matrix differs from the blinded sheet or, for a cell adjudicated in step 3a, from the adjudication file. Such a correction is checked only by the summary in step 5, which checks the earliest permitted date only when given `--findings`.
 
 ## 5. Metrics
 
@@ -103,7 +115,7 @@ uv run micar-review-summary \
 
 The command writes its output before it checks completeness, as `review-protocol.md` says, so it writes to `/tmp`. Copy the output over the committed `human-review-summary.json` only once it exits 0.
 
-Exit status 0 means no row is pending and every labelled row has the fields that publication gate item 2 and "First review" steps 6 and 7 require, with a review date in the form `YYYY-MM-DD` that is no later than today. A `missing` cell with a note but no pinpoint passes (step 3). `--findings` adds two checks: the matrix must hold exactly the 150 cells of `findings-pseudonymous.json` with their detector status, or the command exits 1 and writes nothing; and no review date may precede the detector run (the date of `generated_at`, 2026-07-06). The command in `review-protocol.md` has no `--findings`, so it makes neither check. Exit status 0 covers publication gate items 1, 2 and 4. No script checks item 3 (adjudication), item 5 (limitations in the report), item 6 (legal review of statements about a named issuer) or the ESMA reconciliation that `methodology.md` requires. Exit status 0 is therefore necessary for publication, not sufficient. Exit status 2 prints what is missing. The summary then holds:
+Exit status 0 means no row is pending and every labelled row has the fields that publication gate item 2 and "First review" steps 6 and 7 require, with a review date in the form `YYYY-MM-DD` that is no later than today. A `missing` cell with a note but no pinpoint passes (step 3). `--findings` adds two checks: the matrix must hold exactly the 150 cells of `findings-pseudonymous.json` with their detector status, or the command exits 1 and writes nothing; and no review date may precede the detector run (the date of `generated_at`, 2026-07-06). The command in `review-protocol.md` has no `--findings`, so it makes neither check. Exit status 0 covers publication gate items 1, 2 and 4. The command does not check item 3 (adjudication); the merge in step 4 checks it while `human-review-second.csv` exists (step 3a). No script checks item 5 (limitations in the report), item 6 (legal review of statements about a named issuer) or the ESMA reconciliation that `methodology.md` requires. Exit status 0 is therefore necessary for publication, not sufficient. Exit status 2 prints what is missing. The summary then holds:
 
 - the confusion matrix (`tp` flagged and missing, `fp` flagged and present, `fn` not flagged and missing, `tn` not flagged and present);
 - precision `tp / (tp + fp)`, recall `tp / (tp + fn)` and F1 `2tp / (2tp + fp + fn)`. The protocol does not define F1; `metric_note` records the formula;
@@ -148,4 +160,4 @@ This is an estimate, not a measurement. It assumes ten documents (six HTML or XH
 | Merge and metrics | about 10 minutes, plus fixing any cells the merge lists |
 | Report and status updates | 1 to 2 hours |
 
-The total comes to about 6 to 13 hours, so a single review takes one to two working days. The owner's choice of reference standard (step 2) comes before this and is not included. A second review under the protocol covers at least 47 cells: all 21 flagged cells, at least 26 of the 129 non-flagged cells (20%), and every `uncertain`, `extraction_failure` or `not_applicable` cell not already among them. At the same rate, 47 cells take the second reviewer about 1.5 to 3 hours, plus adjudication time. The repository has no second blinded sheet, no random-selection script and no adjudication record for that step.
+The total comes to about 6 to 13 hours, so a single review takes one to two working days. The owner's choice of reference standard (step 2) comes before this and is not included. A second review under the protocol covers at least 47 cells: all 21 flagged cells, at least 26 of the 129 non-flagged cells (20%), and every `uncertain`, `extraction_failure` or `not_applicable` cell not already among them. At the same rate, 47 cells take the second reviewer about 1.5 to 3 hours, plus adjudication time. `scripts/build_review_matrix.py` builds the second sheet, draws the non-flagged cells and writes the adjudication file that the adjudicator completes (step 3a).

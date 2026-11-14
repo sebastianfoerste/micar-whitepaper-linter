@@ -91,6 +91,15 @@ Before any labelling, the owner records in `review-protocol.md` whether labels a
 uv run python studies/2026-07-title-ii-annex-i-whitepaper-study/scripts/build_review_matrix.py --merge-blinded
 ```
 
+With a second reviewer (`REVIEWING.md`, step 3a), two steps come before that merge. Once the blinded sheet is complete, `--second-sheet` writes the second reviewer's sheet, `human-review-second.csv`: every flagged cell, every cell the first review labelled `uncertain`, `extraction_failure` or `not_applicable`, and a share of the non-flagged cells drawn by a SHA-256 ranking under `--seed` and `--fraction` (defaults 20261014 and 0.2), or every cell with `--second-all`. `analysis-plan.md` section 6 decides which: `--second-all` for a full second review, or, for the protocol's subset, `--fraction 0.2` with the seed that it derives from the commit of the completed first review instead of the default seed. Once both sheets are complete, `--disagreements` writes `human-review-adjudication.csv`, one row for each cell whose two labels differ, without detector columns, for the adjudicator:
+
+```bash
+uv run python studies/2026-07-title-ii-annex-i-whitepaper-study/scripts/build_review_matrix.py --second-sheet
+uv run python studies/2026-07-title-ii-annex-i-whitepaper-study/scripts/build_review_matrix.py --disagreements
+```
+
+While `human-review-second.csv` exists, `--merge-blinded` stops until it is complete and every disagreement is adjudicated, and then writes the adjudicated labels into the matrix; the plain rebuild carries that sheet's cells over as well.
+
 Compute the metrics with:
 
 ```bash
