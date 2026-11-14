@@ -50,10 +50,30 @@ export function parseDraft(text) {
   return draft;
 }
 
-// Display only: exports keep the engine's citation strings unchanged.
-export function displayCitation(citation) {
-  // TODO(human): render the engine's German-style citation in the English house style.
-  return citation;
+// Display only: exports keep the engine's citation strings unchanged. The JSON report carries the canonical
+// citation and its English EU form (citation_en, from citations.to_english), which the CLI's text report prints.
+export function displayCitation(finding) {
+  return finding.citation_en ?? finding.citation;
+}
+
+// iXBRL is a file-format check; adding a JSON section cannot satisfy it.
+export const FORMAT_GATE_RULES = new Set(["COMMON.IXBRL_TAGGING"]);
+// The LEI rules read every section. The report anchors them to "issuer" for line mapping (ADR 0007),
+// which says nothing about where the LEI is, or whether the draft has an issuer section at all.
+export const ALL_SECTION_RULES = new Set(["COMMON.LEI_CHECK_DIGITS", "COMMON.LEI_CONSISTENCY"]);
+
+// The section key "Inspect section" selects, or null. Section navigation reads JSON keys, which an
+// XHTML draft does not have, and a rule that reads no section or every section points to none.
+export function inspectableSection(finding, format) {
+  if (format !== "json" || FORMAT_GATE_RULES.has(finding.rule_id) || ALL_SECTION_RULES.has(finding.rule_id)) {
+    return null;
+  }
+  return finding.section;
+}
+
+// Where a finding says the rule looked.
+export function findingScope(finding) {
+  return ALL_SECTION_RULES.has(finding.rule_id) ? "every section" : finding.section;
 }
 
 // Rule pages sit beside the playground on the same site: <site>/rules/<RULE_ID>.html.
@@ -66,13 +86,21 @@ export function selectFindings(findings, filter = "open", search = "") {
   const statusOrder = { missing: 0, review: 1, pass: 2 };
   return findings.filter(f => {
     const matches = filter === "all" || (filter === "open" ? f.status !== "pass" : f.status === filter);
-    return matches && [f.rule_id, f.label, f.citation, displayCitation(f.citation), f.section, f.severity, ...f.issues]
+    return matches && [f.rule_id, f.label, f.citation, displayCitation(f), f.section, f.severity, ...f.issues]
       .join(" ").toLowerCase().includes(query);
   }).sort((a, b) => {
     const aBlocker = a.status !== "pass" && a.severity === "BLOCKER";
     const bBlocker = b.status !== "pass" && b.severity === "BLOCKER";
     return Number(bBlocker) - Number(aBlocker) || statusOrder[a.status] - statusOrder[b.status];
   });
+}
+
+// The count line of a report. A draft without field numbers runs no field-level check: the report
+// lists those rules under not_run, with no finding, so they count neither as passed nor as open.
+export function checksLabel(report) {
+  const notRun = Array.isArray(report.not_run) ? report.not_run.length : 0;
+  const checks = `${report.summary.total} ${report.summary.total === 1 ? "check" : "checks"}`;
+  return notRun ? `${checks} · ${notRun} field-level ${notRun === 1 ? "check" : "checks"} not run` : checks;
 }
 
 export function reportIsCurrent(report, checkedText, currentText) {

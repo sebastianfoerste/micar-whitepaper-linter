@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Data for classifying the white paper in the ESMA register, with the LEI and DTI conditions of Delegated Regulation (EU) 2025/421. Art. 2 and 3 in conjunction with Annex to Regulation (EU) 2025/421.">
+<title>RTS.CLASSIFICATION_DATA: MiCAR Whitepaper Linter rule</title>
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <a class="brand" href="../"><span class="brand-mark" aria-hidden="true">M</span><span>MiCAR <strong>Whitepaper Linter</strong></span></a>
+  <nav aria-label="Site"><a href="../">Overview</a><a href="../rules/">Rules</a><a href="../playground/">Playground</a><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter">Source</a></nav>
+</header>
+<main id="main">
+<p class="eyebrow">Rule · BLOCKER</p>
+<h1>RTS.CLASSIFICATION_DATA</h1>
+<p class="lede">Data for classifying the white paper in the ESMA register, with the LEI and DTI conditions of Delegated Regulation (EU) 2025/421</p>
+<div class="panel"><dl class="facts">
+<dt>Citation</dt><dd>Art. 2 and 3 in conjunction with Annex to Regulation (EU) 2025/421</dd>
+<dt>Canonical form</dt><dd lang="de">Art. 2 und 3 i.V.m. Anhang VO (EU) 2025/421</dd>
+<dt>Runs for</dt><dd>Annex I · other crypto-assets; Annex II · asset-referenced tokens; Annex III · e-money tokens</dd>
+<dt>Severity if open</dt><dd>BLOCKER</dd>
+<dt>Section key</dt><dd><code>crypto_asset</code> (Annex I); <code>art</code> (Annex II); <code>emt</code> (Annex III)</dd>
+<dt>Minimum words</dt><dd>none: checks for the register data and the identifier conditions</dd>
+<dt>Listed terms (English)</dt><dd>none</dd>
+<dt>Listed terms (German)</dt><dd lang="de">none</dd>
+<dt>Package version</dt><dd>1.2.1, built from source that may include unreleased changes</dd>
+<dt>Source</dt><dd><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/rules/templates.py">rules/templates.py</a> and <a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/classification_data.py">classification_data.py</a></dd>
+</dl></div>
+<h2>How the status is set</h2>
+<ul class="plain"><li><strong>Missing</strong>: in a numbered-field XHTML draft, every field that carries an item the Annex lists without “where available” is empty, absent or holds only a placeholder.</li><li><strong>Review</strong>: one of those fields is empty, absent, holds only a placeholder or is marked not applicable: the type of white paper, the type of submission, the website, the starting date, the publication date, the languages, the personal data flag and the home and host Member States, the issuer's name, and its legal form and registered address unless its LEI field gives an LEI with valid check digits. In Table 2 the issuer is read from Part B where field B.1 is true (or, where B.1 says neither, where B.2 names one), otherwise from Part A. Also: the offer field gives ATTR and the market identifier code field is not answered (item 8); the DTI field is answered and the group DTI field is not (Art. 3(1)), or the other way round (Art. 3(2)); both give the same code; or neither gives a DTI, where Art. 3(3) asks for an identifier approved by ESMA, which the template has no field for. The finding names the field and the item, never the answer.</li><li><strong>Not run</strong>: in a draft without field numbers (JSON, PDF, DOCX, Markdown, heading-based XHTML) the check does not run. The report has no finding for this rule, neither open nor passed; one note names how many field-level checks did not run.</li><li><strong>Pass</strong>: none of the above. Where a field gives an LEI, the finding notes that Art. 2 also asks for its inclusion in the GLEIF database, which the linter does not check.</li></ul><p>The forms of these fields (dates, LEI, DTI, MIC, true or false) are checked by <a href="ITS.FIELD_FORMATS.html">ITS.FIELD_FORMATS</a> and their codes (white paper type, submission type, Member States) by <a href="ITS.CODE_LISTS.html">ITS.CODE_LISTS</a>; <a href="COMMON.LANGUAGE.html">COMMON.LANGUAGE</a> looks for an official EU language. This rule does not report those defects again. The items of the Annex and the fields that carry them:</p><table><thead><tr><th>Item</th><th>Data of the Annex</th><th>Table 2</th><th>Table 3</th><th>Table 4</th></tr></thead><tbody><tr><td>1</td><td>Type of crypto-asset white paper</td><td>F.4</td><td>B.7</td><td>B.4</td></tr><tr><td>2</td><td>Name of the issuer</td><td>A.1, or B.2 where field B.1 says the issuer is not the offeror</td><td>A.1</td><td>A.1</td></tr><tr><td>3</td><td>Legal form of the issuer</td><td>A.2 (B.3), or the LEI in A.6 (B.7)</td><td>A.3, or the LEI in A.7</td><td>A.3, or the LEI in A.7</td></tr><tr><td>4</td><td>Legal entity identifier of the issuer, where available</td><td>A.6 (B.7)</td><td>A.7</td><td>A.7</td></tr><tr><td>5</td><td>Other identifier of the issuer required pursuant to applicable national law, where available</td><td>A.7 (B.8)</td><td>A.8</td><td>A.8</td></tr><tr><td>6</td><td>Legal entity identifier of the entity that drew up the crypto-asset white paper, where available</td><td>A.6, or C.6 for the operator of a trading platform</td><td>A.7, or AA.3</td><td>A.7</td></tr><tr><td>7</td><td>Other identifier of the entity that drew up the crypto-asset white paper required pursuant to applicable national law, where available</td><td>A.7, or C.7</td><td>A.8, or AA.3.1</td><td>A.8</td></tr><tr><td>8</td><td>Identifier of operator of the trading platform</td><td>E.34, where E.1 gives ATTR</td><td>C.25, where C.1 gives ATTR</td><td>C.4, where C.1 gives ATTR</td></tr><tr><td>9</td><td>Commercial name or trading name of the issuer, where available</td><td>F.7</td><td>A.2</td><td>A.2</td></tr><tr><td>10</td><td>Physical address of the issuer</td><td>A.3 (B.4), or the LEI in A.6 (B.7)</td><td>A.4, or the LEI in A.7</td><td>A.4, or the LEI in A.7</td></tr><tr><td>11</td><td>Telephone number of the issuer, where available</td><td>A.8 (the offeror&#x27;s)</td><td>no field</td><td>A.9</td></tr><tr><td>12</td><td>Email of the issuer, where available</td><td>A.9 (the offeror&#x27;s)</td><td>no field</td><td>A.10</td></tr><tr><td>13</td><td>Website of the issuer</td><td>F.8</td><td>B.10</td><td>B.7</td></tr><tr><td>14</td><td>Home Member State</td><td>F.18</td><td>B.19</td><td>B.16</td></tr><tr><td>15</td><td>Host Member States</td><td>F.19</td><td>B.20</td><td>B.17</td></tr><tr><td>16</td><td>Starting date of offer to the public or admission to trading</td><td>F.9</td><td>B.11</td><td>B.8</td></tr><tr><td>17</td><td>Any other services provided by the issuer</td><td>F.11</td><td>B.13</td><td>B.10</td></tr><tr><td>18</td><td>The date of authorisation, where applicable</td><td>no field</td><td>no date field; A.18 describes the authorisation</td><td>no date field; A.25 describes the authorisation</td></tr><tr><td>19</td><td>The date of withdrawal of authorisation, where applicable</td><td>no field</td><td>no field</td><td>no field</td></tr><tr><td>20</td><td>Publication date</td><td>F.10</td><td>B.12</td><td>B.9</td></tr><tr><td>21</td><td>Date and time of notification</td><td>01, as a date</td><td>I.01, as a date</td><td>I.01, as a date</td></tr><tr><td>22</td><td>Language or languages of the crypto-asset white paper</td><td>F.12</td><td>B.14</td><td>B.11</td></tr><tr><td>23</td><td>Record identifier</td><td colspan="3">not carried: the sending competent authority assigns it</td></tr><tr><td>24</td><td>Data file reference</td><td colspan="3">not carried: the sending competent authority assigns it</td></tr><tr><td>25</td><td>The type of submission</td><td>F.5</td><td>B.8</td><td>B.5</td></tr><tr><td>26</td><td>Version</td><td colspan="3">not carried: the sending competent authority assigns it</td></tr><tr><td>27</td><td>Digital Token Identifier of the crypto-asset or of each crypto-asset, where available</td><td>F.13</td><td>B.15</td><td>B.12</td></tr><tr><td>28</td><td>Functionally Fungible Group Digital Token Identifier, where available</td><td>F.14</td><td>B.16</td><td>B.13</td></tr><tr><td>29</td><td>Personal data flag</td><td>F.16</td><td>B.17</td><td>B.14</td></tr></tbody></table><p>Fields of the register block without an item of the Annex: Table 2: F.6, F.15, F.17; Table 3: B.9, B.18; Table 4: B.6, B.15 (the characteristics, the voluntary data flag of Table 2 and the LEI eligibility). Items given “where available” or “where applicable” (4 to 7, 9, 11, 12, 17 to 19, 27 and 28) are not required; item 15 and item 8 are.</p><p>The register data sit in another Part of each template (Part F of Table 2, Part B of Tables 3 and 4), so the rule anchors its finding to the section of that Part: crypto_asset, art or emt. The check itself is the same; it reads the fields of the regime&#x27;s table.</p>
+<h2>Legal basis</h2>
+<p>Art. 2 and 3 in conjunction with Annex to Regulation (EU) 2025/421</p>
+<ul class="plain"><li><a href="https://eur-lex.europa.eu/eli/reg_del/2025/421/oj/eng">https://eur-lex.europa.eu/eli/reg_del/2025/421/oj/eng</a></li></ul>
+<p class="callout">Checked against the OJ on 2026-11-04: Art. 1 to 4 and items 1 to 29 of the Annex against the English and German Official Journal text of Delegated Regulation (EU) 2025/421 (OJ L, 2025/421, 24.3.2025), and the fields that carry them against the English and German Official Journal text of Implementing Regulation (EU) 2024/2984 (OJ L, 2024/2984, 3.12.2024), both as the Publications Office Cellar served them. No amendment or corrigendum was searched for.</p>
+<h2>Synthetic examples</h2>
+<p class="small muted">Each example is linted when this page is generated. The build fails if a result differs.</p>
+<div class="example"><div class="example-head"><span class="badge neutral">Not run</span><strong>Draft without field numbers (Annex I)</strong></div><p class="small muted">A JSON, PDF, DOCX, Markdown or heading-based XHTML draft has no field numbers, so this check does not run. The report has no finding for it, neither open nor passed, and one note names how many field-level checks did not run.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;sections&quot;: {
+    &quot;crypto_asset&quot;: &quot;Synthetic section text of a draft without field numbers.&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>Register block not answered (Annex I)</strong></div><p class="small muted">Every field that carries an item of the Annex without “where available” holds only a placeholder.</p><pre><code>Numbered-field XHTML draft (Table 2), as the loader reads its fields:
+A.1 | Name | TBD
+A.6 | Legal entity identifier | TBD
+E.1 | Public offering or admission to trading | TBD
+B.1 | Issuer different from offeror or person seeking admission to trading | TBD
+F.4 | Type of crypto-asset white paper | TBD
+F.5 | The type of submission | TBD
+F.8 | Website of the issuer | TBD
+F.9 | Starting date of offer to the public or admission to trading | TBD
+F.10 | Publication date | TBD
+F.12 | Language or languages of the crypto-asset white paper | TBD
+F.16 | Personal data flag | TBD
+F.18 | Home Member State | TBD
+F.19 | Host Member States | TBD
+F.13 | Digital token identifier code used to uniquely identify the crypto-asset or each of the several crypto assets to which the white paper relates, where available | TBD
+F.14 | Functionally fungible group digital token identifier, where available | TBD</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>DTI without the group identifier (Annex I)</strong></div><p class="small muted">Field F.13 gives a DTI, so Art. 3(1) asks for the identifier of type 3 of the group in field F.14 as well.</p><pre><code>Numbered-field XHTML draft (Table 2), as the loader reads its fields:
+A.1 | Name | Synthetic Issuer GmbH, a fictional company
+A.6 | Legal entity identifier | 9999SYNTH0000ZZQ0166
+E.1 | Public offering or admission to trading | OTPC
+B.1 | Issuer different from offeror or person seeking admission to trading | false
+F.4 | Type of crypto-asset white paper | OTHR
+F.5 | The type of submission | NEWT
+F.8 | Website of the issuer | https://synthetic-issuer.example
+F.9 | Starting date of offer to the public or admission to trading | 2026-04-01
+F.10 | Publication date | 2026-03-20
+F.12 | Language or languages of the crypto-asset white paper | English
+F.16 | Personal data flag | false
+F.18 | Home Member State | DE
+F.19 | Host Member States | AT
+F.13 | Digital token identifier code used to uniquely identify the crypto-asset or each of the several crypto assets to which the white paper relates, where available | SYNTH0001
+F.14 | Functionally fungible group digital token identifier, where available | N/A</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>No DTI at all (Annex I)</strong></div><p class="small muted">Without an ISO 24165 DTI, Art. 3(3) asks for an identifier approved by ESMA at Union level; the template has no field for it, so a reviewer confirms how the white paper identifies the crypto-assets.</p><pre><code>Numbered-field XHTML draft (Table 2), as the loader reads its fields:
+A.1 | Name | Synthetic Issuer GmbH, a fictional company
+A.6 | Legal entity identifier | 9999SYNTH0000ZZQ0166
+E.1 | Public offering or admission to trading | OTPC
+B.1 | Issuer different from offeror or person seeking admission to trading | false
+F.4 | Type of crypto-asset white paper | OTHR
+F.5 | The type of submission | NEWT
+F.8 | Website of the issuer | https://synthetic-issuer.example
+F.9 | Starting date of offer to the public or admission to trading | 2026-04-01
+F.10 | Publication date | 2026-03-20
+F.12 | Language or languages of the crypto-asset white paper | English
+F.16 | Personal data flag | false
+F.18 | Home Member State | DE
+F.19 | Host Member States | AT
+F.13 | Digital token identifier code used to uniquely identify the crypto-asset or each of the several crypto assets to which the white paper relates, where available | N/A
+F.14 | Functionally fungible group digital token identifier, where available | N/A</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>Admission to trading without a MIC (Annex I)</strong></div><p class="small muted">Field E.1 seeks admission to trading, so item 8 asks for the market identifier code of the trading platform in field E.34.</p><pre><code>Numbered-field XHTML draft (Table 2), as the loader reads its fields:
+A.1 | Name | Synthetic Issuer GmbH, a fictional company
+A.6 | Legal entity identifier | 9999SYNTH0000ZZQ0166
+E.1 | Public offering or admission to trading | ATTR
+B.1 | Issuer different from offeror or person seeking admission to trading | false
+F.4 | Type of crypto-asset white paper | OTHR
+F.5 | The type of submission | NEWT
+F.8 | Website of the issuer | https://synthetic-issuer.example
+F.9 | Starting date of offer to the public or admission to trading | 2026-04-01
+F.10 | Publication date | 2026-03-20
+F.12 | Language or languages of the crypto-asset white paper | English
+F.16 | Personal data flag | false
+F.18 | Home Member State | DE
+F.19 | Host Member States | AT
+F.13 | Digital token identifier code used to uniquely identify the crypto-asset or each of the several crypto assets to which the white paper relates, where available | SYNTH0001
+F.14 | Functionally fungible group digital token identifier, where available | SYNTH0FG2</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>Mandatory field marked not applicable (Annex I)</strong></div><p class="small muted">Field F.4 carries an item that the Annex lists without “where available”.</p><pre><code>Numbered-field XHTML draft (Table 2), as the loader reads its fields:
+A.1 | Name | Synthetic Issuer GmbH, a fictional company
+A.6 | Legal entity identifier | 9999SYNTH0000ZZQ0166
+E.1 | Public offering or admission to trading | OTPC
+B.1 | Issuer different from offeror or person seeking admission to trading | false
+F.4 | Type of crypto-asset white paper | N/A
+F.5 | The type of submission | NEWT
+F.8 | Website of the issuer | https://synthetic-issuer.example
+F.9 | Starting date of offer to the public or admission to trading | 2026-04-01
+F.10 | Publication date | 2026-03-20
+F.12 | Language or languages of the crypto-asset white paper | English
+F.16 | Personal data flag | false
+F.18 | Home Member State | DE
+F.19 | Host Member States | AT
+F.13 | Digital token identifier code used to uniquely identify the crypto-asset or each of the several crypto assets to which the white paper relates, where available | SYNTH0001
+F.14 | Functionally fungible group digital token identifier, where available | SYNTH0FG2</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>Register block answered (Annex I)</strong></div><p class="small muted">Every item the Annex lists without “where available” is answered; the LEI carries the legal form and the address, and both identifiers are given. The finding notes that the LEI&#x27;s inclusion in the GLEIF database (Art. 2(b)) is not checked.</p><pre><code>Numbered-field XHTML draft (Table 2), as the loader reads its fields:
+A.1 | Name | Synthetic Issuer GmbH, a fictional company
+A.6 | Legal entity identifier | 9999SYNTH0000ZZQ0166
+E.1 | Public offering or admission to trading | OTPC
+B.1 | Issuer different from offeror or person seeking admission to trading | false
+F.4 | Type of crypto-asset white paper | OTHR
+F.5 | The type of submission | NEWT
+F.8 | Website of the issuer | https://synthetic-issuer.example
+F.9 | Starting date of offer to the public or admission to trading | 2026-04-01
+F.10 | Publication date | 2026-03-20
+F.12 | Language or languages of the crypto-asset white paper | English
+F.16 | Personal data flag | false
+F.18 | Home Member State | DE
+F.19 | Host Member States | AT
+F.13 | Digital token identifier code used to uniquely identify the crypto-asset or each of the several crypto assets to which the white paper relates, where available | SYNTH0001
+F.14 | Functionally fungible group digital token identifier, where available | SYNTH0FG2</code></pre></div><div class="example"><div class="example-head"><span class="badge neutral">Not run</span><strong>Draft without field numbers (Annex II)</strong></div><p class="small muted">A JSON, PDF, DOCX, Markdown or heading-based XHTML draft has no field numbers, so this check does not run. The report has no finding for it, neither open nor passed, and one note names how many field-level checks did not run.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;art&quot;,
+  &quot;sections&quot;: {
+    &quot;art&quot;: &quot;Synthetic section text of a draft without field numbers.&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>Register block not answered (Annex II)</strong></div><p class="small muted">Every field that carries an item of the Annex without “where available” holds only a placeholder.</p><pre><code>Numbered-field XHTML draft (Table 3), as the loader reads its fields:
+A.1 | Statutory name | TBD
+A.7 | Legal entity identifier | TBD
+C.1 | Public offering or admission to trading | TBD
+B.7 | Type of crypto-asset white paper | TBD
+B.8 | The type of submission | TBD
+B.10 | Website of the issuer | TBD
+B.11 | Starting date of offer to the public or admission to trading | TBD
+B.12 | Publication date | TBD
+B.14 | Language or languages of the crypto-asset white paper | TBD
+B.17 | Personal data flag | TBD
+B.19 | Home Member State | TBD
+B.20 | Host Member States | TBD
+B.15 | Digital token identifier code used to uniquely identify the crypto-asset or each of the several crypto assets to which the white paper relates, where available | TBD
+B.16 | Functionally fungible group digital token identifier, where available | TBD</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>DTI without the group identifier (Annex II)</strong></div><p class="small muted">Field B.15 gives a DTI, so Art. 3(1) asks for the identifier of type 3 of the group in field B.16 as well.</p><pre><code>Numbered-field XHTML draft (Table 3), as the loader reads its fields:
+A.1 | Statutory name | Synthetic Issuer GmbH, a fictional company
+A.7 | Legal entity identifier | 9999SYNTH0000ZZQ0166
+C.1 | Public offering or admission to trading | OTPC
+B.7 | Type of crypto-asset white paper | ARTW
+B.8 | The type of submission | NEWT
+B.10 | Website of the issuer | https://synthetic-issuer.example
+B.11 | Starting date of offer to the public or admission to trading | 2026-04-01
+B.12 | Publication date | 2026-03-20
+B.14 | Language or languages of the crypto-asset white paper | English
+B.17 | Personal data flag | false
+B.19 | Home Member State | DE
+B.20 | Host Member States | AT
+B.15 | Digital token identifier code used to uniquely identify the crypto-asset or each of the several crypto assets to which the white paper relates, where available | SYNTH0001
+B.16 | Functionally fungible group digital token identifier, where available | N/A</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>No DTI at all (Annex II)</strong></div><p class="small muted">Without an ISO 24165 DTI, Art. 3(3) asks for an identifier approved by ESMA at Union level; the template has no field for it, so a reviewer confirms how the white paper identifies the crypto-assets.</p><pre><code>Numbered-field XHTML draft (Table 3), as the loader reads its fields:
+A.1 | Statutory name | Synthetic Issuer GmbH, a fictional company
+A.7 | Legal entity identifier | 9999SYNTH0000ZZQ0166
+C.1 | Public offering or admission to trading | OTPC
+B.7 | Type of crypto-asset white paper | ARTW
+B.8 | The type of submission | NEWT
+B.10 | Website of the issuer | https://synthetic-issuer.example
+B.11 | Starting date of offer to the public or admission to trading | 2026-04-01
+B.12 | Publication date | 2026-03-20
+B.14 | Language or languages of the crypto-asset white paper | English
+B.17 | Personal data flag | false
+B.19 | Home Member State | DE
+B.20 | Host Member States | AT
+B.15 | Digital token identifier code used to uniquely identify the crypto-asset or each of the several crypto assets to which the white paper relates, where available | N/A
+B.16 | Functionally fungible group digital token identifier, where available | N/A</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>Admission to trading without a MIC (Annex II)</strong></div><p class="small muted">Field C.1 seeks admission to trading, so item 8 asks for the market identifier code of the trading platform in field C.25.</p><pre><code>Numbered-field XHTML draft (Table 3), as the loader reads its fields:
+A.1 | Statutory name | Synthetic Issuer GmbH, a fictional company
+A.7 | Legal entity identifier | 9999SYNTH0000ZZQ0166
+C.1 | Public offering or admission to trading | ATTR
+B.7 | Type of crypto-asset white paper | ARTW
+B.8 | The type of submission | NEWT
+B.10 | Website of the issuer | https://synthetic-issuer.example
+B.11 | Starting date of offer to the public or admission to trading | 2026-04-01
+B.12 | Publication date | 2026-03-20
+B.14 | Language or languages of the crypto-asset white paper | English
+B.17 | Personal data flag | false
+B.19 | Home Member State | DE
+B.20 | Host Member States | AT
+B.15 | Digital token identifier code used to uniquely identify the crypto-asset or each of the several crypto assets to which the white paper relates, where available | SYNTH0001
+B.16 | Functionally fungible group digital token identifier, where available | SYNTH0FG2</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>Mandatory field marked not applicable (Annex II)</strong></div><p class="small muted">Field B.7 carries an item that the Annex lists without “where available”.</p><pre><code>Numbered-field XHTML draft (Table 3), as the loader reads its fields:
+A.1 | Statutory name | Synthetic Issuer GmbH, a fictional company
+A.7 | Legal entity identifier | 9999SYNTH0000ZZQ0166
+C.1 | Public offering or admission to trading | OTPC
+B.7 | Type of crypto-asset white paper | N/A
+B.8 | The type of submission | NEWT
+B.10 | Website of the issuer | https://synthetic-issuer.example
+B.11 | Starting date of offer to the public or admission to trading | 2026-04-01
+B.12 | Publication date | 2026-03-20
+B.14 | Language or languages of the crypto-asset white paper | English
+B.17 | Personal data flag | false
+B.19 | Home Member State | DE
+B.20 | Host Member States | AT
+B.15 | Digital token identifier code used to uniquely identify the crypto-asset or each of the several crypto assets to which the white paper relates, where available | SYNTH0001
+B.16 | Functionally fungible group digital token identifier, where available | SYNTH0FG2</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>Register block answered (Annex II)</strong></div><p class="small muted">Every item the Annex lists without “where available” is answered; the LEI carries the legal form and the address, and both identifiers are given. The finding notes that the LEI&#x27;s inclusion in the GLEIF database (Art. 2(b)) is not checked.</p><pre><code>Numbered-field XHTML draft (Table 3), as the loader reads its fields:
+A.1 | Statutory name | Synthetic Issuer GmbH, a fictional company
+A.7 | Legal entity identifier | 9999SYNTH0000ZZQ0166
+C.1 | Public offering or admission to trading | OTPC
+B.7 | Type of crypto-asset white paper | ARTW
+B.8 | The type of submission | NEWT
+B.10 | Website of the issuer | https://synthetic-issuer.example
+B.11 | Starting date of offer to the public or admission to trading | 2026-04-01
+B.12 | Publication date | 2026-03-20
+B.14 | Language or languages of the crypto-asset white paper | English
+B.17 | Personal data flag | false
+B.19 | Home Member State | DE
+B.20 | Host Member States | AT
+B.15 | Digital token identifier code used to uniquely identify the crypto-asset or each of the several crypto assets to which the white paper relates, where available | SYNTH0001
+B.16 | Functionally fungible group digital token identifier, where available | SYNTH0FG2</code></pre></div><div class="example"><div class="example-head"><span class="badge neutral">Not run</span><strong>Draft without field numbers (Annex III)</strong></div><p class="small muted">A JSON, PDF, DOCX, Markdown or heading-based XHTML draft has no field numbers, so this check does not run. The report has no finding for it, neither open nor passed, and one note names how many field-level checks did not run.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic rule example&quot;,
+  &quot;type&quot;: &quot;emt&quot;,
+  &quot;sections&quot;: {
+    &quot;emt&quot;: &quot;Synthetic section text of a draft without field numbers.&quot;
+  }
+}</code></pre></div><div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>Register block not answered (Annex III)</strong></div><p class="small muted">Every field that carries an item of the Annex without “where available” holds only a placeholder.</p><pre><code>Numbered-field XHTML draft (Table 4), as the loader reads its fields:
+A.1 | Statutory name | TBD
+A.7 | Legal entity identifier | TBD
+C.1 | Public offering or trading | TBD
+B.4 | Type of white paper | TBD
+B.5 | The type of submission | TBD
+B.7 | Website of the issuer | TBD
+B.8 | Starting date of offer to the public or admission to trading | TBD
+B.9 | Publication date | TBD
+B.11 | Language or languages of the white paper | TBD
+B.14 | Personal data flag | TBD
+B.16 | Home Member State | TBD
+B.17 | Host Member States | TBD
+B.12 | Digital token identifier code used to uniquely identify the crypto-asset or each of the several crypto assets to which the white paper relates, where available | TBD
+B.13 | Functionally fungible group digital token identifier, where available | TBD</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>DTI without the group identifier (Annex III)</strong></div><p class="small muted">Field B.12 gives a DTI, so Art. 3(1) asks for the identifier of type 3 of the group in field B.13 as well.</p><pre><code>Numbered-field XHTML draft (Table 4), as the loader reads its fields:
+A.1 | Statutory name | Synthetic Issuer GmbH, a fictional company
+A.7 | Legal entity identifier | 9999SYNTH0000ZZQ0166
+C.1 | Public offering or trading | OTPC
+B.4 | Type of white paper | EMTW
+B.5 | The type of submission | NEWT
+B.7 | Website of the issuer | https://synthetic-issuer.example
+B.8 | Starting date of offer to the public or admission to trading | 2026-04-01
+B.9 | Publication date | 2026-03-20
+B.11 | Language or languages of the white paper | English
+B.14 | Personal data flag | false
+B.16 | Home Member State | DE
+B.17 | Host Member States | AT
+B.12 | Digital token identifier code used to uniquely identify the crypto-asset or each of the several crypto assets to which the white paper relates, where available | SYNTH0001
+B.13 | Functionally fungible group digital token identifier, where available | N/A</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>No DTI at all (Annex III)</strong></div><p class="small muted">Without an ISO 24165 DTI, Art. 3(3) asks for an identifier approved by ESMA at Union level; the template has no field for it, so a reviewer confirms how the white paper identifies the crypto-assets.</p><pre><code>Numbered-field XHTML draft (Table 4), as the loader reads its fields:
+A.1 | Statutory name | Synthetic Issuer GmbH, a fictional company
+A.7 | Legal entity identifier | 9999SYNTH0000ZZQ0166
+C.1 | Public offering or trading | OTPC
+B.4 | Type of white paper | EMTW
+B.5 | The type of submission | NEWT
+B.7 | Website of the issuer | https://synthetic-issuer.example
+B.8 | Starting date of offer to the public or admission to trading | 2026-04-01
+B.9 | Publication date | 2026-03-20
+B.11 | Language or languages of the white paper | English
+B.14 | Personal data flag | false
+B.16 | Home Member State | DE
+B.17 | Host Member States | AT
+B.12 | Digital token identifier code used to uniquely identify the crypto-asset or each of the several crypto assets to which the white paper relates, where available | N/A
+B.13 | Functionally fungible group digital token identifier, where available | N/A</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>Admission to trading without a MIC (Annex III)</strong></div><p class="small muted">Field C.1 seeks admission to trading, so item 8 asks for the market identifier code of the trading platform in field C.4.</p><pre><code>Numbered-field XHTML draft (Table 4), as the loader reads its fields:
+A.1 | Statutory name | Synthetic Issuer GmbH, a fictional company
+A.7 | Legal entity identifier | 9999SYNTH0000ZZQ0166
+C.1 | Public offering or trading | ATTR
+B.4 | Type of white paper | EMTW
+B.5 | The type of submission | NEWT
+B.7 | Website of the issuer | https://synthetic-issuer.example
+B.8 | Starting date of offer to the public or admission to trading | 2026-04-01
+B.9 | Publication date | 2026-03-20
+B.11 | Language or languages of the white paper | English
+B.14 | Personal data flag | false
+B.16 | Home Member State | DE
+B.17 | Host Member States | AT
+B.12 | Digital token identifier code used to uniquely identify the crypto-asset or each of the several crypto assets to which the white paper relates, where available | SYNTH0001
+B.13 | Functionally fungible group digital token identifier, where available | SYNTH0FG2</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>Mandatory field marked not applicable (Annex III)</strong></div><p class="small muted">Field B.4 carries an item that the Annex lists without “where available”.</p><pre><code>Numbered-field XHTML draft (Table 4), as the loader reads its fields:
+A.1 | Statutory name | Synthetic Issuer GmbH, a fictional company
+A.7 | Legal entity identifier | 9999SYNTH0000ZZQ0166
+C.1 | Public offering or trading | OTPC
+B.4 | Type of white paper | N/A
+B.5 | The type of submission | NEWT
+B.7 | Website of the issuer | https://synthetic-issuer.example
+B.8 | Starting date of offer to the public or admission to trading | 2026-04-01
+B.9 | Publication date | 2026-03-20
+B.11 | Language or languages of the white paper | English
+B.14 | Personal data flag | false
+B.16 | Home Member State | DE
+B.17 | Host Member States | AT
+B.12 | Digital token identifier code used to uniquely identify the crypto-asset or each of the several crypto assets to which the white paper relates, where available | SYNTH0001
+B.13 | Functionally fungible group digital token identifier, where available | SYNTH0FG2</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>Register block answered (Annex III)</strong></div><p class="small muted">Every item the Annex lists without “where available” is answered; the LEI carries the legal form and the address, and both identifiers are given. The finding notes that the LEI&#x27;s inclusion in the GLEIF database (Art. 2(b)) is not checked.</p><pre><code>Numbered-field XHTML draft (Table 4), as the loader reads its fields:
+A.1 | Statutory name | Synthetic Issuer GmbH, a fictional company
+A.7 | Legal entity identifier | 9999SYNTH0000ZZQ0166
+C.1 | Public offering or trading | OTPC
+B.4 | Type of white paper | EMTW
+B.5 | The type of submission | NEWT
+B.7 | Website of the issuer | https://synthetic-issuer.example
+B.8 | Starting date of offer to the public or admission to trading | 2026-04-01
+B.9 | Publication date | 2026-03-20
+B.11 | Language or languages of the white paper | English
+B.14 | Personal data flag | false
+B.16 | Home Member State | DE
+B.17 | Host Member States | AT
+B.12 | Digital token identifier code used to uniquely identify the crypto-asset or each of the several crypto assets to which the white paper relates, where available | SYNTH0001
+B.13 | Functionally fungible group digital token identifier, where available | SYNTH0FG2</code></pre></div>
+<h2>Limitations</h2>
+<ul class="plain"><li>Reads the fields of a numbered-field XHTML draft by their numbers; text elsewhere is not considered. It does not run on a draft without field numbers; finding the items in free text is not built. Its finding is anchored to the section of the Part that carries the register data (<code>crypto_asset</code>, <code>art</code> or <code>emt</code>).</li><li>Checks whether each field holds an answer, not what it says or whether it is correct; it does not check a field's label, so a draft that numbers its fields otherwise is read in the wrong fields.</li><li>Art. 2 asks for each LEI to be valid and included in the GLEIF database. The check works offline and queries no registry: <code>ITS.FIELD_FORMATS</code> checks the LEI's form and ISO 17442 check digits, and the finding asks a reviewer to confirm that the LEI is listed and current.</li><li>Does not check a DTI's check character, its type (an identifier of type 3 for the group) or the DTI registry, and cannot tell whether an identifier given in free text is one ESMA approved under Art. 3(3).</li><li>Items 23, 24 and 26 are assigned by the competent authority and items 18 and 19 have no field, so they are not checked. Item 21 asks for the date and time of the latest notification in UTC; the template carries a date in field 01 (I.01), which <code>ITS.NOTIFICATION_DATE_FORMAT</code> checks, and Art. 1(3) lets the data be given in the white paper's own format. The legal form is not checked against the ISO 20275 list of entity legal forms.</li><li>The optional items (4 to 7, 9, 11, 12, 17, 27 and 28) are not required; the template's own conditions on fields such as F.7 (commercial name where no DTI is given) are checked by the point rules (<a href="ANNEX_I.F.P2.html">ANNEX_I.F.P2</a>, <a href="ANNEX_II.B.P2.html">ANNEX_II.B.P2</a>, <a href="ANNEX_III.B.P2.html">ANNEX_III.B.P2</a>), which also report a blank field of the register block under the Annex point.</li><li>A host Member State field marked not applicable goes to review, as the Annex lists item 15 without “where available”; where the crypto-asset is offered in no host Member State, a reviewer confirms that.</li><li>The English text gives item 20 (publication date) without a condition and item 17 “where applicable”; the German text reads “gegebenenfalls” and “sofern verfügbar”. The check follows the English text and the template.</li><li>Status and severity are fixed by the rule. A draft cannot waive or downgrade them.</li><li>The checks of the Delegated Regulations (sustainability indicators, register classification data) have not yet been run against a real notified white paper.</li></ul>
+<p class="small muted">Disagree with this rule, or missing one? <a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/issues/new?template=rule-proposal.yml">Propose a rule change</a>.</p>
+
+</main>
+<footer><span>MiCAR Whitepaper Linter 1.2.1 · MIT licence · First-pass screening, not legal advice.</span><span>Generated from the rule set by <code>scripts/build_rule_docs.py</code>.</span></footer>
+</body>
+</html>

@@ -12,7 +12,7 @@ micar-lint <file_path> [options]
 
 Supported options:
 
-- `--json`: print the validation report as JSON.
+- `--json`: print the validation report as JSON. Its `not_run` list names the rules that did not run: on a draft without field numbers, the point rules and the field-only template rules, which run only on drafts in the numbered-field layout. They have no entry in `findings` and count in no summary figure; one entry in `warnings` says how many point and template checks did not run. The `--coverage` table carries the same `not_run` list.
 - `--citation-style en|de`: citation style in the text report, English EU style (`Art. 6(7) MiCAR`, default) or the canonical German form (`Art. 6 Abs. 7 MiCAR`). JSON output always carries both.
 - `--type other|art|emt`: regime of a single PDF, DOCX, Markdown or XHTML draft. Required for XHTML in the numbered-field layout, whose regime is never inferred. A JSON draft states its own `type`.
 - `--strict`: exit with status `1` when blocker findings are open. For a directory, also when a file could not be linted or no file was linted.
@@ -36,7 +36,7 @@ Supported options:
 
 ### CI outputs
 
-`--sarif-output`, `--summary-output` and `--annotations-output` render the same report for CI. They contain rule IDs, statuses, severities, English citations, line numbers and links to the [rule pages](https://sebastianfoerste.github.io/micar-whitepaper-linter/rules/), never draft text: the issue messages of `COMMON.IXBRL_TAGGING`, `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW`, `COMMON.LEI_CHECK_DIGITS` and `COMMON.LEI_CONSISTENCY`, which can quote the draft, are replaced by a fixed sentence, and the summary names the file path instead of the draft title. Each output is byte-reproducible (no timestamps). SARIF lists every rule run and one result per open finding; levels follow severity (BLOCKER `error`, MAJOR `warning`, MINOR `note`). They change no status, severity or exit code. The text and JSON reports on stdout are unchanged and still include draft content such as the title. Design notes: [ADR 0001](adr/0001-ci-outputs-sarif-mapping.md).
+`--sarif-output`, `--summary-output` and `--annotations-output` render the same report for CI. They contain rule IDs, statuses, severities, English citations, line numbers and links to the [rule pages](https://sebastianfoerste.github.io/micar-whitepaper-linter/rules/), never draft text: the issue messages of `COMMON.IXBRL_TAGGING`, `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW`, `COMMON.LEI_CHECK_DIGITS` and `COMMON.LEI_CONSISTENCY`, which can quote the draft, are replaced by a fixed sentence, and the summary names the file path instead of the draft title. Each output is byte-reproducible (no timestamps). SARIF lists every rule run and one result per open finding; a rule that did not run (a field-level rule on a draft without field numbers) is not listed, and the run's `properties.not_run` names it, while the job summary counts such rules in one fixed sentence; levels follow severity (BLOCKER `error`, MAJOR `warning`, MINOR `note`). They change no status, severity or exit code. The text and JSON reports on stdout are unchanged and still include draft content such as the title. Design notes: [ADR 0001](adr/0001-ci-outputs-sarif-mapping.md).
 
 Input format is detected from the file extension by `load_whitepaper`: `.json`, `.xhtml`, `.html`, `.pdf` and `.md` work with the base install; `.docx` needs the optional `docx` extra. An `.xhtml` or `.html` file that is a saved iXBRL viewer page is unpacked in memory before the checks, up to 8 MB.
 
@@ -62,7 +62,7 @@ uv run micar-lint examples/incomplete.json \
   --manifest-output /tmp/micar-incomplete-manifest.json
 ```
 
-The review table projects rule findings into rows with blocker status, remediation, citation, source anchor, reviewer decision state, export gate, review cells, playbook metadata and Word-style suggested-edit metadata. Review bundles include `review-table.md` alongside JSON outputs, and artifact manifests record each output role. When the report has warnings, such as the loader's extraction notes or unrecognised section keys, the audit log, `review-table.md` and `reviewer-signoff.md` list them under "Extraction Notes" before their results. The manifest records source and output SHA-256 digests, missing output warnings, blocker rule IDs and export eligibility metadata. It is an integrity aid for local review. It is not a filing approval, legal opinion, or external publication authority.
+The review table projects rule findings into rows with blocker status, remediation, citation, source anchor, reviewer decision state, export gate, review cells, playbook metadata and Word-style suggested-edit metadata. Review bundles include `review-table.md` alongside JSON outputs, and artifact manifests record each output role. When the report has warnings, such as the loader's extraction notes, unrecognised section keys or the note that the field-level checks did not run on a draft without field numbers, the audit log, `review-table.md` and `reviewer-signoff.md` list them under "Extraction Notes" before their results. The manifest records source and output SHA-256 digests, missing output warnings, blocker rule IDs and export eligibility metadata. It is an integrity aid for local review. It is not a filing approval, legal opinion, or external publication authority.
 
 ## Python API
 

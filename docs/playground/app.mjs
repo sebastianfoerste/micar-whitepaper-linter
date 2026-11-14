@@ -1,5 +1,5 @@
-import { FORMATS, MAX_BYTES, MAX_XHTML_BYTES, REGIMES, displayCitation, draftFormat, formatDraft, parseDraft, reportIsCurrent,
-  ruleDocHref, sectionSelection, selectFindings, validateDraft } from "./model.mjs";
+import { FORMATS, MAX_BYTES, MAX_XHTML_BYTES, REGIMES, checksLabel, displayCitation, draftFormat, findingScope, formatDraft, inspectableSection,
+  parseDraft, reportIsCurrent, ruleDocHref, sectionSelection, selectFindings, validateDraft } from "./model.mjs";
 
 const $ = id => document.getElementById(id);
 const input = $("input");
@@ -231,7 +231,7 @@ function renderReport() {
   $("empty").hidden = true;
   $("results").hidden = false;
   $("report-title").textContent = report.title;
-  $("report-regime").textContent = `${REGIMES[report.whitepaper_type]} · ${report.summary.total} checks`;
+  $("report-regime").textContent = `${REGIMES[report.whitepaper_type]} · ${checksLabel(report)}`;
   for (const key of ["blockers", "missing", "review", "pass"]) $("count-" + key).textContent = report.summary[key];
   $("review-boundary").textContent = report.summary.blockers
     ? "Open blockers require attention. Substantive lawyer review is required before any filing decision."
@@ -288,14 +288,14 @@ function renderFindings() {
     summary.append(node("span", `badge ${finding.status}`, finding.status === "missing" ? "Missing" : finding.status === "review" ? "Review" : "Pass"));
     const heading = node("div");
     // The citation sits in the collapsed row so the legal basis can be scanned without opening each finding.
-    heading.append(node("span", "finding-label", finding.label), node("span", "finding-citation", displayCitation(finding.citation)),
+    heading.append(node("span", "finding-label", finding.label), node("span", "finding-citation", displayCitation(finding)),
       node("span", "finding-id", finding.rule_id));
     summary.append(heading);
     const body = node("div", "finding-body");
     const issues = node("ul");
     for (const issue of finding.issues) issues.append(node("li", "", issue));
     if (!finding.issues.length) issues.append(node("li", "", "Automated check matched. Verify the disclosure in substance."));
-    body.append(issues, node("p", "finding-meta", `${finding.severity} severity · ${finding.word_count} words · ${finding.section}`));
+    body.append(issues, node("p", "finding-meta", `${finding.severity} severity · ${finding.word_count} words · ${findingScope(finding)}`));
     // A new tab keeps the draft in this one; rule pages are static and load nothing else.
     const rulePage = node("a", "rule-link", `How ${finding.rule_id} is checked `);
     const arrow = node("span", "", "↗");
@@ -305,12 +305,12 @@ function renderFindings() {
     rulePage.target = "_blank";
     rulePage.rel = "noopener";
     body.append(rulePage);
-    // iXBRL is a file-format check; adding a JSON section cannot satisfy it.
-    // Section navigation reads JSON keys; an XHTML draft has none to select.
-    if (finding.rule_id !== "COMMON.IXBRL_TAGGING" && checkedFormat === "json") {
-      const source = node("button", "text-button source-button", `Inspect section: ${finding.section} ↗`);
+    // No button for the format gate, the LEI rules or an XHTML draft (inspectableSection).
+    const section = inspectableSection(finding, checkedFormat);
+    if (section !== null) {
+      const source = node("button", "text-button source-button", `Inspect section: ${section} ↗`);
       source.disabled = !isCurrent();
-      source.onclick = () => locateSection(finding.section);
+      source.onclick = () => locateSection(section);
       body.append(source);
     }
     details.append(summary, body);

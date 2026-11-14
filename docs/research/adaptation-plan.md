@@ -70,7 +70,7 @@ Rank = Impact × evidence weight (Observed 3, Claimed 2, Inferred 1) ÷ effort (
 | H5 | Browser DOCX import | 3 | pass | M | Inferred | differentiator | 1.5 | Spec; kill test pending |
 | H9 | Arelle formula assertions (CLI extra) | 3 | fail (this run: new extra changes `pyproject.toml`/`uv.lock`; see Needs owner decision) | L | Observed | differentiator | 2.25 | Proposed ADR |
 | D4 | Load progress and "format gate only" state | 2 | pass | S | Inferred | polish | 2 | Spec |
-| H4 | English citations in the browser | 4 | fail (`displayCitation` is `TODO(human)`; see Needs owner decision) | S | Observed (CLI already renders them) | table stakes | — | Owner decision (`TODO(human)`) |
+| H4 | English citations in the browser | 4 | fail (`displayCitation` was `TODO(human)`; see Needs owner decision) | S | Observed (CLI already renders them) | table stakes | — | **Built** 2026-11-10, after the decision under the owner's delegation |
 
 Budget: 4 items built, all Fit = pass, effort S or M. Since 2026-10-21 these are 3 features (H1, H2, H11) and 1 design upgrade (H6): the owner swapped dark mode (H7) for H11, which restores rank order.
 
@@ -128,7 +128,7 @@ Where this repo should beat everyone: **the only MiCA white-paper checker whose 
 - **Citation.** Part A of each Annex, at Part level, the citation the party rules already use; the repo's study maps the LEI to Annex I, Part A. The point-level basis is not verified (EUR-Lex unreachable) and every rule page says so. See [ADR 0007](../adr/0007-lei-rules.md).
 - **Acceptance.** Met: `tests/test_lei.py` (14 tests) covers the check-digit arithmetic, labelled and unlabelled numbers, every status of both rules, German messages, every regime and draft-free CI outputs. Generated rule pages carry tested examples. Fixture LEIs are synthetic, with computed check digits.
 - **Effect.** Each regime gains two rules (Annex I 16 → 18, Annex II 18 → 20, Annex III 14 → 16). The three full synthetic examples carry a fictional LEI (base containing `SYNTH`, computed check digits) and pass both rules; `examples/incomplete.json` has none and shows both as Missing. Existing rule IDs are unchanged.
-- **Changed since (Unreleased in `CHANGELOG.md`).** Both rules cite point 5 of Annex I Parts A, B and C and of Annex II and III Part A, checked against the Official Journal, and a draft that gives no LEI while a party section has text shows Review instead of Missing, because point 5 allows another identifier required pursuant to applicable national law. `examples/incomplete.json` therefore shows both rules as Review.
+- **Changed since (Unreleased in `CHANGELOG.md`).** Both rules cite point 5 of Annex I Parts A, B and C and of Annex II and III Part A, checked against the Official Journal, and a draft that gives no LEI while a party section has text shows Review instead of Missing, because point 5 allows another identifier required pursuant to applicable national law. `examples/incomplete.json` therefore shows both rules as Review. Since 2026-11-02, after an audit, every LEI-like code that is not LEI-shaped (wrong length, lower case, a letter where a check digit belongs, a look-alike character, glued to a word, split into groups, also by markup or invisible characters, or wrapped in a table cell) anywhere in a draft that reads LEIs (one with a party section, an LEI label or an LEI-shaped code) sends `COMMON.LEI_CHECK_DIGITS` to Review: in every section, and in the text of a document file outside its sections (headings, tables, text in no section). So a malformed or invalid LEI next to a valid one no longer passes, and a 20-digit number in such a draft has its check digits checked (ADR 0007, which lists the limits).
 
 ### F4. Wilson intervals in the review summary (H10), next
 
@@ -136,21 +136,21 @@ Where this repo should beat everyone: **the only MiCA white-paper checker whose 
 - **Adapt.** Add Wilson 95% bounds to `micar-review-summary` beside the existing precision/recall/F1 and `publication_ready` gate; keep the `model.test.mjs` study-figures test green. No labels entered by the agent or a model.
 - **Risk.** None to the non-negotiables; impact is nil until an owner reviews the 150 cells.
 
-### F5. Point-level rules (H8), first rules built 2026-10-30
+### F5. Point-level rules (H8), first rules built 2026-10-30, the other points carried by template fields 2026-11-04
 
 New IDs under a separate namespace (`ANNEX_I.A.P<n>`, distinct from `ANNEX_II.G.*` topic IDs and the study's `ANNEX_I_PART_A_02_*` IDs), driven by the numbered fields of Implementing Regulation (EU) 2024/2984. The owner chose this scheme on 2026-10-28: each rule cites one Annex point, checks the fields of Tables 2 to 4 that carry it and applies the template's LEI, DTI and flag conditions. Every point citation still has to be checked against the Official Journal text before it is added; the Publications Office Cellar serves that text where EUR-Lex refuses automated retrieval. See [ADR 0005](../adr/0005-point-level-rule-ids.md). The first two, `ANNEX_I.A.P6` and `ANNEX_III.A.P6` for the contact details of Part A point 6 (#68), were built on 2026-10-30, after the point and the template fields were read against the Official Journal that day.
 
 ### F6. Arelle formula assertions (H9), Proposed
 
-An optional CLI-only extra that runs the taxonomy's existence and value assertions with `--internetConnectivity offline` against a taxonomy package the user supplies. Not for the browser (lxml pin conflict). `COMMON.IXBRL_TAGGING` stays never-pass: assertion results become issues under it or under new rule IDs. See [ADR 0004](../adr/0004-arelle-optional-extra.md).
+An optional CLI-only extra that runs the taxonomy's existence and value assertions with `--internetConnectivity offline` against a taxonomy package the user supplies. Not for the browser (lxml pin conflict). `COMMON.IXBRL_TAGGING` stays never-pass, and assertion failures become issues under it, not new statuses (decided 2026-11-10, item 2 of Needs owner decision). See [ADR 0004](../adr/0004-arelle-optional-extra.md).
 
 ### F7. Browser DOCX import (H5), spec only
 
 Vendor `python_docx-1.2.0-py3-none-any.whl` under `docs/playground/vendor/`, load `lxml` and `typing-extensions` from Pyodide on first DOCX import, then `micropip.install(<same-origin URL>, deps=False)`. Kill if `examples/sample-draft.docx` costs more than 1.5 MB gzip or 5 s extra. Not measured in this run.
 
-### F8. English citations in the browser (H4), owner decision
+### F8. English citations in the browser (H4), built 2026-11-10
 
-`displayCitation` in `docs/playground/model.mjs` is reserved for the owner (`TODO(human)`) and was not edited. The engine already emits `citation_en` in the JSON report, so the smallest change is:
+`displayCitation` in `docs/playground/model.mjs` was reserved for the owner (`TODO(human)`). On 2026-11-10 the owner delegated the decision, and the proposal below was accepted and built as written: the engine already emits `citation_en` in the JSON report, so the smallest change was:
 
 ```diff
 -export function displayCitation(citation) {
@@ -163,7 +163,7 @@ Vendor `python_docx-1.2.0-py3-none-any.whl` under `docs/playground/vendor/`, loa
 +}
 ```
 
-with call sites passing the finding instead of `finding.citation`, and a test (to add when the owner accepts) asserting `displayCitation({citation: "Art. 6 Abs. 7 MiCAR", citation_en: "Art. 6(7) MiCAR"}) === "Art. 6(7) MiCAR"`.
+with call sites passing the finding instead of `finding.citation` (`renderFindings` in `app.mjs` and the search in `selectFindings`, which matches both forms). `tests/playground/model.test.mjs` checks that a finding shows `citation_en`, falls back to `citation` without it, stays searchable in both forms, and that on every rule page the English citation keeps the canonical form's numbers. The `TODO(human)` marker is gone. Exports still write the report as the engine produced it.
 
 ## Design upgrades
 
@@ -182,19 +182,19 @@ with call sites passing the finding instead of `finding.citation`, and a test (t
 | H1 | modified (built) | https://github.com/github/docs/blob/666463860bec200da6c8db9cb9334e7335d9b753/content/code-security/reference/code-scanning/sarif-files/sarif-support.md; https://github.com/reviewdog/reviewdog/blob/73c79487a087e1696b3e70a0ae5d2a7233343567/README.md | Built with summary and annotations on by default and SARIF opt-in; format gate kept out of annotations; `helpUri` kept for other SARIF consumers although GitHub does not document it |
 | H2 | confirmed (built) | https://github.com/eslint/eslint/blob/449724e95bfa013fa32c29375925b4111d3924e4/tools/check-rule-examples.js; https://github.com/astral-sh/ruff/blob/3e3f22dcc47a534d5bb6668817464b02c6e6e133/crates/ruff_dev/src/generate_docs.rs; https://github.com/DataQualityCommittee/dqc_us_rules/blob/64abefd357c34ef45f9f4336a1e3171984d76601/docs/DQC_US_0001/DQC_0001.md | Examples executed in tests, not only rendered |
 | H3 | parked | https://github.com/astral-sh/ruff/blob/3e3f22dcc47a534d5bb6668817464b02c6e6e133/playground/ruff/src/Editor/settings.ts | Effort L; needs the editor ADR decision |
-| H4 | parked (owner) | https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/ee156930df78b515d5a61397467c24439b61fecd/docs/playground/model.mjs | `displayCitation` is reserved for the owner (`TODO(human)`); diff above |
+| H4 | confirmed (built 2026-11-10) | https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/ee156930df78b515d5a61397467c24439b61fecd/docs/playground/model.mjs | `displayCitation` was reserved for the owner (`TODO(human)`); the diff above was accepted under the owner's delegation and built |
 | H5 | parked | https://github.com/pyodide/pyodide/releases/download/0.28.2/pyodide-0.28.2.tar.bz2 (no python-docx in the distribution) | Size and time kill test not yet run |
 | H6 | confirmed (built) | none external (Inferred) | Gives the Pages root a home and states limits |
 | H7 | built, then removed | https://github.com/astral-sh/ruff/blob/3e3f22dcc47a534d5bb6668817464b02c6e6e133/playground/ruff/src/Editor/settings.ts (theme setting persisted there; not here) | Removed at the owner's request (2026-10-21) in favour of H11 |
-| H8 | parked, then started (ID scheme chosen by the owner 2026-10-28, ADR 0005; first rules `ANNEX_I.A.P6` and `ANNEX_III.A.P6` built 2026-10-30) | https://github.com/Loideroi/WhitePaperXBRL/blob/f0dc7028e8c13ed8ccd3e322221f03b225f73a10/docs/agent_docs/validation-rules.md | Point citations need EUR-Lex verification |
+| H8 | parked, then started (ID scheme chosen by the owner 2026-10-28, ADR 0005; first rules `ANNEX_I.A.P6` and `ANNEX_III.A.P6` built 2026-10-30; 174 more for the other points carried by template fields built 2026-11-04) | https://github.com/Loideroi/WhitePaperXBRL/blob/f0dc7028e8c13ed8ccd3e322221f03b225f73a10/docs/agent_docs/validation-rules.md | Point citations need EUR-Lex verification |
 | H9 | modified, parked | https://github.com/Arelle/Arelle/blob/2ba2e9d96554554a79c2545219f6e5b941bb4d59/arelle/CntlrCmdLine.py; https://github.com/Arelle/Arelle/issues/1898 | CLI-only; killed for the browser (`lxml!=6.0.0`) |
 | H10 | confirmed, not built | https://github.com/TheAtticusProject/cuad/blob/67faa0e6023b04fcaae6cc09497ab00e5d63a2a2/evaluate.py; https://github.com/HazyResearch/legalbench/blob/b46bf4ffae90524b2b72aaa30e7745fe9db64481/README.md | Should have been built as a third feature (see the correction above); low impact while 0 of 150 cells are reviewed |
 | H11 | modified (built) | https://github.com/Loideroi/WhitePaperXBRL/blob/f0dc7028e8c13ed8ccd3e322221f03b225f73a10/docs/agent_docs/validation-rules.md | Built 2026-10-21 as two fail-closed rules, `COMMON.LEI_CHECK_DIGITS` and `COMMON.LEI_CONSISTENCY`; offline, no registry lookup; see [ADR 0007](../adr/0007-lei-rules.md) |
 
 ## Needs owner decision
 
-1. **H4**: accept the `displayCitation` diff above, or keep German citations in the browser.
-2. **H9 never-pass**: if Arelle assertions are added, confirm `COMMON.IXBRL_TAGGING` stays never-pass and assertion failures add issues rather than new statuses.
+1. **H4**: decided 2026-11-10 under the owner's delegation: the `displayCitation` diff above is accepted and built (F8). The browser shows the English EU citation that the CLI's text report prints, so both surfaces cite alike, and the canonical form stays in the exports and in search.
+2. **H9 never-pass**: decided 2026-11-10 under the owner's delegation (ADR 0004): if Arelle assertions are added, `COMMON.IXBRL_TAGGING` stays never-pass and assertion failures add issues to it, not new statuses. A clean assertion run does not show on its own that the format of Art. 2 of Implementing Regulation (EU) 2024/2984 is met, and a new status would change every output that reads the three statuses. Nothing is built; whether to add the extra stays open with ADR 0004.
 3. **H10 labels**: the 150 study cells need human review before any accuracy figure; nobody else can enter them.
 4. **`setup-uv` pin**: decided 2026-10-26. The owner moved the Action to `v10.3.0` (node24), recorded in ADR 0001, with `enable-cache: 'false'`. The `action` job in CI runs it; the starter repo itself has not been run against it.
 5. **Annotations and summary on by default** under `@v1`: decided 2026-10-26. The owner kept both on by default for the 1.2.0 release, which every existing consumer sees when `v1` moves.
@@ -203,3 +203,4 @@ with call sites passing the finding instead of `finding.citation`, and a test (t
 8. **H7 versus H11**: decided 2026-10-21. The owner swapped dark mode out for H11.
 9. **H11 legal basis**: decided 2026-10-27, after the owner's decisions on the rule terms review (ADR 0007). On `main` the LEI rules cite point 5 of each party Part (`Anhang I Teil A Nr. 5, Teil B Nr. 5, Teil C Nr. 5, Anhang II Teil A Nr. 5, Anhang III Teil A Nr. 5 MiCAR`), checked against the Official Journal text in English and German on 2026-10-27; release 1.2.1 still cites Part A of each Annex without a point. Severity MAJOR for both rules was confirmed by the owner on 2026-10-22.
 10. **Doc drift** proposed in the PR body: resolved 2026-10-27 at the owner's request. `AGENTS.md` (`BaseRule`, database migrations, "compliant") was fixed in #30; `docs/FEATURES.md` and `docs/ARCHITECTURE.md` ("regulatory rejection", "compliant") and the starter README custody claim (`ANNEX_II.G.CUSTODY` can pass) in #36; the sample reports in `reports/sample-*.txt` (since #31) and the text report footer print English citations by default.
+11. **Exit codes of `--coverage --strict` and strict directory runs** (ADR 0008, recorded 2026-11-02): decided 2026-11-10 under the owner's delegation, confirmed (ADR 0008 option 1, now Accepted). 06d0f46 and 85d81d8, released in 1.2.0, make `--coverage --strict` exit 1 on open BLOCKER findings (before: 0, with no output file written) and a strict directory run exit 1 when a file could not be linted or no file was linted (before: 0). They stay: `--strict` must fail when a file could not be linted or blockers are open, and a revert would be a second exit-code change for `@v1` users.

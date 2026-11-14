@@ -16,23 +16,29 @@ received; no Annex III item asks the white paper to describe their
 safeguarding.
 
 Scaffold note: rules below cover each Part of Annex III at the Part level.
-ANNEX_III.A.P6 is the one point rule (ADR 0005), for the contact details of
-Part A point 6. Other point-level extensions are the practitioner's
-contribution.
+ANNEX_III.A.P6 is the point rule (ADR 0005) for the contact details of Part A
+point 6; the point rules for the other points that a field of Table 4 of
+Implementing Regulation (EU) 2024/2984 carries are built in rules/points.py
+from point_fields.py and placed after their Part rule in RULESETS.
 """
 
 from __future__ import annotations
 
-from micar_linter.rules.annex_i import NOT_APPROVED_STATEMENT_EN, NOT_APPROVED_STATEMENT_LABEL
+from micar_linter.rules.annex_i import (
+    NOT_APPROVED_STATEMENT_DE,
+    NOT_APPROVED_STATEMENT_EN,
+    NOT_APPROVED_STATEMENT_LABEL,
+)
 from micar_linter.rules.base import Rule, Severity
 from micar_linter.rules.terms import ADDRESS_DE, ADDRESS_EN, COURT_DE
 
 ANNEX_III_RULES: tuple[Rule, ...] = (
     Rule(
-        # Art. 51(3) MiCAR: the same first-page statement, naming the issuer. Art. 19 MiCAR
+        # Art. 51(3) MiCAR: the same first-page statement, naming the issuer ("Der Emittent des
+        # Kryptowerts" in German, as in Table 4 field I.02 of 2024/2984). Art. 19 MiCAR
         # prescribes no such statement for an ART white paper, so Annex II has no
         # counterpart: Table 3 field I.02 of Implementing Regulation (EU) 2024/2984 holds
-        # the Art. 19(4) warning instead. Approval is not the reason: the white paper of an
+        # the Art. 19(4) statement instead. Approval is not the reason: the white paper of an
         # authorised issuer is deemed approved (Art. 21(1)) and that of a credit institution
         # is approved (Art. 17(1)(a)), but an issuer exempt under Art. 16(2) only notifies it.
         rule_id="ANNEX_III.NOT_APPROVED_STATEMENT",
@@ -43,6 +49,11 @@ ANNEX_III_RULES: tuple[Rule, ...] = (
             NOT_APPROVED_STATEMENT_EN,
             "the issuer of the crypto-asset is solely responsible for the content of this "
             "crypto-asset white paper",
+        ),
+        required_terms_de=(
+            NOT_APPROVED_STATEMENT_DE,
+            "der emittent des kryptowerts trägt die alleinige verantwortung für den inhalt dieses "
+            "kryptowerte-whitepapers",
         ),
         min_words=0,
         severity=Severity.BLOCKER,

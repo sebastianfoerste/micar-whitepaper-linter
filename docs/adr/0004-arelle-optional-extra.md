@@ -1,6 +1,6 @@
 # 0004. Arelle as an optional CLI extra for taxonomy assertions
 
-Status: Proposed
+Status: Proposed. The never-pass rule for the format gate was decided on 2026-11-10 under the owner's delegation (see Decision); the extra itself is not decided.
 
 ## Context
 
@@ -15,7 +15,7 @@ Tag completeness is defined by the existence and value assertions of the ESMA Mi
 ## Decision (proposed)
 
 Option 2, subject to the owner's decisions:
-- `COMMON.IXBRL_TAGGING` stays never-pass. Assertion failures are listed as its issues, or as new rule IDs with their own statuses; a clean assertion run is still not a pass of the format gate.
+- Decided on 2026-11-10 under the owner's delegation: `COMMON.IXBRL_TAGGING` stays never-pass, and assertion failures add issues to it, not new statuses. The status set stays `missing`, `review` and `pass`, and a clean assertion run is still not a pass of the format gate. Reasons: the formula assertions test tag existence and values only, and Arelle had no MiCA reporting-manual rules when this record was written (Context), so a clean run does not show on its own that a white paper meets the format of Art. 2 of Implementing Regulation (EU) 2024/2984; and every output reads the three statuses (`Finding.status` in `rules/base.py`, the SARIF mapping of ADR 0001 in `ci_outputs.py`, the playground and the review bundle), so a new status would change them all for what is extra detail on an open gate.
 - A new extra changes `pyproject.toml` and `uv.lock` and needs this ADR accepted first.
 
 ## Consequences

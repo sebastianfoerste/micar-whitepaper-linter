@@ -106,6 +106,110 @@ def test_part_title_between_paragraph_fields_ends_the_field_before_it(tmp_path: 
     assert not fields["A.2"].answered
 
 
+@pytest.mark.parametrize("title", [*sorted(PART_TITLES.values()), "Part B", "Teil AA"])
+def test_text_after_a_part_title_does_not_answer_the_field_before_it(tmp_path: Path, title: str):
+    # An introduction between a part title and the part's first field belongs to no field: before the
+    # fix it joined the field before the title, so an "N/A" field there read as answered.
+    path = _write(
+        tmp_path,
+        "<p>A.1 Name: Quillmoor Ledger S.A.</p><p>A.2 Legal form</p><p>N/A</p>"
+        f"<p>{title}</p>"
+        "<p>This part describes the issuer of the crypto-asset in some detail for the reader.</p>"
+        "<p>B.1 Name: Quillmoor Issuer AG</p>",
+    )
+    fields = {field.field_id: field for field in extract_numbered_fields(path)}
+    assert fields["A.2"].content == "N/A"
+    assert not fields["A.2"].answered
+    assert fields["B.1"].content == "Quillmoor Issuer AG"
+
+
+@pytest.mark.parametrize(
+    "reference",
+    [
+        "Part E of this white paper describes the offer.",
+        "Teil B dieses Whitepapers beschreibt den Emittenten.",
+        "Part E.3 sets out the amount of the offer.",
+        "part a of the terms applies.",
+    ],
+)
+def test_cross_reference_to_a_part_does_not_end_the_field(tmp_path: Path, reference: str):
+    # A line that starts with "Part E" but is no part title, as a cross-reference wrapped to the start of a
+    # line in a PDF conversion, is left out and keeps the rest of the answer in its field.
+    path = _write(
+        tmp_path,
+        "<p>D.2 Description of the project</p><p>The project runs a shared ledger for logistics firms.</p>"
+        f"<p>{reference}</p><p>The ledger settles freight invoices within one business day.</p>"
+        "<p>E.1 Amount: 1000</p>",
+    )
+    fields = {field.field_id: field for field in extract_numbered_fields(path)}
+    assert fields["D.2"].content.endswith("The ledger settles freight invoices within one business day.")
+
+
+@pytest.mark.parametrize(
+    "paragraph",
+    [
+        # A cross-reference in inline markup is a text fragment of its own, but no block.
+        "The offer is described in <b>Part E</b> of this white paper.",
+        # A wrapped German cross-reference that starts a line.
+        "Teil G gemäß Anhang I beschreibt die Rechte.",
+    ],
+)
+def test_part_reference_inside_an_answer_does_not_end_the_field(tmp_path: Path, paragraph: str):
+    path = _write(
+        tmp_path,
+        f"<p>D.2 Description of the project</p><p>{paragraph}</p>"
+        "<p>The ledger settles freight invoices within one business day.</p><p>E.1 Amount: 1000</p>",
+    )
+    fields = {field.field_id: field for field in extract_numbered_fields(path)}
+    assert fields["D.2"].content.endswith("The ledger settles freight invoices within one business day.")
+
+
+@pytest.mark.parametrize(
+    "markup",
+    [
+        # A title without a dash and of more than 20 words.
+        "<p>N/A</p><p>Part B Information about the issuer, if different from the offeror or person seeking "
+        "admission to trading, as the template of the implementing regulation sets it out for this table</p>"
+        "<p>This part describes the issuer of the crypto-asset in some detail for the reader.</p>",
+        # Fields and a part title run together in one paragraph.
+        "<p>N/A Part B \u2013 Information about the issuer, if different from the offeror or person seeking "
+        "admission to trading This part describes the issuer.</p>",
+        # Swiss and Liechtenstein German, and capitals.
+        "<p>N/A</p><p>AA \u2013 Gemäss Artikel 19 Absatz 1 Unterabsatz 2 der Verordnung</p><p>Dieser Teil "
+        "beschreibt andere Personen.</p>",
+        "<p>N/A</p><p>AA \u2013 GEMÄSS ARTIKEL 19</p><p>Dieser Teil beschreibt andere Personen.</p>",
+    ],
+)
+def test_other_wordings_of_a_part_title_end_the_field_before_it(tmp_path: Path, markup: str):
+    path = _write(tmp_path, f"<p>A.2 Legal form</p>{markup}<p>B.1 Name: Quillmoor Issuer AG</p>")
+    fields = {field.field_id: field for field in extract_numbered_fields(path)}
+    assert fields["A.2"].content == "N/A"
+    assert not fields["A.2"].answered
+
+
+@pytest.mark.parametrize(
+    "header",
+    ["Part A - Information about the offeror or the person seeking admission to trading", "Part A"],
+)
+def test_title_of_the_fields_own_part_does_not_end_the_field(tmp_path: Path, header: str):
+    # A PDF conversion can repeat the part title as a page header between a field's label and its answer.
+    path = _write(
+        tmp_path,
+        f"<p>A.8 Contact telephone number</p><p>{header}</p><p>+49 30 0000 0000</p>"
+        "<p>A.9 E-mail address: contact@offeror.example</p>",
+    )
+    fields = {field.field_id: field for field in extract_numbered_fields(path)}
+    assert fields["A.8"].content == "+49 30 0000 0000"
+
+
+def test_short_letter_line_in_a_field_does_not_end_it(tmp_path: Path):
+    # "J. Doe" looks like a short "B. Issuer" part line, but such a line does not end the field: the
+    # field's next line stays in it.
+    path = _write(tmp_path, "<p>A.12 Members of the management body</p><p>J. Doe</p><p>Chair of the board</p>")
+    fields = {field.field_id: field for field in extract_numbered_fields(path)}
+    assert "Chair of the board" in fields["A.12"].content
+
+
 @pytest.mark.parametrize(
     "text",
     [

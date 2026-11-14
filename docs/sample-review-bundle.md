@@ -30,7 +30,7 @@ The linter was run on `examples/art-stablecoin.json` with the default English ci
 MiCAR Whitepaper Linter - Synthetic EuroStable ART White Paper
 Whitepaper type: ART
 ==============================================================================
-Pass: 17  |  Review: 2  |  Missing: 1  |  Blockers: 3
+Pass: 18  |  Review: 2  |  Missing: 1  |  Blockers: 3
 
 [PASS  ] [BLOCKER] COMMON.SUMMARY  Plain-language summary
            Cite:  Art. 6(7), Art. 19(6), Art. 51(6) MiCAR
@@ -50,7 +50,7 @@ Pass: 17  |  Review: 2  |  Missing: 1  |  Blockers: 3
 [PASS  ] [MAJOR  ] COMMON.NOTIFICATION_DATE  Date of notification to the competent authority
            Cite:  Art. 6(8), Art. 19(7), Art. 51(7) MiCAR
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
-           Section: 'notification_date'  (17 words)
+           Section: 'notification_date'  (15 words)
 
 [PASS  ] [MAJOR  ] COMMON.LANGUAGE  Language of the white paper (home Member State official language or customary in international finance)
            Cite:  Art. 6(9), Art. 19(8), Art. 51(8) MiCAR
@@ -137,6 +137,14 @@ Pass: 17  |  Review: 2  |  Missing: 1  |  Blockers: 3
            Text:  https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng
            Section: 'redemption'  (139 words)
 
+[PASS  ] [BLOCKER] ITS.NOTIFICATION_DATE_FORMAT  Date of notification written as YYYY-MM-DD, the template's format
+           Cite:  Annex, Table 2, field 01, Table 3, field I.01, Table 4, field I.01 Regulation (EU) 2024/2984
+           Text:  https://eur-lex.europa.eu/eli/reg_impl/2024/2984/oj/eng
+           Section: 'notification_date'  (15 words)
+
+Warnings:
+  -  Field-level checks of the templates of Implementing Regulation (EU) 2024/2984 and Delegated Regulations (EU) 2025/421 and 2025/422 run only on drafts in the numbered-field layout (XHTML). This draft has no field numbers, so 65 point checks and 5 template checks did not run. They are left out of this report and count neither as passed nor as open; check the white paper in the numbered-field layout to run them.
+
 ==============================================================================
 First-pass screening only. The draft is not package-ready. The white paper notification or submission for approval (Art. 8(1), Art. 16(2), second subparagraph, Art. 17(1), point (a), Art. 18(2), point (k), Art. 51(11) MiCAR) should not enter an external review or filing workflow until BLOCKER items are cured and a lawyer has signed off.
 This tool is not legal advice.
@@ -146,11 +154,12 @@ This tool is not legal advice.
 
 ## Coverage Statistics
 
-- **Total Checked Rules**: 20
-- **Passed Rules**: 17
-- **Rules Requiring Review**: 2 (the fact-dependent deposit floor, and custody under Annex II, Part G)
+- **Total Checked Rules**: 21
+- **Passed Rules**: 18
+- **Rules Requiring Review**: 2 (the fact-dependent deposit floor and custody under Annex II, Part G)
 - **Missing Sections**: 1 (format: a JSON draft cannot satisfy the XHTML/iXBRL notification format)
 - **Open Blockers**: 3 (`COMMON.IXBRL_TAGGING`, `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW`, `ANNEX_II.G.CUSTODY`)
+- **Not Run**: 70 field-level checks (the 65 point rules `ANNEX_II.A.P1` to `ANNEX_II.G.P5` and the template rules `ITS.PREDEFINED_TEXT`, `ITS.FIELD_FORMATS`, `ITS.CODE_LISTS`, `RTS.SUSTAINABILITY_INDICATORS`, `RTS.CLASSIFICATION_DATA`). They run only on drafts in the numbered-field layout; the JSON draft has no field numbers, so the report has no finding for them, neither open nor passed, and one note says so.
 
 ---
 
