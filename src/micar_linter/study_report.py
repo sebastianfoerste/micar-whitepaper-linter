@@ -25,6 +25,7 @@ ESMA_PAGE_LAST_UPDATE = "3 July 2026"
 def render_study_report(payload: dict[str, Any]) -> str:
     summary = payload["summary"]
     reviewed = summary["documents_reviewed"]
+    cells = reviewed * len(payload.get("rules", []))
     potential_gaps = summary["potential_gaps"]
     high_confidence = summary["high_confidence_gaps"]
     review_status = payload.get("human_review_status", "pending_review")
@@ -132,9 +133,13 @@ def render_study_report(payload: dict[str, Any]) -> str:
             "",
             "## Human validation gate",
             "",
-            "The 150 document-rule cells are listed in `human-review-matrix.csv`. No precision, recall, "
-            "false-positive, or false-negative claim is made until qualified reviewers label every cell "
-            "under `review-protocol.md` and `micar-review-summary --require-complete` exits successfully.",
+            f"Reviewers label the {cells} document-rule cells in `human-review-blinded.csv`, which omits "
+            "the detector outcomes, following `REVIEWING.md`. `human-review-matrix.csv` already holds the "
+            "detector outcomes, so reviewers do not open it while labelling; "
+            "`scripts/build_review_matrix.py --merge-blinded` copies the labels into it once every blinded "
+            "cell is labelled. No precision, recall, false-positive, or false-negative claim is made until "
+            "qualified reviewers label every cell under `review-protocol.md` and "
+            "`micar-review-summary --require-complete` exits successfully.",
             "",
             "Document byte hashes and extraction metadata are recorded in `document-provenance.json`.",
             "",
@@ -151,7 +156,8 @@ def render_study_report(payload: dict[str, Any]) -> str:
                 "| --- | ---: |",
             ]
         )
-        for item in frequent[:10]:
+        # Every flagged rule is listed; a truncated table hid the Article 6 rows.
+        for item in frequent:
             lines.append(f"| `{item['rule_id']}` | {item['count']} |")
     else:
         lines.append("No candidate gaps were flagged.")
