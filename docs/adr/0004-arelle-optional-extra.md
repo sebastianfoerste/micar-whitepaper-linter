@@ -4,13 +4,13 @@ Status: Proposed. The never-pass rule for the format gate was decided on 2026-11
 
 ## Context
 
-Tag completeness is defined by the existence and value assertions of the ESMA MiCA taxonomy's formula linkbase, which this repo does not evaluate. Arelle (Apache-2.0) supports offline runs (`--internetConnectivity offline`, `--packages`, `--formula run`) (Observed in source). It has no MiCA plugin and issue #1898 for the MiCA reporting-manual rules is open (Observed). `arelle-release` 2.46.1 is a 6.1 MB pure-Python wheel but requires `lxml!=6.0.0`; Pyodide 0.28.2 ships only lxml 6.0.0 (Observed), so it cannot run in the playground as pinned.
+Tag completeness is defined by the existence and value assertions of the ESMA MiCA taxonomy's formula linkbase, which this repo does not evaluate. Arelle (Apache-2.0) supports offline runs (`--internetConnectivity offline`, `--packages`, `--formula run`) (Observed in source). It has no MiCA plugin and issue #1898 for the MiCA reporting-manual rules is open (Observed). `arelle-release` 2.46.1 is a 6.1 MB pure-Python wheel but requires `lxml!=6.0.0`; Pyodide 0.28.2 ships only lxml 6.0.0 (Observed), so it cannot run in the playground as pinned. Sources, all read on 2026-10-20: Arelle/Arelle at commit `2ba2e9d96554554a79c2545219f6e5b941bb4d59` and its issue #1898, the PyPI metadata of `arelle-release` 2.46.1, and `Makefile.envs` of pyodide/pyodide at tag 0.28.2 with the `pyodide-lock.json` of the pyodide/pyodide-recipes release `0.28-20250801` that it names.
 
 ## Options
 
 1. Do nothing; keep pointing users to a taxonomy validator.
 2. An optional `arelle` extra, CLI-only: `micar-lint draft.xhtml --taxonomy-package PATH` runs the assertions offline against a package the user downloads. The repo never commits a taxonomy.
-3. Re-implement assertions in Python (as WhitePaperXBRL does in TypeScript, Observed).
+3. Re-implement assertions in Python (as WhitePaperXBRL does in TypeScript; Observed in Loideroi/WhitePaperXBRL at commit `f0dc7028e8c13ed8ccd3e322221f03b225f73a10`, read on 2026-10-20).
 
 ## Decision (proposed)
 

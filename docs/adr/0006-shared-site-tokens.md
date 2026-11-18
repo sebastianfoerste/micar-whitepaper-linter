@@ -4,7 +4,7 @@ Status: Accepted (2026-10-20); amended 2026-10-21, when the dark theme was remov
 
 ## Context
 
-The playground used nine colour tokens and about thirty hard-coded colours. The landing page and rule pages need the same look. A first version of this decision also added a dark theme: `prefers-color-scheme`, plus a page-session toggle that stored nothing. Ruff's playground has a theme switch but persists it in `localStorage` (Observed). On 2026-10-21 the owner swapped the dark theme out for the LEI checks (H11, [ADR 0007](0007-lei-rules.md)), which ranked higher.
+The playground used nine colour tokens and about thirty hard-coded colours. The landing page and rule pages need the same look. A first version of this decision also added a dark theme: `prefers-color-scheme`, plus a page-session toggle that stored nothing. Ruff's playground has a theme switch but persists it in `localStorage` (Observed in astral-sh/ruff at commit `3e3f22dcc47a534d5bb6668817464b02c6e6e133`, read in source on 2026-10-20). On 2026-10-21 the owner swapped the dark theme out for the LEI checks ([ADR 0007](0007-lei-rules.md)), which the October 2026 adaptation plan ranked higher.
 
 ## Options
 

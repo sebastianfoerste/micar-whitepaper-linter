@@ -9,7 +9,7 @@ Any change to a severity, a status or an exit code is an owner decision. Two com
 - 06d0f46 (2026-10-25, "fix: keep --coverage, batch runs and the Action fail-closed"): `--coverage` without `--review-bundle-dir` printed its table and returned 0 before the output files were written and before `--strict` was applied. It now replaces only the printed report. The same commit added `failed_files` to the directory batch summary and made `--strict` exit 1 when a file could not be linted.
 - 85d81d8 (2026-10-25, "fix: fail a strict directory run that linted no file"): `--strict` on a directory exits 1 when no file was linted.
 
-Both reached `main` with PR #30 (merged 2026-10-26) and are in releases 1.2.0 and 1.2.1, so `@v1` users of the Action run them. `CHANGELOG.md` lists them under 1.2.0 "Fixed". No ADR records them, and the "Needs owner decision" list in `docs/research/adaptation-plan.md` did not name them. The post-verification audit of 2026-11-02 found the record missing. The changes move in the fail-closed direction, but a `--strict` run in CI can now fail where it passed before.
+Both reached `main` with PR #30 (merged 2026-10-26) and are in releases 1.2.0 and 1.2.1, so `@v1` users of the Action run them. `CHANGELOG.md` lists them under 1.2.0 "Fixed". No ADR records them, and the owner-decision list of the October 2026 adaptation plan did not name them. The post-verification audit of 2026-11-02 found the record missing. The changes move in the fail-closed direction, but a `--strict` run in CI can now fail where it passed before.
 
 Measured with `python -m micar_linter` on the source before 06d0f46 and on `main` at c7c99cf (`examples/incomplete.json` has open BLOCKER findings; the numbered-field draft is `examples/numbered-other-draft.xhtml`, which a directory run cannot lint because it needs `--type`):
 
@@ -43,7 +43,7 @@ Reasons:
 ## Consequences
 
 - No code changes. The tests in `tests/test_fail_closed_fixes.py` (`test_coverage_keeps_strict_and_output_files`, `test_batch_counts_files_it_could_not_lint_and_strict_fails_on_them`, `test_strict_batch_fails_when_no_file_was_linted`) keep pinning the three exit codes, and `docs/API.md` already describes them.
-- `CHANGELOG.md` keeps the entries under 1.2.0 "Fixed". The commands in section 3 of `AGENTS.md` and item 11 of "Needs owner decision" in `docs/research/adaptation-plan.md` now point to this decision.
+- `CHANGELOG.md` keeps the entries under 1.2.0 "Fixed". The commands in section 3 of `AGENTS.md` now point to this decision.
 - Changing any of the three later would need a new record: it would be an exit-code change for `@v1` users.
 
 ## Non-negotiables check

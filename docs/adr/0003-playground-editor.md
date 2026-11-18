@@ -4,7 +4,7 @@ Status: Proposed
 
 ## Context
 
-"Inspect section" selects the section text in a plain `<textarea>`. Ruff's playground uses a full editor (Monaco) with diagnostics inline (Observed) but also autosaves to `localStorage` and stores share links (Observed), which this repo must not do.
+"Inspect section" selects the section text in a plain `<textarea>`. Ruff's playground uses a full editor (Monaco) with diagnostics inline (Observed) but also autosaves to `localStorage` and stores share links (Observed), which this repo must not do. Source: `playground/` in astral-sh/ruff at commit `3e3f22dcc47a534d5bb6668817464b02c6e6e133`, read in source on 2026-10-20.
 
 ## Options
 

@@ -4,7 +4,7 @@ Status: Accepted (2026-10-21). Amended on 2026-10-27, after the owner's decision
 
 ## Context
 
-White papers identify their parties by Legal Entity Identifier. The repo's study maps the LEI to Annex I, Part A (`ANNEX_I_PART_A_05_LEI_OR_IDENTIFIER` in `batch.py`). A mistyped LEI is a common, mechanical error that a deterministic check can catch. WhitePaperXBRL checks LEI check digits and optionally asks GLEIF, but treats a failed lookup as valid (Observed in its docs); that fails open. EUR-Lex was unreachable, so no new citation could be verified.
+White papers identify their parties by Legal Entity Identifier. The repo's study maps the LEI to Annex I, Part A (`ANNEX_I_PART_A_05_LEI_OR_IDENTIFIER` in `batch.py`). A mistyped LEI is a common, mechanical error that a deterministic check can catch. WhitePaperXBRL checks LEI check digits and optionally asks GLEIF, but treats a failed lookup as valid (Observed in `docs/agent_docs/validation-rules.md` of Loideroi/WhitePaperXBRL at commit `f0dc7028e8c13ed8ccd3e322221f03b225f73a10`, read on 2026-10-20); that fails open. EUR-Lex was unreachable, so no new citation could be verified.
 
 ## Options
 

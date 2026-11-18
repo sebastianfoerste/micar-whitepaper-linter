@@ -4,7 +4,7 @@ Status: Accepted (2026-10-20)
 
 ## Context
 
-The Action printed findings to the job log only. GitHub offers three surfaces: workflow-command annotations (no permissions, work on forks), the step summary (no permissions, 1 MiB per step) and code scanning via SARIF (`security-events: write`, public repositories or GitHub Code Security). Sources: github/docs and reviewdog, read in source on 2026-10-20 (landscape Part B). CI surfaces can be more widely visible than the draft, and the repo promises that statuses fail closed and exit codes do not change silently.
+The Action printed findings to the job log only. GitHub offers three surfaces: workflow-command annotations (no permissions, work on forks), the step summary (no permissions, 1 MiB per step) and code scanning via SARIF (`security-events: write`, public repositories or GitHub Code Security). Sources: github/docs at commit `666463860bec200da6c8db9cb9334e7335d9b753` and reviewdog at commit `73c79487a087e1696b3e70a0ae5d2a7233343567`, read in source on 2026-10-20. CI surfaces can be more widely visible than the draft, and the repo promises that statuses fail closed and exit codes do not change silently.
 
 ## Options
 
@@ -31,7 +31,7 @@ Option 3.
 
 - `@v1` users have had a job summary and up to 10 annotations by default since `v1` moved to 1.2.0. Exit codes are unchanged.
 - SARIF upload fails on fork PRs and on private repositories without Code Security; it is opt-in and documented.
-- The annotation caps (10 per level per step) are documented only in a reviewdog issue (Claimed); the summary is the complete list.
+- The annotation caps (10 per level per step) are documented only in a comment of 2020-01-05 on [reviewdog issue #411](https://github.com/reviewdog/reviewdog/issues/411), which cites a GitHub Community post (Claimed); the summary is the complete list.
 - rdjson for reviewdog is not emitted; reviewdog can read SARIF.
 
 - The job log still prints the full text report, including the draft title. Only the summary, annotations and SARIF log are draft-free.

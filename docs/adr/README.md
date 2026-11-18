@@ -12,3 +12,5 @@
 | [0008](0008-strict-exit-codes.md) | Exit codes of `--coverage --strict` and strict directory runs | Accepted (2026-11-10) |
 
 Each record has Status, Context, Options, Decision, Consequences and a non-negotiables check. "Accepted" records describe code in this repository; "Proposed" records describe nothing built yet, except ADR 0005, whose point rules are built for every Annex point that a template field carries.
+
+The evidence tag after a statement about another tool says how the statement was checked. Observed: read in the tool's source code, documentation or package metadata. Claimed: taken only from marketing, a search-result snippet or another party's statement. Each record names the sources of its tagged statements.
