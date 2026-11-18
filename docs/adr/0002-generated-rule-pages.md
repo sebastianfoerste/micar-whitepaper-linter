@@ -4,7 +4,7 @@ Status: Accepted (2026-10-20)
 
 ## Context
 
-Findings cite a provision but the rule logic was only readable in Python. The strongest rule-doc pattern seen is ESLint's: every doc example is linted in CI (`tools/check-rule-examples.js`, Observed). Ruff checks that headings exist; DQC and Spectral keep tests apart from docs (Observed).
+Findings cite a provision but the rule logic was only readable in Python. The strongest rule-doc pattern seen is ESLint's: every doc example is linted in CI (`tools/check-rule-examples.js`, Observed). Ruff checks that headings exist; DQC and Spectral keep tests apart from docs (Observed). Sources: eslint/eslint at commit `449724e95bfa013fa32c29375925b4111d3924e4`, astral-sh/ruff at commit `3e3f22dcc47a534d5bb6668817464b02c6e6e133`, DataQualityCommittee/dqc_us_rules at commit `64abefd357c34ef45f9f4336a1e3171984d76601` and stoplightio/spectral at commit `95ab37eeea1f69ee9ae1a43b88f3ed1df007f190`, read in source on 2026-10-20.
 
 ## Options
 

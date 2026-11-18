@@ -10,6 +10,7 @@
 
 ### Changed
 - Starter template: Dependabot waits seven days after an action release before it proposes the update, as this repository's own configuration does. Security updates are not delayed.
+- The research notes of the October 2026 adaptation run (`2026-10-competitive-landscape.md`, `design-teardown.md`, `feature-matrix.csv` and `adaptation-plan.md` in `docs/research/`) and the run's playground screenshots (`research/screenshots/`) are deleted from the source tree, so the documentation site no longer serves the notes. The review of the rule terms (`docs/research/2026-10-rule-terms-review.md`) stays.
 
 ### Fixed
 - `micar-study-report` lists every flagged rule under "Most frequent detector flags"; before, the table stopped at ten rows and left out the three Article 6 rules. Its "Human validation gate" paragraph takes the cell count from the findings and names `human-review-blinded.csv`, `REVIEWING.md` and `build_review_matrix.py --merge-blinded`. `findings-summary.md` is re-rendered, and a test now fails when it differs from a fresh render. The playground wheel is rebuilt.
