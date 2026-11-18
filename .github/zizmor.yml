@@ -1,0 +1,13 @@
+# The starter template's workflow (templates/whitepaper-starter/.github/workflows/micar-lint.yml)
+# follows this repository's own Action through its moving v1 tag, so that repositories created from
+# the template receive linter releases. The ignore entry exempts that one uses: line from the
+# hash-pin rule. zizmor matches the entry by file name and line number, so an edit that moves the
+# line fails the audit until the entry names the new line. Every other action stays pinned by
+# commit SHA, including a reference to this Action from any other line.
+rules:
+  unpinned-uses:
+    ignore:
+      - micar-lint.yml:21
+    config:
+      policies:
+        "*": hash-pin
