@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="States that a white paper has been published and gives a website, a telephone number and an e-mail address. Art. 7(1), point (d) MiCAR.">
+<title>MARKETING.WHITE_PAPER_AND_CONTACT: MiCAR Whitepaper Linter rule</title>
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <a class="brand" href="../"><span class="brand-mark" aria-hidden="true">M</span><span>MiCAR <strong>Whitepaper Linter</strong></span></a>
+  <nav aria-label="Site"><a href="../">Overview</a><a href="../rules/">Rules</a><a href="../playground/">Playground</a><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter">Source</a></nav>
+</header>
+<main id="main">
+<p class="eyebrow">Rule · BLOCKER</p>
+<h1>MARKETING.WHITE_PAPER_AND_CONTACT</h1>
+<p class="lede">States that a white paper has been published and gives a website, a telephone number and an e-mail address</p>
+<div class="panel"><dl class="facts">
+<dt>Citation</dt><dd>Art. 7(1), point (d) MiCAR</dd>
+<dt>Canonical form</dt><dd lang="de">Art. 7 Abs. 1 Buchst. d MiCAR</dd>
+<dt>Runs for</dt><dd>Marketing communications · crypto-assets other than ARTs and EMTs (Art. 7 MiCAR)</dd>
+<dt>Severity if open</dt><dd>BLOCKER</dd>
+<dt>Section key</dt><dd><code>marketing_communication</code></dd>
+<dt>Minimum words</dt><dd>none: checks for a white paper statement, a website, a telephone number and an e-mail address</dd>
+<dt>Listed terms (English)</dt><dd>none</dd>
+<dt>Listed terms (German)</dt><dd lang="de">none</dd>
+<dt>Package version</dt><dd>1.3.0, built from source that may include unreleased changes</dd>
+<dt>Source</dt><dd><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/rules/marketing.py">rules/marketing.py</a></dd>
+</dl></div>
+<h2>How the status is set</h2>
+<ul class="plain"><li><strong>Missing</strong>: the text is empty or holds only placeholders such as TBD.</li><li><strong>Review</strong>: one or more of these is not found: a statement that a crypto-asset white paper has been published, a website address, a telephone number, an e-mail address.</li><li><strong>Pass</strong>: all four are found.</li></ul>
+<h2>Legal basis</h2>
+<p>Art. 7(1), point (d) MiCAR</p>
+<ul class="plain"><li><a href="https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng">https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng</a></li></ul>
+<p class="callout">Checked on 2026-11-25 against the Official Journal text of Art. 7(1) MiCAR in English and German (OJ L 150, 9.6.2023; CELEX 32023R1114), as the Publications Office Cellar served it that day. Amendments and corrigenda of Art. 7 were not checked separately.</p>
+<h2>Synthetic examples</h2>
+<p class="small muted">Each example is linted when this page is generated. The build fails if a result differs.</p>
+<div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>Empty communication</strong></div><p class="small muted">An empty text is missing for every marketing rule.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic token offer&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;text&quot;: &quot;&quot;
+}
+
+No white paper given (no --whitepaper).</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>Statement only</strong></div><p class="small muted">No white paper statement, website, telephone number or e-mail address.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic token offer&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;text&quot;: &quot;Advertisement. This crypto-asset marketing communication has not been reviewed or approved by any competent authority in any Member State of the European Union. The offeror of the crypto-asset is solely responsible for the content of this crypto-asset marketing communication.&quot;
+}
+
+No white paper given (no --whitepaper).</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>All four items</strong></div><p class="small muted">Each item is there.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic token offer&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;text&quot;: &quot;Advertisement. A crypto-asset white paper has been published at https://synthetic-offeror.example/white-paper. Telephone +49 30 0000 0000, e-mail contact@synthetic-offeror.example.&quot;
+}
+
+No white paper given (no --whitepaper).</code></pre></div>
+<h2>Limitations</h2>
+<ul class="plain"><li>Reads the whole text of the marketing communication as a reader sees it: the <code>text</code> value of a JSON file, or the text of a Markdown, text, HTML, XHTML, DOCX or PDF file without what the loader finds a reader cannot see. It cannot see layout, placement, prominence, images, audio or video, so wording shown only in an image, a banner or a voice-over is not read.</li><li>Recognises a sentence that says a white paper has been published, in English or German, a web address (with a scheme, starting with www. or a host with a path), a telephone number and an e-mail address, as the contact checks of Annex I Part A point 6 recognise them. It cannot tell whose website, number or address they are, or whether they work.</li><li>Status and severity are fixed by the rule. A draft cannot waive or downgrade them.</li><li>The marketing communication checks have not yet been run against a real marketing communication.</li></ul>
+<p class="small muted">Disagree with this rule, or missing one? <a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/issues/new?template=rule-proposal.yml">Propose a rule change</a>.</p>
+
+</main>
+<footer><span>MiCAR Whitepaper Linter 1.3.0 · MIT licence · First-pass screening, not legal advice.</span><span>Generated from the rule set by <code>scripts/build_rule_docs.py</code>.</span></footer>
+</body>
+</html>

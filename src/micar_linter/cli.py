@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 from micar_linter import __version__
@@ -20,7 +21,7 @@ from micar_linter.collaboration_workspace import (
     write_collaboration_bundle,
 )
 from micar_linter.coverage import build_coverage_matrix, render_coverage_matrix
-from micar_linter.linter import lint_whitepaper
+from micar_linter.linter import lint_marketing, lint_whitepaper
 from micar_linter.remediation import render_remediation_report
 from micar_linter.report import render_audit_log, render_coverage_table, render_json, render_text
 from micar_linter.review_bundle import write_review_bundle
@@ -30,7 +31,8 @@ from micar_linter.review_table import (
     render_review_table,
     render_review_table_comparison,
 )
-from micar_linter.whitepaper import WhitepaperType, load_whitepaper
+from micar_linter.signoff import SignoffError, apply_signoff, load_signoff
+from micar_linter.whitepaper import WhitepaperType, load_marketing_communication, load_whitepaper
 from micar_linter.workspace import build_whitepaper_workspace, render_whitepaper_workspace
 
 
@@ -79,6 +81,34 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Exit with status 1 if any BLOCKER-severity finding is open. For a directory, also if a file "
             "could not be linted or no file was linted."
+        ),
+    )
+    parser.add_argument(
+        "--signoff",
+        type=Path,
+        help=(
+            "Sign-off file (JSON, schema micar-whitepaper-linter.signoff.v1) that acknowledges the "
+            "never-pass gates COMMON.IXBRL_TAGGING and ANNEX_II.G.DEPOSIT_FLOOR_REVIEW for this exact file "
+            "(by SHA-256). "
+            "With --strict, an acknowledged gate no longer fails the run; its finding stays open. One white "
+            "paper file only."
+        ),
+    )
+    parser.add_argument(
+        "--marketing",
+        action="store_true",
+        help=(
+            "Check the file as a marketing communication under Art. 7 MiCAR (crypto-assets other than ARTs "
+            "and EMTs) instead of a white paper: JSON with a 'text' value, Markdown, text, HTML, XHTML, "
+            "DOCX or PDF. Works with --json, --strict, --lang, --citation-style and the CI outputs."
+        ),
+    )
+    parser.add_argument(
+        "--whitepaper",
+        type=Path,
+        help=(
+            "With --marketing: the white paper the communication must be consistent with "
+            "(Art. 7(1)(c) MiCAR). Without it, MARKETING.CONSISTENCY does not run."
         ),
     )
     parser.add_argument(
@@ -192,6 +222,26 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     paths: list[Path] = args.paths
 
+    if args.whitepaper and not args.marketing:
+        print(
+            "error: --whitepaper names the white paper of a marketing communication; it needs --marketing",
+            file=sys.stderr,
+        )
+        return 2
+    if args.signoff and (
+        args.marketing
+        or args.workspace_output
+        or args.collaboration_bundle_dir
+        or args.workflow_action
+        or args.compare_review_table_output
+        or len(paths) != 1
+        or paths[0].is_dir()
+    ):
+        print("error: --signoff applies to a single white paper file", file=sys.stderr)
+        return 2
+    if args.marketing:
+        return _run_marketing(args, paths)
+
     if args.workspace_output or args.collaboration_bundle_dir or args.workflow_action:
         try:
             workspace = build_whitepaper_workspace(paths)
@@ -263,6 +313,18 @@ def main(argv: list[str] | None = None) -> int:
         whitepaper.metadata["language"] = args.lang
 
     report = lint_whitepaper(whitepaper)
+    if args.signoff:
+        try:
+            acknowledgements = load_signoff(args.signoff)
+        except SignoffError as exc:
+            print(f"error: sign-off file {args.signoff}: {exc}", file=sys.stderr)
+            return 2
+        applied, notes = apply_signoff(
+            acknowledgements,
+            calculate_sha256(args.path),
+            {finding.rule.rule_id for finding in report.blockers},
+        )
+        report = replace(report, acknowledged=applied, warnings=(*report.warnings, *notes))
 
     # --coverage only changes what is printed: output files and --strict still apply.
     if args.coverage and not args.review_bundle_dir:
@@ -373,6 +435,80 @@ def main(argv: list[str] | None = None) -> int:
                 f"error: cannot write artifact manifest to {args.manifest_output}: {exc}",
                 file=sys.stderr,
             )
+            return 2
+
+    # A never-pass gate that the sign-off file acknowledges for this file version does not fail --strict
+    # (ADR 0010).
+    if args.strict and report.open_blockers:
+        return 1
+    return 0
+
+
+# The outputs that read a white paper report (review table, bundle, coverage and the rest) and the modes for
+# many drafts: not available for a marketing communication yet (ADR 0009).
+_MARKETING_UNSUPPORTED = (
+    "audit_log",
+    "manifest_output",
+    "remediation_output",
+    "coverage_output",
+    "review_table_output",
+    "compare_review_table_output",
+    "coverage",
+    "review_bundle_dir",
+    "batch_output",
+    "workspace_output",
+    "collaboration_bundle_dir",
+    "workflow_action",
+)
+
+
+def _run_marketing(args: argparse.Namespace, paths: list[Path]) -> int:
+    """Lint one marketing communication under Art. 7 MiCAR, against the white paper of --whitepaper."""
+    unsupported = [f"--{name.replace('_', '-')}" for name in _MARKETING_UNSUPPORTED if getattr(args, name)]
+    if unsupported:
+        print(f"error: --marketing does not support {', '.join(unsupported)}", file=sys.stderr)
+        return 2
+    if args.type not in (None, WhitepaperType.OTHER.value):
+        print(
+            "error: --marketing covers crypto-assets other than ARTs and EMTs (Art. 7 MiCAR); "
+            "Art. 29 and Art. 53 MiCAR are not covered",
+            file=sys.stderr,
+        )
+        return 2
+    if len(paths) != 1 or paths[0].is_dir():
+        print("error: --marketing takes one marketing communication file", file=sys.stderr)
+        return 2
+    path = paths[0]
+
+    reference = None
+    if args.whitepaper:
+        reference = load_whitepaper(args.whitepaper, WhitepaperType.OTHER)
+        if reference.type is not WhitepaperType.OTHER:
+            print(
+                f"error: {args.whitepaper} is a white paper for an {reference.type.value.upper()}; "
+                "Art. 7 MiCAR covers crypto-assets other than ARTs and EMTs",
+                file=sys.stderr,
+            )
+            return 2
+    communication = load_marketing_communication(path, reference)
+    if args.lang != "auto":
+        communication.metadata["language"] = args.lang
+    report = lint_marketing(communication)
+    print(render_json(report) if args.json else render_text(report, args.citation_style))
+
+    ci_outputs = (
+        (args.sarif_output, render_sarif, "SARIF log"),
+        (args.summary_output, render_summary, "summary"),
+        (args.annotations_output, render_annotations, "annotations"),
+    )
+    for output_path, render, name in ci_outputs:
+        if not output_path:
+            continue
+        try:
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(render(report, path), encoding="utf-8")
+        except OSError as exc:
+            print(f"error: cannot write {name} to {output_path}: {exc}", file=sys.stderr)
             return 2
 
     if args.strict and report.blockers:

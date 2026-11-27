@@ -37,6 +37,8 @@ DRAFT_ECHO_RULES = frozenset(
         "ANNEX_II.G.DEPOSIT_FLOOR_REVIEW",
         "COMMON.LEI_CHECK_DIGITS",
         "COMMON.LEI_CONSISTENCY",
+        # Names the identifiers, dates, amounts and contact details of a marketing communication (ADR 0009).
+        "MARKETING.CONSISTENCY",
     }
 )
 _FIXED_ISSUE = "Details are in the full lint report; this output does not repeat draft content."
@@ -132,7 +134,12 @@ def build_sarif(report: Report, source_path: Path) -> dict:
                         f"{uri}\n{rule.rule_id}\n{rule.section}".encode()
                     ).hexdigest()
                 },
-                "properties": {"status": finding.status, "severity": rule.severity.label},
+                "properties": {
+                    "status": finding.status,
+                    "severity": rule.severity.label,
+                    # A never-pass gate that a sign-off file acknowledges for this file version (ADR 0010).
+                    **({"acknowledged": True} if rule.rule_id in report.acknowledged_rule_ids else {}),
+                },
             }
         )
 
@@ -155,7 +162,14 @@ def build_sarif(report: Report, source_path: Path) -> dict:
                 "automationDetails": {"id": sarif_category(source_path, report.whitepaper_type.value)},
                 "results": results,
                 "properties": {
+                    # Only a marketing communication run names its kind (ADR 0009).
+                    **(
+                        {"document_kind": report.document_kind}
+                        if report.document_kind != "white_paper"
+                        else {}
+                    ),
                     "whitepaper_type": report.whitepaper_type.value,
+                    **({"acknowledged": sorted(report.acknowledged_rule_ids)} if report.acknowledged else {}),
                     "summary": _summary_counts(report),
                     "notice": "First-pass screening. Not legal advice. A pass means a check matched.",
                     # Field-level rules that did not run on a draft without field numbers: not in the rules
@@ -176,12 +190,24 @@ def render_summary(report: Report, source_path: Path) -> str:
     lines_by_rule = finding_lines(report, source_path)
     path = source_path.as_posix()
     counts = _summary_counts(report)
+    marketing = report.document_kind == "marketing_communication"
+    kind = (
+        "**marketing communication** (Art. 7 MiCAR)"
+        if marketing
+        else (f"Regime: **{report.whitepaper_type.value.upper()}**")
+    )
     out = [
-        f"## MiCAR white paper lint: `{_cell(path)}`",
+        f"## MiCAR {'marketing communication' if marketing else 'white paper'} lint: `{_cell(path)}`",
         "",
         (
-            f"Regime: **{report.whitepaper_type.value.upper()}** · {counts['total']} checks · "
-            f"open blockers: **{counts['blockers']}** · missing: {counts['missing']} · "
+            f"{kind} · {counts['total']} checks · "
+            f"open blockers: **{counts['blockers']}**"
+            + (
+                f" ({len(report.acknowledged)} acknowledged by the sign-off file)"
+                if report.acknowledged
+                else ""
+            )
+            + f" · missing: {counts['missing']} · "
             f"review: {counts['review']} · pass: {counts['pass']}"
         ),
         "",
@@ -197,12 +223,17 @@ def render_summary(report: Report, source_path: Path) -> str:
         ]
         for finding in findings:
             rule = finding.rule
+            status = finding.status + (
+                ", acknowledged" if rule.rule_id in report.acknowledged_rule_ids else ""
+            )
             out.append(
-                f"| `{rule.rule_id}` | {finding.status} | {rule.severity.label} | "
+                f"| `{rule.rule_id}` | {status} | {rule.severity.label} | "
                 f"{_cell(citations.to_english(rule.citation))} | "
                 f"`{_cell(path)}:{lines_by_rule.get(rule.rule_id, 1)}` | "
                 f"[{rule.rule_id}]({rule_doc_url(rule.rule_id)}) |"
             )
+    elif marketing:
+        out.append("No open findings. Lawyer review still applies.")
     else:
         out.append("No open content findings. The format gate below and lawyer review still apply.")
     gate = [f for f in report.findings if f.rule.rule_id in FORMAT_GATE_RULES and not f.passed]
@@ -214,9 +245,21 @@ def render_summary(report: Report, source_path: Path) -> str:
                 "This tool checks the file format and taxonomy namespace only, "
                 "so this blocker never passes here; "
                 "tag completeness needs a taxonomy validator. "
-                f"[Rule page]({rule_doc_url(finding.rule.rule_id)})"
+                + (
+                    "The sign-off file acknowledges it for this file version, "
+                    "so `--strict` does not count it. "
+                    if finding.rule.rule_id in report.acknowledged_rule_ids
+                    else ""
+                )
+                + f"[Rule page]({rule_doc_url(finding.rule.rule_id)})"
             )
-    if report.not_run:
+    if report.not_run and marketing:
+        out += [
+            "",
+            "MARKETING.CONSISTENCY did not run: no white paper was given with the communication "
+            "(--whitepaper). It is neither counted nor listed here.",
+        ]
+    elif report.not_run:
         # A fixed sentence with a count: no draft text, so the summary stays byte-reproducible.
         out += [
             "",
@@ -241,7 +284,9 @@ def render_annotations(report: Report, source_path: Path, limit: int = MAX_ANNOT
     """GitHub workflow commands for the first ``limit`` open content findings."""
     lines_by_rule = finding_lines(report, source_path)
     path = source_path.as_posix()
-    findings = [f for f in open_findings(report) if f.rule.rule_id not in FORMAT_GATE_RULES]
+    # Acknowledged gates (ADR 0010) are named in the summary and take no annotation slot.
+    skipped = FORMAT_GATE_RULES | report.acknowledged_rule_ids
+    findings = [f for f in open_findings(report) if f.rule.rule_id not in skipped]
     out = []
     for finding in findings[:limit]:
         rule = finding.rule

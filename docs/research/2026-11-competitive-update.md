@@ -80,6 +80,16 @@ Ranked by impact, evidence and effort as in the [adaptation plan](adaptation-pla
 - **Strict mode:** an opt-in sign-off file outside the draft, bound to the file's hash, so `--strict` can pass on acknowledged never-pass gates (rank 9); outputs show "acknowledged", never "pass". It needs an ADR, because it revises the adaptation plan's rule that a waiver keeps the exit code.
 - **This note:** committed with a draft pull request.
 
+## 7. Validation run on real iXBRL white papers (2026-11-25)
+
+A local run, nothing committed: twelve Title II entries of ESMA's interim register (`OTHER.csv`, rows updated in 2026 whose link ends in .xhtml or .html, at most two per filer), linted with `micar-lint --type other --json` at d5489fe. In 2026, 171 register rows link straight to such a file; three filers account for 148 of them.
+
+- **Coverage.** 10 of the 12 links were numbered-field iXBRL files, and all 79 field-level findings appeared for each (790 in all: 659 pass, 97 review, 34 missing). The other 2 were landing pages, where the field rules did not run, as designed.
+- **Template rules flag most often:** `ITS.FIELD_FORMATS` on 9 of 10 files, `ITS.CODE_LISTS` and `RTS.SUSTAINABILITY_INDICATORS` on 7, `ITS.PREDEFINED_TEXT` on 6, `ITS.NOTIFICATION_DATE_FORMAT` and `RTS.CLASSIFICATION_DATA` on 5. Most of these flags are false positives with four causes: a rendering that prints each field's data type before the answer ("date", "text", "textBlock", "enumeration", "boolean"; 3 files); labels or "code (description)" text where the template has a code, and display text such as "Yes" for a boolean, while iXBRL keeps the code or the value in the tag, which the checks do not read; a display date written DD.MM.YYYY (1 file); and text merged into an answer (running page headers, the next heading, and in 1 file a balance-sheet row read as field C.1). A few flags look like real defects: a wrong type code, a ticker in a DTI field and a missing functionally fungible group DTI.
+- **Point rules** give 0 or 1 prompts on four files and 10 to 19 on six. Most of those come from "N/A" answers in Part A of white papers drawn up by the operator of the trading platform, and in the offer-only fields of Part E (refunds, oversubscription, transfer schedule) of white papers that seek admission to trading only. Whether those points apply to such white papers is a legal reading to settle once and encode as a condition.
+- **Language.** One file in Czech: the label-based language check found no language field.
+- **Fix proposals** (not built, owner decision): split a leading data-type word off each answer where most fields carry one; accept a code followed by its description; drop running headers and footers repeated on many pages; read the Inline XBRL fact behind each field (its value, enumeration member or transformed date) for the format and code checks, falling back to the visible text (rank 11); settle the Part A and Part E reading for operator-drafted admission white papers.
+
 ## Sources
 
 All accessed 2026-11-25.

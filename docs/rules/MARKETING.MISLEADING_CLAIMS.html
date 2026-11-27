@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Fair, clear and not misleading: listed claims of guaranteed returns, no risk, rising prices or approval (wording only). Art. 7(1), point (b) MiCAR.">
+<title>MARKETING.MISLEADING_CLAIMS: MiCAR Whitepaper Linter rule</title>
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <a class="brand" href="../"><span class="brand-mark" aria-hidden="true">M</span><span>MiCAR <strong>Whitepaper Linter</strong></span></a>
+  <nav aria-label="Site"><a href="../">Overview</a><a href="../rules/">Rules</a><a href="../playground/">Playground</a><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter">Source</a></nav>
+</header>
+<main id="main">
+<p class="eyebrow">Rule · MAJOR</p>
+<h1>MARKETING.MISLEADING_CLAIMS</h1>
+<p class="lede">Fair, clear and not misleading: listed claims of guaranteed returns, no risk, rising prices or approval (wording only)</p>
+<div class="panel"><dl class="facts">
+<dt>Citation</dt><dd>Art. 7(1), point (b) MiCAR</dd>
+<dt>Canonical form</dt><dd lang="de">Art. 7 Abs. 1 Buchst. b MiCAR</dd>
+<dt>Runs for</dt><dd>Marketing communications · crypto-assets other than ARTs and EMTs (Art. 7 MiCAR)</dd>
+<dt>Severity if open</dt><dd>MAJOR</dd>
+<dt>Section key</dt><dd><code>marketing_communication</code></dd>
+<dt>Minimum words</dt><dd>none: checks for the listed claims</dd>
+<dt>Listed terms (English)</dt><dd>none</dd>
+<dt>Listed terms (German)</dt><dd lang="de">none</dd>
+<dt>Wording sent to review (English)</dt><dd><code>guaranteed return</code> (pattern <code>(?P&lt;guaranteed_return&gt;(?&lt;!\bnot )(?&lt;!\bno )(?&lt;!\bnever )(?&lt;!\bwithout )(?&lt;!\bnot a )(?&lt;!\bnot an )\bguarantee(?:d|s)?\s+(?:(?:a|an|the)\s+)?(?:\w+\s+){0,2}?(?:returns?|profits?|yields?|income|gains?|interest|payouts?|rewards?)\b|\b(?:returns?|profits?|yields?|income|gains?|payouts?|rewards?)\s+(?:is|are|will\s+be)\s+guaranteed\b)</code>), <code>no risk</code> (pattern <code>(?P&lt;no_risk&gt;(?&lt;!\bnot )(?&lt;!\bnever )\b(?:risk[- ]free|riskless|zero[- ]risk|no[- ]risk)\b(?![- ](?:warnings?|disclosures?|statements?)\b)|(?&lt;!\bnot )\bwithout\s+(?:any\s+)?risks?\b)</code>), <code>rising price</code> (pattern <code>(?P&lt;rising_price&gt;\b(?:price|value|worth)\s+(?:of\s+(?:[\w$-]+\s+){1,3})?(?:will|is\s+going\s+to|is\s+set\s+to|is\s+expected\s+to)\s+(?:\w+\s+)?(?:rise|increase|grow|climb|double|triple|multiply|skyrocket|soar|go\s+up)\b|\bwill\s+(?:rise|increase|grow|climb|soar|skyrocket)\s+in\s+(?:value|price)\b|\bto\s+the\s+moon\b|\b\d+\s*x\s+(?:returns?|gains?|profits?)\b)</code>), <code>approval claim</code> (pattern <code>(?P&lt;approval_claim&gt;(?&lt;!\bnot )(?&lt;!\bnot been )(?&lt;!\bnever been )(?&lt;!\bor )(?&lt;!\bnor )\b(?:approved|endorsed|certified|vetted|sanctioned)\s+by\s+(?:(?:the|a|an|any)\s+)?(?:bafin|esma|eba|ecb|sec|fca|amf|cssf|consob|cnmv|cysec|mfsa|afm|central\s+bank|competent\s+authorit(?:y|ies)|financial\s+(?:regulator|supervisor|authority)|regulators?|supervisors?)\b|\bmicar?[- ](?:approved|certified)\b|\bapproved\s+under\s+micar?\b)</code>)</dd>
+<dt>Wording sent to review (German)</dt><dd lang="de"><code>garantierte rendite</code> (pattern <code>(?P&lt;garantierte_rendite&gt;(?&lt;!\bkeine )(?&lt;!\bnicht )(?&lt;!\bohne )(?&lt;!\bkeinen )\bgarantiert(?:e|en|er|es)?\s+(?:\w+\s+){0,2}?(?:renditen?|gewinnen?|gewinne?|erträgen?|ertrag|zinsen|ausschüttungen?|auszahlungen?|belohnungen?)\b|\b(?:renditen?|gewinne?|erträge|ertrag|zinsen|auszahlungen?)\s+(?:ist|sind|wird|werden)\s+garantiert\b)</code>), <code>kein risiko</code> (pattern <code>(?P&lt;kein_risiko&gt;(?&lt;!\bnicht )\b(?:risikofrei\w*|risikolos\w*|null\s+risiko)\b|(?&lt;!\bnicht )\bohne\s+(?:jedes\s+|jegliches\s+)?risiko\b|\bkein(?:erlei)?\s+risiko\b)</code>), <code>steigender kurs</code> (pattern <code>(?P&lt;steigender_kurs&gt;\b(?:preis|kurs|wert)\s+(?:\w+\s+){0,3}?wird\s+(?:\w+\s+){0,2}?(?:steigen|zulegen|wachsen|sich\s+verdoppeln|explodieren)\b|\bwird\s+(?:\w+\s+){0,2}?im\s+(?:wert|preis|kurs)\s+steigen\b|\bto\s+the\s+moon\b)</code>), <code>behauptete genehmigung</code> (pattern <code>(?P&lt;behauptete_genehmigung&gt;\b(?:von|durch)\s+(?:(?:der|die|einer)\s+)?(?:bafin|esma|eba|ezb|zuständigen\s+behörde|aufsicht(?:sbehörde)?|finanzaufsicht)\s+(?:\w+\s+){0,2}?(?:genehmigt|gebilligt|zertifiziert)\b|\bmicar?-(?:genehmigt|zertifiziert)\b)</code>)</dd>
+<dt>Package version</dt><dd>1.3.0, built from source that may include unreleased changes</dd>
+<dt>Source</dt><dd><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/rules/marketing.py">rules/marketing.py</a></dd>
+</dl></div>
+<h2>How the status is set</h2>
+<ul class="plain"><li><strong>Missing</strong>: the text is empty or holds only placeholders such as TBD.</li><li><strong>Review</strong>: the text holds one of the listed claims: a guaranteed return, no risk, a rising price or an approval by an authority. The finding names each claim, never the text.</li><li><strong>Pass</strong>: none of the listed claims was found.</li></ul>
+<h2>Legal basis</h2>
+<p>Art. 7(1), point (b) MiCAR</p>
+<ul class="plain"><li><a href="https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng">https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng</a></li></ul>
+<p class="callout">Checked on 2026-11-25 against the Official Journal text of Art. 7(1) MiCAR in English and German (OJ L 150, 9.6.2023; CELEX 32023R1114), as the Publications Office Cellar served it that day. Amendments and corrigenda of Art. 7 were not checked separately.</p>
+<h2>Synthetic examples</h2>
+<p class="small muted">Each example is linted when this page is generated. The build fails if a result differs.</p>
+<div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>Empty communication</strong></div><p class="small muted">An empty text is missing for every marketing rule.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic token offer&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;text&quot;: &quot;&quot;
+}
+
+No white paper given (no --whitepaper).</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>Listed claims</strong></div><p class="small muted">The finding names the claims (guaranteed return, rising price), never the text.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic token offer&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;text&quot;: &quot;Holders earn guaranteed returns, and the price will rise after the listing.&quot;
+}
+
+No white paper given (no --whitepaper).</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>Negated claims</strong></div><p class="small muted">A negation right before a claim does not count, and &quot;may rise or fall&quot; is no listed claim.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic token offer&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;text&quot;: &quot;There are no guaranteed returns, and the price may rise or fall.&quot;
+}
+
+No white paper given (no --whitepaper).</code></pre></div>
+<h2>Limitations</h2>
+<ul class="plain"><li>Reads the whole text of the marketing communication as a reader sees it: the <code>text</code> value of a JSON file, or the text of a Markdown, text, HTML, XHTML, DOCX or PDF file without what the loader finds a reader cannot see. It cannot see layout, placement, prominence, images, audio or video, so wording shown only in an image, a banner or a voice-over is not read.</li><li>Finds the listed claims only, in the English and German wordings shown above, in a draft of either language. Whether the information is fair, clear and not misleading depends on all of it and on the white paper, so a pass means only that none of the listed claims was found. A negation right before a claim, such as "no guaranteed returns" or "not risk-free", does not count; one further back in the sentence is not recognised, so "No investment is risk-free" goes to review.</li><li>Status and severity are fixed by the rule. A draft cannot waive or downgrade them.</li><li>The marketing communication checks have not yet been run against a real marketing communication.</li></ul>
+<p class="small muted">Disagree with this rule, or missing one? <a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/issues/new?template=rule-proposal.yml">Propose a rule change</a>.</p>
+
+</main>
+<footer><span>MiCAR Whitepaper Linter 1.3.0 · MIT licence · First-pass screening, not legal advice.</span><span>Generated from the rule set by <code>scripts/build_rule_docs.py</code>.</span></footer>
+</body>
+</html>

@@ -4,6 +4,7 @@
   "proofGeneratedOn": "2026-11-02",
   "capabilities": [
     "deterministic-whitepaper-lint",
+    "marketing-communication-lint",
     "review-table-export",
     "draft-remediation",
     "github-action",

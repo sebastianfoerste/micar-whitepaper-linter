@@ -97,6 +97,10 @@ _RESERVED_METADATA_KEYS = (
     # absent where it is the same), which that rule reads too.
     "document_text",
     "shown_text",
+    # Set only by load_marketing_communication (ADR 0009): the kind of document, and the text of the white
+    # paper given with a marketing communication, which MARKETING.CONSISTENCY compares the communication with.
+    "document_kind",
+    "reference_text",
     "reserve_characterisation_reviewed_by",
     "reserve_characterisation_reviewed_on",
 )
@@ -630,5 +634,90 @@ def _load_document(path: Path, suffix: str, whitepaper_type: WhitepaperType | No
         title=title,
         type=wp_type,
         sections=sections,
+        metadata=metadata,
+    )
+
+
+MARKETING_SUFFIXES = (".json", ".md", ".txt", ".html", ".htm", ".xhtml", ".docx", ".pdf")
+
+
+def reference_text(whitepaper: Whitepaper) -> str:
+    """The text of a white paper that a marketing communication is compared with: its title, every section
+    and, for a document file, the whole text of the file."""
+    parts = [
+        whitepaper.title,
+        *whitepaper.sections.values(),
+        str(whitepaper.metadata.get("document_text", "")),
+    ]
+    return "\n\n".join(part for part in parts if part)
+
+
+def load_marketing_communication(path: Path, reference: Whitepaper | None = None) -> Whitepaper:
+    """Load a marketing communication for the rules of Art. 7 MiCAR (rules/marketing.py, ADR 0009).
+
+    The whole text a reader sees goes into one section, `marketing_communication`; a JSON file gives it under
+    "text", with an optional "title" and "type" (only "other": Art. 29 and 53 MiCAR are not covered). The text
+    of ``reference``, the white paper given with the communication, is kept under the reserved key
+    "reference_text"; without it, MARKETING.CONSISTENCY does not run.
+    """
+    from micar_linter.rules.marketing import MARKETING_SECTION
+
+    suffix = path.suffix.lower()
+    if suffix not in MARKETING_SUFFIXES:
+        raise SystemExit(
+            f"Unsupported file format '{suffix}' for a marketing communication. Expected: "
+            + ", ".join(MARKETING_SUFFIXES)
+        )
+    if not path.exists():
+        raise SystemExit(f"File not found: {path}")
+    title = path.stem.replace("-", " ").replace("_", " ").title()
+    try:
+        if suffix == ".json":
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                raise SystemExit(f"Invalid JSON in {path}: {exc}") from exc
+            if not isinstance(data, dict) or "text" not in data:
+                raise SystemExit("Marketing communication JSON must be an object with a 'text' value.")
+            if str(data.get("type", "other")).lower() != WhitepaperType.OTHER.value:
+                raise SystemExit(
+                    "The marketing communication checks cover crypto-assets other than ARTs and EMTs "
+                    "(Art. 7 MiCAR); 'type' must be 'other'."
+                )
+            title = str(data.get("title", "Untitled marketing communication"))
+            text = _section_text(data["text"])
+        elif suffix in (".md", ".txt"):
+            text = path.read_text(encoding="utf-8")
+        elif suffix == ".pdf":
+            from micar_linter.document import parse_pdf
+
+            parsed = parse_pdf(path)
+            text = parsed.shown_text or parsed.document_text
+        elif suffix == ".docx":
+            from micar_linter.document import parse_docx
+
+            parsed = parse_docx(path)
+            text = parsed.shown_text or parsed.document_text
+        else:
+            from micar_linter.xhtml_parser import document_texts
+
+            document_text, shown_text = document_texts(path)
+            text = shown_text or document_text
+    except SystemExit:
+        raise
+    except Exception as exc:
+        raise SystemExit(f"Error reading document {path}: {exc}") from exc
+
+    metadata: dict[str, Any] = {
+        "source_file": str(path),
+        "document_kind": "marketing_communication",
+        "extraction_notes": (),
+    }
+    if reference is not None:
+        metadata["reference_text"] = reference_text(reference)
+    return Whitepaper(
+        title=title,
+        type=WhitepaperType.OTHER,
+        sections={MARKETING_SECTION: text},
         metadata=metadata,
     )

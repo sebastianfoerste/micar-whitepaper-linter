@@ -56,3 +56,23 @@ This document details the functional features implemented in the MiCAR Whitepape
   - `src/micar_linter/rules/annex_ii.py`
   - `tests/test_reserve_rules.py`
 - **Status**: Fully implemented as a fail-closed review gate. Draft reviewer-name and reviewer-date fields are ignored.
+
+## 7. Marketing communication checks
+
+- **Description**: Checks a marketing communication for a crypto-asset other than an ART or EMT against Art. 7(1) MiCAR with five `MARKETING.*` rules: a marketing label, listed misleading claims, consistency of its identifiers, dates, amounts and contact details with the white paper given with `--whitepaper`, the statement that a white paper has been published with website, telephone number and e-mail address, and the statement of Art. 7(1)(e). It does not cover Art. 7(2), Art. 29 or Art. 53 ([ADR 0009](adr/0009-marketing-communications.md)).
+- **Related Files**:
+  - [src/micar_linter/rules/marketing.py](../src/micar_linter/rules/marketing.py)
+  - [src/micar_linter/marketing_checks.py](../src/micar_linter/marketing_checks.py)
+  - [src/micar_linter/linter.py](../src/micar_linter/linter.py) (`lint_marketing`)
+  - [src/micar_linter/whitepaper.py](../src/micar_linter/whitepaper.py) (`load_marketing_communication`)
+  - `tests/test_marketing.py`
+- **Status**: Implemented, not yet run against a real marketing communication. The playground and the review table, bundle and other output modes do not offer it yet.
+
+## 8. Sign-off file for the never-pass gates
+
+- **Description**: `--signoff` reads a JSON file kept outside the draft in which a reviewer acknowledges `COMMON.IXBRL_TAGGING` or `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW` for the exact file version (by SHA-256). The finding keeps its status, the outputs mark it as acknowledged, and `--strict` stops counting it, so a strict CI gate can pass once only acknowledged gates remain open. Any change to the file voids the acknowledgement ([ADR 0010](adr/0010-strict-signoff-file.md)).
+- **Related Files**:
+  - [src/micar_linter/signoff.py](../src/micar_linter/signoff.py)
+  - [src/micar_linter/cli.py](../src/micar_linter/cli.py)
+  - `tests/test_signoff.py`
+- **Status**: Implemented for single white paper files; the review table, bundle and other output modes still list the gate as open.

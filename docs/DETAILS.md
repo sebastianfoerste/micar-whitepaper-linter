@@ -46,6 +46,43 @@ uv run micar-lint examples/numbered-other-draft.xhtml --type other
 
 A saved iXBRL viewer page packs the white paper into a script and shows it only when a browser runs that script. The linter unpacks it in memory (gzip, zlib, raw deflate or uncompressed, up to 8 MB) and checks the white paper it carries; a page in the numbered-field layout still needs `--type`. Its `COMMON.IXBRL_TAGGING` result stays Missing, because the viewer's rendering is not the XHTML document itself, and its findings point at line 1. A page that cannot be unpacked, unpacks to more than 8 MB, or packs more than one document stops with exit 1 and a message.
 
+## Marketing communications
+
+`--marketing` checks a marketing communication for a crypto-asset other than an ART or EMT against Art. 7(1) MiCAR instead of a white paper ([ADR 0009](adr/0009-marketing-communications.md)). Five rules run: a marketing label in the title or the opening words, listed misleading claims, consistency with the white paper given with `--whitepaper`, the statement that a white paper has been published with a website, a telephone number and an e-mail address, and the statement of Art. 7(1)(e) word for word in English or German. Without `--whitepaper` the consistency check does not run. Art. 7(2), Art. 29 and Art. 53 are not covered. The checks have not yet been run against a real marketing communication.
+
+```bash
+uv run micar-lint examples/marketing-other.md --marketing --whitepaper examples/other-crypto-asset.json --strict
+```
+
+```bash
+uv run micar-lint examples/marketing-incomplete.md --marketing --whitepaper examples/other-crypto-asset.json
+```
+
+## Strict mode with a sign-off file
+
+`COMMON.IXBRL_TAGGING` and, for ARTs, `ANNEX_II.G.DEPOSIT_FLOOR_REVIEW` never pass, so `--strict` alone fails every white paper. A reviewer who has checked them outside the linter can acknowledge them for the exact file version in a sign-off file kept outside the draft ([ADR 0010](adr/0010-strict-signoff-file.md)); `--strict` then fails only on the other open blockers. The finding stays open in every report, and any change to the draft voids the entry.
+
+```json
+{
+  "schema": "micar-whitepaper-linter.signoff.v1",
+  "acknowledgements": [
+    {
+      "rule_id": "COMMON.IXBRL_TAGGING",
+      "sha256": "<SHA-256 of the white paper file, lower-case hex>",
+      "reviewer": "Reviewing lawyer",
+      "date": "2026-11-25",
+      "note": "iXBRL file validated against the ESMA MiCA taxonomy outside the linter."
+    }
+  ]
+}
+```
+
+```bash
+uv run micar-lint whitepaper.xhtml --type other --strict --signoff signoff.json
+```
+
+In the GitHub Action, pass it with `extra-args: --signoff signoff.json`.
+
 ## Coverage caveats
 
 The Table 2 mapping (crypto-assets other than ARTs and EMTs) has been run against public register documents. The Table 3 and Table 4 mappings follow the Official Journal text and have not yet been run against a real ART or EMT white paper. Where a white paper runs its field labels into the answers, as a conversion from PDF can, the loader recognises the English field names of the template's three tables, also in slightly other words, and splits them off; a label in another language, or worded further from the template, stays in the answer, and the report warns about those fields. The iXBRL check tests well-formedness, the Inline XBRL 1.1 namespace and the ESMA MiCA taxonomy namespace. It does not evaluate the taxonomy's existence and value assertions, so it never reports Pass. For a saved iXBRL viewer page it does not run at all and reports Missing.

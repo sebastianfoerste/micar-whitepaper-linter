@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from datetime import date
 from functools import partial
 
+from micar_linter import marketing_checks
 from micar_linter.anchors import SourceAnchor, build_source_anchors
 from micar_linter.classification_data import classification_issues
 from micar_linter.contact import CONTACT_FIELDS, has_email_address, has_period_in_days, has_telephone_number
@@ -24,9 +25,16 @@ from micar_linter.lei import (
 )
 from micar_linter.placeholders import is_not_applicable, is_placeholder, is_template_note
 from micar_linter.point_fields import ANNEX_REGIMES, POINTS_BY_RULE, point_issues
-from micar_linter.rules import RULESETS
+from micar_linter.rules import MARKETING_RULESETS, RULESETS
 from micar_linter.rules.base import Finding, Rule, Severity
+from micar_linter.rules.marketing import (
+    NOT_REVIEWED_STATEMENT_DE,
+    NOT_REVIEWED_STATEMENT_EN,
+    RESPONSIBILITY_CLAUSE_DE,
+    RESPONSIBILITY_CLAUSE_EN,
+)
 from micar_linter.rules.points import POINT_RULE_IDS
+from micar_linter.signoff import Acknowledgement
 from micar_linter.template_checks import (
     field_type_issues,
     is_iso_date,
@@ -51,6 +59,20 @@ class Report:
     source_anchors: dict[str, SourceAnchor] = field(default_factory=dict)
     # The rules of the regime that did not run (field_rules_not_run): no finding, so never passed or open.
     not_run: tuple[Rule, ...] = field(default_factory=tuple)
+    # "white_paper", or "marketing_communication" for a report of lint_marketing (ADR 0009).
+    document_kind: str = "white_paper"
+    # The never-pass gates that a sign-off file acknowledges for this file version (signoff.py, ADR 0010).
+    # Their findings keep their status; open_blockers, which --strict reads, leaves them out.
+    acknowledged: tuple[Acknowledgement, ...] = field(default_factory=tuple)
+
+    @property
+    def acknowledged_rule_ids(self) -> frozenset[str]:
+        return frozenset(ack.rule_id for ack in self.acknowledged)
+
+    @property
+    def open_blockers(self) -> tuple[Finding, ...]:
+        """The blockers that no sign-off acknowledges: what --strict fails on."""
+        return tuple(f for f in self.blockers if f.rule.rule_id not in self.acknowledged_rule_ids)
 
     @property
     def passed(self) -> tuple[Finding, ...]:
@@ -91,7 +113,10 @@ class Linter:
     @staticmethod
     def _apply(rule: Rule, whitepaper: Whitepaper) -> Finding:
         if not runs_on(rule, whitepaper):
-            raise ValueError(f"{rule.rule_id} reads template fields and does not run on a draft without them")
+            raise ValueError(f"{rule.rule_id} does not run on this draft (runs_on)")
+
+        if rule.rule_id in MARKETING_RULE_CHECKS:
+            return MARKETING_RULE_CHECKS[rule.rule_id](rule, whitepaper)
 
         if rule.rule_id == "COMMON.IXBRL_TAGGING":
             return _ixbrl_finding(rule, whitepaper)
@@ -865,6 +890,24 @@ def _exists(year: int, month: int, day: int) -> bool:
     return True
 
 
+def calendar_dates_in(text: str) -> list[date]:
+    """Every calendar date the text names, in the forms has_calendar_date reads: a numeric date day first, and
+    month first only where the day-first reading does not exist."""
+    found: list[tuple[int, int, int]] = []
+    for m in _ISO_DATE.finditer(text):
+        found.append((int(m["year"]), int(m["month"]), int(m["day"])))
+    for m in _NUMERIC_DATE.finditer(text):
+        day, month, year = int(m["day"]), int(m["month"]), int(m["year"])
+        found.append((year, month, day) if _exists(year, month, day) else (year, day, month))
+    for pattern in _WRITTEN_DATES:
+        found += [(int(m["year"]), _MONTHS[m["name"].lower()], int(m["day"])) for m in pattern.finditer(text)]
+    dates: list[date] = []
+    for year, month, day in found:
+        if _exists(year, month, day) and date(year, month, day) not in dates:
+            dates.append(date(year, month, day))
+    return dates
+
+
 # The official languages of the Union, by English and German name, as Art. 1 of Council Regulation No 1
 # lists them. The template of Implementing Regulation (EU) 2024/2984 has each language of the white paper
 # reported from a closed list of EU languages, which it does not spell out.
@@ -1149,7 +1192,9 @@ def has_field_numbers(whitepaper: Whitepaper) -> bool:
 
 def runs_on(rule: Rule, whitepaper: Whitepaper) -> bool:
     """Whether the rule runs on the draft: every rule but the field-only ones, and those on a numbered-field
-    draft."""
+    draft; MARKETING.CONSISTENCY only on a marketing communication given with its white paper."""
+    if rule.rule_id == "MARKETING.CONSISTENCY":
+        return isinstance(whitepaper.metadata.get("reference_text"), str)
     return rule.rule_id not in FIELD_ONLY_RULE_IDS or has_field_numbers(whitepaper)
 
 
@@ -1297,3 +1342,272 @@ def _point_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
     regime = ANNEX_REGIMES[point.annex]
     status, issues, words = point_issues(point, answers, regime, whitepaper.language == "de")
     return Finding(rule=rule, status=status, word_count=words, issues=issues)
+
+
+# Marketing communications under Art. 7 MiCAR (rules/marketing.py, marketing_checks.py, ADR 0009). The loader
+# puts the whole text a reader sees into the section marketing_communication; the title is the document's
+# title.
+
+
+def _marketing_text(rule: Rule, whitepaper: Whitepaper) -> tuple[str, int, str | None]:
+    """The communication's text, its word count and the issue that makes the finding Missing, if any."""
+    text = whitepaper.section(rule.section)
+    return text, _count_words(text), _absent(text, whitepaper.language == "de")
+
+
+def _marketing_identifiable_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    text, words, absent = _marketing_text(rule, whitepaper)
+    if absent:
+        return Finding(rule=rule, status="missing", word_count=0, issues=(absent,))
+    if marketing_checks.has_marketing_label(whitepaper.title, text):
+        return Finding(rule=rule, status="pass", word_count=words)
+    opening = marketing_checks.OPENING_WORDS
+    msg = (
+        f"Weder der Titel noch die ersten {opening} Wörter bezeichnen die Mitteilung als Werbung, etwa als "
+        "„Marketingmitteilung“ oder „Werbung“. Nach Art. 7 Abs. 1 Buchst. a MiCAR muss sie eindeutig als "
+        "solche "
+        "erkennbar sein; die Aufmachung prüfen."
+        if whitepaper.language == "de"
+        else f"Neither the title nor the first {opening} words label the text as marketing, for example as a "
+        "\"marketing communication\" or an \"advertisement\". Art. 7(1)(a) MiCAR requires the communication "
+        "to be "
+        "clearly identifiable as such; check its presentation."
+    )
+    return Finding(rule=rule, status="review", word_count=words, issues=(msg,))
+
+
+def _marketing_claims_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """Art. 7(1)(b): the listed claims, English and German patterns in a draft of either language, each named
+    by its group, never by the matched text."""
+    text, words, absent = _marketing_text(rule, whitepaper)
+    if absent:
+        return Finding(rule=rule, status="missing", word_count=0, issues=(absent,))
+    collapsed = _collapse_whitespace(_SOFT_BREAK.sub("", text).translate(_UNICODE_HYPHENS))
+    names: list[str] = []
+    for pattern in (*rule.prohibited_patterns, *rule.prohibited_patterns_de):
+        found = re.search(pattern, collapsed, re.IGNORECASE)
+        if found:
+            for name, value in found.groupdict().items():
+                label = name.replace("_", " ")
+                if value is not None and label not in names:
+                    names.append(label)
+    if not names:
+        return Finding(rule=rule, status="pass", word_count=words)
+    is_de = whitepaper.language == "de"
+    msg = (
+        "Formulierungen, die die Informationen unredlich, uneindeutig oder irreführend machen können "
+        f"(Art. 7 Abs. 1 Buchst. b MiCAR): {_listed(names, 'und')}. Jede im Zusammenhang prüfen."
+        if is_de
+        else "Wording that can make the information unfair, unclear or misleading (Art. 7(1)(b) MiCAR): "
+        f"{_listed(names, 'and')}. Check each in context."
+    )
+    return Finding(rule=rule, status="review", word_count=words, issues=(msg,))
+
+
+_VALUE_KINDS = {
+    "lei": ("LEI", "LEI"),
+    "identifier": ("token identifier", "Token-Kennung"),
+    "email": ("e-mail address", "E-Mail-Adresse"),
+    "website": ("web address", "Webadresse"),
+    "telephone": ("telephone number", "Telefonnummer"),
+    "date": ("date", "Datum"),
+    "percentage": ("percentage", "Prozentsatz"),
+    "amount": ("amount", "Betrag"),
+}
+# The values a consistency finding names; the rest are counted.
+_MAX_NAMED_VALUES = 10
+
+
+def _values_missing_from_reference(text: str, reference: str) -> list[tuple[str, str]]:
+    """The values of the communication that the white paper does not contain, as (kind, value as shown)."""
+    upper, lower = reference.upper(), reference.lower()
+    missing: list[tuple[str, str]] = []
+    missing += [("lei", code) for code in marketing_checks.valid_leis(text) if code not in upper]
+    missing += [
+        ("identifier", code) for code in marketing_checks.token_identifiers(text) if code not in upper
+    ]
+    missing += [
+        ("email", address) for address in marketing_checks.email_addresses(text) if address not in lower
+    ]
+    missing += [("website", host) for host in marketing_checks.web_hosts(text) if host not in lower]
+    phones = set(marketing_checks.phone_numbers(reference))
+    missing += [
+        ("telephone", number) for number in marketing_checks.phone_numbers(text) if number not in phones
+    ]
+    dates = set(calendar_dates_in(reference))
+    missing += [("date", day.isoformat()) for day in calendar_dates_in(text) if day not in dates]
+    percentages = set(marketing_checks.percentages(reference))
+    missing += [
+        ("percentage", marketing_checks.format_percentage(value))
+        for value in marketing_checks.percentages(text)
+        if value not in percentages
+    ]
+    amounts = set(marketing_checks.amounts(reference))
+    missing += [
+        ("amount", marketing_checks.format_amount(currency, value))
+        for currency, value in marketing_checks.amounts(text)
+        if (currency, value) not in amounts
+    ]
+    return missing
+
+
+def _marketing_consistency_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """Art. 7(1)(c): each identifier, e-mail address, web host, international telephone number, date,
+    percentage and amount of the communication must be found in the white paper given with it (runs_on)."""
+    text, words, absent = _marketing_text(rule, whitepaper)
+    if absent:
+        return Finding(rule=rule, status="missing", word_count=0, issues=(absent,))
+    missing = _values_missing_from_reference(text, whitepaper.metadata["reference_text"])
+    if not missing:
+        return Finding(rule=rule, status="pass", word_count=words)
+    is_de = whitepaper.language == "de"
+    shown = [
+        f"{_VALUE_KINDS[kind][1 if is_de else 0]} {value}" for kind, value in missing[:_MAX_NAMED_VALUES]
+    ]
+    more = len(missing) - len(shown)
+    if more:
+        shown.append(f"{more} weitere" if is_de else f"{more} more")
+    listed = "; ".join(shown)
+    msg = (
+        f"Das Kryptowerte-Whitepaper enthält diese Angaben der Marketingmitteilung nicht: {listed}. Nach "
+        "Art. 7 "
+        "Abs. 1 Buchst. c MiCAR müssen die Informationen mit denen im Kryptowerte-Whitepaper übereinstimmen; "
+        "jede Angabe prüfen."
+        if is_de
+        else f"The white paper does not contain these values of the marketing communication: {listed}. "
+        "Art. 7(1)(c) MiCAR requires the information to be consistent with the white paper; check each value."
+    )
+    return Finding(rule=rule, status="review", word_count=words, issues=(msg,))
+
+
+def _marketing_reference_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """Art. 7(1)(d): the statement that a white paper has been published, a website, a telephone number and an
+    e-mail address."""
+    text, words, absent = _marketing_text(rule, whitepaper)
+    if absent:
+        return Finding(rule=rule, status="missing", word_count=0, issues=(absent,))
+    is_de = whitepaper.language == "de"
+    items = (
+        (marketing_checks.states_white_paper_published(text), "ein Hinweis, dass ein Kryptowerte-Whitepaper "
+         "veröffentlicht wurde", "a statement that a crypto-asset white paper has been published"),
+        (bool(marketing_checks.web_hosts(text)), "eine Website-Adresse", "a website address"),
+        (has_telephone_number(text), "eine Telefonnummer", "a telephone number"),
+        (has_email_address(text), "eine E-Mail-Adresse", "an e-mail address"),
+    )
+    absent_items = [de if is_de else en for found, de, en in items if not found]
+    if not absent_items:
+        return Finding(rule=rule, status="pass", word_count=words)
+    msg = (
+        f"Nicht gefunden: {_listed(absent_items, 'und')}. Art. 7 Abs. 1 Buchst. d MiCAR verlangt den "
+        "Hinweis, "
+        "dass ein Kryptowerte-Whitepaper veröffentlicht wurde, die Adresse der Website des Anbieters, der "
+        "Person, "
+        "die die Zulassung zum Handel beantragt, oder des Betreibers der Handelsplattform sowie eine "
+        "Telefonnummer "
+        "und eine E-Mail-Adresse."
+        if is_de
+        else f"Not found: {_listed(absent_items, 'and')}. Art. 7(1)(d) MiCAR asks for a statement that a "
+        "crypto-asset "
+        "white paper has been published, the address of the website of the offeror, the person seeking "
+        "admission "
+        "to trading or the operator of the trading platform, and a telephone number and an e-mail address."
+    )
+    return Finding(rule=rule, status="review", word_count=words, issues=(msg,))
+
+
+# Art. 7(1)(e), second subparagraph: the person before the responsibility clause.
+_MARKETING_RESPONSIBLE_PERSON_EN = re.compile(
+    r"\b(?:offeror|person seeking admission to trading|operator of the trading platform) "
+    + re.escape(RESPONSIBILITY_CLAUSE_EN)
+)
+_MARKETING_RESPONSIBLE_PERSON_DE = re.compile(
+    r"\b(?:anbieter des kryptowerts|person, die die zulassung (?:des kryptowerts )?zum handel beantragt,?"
+    r"|betreiber der handelsplattform(?: des kryptowerts)?) " + re.escape(RESPONSIBILITY_CLAUSE_DE)
+)
+
+
+def _marketing_statement_finding(rule: Rule, whitepaper: Whitepaper) -> Finding:
+    """Art. 7(1)(e): the statement word for word, in English for an English draft and German for a German
+    one, with the offeror, the person seeking admission to trading or the operator of the trading platform
+    named."""
+    text, words, absent = _marketing_text(rule, whitepaper)
+    if absent:
+        return Finding(rule=rule, status="missing", word_count=0, issues=(absent,))
+    is_de = whitepaper.language == "de"
+    normalized = _collapse_whitespace(_SOFT_BREAK.sub("", text).translate(_UNICODE_HYPHENS)).lower()
+    first, clause = (NOT_REVIEWED_STATEMENT_DE, RESPONSIBILITY_CLAUSE_DE) if is_de else (
+        NOT_REVIEWED_STATEMENT_EN,
+        RESPONSIBILITY_CLAUSE_EN,
+    )
+    person = _MARKETING_RESPONSIBLE_PERSON_DE if is_de else _MARKETING_RESPONSIBLE_PERSON_EN
+    issues: list[str] = []
+    if first not in normalized:
+        issues.append(
+            "Der erste Satz der Erklärung nach Art. 7 Abs. 1 Buchst. e MiCAR steht nicht im Wortlaut im Text."
+            if is_de
+            else "The first sentence of the Art. 7(1)(e) MiCAR statement is not in the text word for word."
+        )
+    if clause not in normalized:
+        issues.append(
+            "Der zweite Satz der Erklärung („… trägt die alleinige Verantwortung für den Inhalt dieser "
+            "Kryptowert-Marketingmitteilung.“) steht nicht im Wortlaut im Text."
+            if is_de
+            else "The second sentence of the statement (\"... of the crypto-asset is solely responsible for "
+            "the "
+            "content of this crypto-asset marketing communication.\") is not in the text word for word."
+        )
+    elif not person.search(normalized):
+        issues.append(
+            "Nach Art. 7 Abs. 1 MiCAR steht vor „trägt die alleinige Verantwortung“ der Anbieter des "
+            "Kryptowerts "
+            "oder nach Unterabsatz 2 die Person, die die Zulassung zum Handel beantragt, oder der Betreiber "
+            "der "
+            "Handelsplattform; in dieser Erklärung stehen dort andere Worte."
+            if is_de
+            else "Art. 7(1) MiCAR puts the offeror, or under its second subparagraph the person seeking "
+            "admission to "
+            "trading or the operator of the trading platform, directly before \"of the crypto-asset is "
+            "solely "
+            "responsible\"; in this statement other words stand there."
+        )
+    return Finding(rule=rule, status="review" if issues else "pass", word_count=words, issues=tuple(issues))
+
+
+MARKETING_RULE_CHECKS: dict[str, Callable[[Rule, Whitepaper], Finding]] = {
+    "MARKETING.IDENTIFIABLE": _marketing_identifiable_finding,
+    "MARKETING.MISLEADING_CLAIMS": _marketing_claims_finding,
+    "MARKETING.CONSISTENCY": _marketing_consistency_finding,
+    "MARKETING.WHITE_PAPER_AND_CONTACT": _marketing_reference_finding,
+    "MARKETING.NOT_REVIEWED_STATEMENT": _marketing_statement_finding,
+}
+_MARKETING_NOT_RUN_NOTE = (
+    "No white paper was given (--whitepaper), so MARKETING.CONSISTENCY did not run. It is left out of this "
+    "report "
+    "and counts neither as passed nor as open; give the white paper to compare the communication's "
+    "identifiers, "
+    "dates, percentages, amounts and contact details with it.",
+    "Es wurde kein Kryptowerte-Whitepaper angegeben (--whitepaper), daher lief MARKETING.CONSISTENCY nicht. "
+    "Die "
+    "Prüfung fehlt in diesem Bericht und zählt weder als bestanden noch als offen; geben Sie das Whitepaper "
+    "an, um "
+    "Kennungen, Daten, Prozentsätze, Beträge und Kontaktangaben der Mitteilung damit abzugleichen.",
+)
+
+
+def lint_marketing(communication: Whitepaper) -> Report:
+    """Lint a marketing communication (whitepaper.load_marketing_communication) under Art. 7 MiCAR."""
+    rules = MARKETING_RULESETS[communication.type]
+    linter = Linter(rules)
+    findings = linter.lint(communication)
+    not_run = linter.not_run(communication)
+    warnings: list[str] = list(communication.metadata.get("extraction_notes", ()))
+    if not_run:
+        warnings.append(_MARKETING_NOT_RUN_NOTE[1 if communication.language == "de" else 0])
+    return Report(
+        title=communication.title,
+        whitepaper_type=communication.type,
+        findings=findings,
+        warnings=tuple(warnings),
+        not_run=not_run,
+        document_kind="marketing_communication",
+    )
