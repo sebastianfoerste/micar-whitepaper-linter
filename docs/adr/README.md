@@ -10,5 +10,7 @@
 | [0006](0006-shared-site-tokens.md) | Shared site tokens (light theme; dark theme removed 2026-10-21) | Accepted |
 | [0007](0007-lei-rules.md) | LEI check-digit and consistency rules | Accepted |
 | [0008](0008-strict-exit-codes.md) | Exit codes of `--coverage --strict` and strict directory runs | Accepted (2026-11-10) |
+| [0009](0009-marketing-communications.md) | Marketing communications under Art. 7 MiCAR | Accepted (2026-11-25) |
+| [0010](0010-strict-signoff-file.md) | A sign-off file for the never-pass gates of `--strict` | Accepted (2026-11-25) |
 
 Each record has Status, Context, Options, Decision, Consequences and a non-negotiables check. "Accepted" records describe code in this repository; "Proposed" records describe nothing built yet, except ADR 0005, whose point rules are built for every Annex point that a template field carries.

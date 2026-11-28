@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Statement that no competent authority has reviewed or approved the communication (wording only). Art. 7(1), point (e) MiCAR.">
+<title>MARKETING.NOT_REVIEWED_STATEMENT: MiCAR Whitepaper Linter rule</title>
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <a class="brand" href="../"><span class="brand-mark" aria-hidden="true">M</span><span>MiCAR <strong>Whitepaper Linter</strong></span></a>
+  <nav aria-label="Site"><a href="../">Overview</a><a href="../rules/">Rules</a><a href="../playground/">Playground</a><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter">Source</a></nav>
+</header>
+<main id="main">
+<p class="eyebrow">Rule · BLOCKER</p>
+<h1>MARKETING.NOT_REVIEWED_STATEMENT</h1>
+<p class="lede">Statement that no competent authority has reviewed or approved the communication (wording only)</p>
+<div class="panel"><dl class="facts">
+<dt>Citation</dt><dd>Art. 7(1), point (e) MiCAR</dd>
+<dt>Canonical form</dt><dd lang="de">Art. 7 Abs. 1 Buchst. e MiCAR</dd>
+<dt>Runs for</dt><dd>Marketing communications · crypto-assets other than ARTs and EMTs (Art. 7 MiCAR)</dd>
+<dt>Severity if open</dt><dd>BLOCKER</dd>
+<dt>Section key</dt><dd><code>marketing_communication</code></dd>
+<dt>Minimum words</dt><dd>none: checks for the statement's wording</dd>
+<dt>Listed terms (English)</dt><dd><code>this crypto-asset marketing communication has not been reviewed or approved by any competent authority in any member state of the european union</code>, <code>of the crypto-asset is solely responsible for the content of this crypto-asset marketing communication</code></dd>
+<dt>Listed terms (German)</dt><dd lang="de"><code>diese kryptowert-marketingmitteilung wurde von keiner zuständigen behörde eines mitgliedstaats der europäischen union geprüft oder genehmigt</code>, <code>trägt die alleinige verantwortung für den inhalt dieser kryptowert-marketingmitteilung</code></dd>
+<dt>Package version</dt><dd>1.3.0, built from source that may include unreleased changes</dd>
+<dt>Source</dt><dd><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/rules/marketing.py">rules/marketing.py</a></dd>
+</dl></div>
+<h2>How the status is set</h2>
+<ul class="plain"><li><strong>Missing</strong>: the text is empty or holds only placeholders such as TBD.</li><li><strong>Review</strong>: either sentence of the statement is not in the text word for word, in English for an English draft and in German for a German one, or the words before "of the crypto-asset is solely responsible" name neither the offeror nor, under the second subparagraph, the person seeking admission to trading or the operator of the trading platform.</li><li><strong>Pass</strong>: the statement is there in that wording.</li></ul>
+<h2>Legal basis</h2>
+<p>Art. 7(1), point (e) MiCAR</p>
+<ul class="plain"><li><a href="https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng">https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng</a></li></ul>
+<p class="callout">Checked on 2026-11-25 against the Official Journal text of Art. 7(1) MiCAR in English and German (OJ L 150, 9.6.2023; CELEX 32023R1114), as the Publications Office Cellar served it that day. Amendments and corrigenda of Art. 7 were not checked separately.</p>
+<h2>Synthetic examples</h2>
+<p class="small muted">Each example is linted when this page is generated. The build fails if a result differs.</p>
+<div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>Empty communication</strong></div><p class="small muted">An empty text is missing for every marketing rule.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic token offer&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;text&quot;: &quot;&quot;
+}
+
+No white paper given (no --whitepaper).</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>White paper wording</strong></div><p class="small muted">The Art. 6(3) statement of a white paper is not the Art. 7(1)(e) statement.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic token offer&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;text&quot;: &quot;This crypto-asset white paper has not been approved by any competent authority in any Member State of the European Union. The offeror of the crypto-asset is solely responsible for the content of this crypto-asset white paper.&quot;
+}
+
+No white paper given (no --whitepaper).</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>English statement</strong></div><p class="small muted">The wording of Art. 7(1)(e).</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic token offer&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;text&quot;: &quot;This crypto-asset marketing communication has not been reviewed or approved by any competent authority in any Member State of the European Union. The offeror of the crypto-asset is solely responsible for the content of this crypto-asset marketing communication.&quot;
+}
+
+No white paper given (no --whitepaper).</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>Operator of the trading platform</strong></div><p class="small muted">The second subparagraph puts this person in place of the offeror.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic token offer&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;text&quot;: &quot;This crypto-asset marketing communication has not been reviewed or approved by any competent authority in any Member State of the European Union. The operator of the trading platform of the crypto-asset is solely responsible for the content of this crypto-asset marketing communication.&quot;
+}
+
+No white paper given (no --whitepaper).</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>German statement</strong></div><p class="small muted">A German draft is checked for the German wording.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic token offer&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;text&quot;: &quot;Werbung für einen synthetischen Token. Diese Kryptowert-Marketingmitteilung wurde von keiner zuständigen Behörde eines Mitgliedstaats der Europäischen Union geprüft oder genehmigt. Der Anbieter des Kryptowerts trägt die alleinige Verantwortung für den Inhalt dieser Kryptowert-Marketingmitteilung.&quot;
+}
+
+No white paper given (no --whitepaper).</code></pre></div>
+<h2>Limitations</h2>
+<ul class="plain"><li>Reads the whole text of the marketing communication as a reader sees it: the <code>text</code> value of a JSON file, or the text of a Markdown, text, HTML, XHTML, DOCX or PDF file without what the loader finds a reader cannot see. It cannot see layout, placement, prominence, images, audio or video, so wording shown only in an image, a banner or a voice-over is not read.</li><li>Matches the English and German wording of Art. 7(1)(e) MiCAR only. The draft's language decides which, so a statement in the other language or in a third one goes to review. Case, line ends and soft hyphens are ignored. It cannot see whether the statement is clear and prominent. The German second subparagraph names the “Person, die die Zulassung zum Handel beantragt” and the “Betreiber der Handelsplattform” without printing a sentence for them; the check accepts both with or without “des Kryptowerts”.</li><li>Status and severity are fixed by the rule. A draft cannot waive or downgrade them.</li><li>The marketing communication checks have not yet been run against a real marketing communication.</li></ul>
+<p class="small muted">Disagree with this rule, or missing one? <a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/issues/new?template=rule-proposal.yml">Propose a rule change</a>.</p>
+
+</main>
+<footer><span>MiCAR Whitepaper Linter 1.3.0 · MIT licence · First-pass screening, not legal advice.</span><span>Generated from the rule set by <code>scripts/build_rule_docs.py</code>.</span></footer>
+</body>
+</html>

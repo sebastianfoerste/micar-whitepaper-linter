@@ -17,22 +17,33 @@ _FILING_CITATION = (
     "Art. 8 Abs. 1, Art. 16 Abs. 2 UAbs. 2, Art. 17 Abs. 1 Buchst. a, Art. 18 Abs. 2 Buchst. k, "
     "Art. 51 Abs. 11 MiCAR"
 )
+# The provision named in the header and footer of a marketing communication report (ADR 0009).
+_MARKETING_CITATION = "Art. 7 MiCAR"
 # Characters that start inline Markdown or HTML. The loader's notes contain none, but the title and the
 # source path come from the draft or its file name, and an unrecognised-section warning quotes a section key.
 _MARKDOWN_MARKUP = re.compile(r"[\\`*_~\[\]<>&]")
 
 
 def render_text(report: Report, citation_style: str = "en") -> str:
+    marketing = report.document_kind == "marketing_communication"
     lines: list[str] = []
     lines.append(f"MiCAR Whitepaper Linter - {report.title}")
-    lines.append(f"Whitepaper type: {report.whitepaper_type.value.upper()}")
+    if marketing:
+        lines.append(
+            "Document: marketing communication, crypto-asset other than an ART or EMT "
+            f"({citations.render(_MARKETING_CITATION, citation_style)})"
+        )
+    else:
+        lines.append(f"Whitepaper type: {report.whitepaper_type.value.upper()}")
     lines.append(_TITLE_BAR)
+    acknowledged = {ack.rule_id: ack for ack in report.acknowledged}
     lines.append(
-        "Pass: {p}  |  Review: {r}  |  Missing: {m}  |  Blockers: {b}".format(
+        "Pass: {p}  |  Review: {r}  |  Missing: {m}  |  Blockers: {b}{a}".format(
             p=len(report.passed),
             r=len(report.needs_review),
             m=len(report.missing),
             b=len(report.blockers),
+            a=f" ({len(acknowledged)} acknowledged)" if acknowledged else "",
         )
     )
     lines.append("")
@@ -48,6 +59,12 @@ def render_text(report: Report, citation_style: str = "en") -> str:
         lines.append(f"           Section: '{rule.section}'  ({finding.word_count} words)")
         for issue in finding.issues:
             lines.append(f"           -  {issue}")
+        if rule.rule_id in acknowledged:
+            ack = acknowledged[rule.rule_id]
+            lines.append(
+                f"           Acknowledged for this file version by {ack.reviewer} on {ack.date} "
+                f"(sign-off file): {ack.note}"
+            )
         lines.append("")
 
     if report.warnings:
@@ -57,8 +74,22 @@ def render_text(report: Report, citation_style: str = "en") -> str:
         lines.append("")
 
     lines.append(_TITLE_BAR)
-    if report.is_clean:
+    if marketing:
+        lines.append(
+            "All checked items present. Lawyer review still required."
+            if report.is_clean
+            else "First-pass screening only. The marketing communication should not be disseminated "
+            f"({citations.render(_MARKETING_CITATION, citation_style)}) until BLOCKER items are cured and a "
+            "lawyer has signed off."
+        )
+    elif report.is_clean:
         lines.append("All required disclosures present. Lawyer review still required.")
+    elif acknowledged and not report.open_blockers:
+        lines.append(
+            "First-pass screening only. The open BLOCKER items are never-pass gates that the sign-off "
+            "file acknowledges for this file version; they stay open here and do not count for --strict. "
+            "The other open items and a lawyer's sign-off of the white paper still apply."
+        )
     else:
         lines.append(
             "First-pass screening only. The draft is not package-ready. The white paper "
@@ -73,14 +104,18 @@ def render_text(report: Report, citation_style: str = "en") -> str:
 def render_json(report: Report) -> str:
     payload = {
         "title": report.title,
+        # Only a marketing communication report names its kind, so a white paper report keeps its keys.
+        **({"document_kind": report.document_kind} if report.document_kind != "white_paper" else {}),
         "whitepaper_type": report.whitepaper_type.value,
         "summary": {
             "pass": len(report.passed),
             "review": len(report.needs_review),
             "missing": len(report.missing),
             "blockers": len(report.blockers),
+            **({"open_blockers": len(report.open_blockers)} if report.acknowledged else {}),
             "total": len(report.findings),
         },
+        **({"acknowledged": [ack.to_json() for ack in report.acknowledged]} if report.acknowledged else {}),
         "warnings": list(report.warnings),
         # The rules that did not run on this draft (field-level rules without field numbers): no finding.
         "not_run": [rule.rule_id for rule in report.not_run],

@@ -42,8 +42,9 @@ from micar_linter.point_fields import (
     PointField,
     fields_text,
 )
-from micar_linter.rules import RULESETS
+from micar_linter.rules import MARKETING_RULESETS, RULESETS
 from micar_linter.rules.base import Rule
+from micar_linter.rules.marketing import MARKETING_RULE_IDS, MARKETING_SECTION
 from micar_linter.rules.points import POINT_RULE_IDS
 from micar_linter.template_fields import FIELD_NAMES
 from micar_linter.template_types import (
@@ -74,6 +75,8 @@ REGIME_NAMES = {
     WhitepaperType.ART: "Annex II · asset-referenced tokens",
     WhitepaperType.EMT: "Annex III · e-money tokens",
 }
+# The marketing communication rules (ADR 0009) run on a second kind of document, not on a white paper.
+MARKETING_NAME = "Marketing communications · crypto-assets other than ARTs and EMTs (Art. 7 MiCAR)"
 SOURCE_MODULES = {
     "COMMON": "common.py",
     "ANNEX_I": "annex_i.py",
@@ -81,6 +84,7 @@ SOURCE_MODULES = {
     "ANNEX_III": "annex_iii.py",
     "ITS": "templates.py",
     "RTS": "templates.py",
+    "MARKETING": "marketing.py",
 }
 # The stated status of an example on which the rule gives no finding: a field-level rule on a draft without
 # field numbers (linter.runs_on).
@@ -278,6 +282,7 @@ UNTESTED_REGIMES = {
         "The checks of the Delegated Regulations (sustainability indicators, register classification data) have not "
         "yet been run against a real notified white paper."
     ),
+    "MARKETING": "The marketing communication checks have not yet been run against a real marketing communication.",
 }
 # Why a rule runs with other terms or another minimum for some regimes. The build stops when a rule
 # ID has more than one Rule in RULESETS and no note here.
@@ -307,11 +312,18 @@ class Example:
     note: str
     # A numbered-field draft as the XHTML loader reads it: (number, label, answer) per field.
     fields: tuple[tuple[str, str, str], ...] = ()
+    # A marketing communication example: the text of the white paper given with --whitepaper, or None for none.
+    reference: str | None = None
+
+
+def _rule_sets() -> list[tuple[WhitepaperType, tuple[Rule, ...]]]:
+    """The white paper rule sets, then the marketing communication rule sets (ADR 0009)."""
+    return [*RULESETS.items(), *MARKETING_RULESETS.items()]
 
 
 def regimes_by_rule() -> dict[str, list[WhitepaperType]]:
     found: dict[str, list[WhitepaperType]] = {}
-    for regime, rules in RULESETS.items():
+    for regime, rules in _rule_sets():
         for rule in rules:
             found.setdefault(rule.rule_id, []).append(regime)
     return found
@@ -319,7 +331,7 @@ def regimes_by_rule() -> dict[str, list[WhitepaperType]]:
 
 def all_rules() -> list[Rule]:
     seen: dict[str, Rule] = {}
-    for rules in RULESETS.values():
+    for _, rules in _rule_sets():
         for rule in rules:
             seen.setdefault(rule.rule_id, rule)
     return list(seen.values())
@@ -328,7 +340,7 @@ def all_rules() -> list[Rule]:
 def variants(rule_id: str) -> list[tuple[Rule, list[WhitepaperType]]]:
     """The distinct Rule objects that carry one ID, each with the regimes that run it."""
     found: dict[Rule, list[WhitepaperType]] = {}
-    for regime, rules in RULESETS.items():
+    for regime, rules in _rule_sets():
         for rule in rules:
             if rule.rule_id == rule_id:
                 found.setdefault(rule, []).append(regime)
@@ -372,6 +384,8 @@ def _responsibility(person: str) -> str:
 
 
 def examples(rule: Rule, regime: WhitepaperType) -> list[Example]:
+    if rule.rule_id in MARKETING_RULE_IDS:
+        return _marketing_examples(rule)
     if rule.rule_id in POINT_RULE_IDS:
         return _point_examples(rule, regime)
     if rule.rule_id in TEMPLATE_RULES:
@@ -1727,8 +1741,237 @@ def _point_limitations(rule: Rule) -> list[str]:
     return items
 
 
+# Marketing communications under Art. 7 MiCAR (rules/marketing.py, ADR 0009). Every value below is synthetic.
+MARKETING_VERIFICATION = (
+    "Checked on 2026-11-25 against the Official Journal text of Art. 7(1) MiCAR in English and German (OJ L 150, "
+    "9.6.2023; CELEX 32023R1114), as the Publications Office Cellar served it that day. Amendments and corrigenda "
+    "of Art. 7 were not checked separately."
+)
+OJ_CHECKED.update(dict.fromkeys(sorted(MARKETING_RULE_IDS), MARKETING_VERIFICATION))
+MARKETING_ANSWERS = {
+    "MARKETING.IDENTIFIABLE": "a marketing label in the title or the first 40 words",
+    "MARKETING.MISLEADING_CLAIMS": "the listed claims",
+    "MARKETING.CONSISTENCY": "values that the white paper contains",
+    "MARKETING.WHITE_PAPER_AND_CONTACT": "a white paper statement, a website, a telephone number and an e-mail address",
+    "MARKETING.NOT_REVIEWED_STATEMENT": "the statement's wording",
+}
+MARKETING_STATEMENT_EN = (
+    "This crypto-asset marketing communication has not been reviewed or approved by any competent authority in any "
+    "Member State of the European Union. The offeror of the crypto-asset is solely responsible for the content of "
+    "this crypto-asset marketing communication."
+)
+MARKETING_STATEMENT_DE = (
+    "Diese Kryptowert-Marketingmitteilung wurde von keiner zuständigen Behörde eines Mitgliedstaats der Europäischen "
+    "Union geprüft oder genehmigt. Der Anbieter des Kryptowerts trägt die alleinige Verantwortung für den Inhalt "
+    "dieser Kryptowert-Marketingmitteilung."
+)
+MARKETING_CONTACT = (
+    "A crypto-asset white paper has been published at https://synthetic-offeror.example/white-paper. "
+    "Telephone +49 30 0000 0000, e-mail contact@synthetic-offeror.example."
+)
+MARKETING_REFERENCE = (
+    f"Synthetic white paper. Offeror LEI {SYNTHETIC_LEI}. Contact: telephone +49 30 0000 0000, e-mail "
+    "contact@synthetic-offeror.example. Date of notification: 2026-03-02. Fixed price EUR 0.10 per token."
+)
+WHITE_PAPER_STATEMENT = (
+    "This crypto-asset white paper has not been approved by any competent authority in any Member State of the "
+    "European Union. The offeror of the crypto-asset is solely responsible for the content of this crypto-asset "
+    "white paper."
+)
+
+
+def _marketing(text: str, title: str = "Synthetic token offer") -> dict:
+    return {"title": title, "type": "other", "text": text}
+
+
+def _marketing_examples(rule: Rule) -> list[Example]:
+    empty = Example("Empty communication", "missing", _marketing(""), "An empty text is missing for every marketing rule.")
+    if rule.rule_id == "MARKETING.IDENTIFIABLE":
+        late = " ".join([FILLER] * 3) + " " + MARKETING_STATEMENT_EN
+        return [
+            empty,
+            Example(
+                "Label only after the opening",
+                "review",
+                _marketing(late),
+                "The statement names a marketing communication, but only after the first 40 words, and the title "
+                "names none.",
+            ),
+            Example("Label in the opening words", "pass", _marketing("Advertisement. " + FILLER), "A label opens the text."),
+        ]
+    if rule.rule_id == "MARKETING.MISLEADING_CLAIMS":
+        return [
+            empty,
+            Example(
+                "Listed claims",
+                "review",
+                _marketing("Holders earn guaranteed returns, and the price will rise after the listing."),
+                "The finding names the claims (guaranteed return, rising price), never the text.",
+            ),
+            Example(
+                "Negated claims",
+                "pass",
+                _marketing("There are no guaranteed returns, and the price may rise or fall."),
+                "A negation right before a claim does not count, and \"may rise or fall\" is no listed claim.",
+            ),
+        ]
+    if rule.rule_id == "MARKETING.CONSISTENCY":
+        values = f"Advertisement. Offeror LEI {SYNTHETIC_LEI}. Price EUR 0.10 per token, notified on 2 March 2026. "
+        return [
+            Example(
+                "No white paper given",
+                NOT_RUN,
+                _marketing(values + MARKETING_CONTACT),
+                "Without --whitepaper the rule gives no finding, and the report says so.",
+            ),
+            Example("Empty communication", "missing", _marketing(""), "An empty text is missing.", reference=MARKETING_REFERENCE),
+            Example(
+                "A value the white paper lacks",
+                "review",
+                _marketing("Advertisement. Early buyers receive a 20 % bonus. " + MARKETING_CONTACT),
+                "The white paper gives no percentage of 20, so the finding names it.",
+                reference=MARKETING_REFERENCE,
+            ),
+            Example(
+                "Every value found",
+                "pass",
+                _marketing(values + MARKETING_CONTACT),
+                "The LEI, the amount, the date (written another way), the web host (inside the white paper's e-mail "
+                "address), the telephone number and the e-mail address are all in the white paper.",
+                reference=MARKETING_REFERENCE,
+            ),
+        ]
+    if rule.rule_id == "MARKETING.WHITE_PAPER_AND_CONTACT":
+        return [
+            empty,
+            Example(
+                "Statement only",
+                "review",
+                _marketing("Advertisement. " + MARKETING_STATEMENT_EN),
+                "No white paper statement, website, telephone number or e-mail address.",
+            ),
+            Example("All four items", "pass", _marketing("Advertisement. " + MARKETING_CONTACT), "Each item is there."),
+        ]
+    return [
+        empty,
+        Example(
+            "White paper wording",
+            "review",
+            _marketing(WHITE_PAPER_STATEMENT),
+            "The Art. 6(3) statement of a white paper is not the Art. 7(1)(e) statement.",
+        ),
+        Example("English statement", "pass", _marketing(MARKETING_STATEMENT_EN), "The wording of Art. 7(1)(e)."),
+        Example(
+            "Operator of the trading platform",
+            "pass",
+            _marketing(MARKETING_STATEMENT_EN.replace("offeror", "operator of the trading platform")),
+            "The second subparagraph puts this person in place of the offeror.",
+        ),
+        Example(
+            "German statement",
+            "pass",
+            _marketing("Werbung für einen synthetischen Token. " + MARKETING_STATEMENT_DE),
+            "A German draft is checked for the German wording.",
+        ),
+    ]
+
+
+def _marketing_status_logic(rule: Rule) -> str:
+    missing = "<li><strong>Missing</strong>: the text is empty or holds only placeholders such as TBD.</li>"
+    logic = {
+        "MARKETING.IDENTIFIABLE": (
+            "<li><strong>Review</strong>: neither the title nor the first 40 words hold a label that marks the text "
+            "as marketing.</li><li><strong>Pass</strong>: the title or the opening holds such a label.</li>"
+        ),
+        "MARKETING.MISLEADING_CLAIMS": (
+            "<li><strong>Review</strong>: the text holds one of the listed claims: a guaranteed return, no risk, a "
+            "rising price or an approval by an authority. The finding names each claim, never the text.</li>"
+            "<li><strong>Pass</strong>: none of the listed claims was found.</li>"
+        ),
+        "MARKETING.CONSISTENCY": (
+            "<li><strong>Review</strong>: the white paper given with the communication does not contain an "
+            "identifier, e-mail address, web host, telephone number, date, percentage or amount of the "
+            "communication; the finding names up to ten of them and counts the rest.</li><li><strong>Pass</strong>: "
+            "the white paper contains every such value, or the communication holds none.</li>"
+            "<li><strong>Not run</strong>: no white paper was given (<code>--whitepaper</code>). The report says so "
+            "and lists the rule under <code>not_run</code>.</li>"
+        ),
+        "MARKETING.WHITE_PAPER_AND_CONTACT": (
+            "<li><strong>Review</strong>: one or more of these is not found: a statement that a crypto-asset white "
+            "paper has been published, a website address, a telephone number, an e-mail address.</li>"
+            "<li><strong>Pass</strong>: all four are found.</li>"
+        ),
+        "MARKETING.NOT_REVIEWED_STATEMENT": (
+            "<li><strong>Review</strong>: either sentence of the statement is not in the text word for word, in "
+            "English for an English draft and in German for a German one, or the words before \"of the crypto-asset "
+            "is solely responsible\" name neither the offeror nor, under the second subparagraph, the person seeking "
+            "admission to trading or the operator of the trading platform.</li><li><strong>Pass</strong>: the "
+            "statement is there in that wording.</li>"
+        ),
+    }
+    return f'<ul class="plain">{missing}{logic[rule.rule_id]}</ul>'
+
+
+def _marketing_limitations(rule: Rule) -> list[str]:
+    reads = (
+        "Reads the whole text of the marketing communication as a reader sees it: the <code>text</code> value of a "
+        "JSON file, or the text of a Markdown, text, HTML, XHTML, DOCX or PDF file without what the loader finds a "
+        "reader cannot see. It cannot see layout, placement, prominence, images, audio or video, so wording shown "
+        "only in an image, a banner or a voice-over is not read."
+    )
+    specific = {
+        "MARKETING.IDENTIFIABLE": (
+            "Looks for a label in English or German in the title or the first 40 words: crypto-asset marketing "
+            "communication, marketing communication, advertisement, advertising, sponsored, sponsored content, paid "
+            "promotion, paid partnership, promotional material, content or communication, Kryptowert-"
+            "Marketingmitteilung, Marketingmitteilung, Werbemitteilung, Werbeanzeige, Werbung, Anzeige, gesponsert, "
+            "bezahlte Partnerschaft. Whether the communication is clearly identifiable as such depends on its "
+            "presentation, which the check cannot see. The title of a file other than JSON is its file name."
+        ),
+        "MARKETING.MISLEADING_CLAIMS": (
+            "Finds the listed claims only, in the English and German wordings shown above, in a draft of either "
+            "language. Whether the information is fair, clear and not misleading depends on all of it and on the "
+            "white paper, so a pass means only that none of the listed claims was found. A negation right before a "
+            "claim, such as \"no guaranteed returns\" or \"not risk-free\", does not count; one further back in the "
+            "sentence is not recognised, so \"No investment is risk-free\" goes to review."
+        ),
+        "MARKETING.CONSISTENCY": (
+            "Compares only values it can read: LEIs with valid check digits, nine-character codes of capital "
+            "letters and digits such as a DTI, e-mail addresses, web hosts, international telephone numbers (+ or "
+            "00), calendar dates, percentages and amounts with a currency code or symbol (EUR, USD, GBP, CHF, USDC, "
+            "USDT, €, $, £, with million and similar words). A value counts as found where the white paper "
+            "contains it anywhere: a web host also inside an e-mail address, a date in any form the check reads, "
+            "an amount or a percentage of the same value. It does not compare statements, names or descriptions, "
+            "so a claim that the white paper does not support passes where it holds no such value. It does not "
+            "run without a white paper (<code>--whitepaper</code>)."
+        ),
+        "MARKETING.WHITE_PAPER_AND_CONTACT": (
+            "Recognises a sentence that says a white paper has been published, in English or German, a web address "
+            "(with a scheme, starting with www. or a host with a path), a telephone number and an e-mail address, "
+            "as the contact checks of Annex I Part A point 6 recognise them. It cannot tell whose website, number "
+            "or address they are, or whether they work."
+        ),
+        "MARKETING.NOT_REVIEWED_STATEMENT": (
+            "Matches the English and German wording of Art. 7(1)(e) MiCAR only. The draft's language decides "
+            "which, so a statement in the other language or in a third one goes to review. Case, line ends and soft "
+            "hyphens are ignored. It cannot see whether the statement is clear and prominent. The German second "
+            "subparagraph names the “Person, die die Zulassung zum Handel beantragt” and the "
+            "“Betreiber der Handelsplattform” without printing a sentence for them; the check accepts "
+            "both with or without “des Kryptowerts”."
+        ),
+    }
+    # rule_page adds UNTESTED_REGIMES["MARKETING"] for the family.
+    return [reads, specific[rule.rule_id]]
+
+
 def _shown_draft(example: Example) -> str:
-    """The draft as an example shows it: JSON, or the numbered fields of an XHTML draft, one per line."""
+    """The draft as an example shows it: JSON, or the numbered fields of an XHTML draft, one per line; for a
+    marketing communication also the text of the white paper given with it."""
+    if "text" in example.draft:
+        shown = json.dumps(example.draft, indent=2, ensure_ascii=False)
+        if example.reference is None:
+            return shown + "\n\nNo white paper given (no --whitepaper)."
+        return shown + "\n\nWhite paper given with --whitepaper, as its text reads:\n" + example.reference
     if not example.fields:
         return json.dumps(example.draft, indent=2, ensure_ascii=False)
     table = TABLE_NUMBERS[WhitepaperType(example.draft["type"])]
@@ -1739,6 +1982,19 @@ def _shown_draft(example: Example) -> str:
 
 def lint_example(rule: Rule, example: Example) -> str:
     draft = example.draft
+    if rule.rule_id in MARKETING_RULE_IDS:
+        # The keys load_marketing_communication sets (whitepaper.py); a JSON communication cannot set them.
+        metadata: dict = {"document_kind": "marketing_communication"}
+        if example.reference is not None:
+            metadata["reference_text"] = example.reference
+        communication = Whitepaper(
+            title=draft["title"],
+            type=WhitepaperType.OTHER,
+            sections={MARKETING_SECTION: draft["text"]},
+            metadata=metadata,
+        )
+        found = Linter((rule,)).lint(communication)
+        return found[0].status if found else NOT_RUN
     # The same filter as the JSON loader: a draft cannot set the reserved keys.
     metadata = {
         k: v
@@ -1803,6 +2059,8 @@ def _terms(terms: tuple[str, ...], patterns: tuple[str, ...] = ()) -> str:
 
 
 def status_logic(rule: Rule) -> str:
+    if rule.rule_id in MARKETING_RULE_IDS:
+        return _marketing_status_logic(rule)
     if rule.rule_id in POINT_RULE_IDS:
         return _point_status_logic(rule)
     if rule.rule_id in TEMPLATE_RULES:
@@ -2137,6 +2395,8 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
         limitations = [*_template_limitations(rule), limitations[-1]]
     if rule.rule_id in POINT_RULE_IDS:
         limitations = [*_point_limitations(rule), limitations[-1]]
+    if rule.rule_id in MARKETING_RULE_IDS:
+        limitations = [*_marketing_limitations(rule), limitations[-1]]
     if family in UNTESTED_REGIMES:
         limitations.append(UNTESTED_REGIMES[family])
     if rule.rule_id == "COMMON.LEI_CHECK_DIGITS":
@@ -2380,7 +2640,11 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
             "holds it, in the cell or around the table."
         )
     if rule.rule_id in NEVER_PASS:
-        limitations.append("This rule never reports Pass.")
+        limitations.append(
+            "This rule never reports Pass. A sign-off file (<code>--signoff</code>, ADR 0010) can acknowledge its "
+            "open finding for one version of the file, so that <code>--strict</code> does not count it; the "
+            "finding stays open."
+        )
     example_html = []
     for variant, found in groups:
         suffix = f" ({_annexes(found)})" if len(groups) > 1 else ""
@@ -2402,10 +2666,10 @@ def rule_page(rule: Rule, regimes: list[WhitepaperType]) -> str:
 <div class="panel"><dl class="facts">
 <dt>Citation</dt><dd>{_e(citation_en)}</dd>
 <dt>Canonical form</dt><dd lang="de">{_e(rule.citation)}</dd>
-<dt>Runs for</dt><dd>{_e("; ".join(REGIME_NAMES[r] for r in regimes))}</dd>
+<dt>Runs for</dt><dd>{_e(MARKETING_NAME if rule.rule_id in MARKETING_RULE_IDS else "; ".join(REGIME_NAMES[r] for r in regimes))}</dd>
 <dt>Severity if open</dt><dd>{_e(rule.severity.label)}</dd>
 <dt>Section key</dt><dd>{"none: checks the file format" if rule.rule_id in FORMAT_GATE else "all sections; anchored to <code>issuer</code>" if rule.rule_id in LEI_RULES else by_regime(lambda r: f"<code>{_e(r.section)}</code>")}</dd>
-<dt>Minimum words</dt><dd>{f"none: checks for {ANSWER_CHECKS[rule.rule_id]}" if rule.rule_id in ANSWER_CHECKS else f"none: checks for {TEMPLATE_ANSWERS[rule.rule_id]}" if rule.rule_id in TEMPLATE_RULES else "none: checks whether the template fields that carry the point hold an answer" if rule.rule_id in POINT_RULE_IDS else by_regime(lambda r: str(r.min_words))}</dd>
+<dt>Minimum words</dt><dd>{f"none: checks for {MARKETING_ANSWERS[rule.rule_id]}" if rule.rule_id in MARKETING_ANSWERS else f"none: checks for {ANSWER_CHECKS[rule.rule_id]}" if rule.rule_id in ANSWER_CHECKS else f"none: checks for {TEMPLATE_ANSWERS[rule.rule_id]}" if rule.rule_id in TEMPLATE_RULES else "none: checks whether the template fields that carry the point hold an answer" if rule.rule_id in POINT_RULE_IDS else by_regime(lambda r: str(r.min_words))}</dd>
 <dt>Listed terms (English)</dt><dd>{by_regime(lambda r: _terms(r.required_terms, r.required_patterns))}</dd>
 <dt>Listed terms (German)</dt><dd lang="de">{by_regime(lambda r: _terms(r.required_terms_de, r.required_patterns_de))}</dd>
 {prohibited}<dt>Package version</dt><dd>{_e(__version__)}, built from source that may include unreleased changes</dd>
@@ -2454,6 +2718,18 @@ def index_page(rules: list[Rule], regimes: dict[str, list[WhitepaperType]]) -> s
         )
         sections.append(
             f'<h2>{_e(name)} <span class="muted small">({len(RULESETS[regime])} rules)</span></h2>'
+            '<div class="table-wrap"><table><thead><tr><th scope="col">Rule</th><th scope="col">Checks for</th>'
+            f'<th scope="col">Severity</th><th scope="col">Citation</th></tr></thead><tbody>{rows}</tbody></table></div>'
+        )
+    for marketing_rules in MARKETING_RULESETS.values():
+        rows = "".join(
+            f'<tr><td><a href="{_e(rule.rule_id)}.html"><code>{_e(rule.rule_id)}</code></a></td>'
+            f"<td>{_e(rule.label)}</td><td>{_e(rule.severity.label)}</td>"
+            f"<td>{_e(citations.to_english(rule.citation))}</td></tr>"
+            for rule in marketing_rules
+        )
+        sections.append(
+            f'<h2>{_e(MARKETING_NAME)} <span class="muted small">({len(marketing_rules)} rules)</span></h2>'
             '<div class="table-wrap"><table><thead><tr><th scope="col">Rule</th><th scope="col">Checks for</th>'
             f'<th scope="col">Severity</th><th scope="col">Citation</th></tr></thead><tbody>{rows}</tbody></table></div>'
         )

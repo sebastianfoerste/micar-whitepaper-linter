@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Consistent with the white paper: identifiers, dates, percentages, amounts and contact details found in the white paper. Art. 7(1), point (c) MiCAR.">
+<title>MARKETING.CONSISTENCY: MiCAR Whitepaper Linter rule</title>
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <a class="brand" href="../"><span class="brand-mark" aria-hidden="true">M</span><span>MiCAR <strong>Whitepaper Linter</strong></span></a>
+  <nav aria-label="Site"><a href="../">Overview</a><a href="../rules/">Rules</a><a href="../playground/">Playground</a><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter">Source</a></nav>
+</header>
+<main id="main">
+<p class="eyebrow">Rule · MAJOR</p>
+<h1>MARKETING.CONSISTENCY</h1>
+<p class="lede">Consistent with the white paper: identifiers, dates, percentages, amounts and contact details found in the white paper</p>
+<div class="panel"><dl class="facts">
+<dt>Citation</dt><dd>Art. 7(1), point (c) MiCAR</dd>
+<dt>Canonical form</dt><dd lang="de">Art. 7 Abs. 1 Buchst. c MiCAR</dd>
+<dt>Runs for</dt><dd>Marketing communications · crypto-assets other than ARTs and EMTs (Art. 7 MiCAR)</dd>
+<dt>Severity if open</dt><dd>MAJOR</dd>
+<dt>Section key</dt><dd><code>marketing_communication</code></dd>
+<dt>Minimum words</dt><dd>none: checks for values that the white paper contains</dd>
+<dt>Listed terms (English)</dt><dd>none</dd>
+<dt>Listed terms (German)</dt><dd lang="de">none</dd>
+<dt>Package version</dt><dd>1.3.0, built from source that may include unreleased changes</dd>
+<dt>Source</dt><dd><a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/blob/main/src/micar_linter/rules/marketing.py">rules/marketing.py</a></dd>
+</dl></div>
+<h2>How the status is set</h2>
+<ul class="plain"><li><strong>Missing</strong>: the text is empty or holds only placeholders such as TBD.</li><li><strong>Review</strong>: the white paper given with the communication does not contain an identifier, e-mail address, web host, telephone number, date, percentage or amount of the communication; the finding names up to ten of them and counts the rest.</li><li><strong>Pass</strong>: the white paper contains every such value, or the communication holds none.</li><li><strong>Not run</strong>: no white paper was given (<code>--whitepaper</code>). The report says so and lists the rule under <code>not_run</code>.</li></ul>
+<h2>Legal basis</h2>
+<p>Art. 7(1), point (c) MiCAR</p>
+<ul class="plain"><li><a href="https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng">https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng</a></li></ul>
+<p class="callout">Checked on 2026-11-25 against the Official Journal text of Art. 7(1) MiCAR in English and German (OJ L 150, 9.6.2023; CELEX 32023R1114), as the Publications Office Cellar served it that day. Amendments and corrigenda of Art. 7 were not checked separately.</p>
+<h2>Synthetic examples</h2>
+<p class="small muted">Each example is linted when this page is generated. The build fails if a result differs.</p>
+<div class="example"><div class="example-head"><span class="badge neutral">Not run</span><strong>No white paper given</strong></div><p class="small muted">Without --whitepaper the rule gives no finding, and the report says so.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic token offer&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;text&quot;: &quot;Advertisement. Offeror LEI 9999SYNTH0000ZZQ0166. Price EUR 0.10 per token, notified on 2 March 2026. A crypto-asset white paper has been published at https://synthetic-offeror.example/white-paper. Telephone +49 30 0000 0000, e-mail contact@synthetic-offeror.example.&quot;
+}
+
+No white paper given (no --whitepaper).</code></pre></div><div class="example"><div class="example-head"><span class="badge missing">Missing</span><strong>Empty communication</strong></div><p class="small muted">An empty text is missing.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic token offer&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;text&quot;: &quot;&quot;
+}
+
+White paper given with --whitepaper, as its text reads:
+Synthetic white paper. Offeror LEI 9999SYNTH0000ZZQ0166. Contact: telephone +49 30 0000 0000, e-mail contact@synthetic-offeror.example. Date of notification: 2026-03-02. Fixed price EUR 0.10 per token.</code></pre></div><div class="example"><div class="example-head"><span class="badge review">Review</span><strong>A value the white paper lacks</strong></div><p class="small muted">The white paper gives no percentage of 20, so the finding names it.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic token offer&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;text&quot;: &quot;Advertisement. Early buyers receive a 20 % bonus. A crypto-asset white paper has been published at https://synthetic-offeror.example/white-paper. Telephone +49 30 0000 0000, e-mail contact@synthetic-offeror.example.&quot;
+}
+
+White paper given with --whitepaper, as its text reads:
+Synthetic white paper. Offeror LEI 9999SYNTH0000ZZQ0166. Contact: telephone +49 30 0000 0000, e-mail contact@synthetic-offeror.example. Date of notification: 2026-03-02. Fixed price EUR 0.10 per token.</code></pre></div><div class="example"><div class="example-head"><span class="badge pass">Pass</span><strong>Every value found</strong></div><p class="small muted">The LEI, the amount, the date (written another way), the web host (inside the white paper&#x27;s e-mail address), the telephone number and the e-mail address are all in the white paper.</p><pre><code>{
+  &quot;title&quot;: &quot;Synthetic token offer&quot;,
+  &quot;type&quot;: &quot;other&quot;,
+  &quot;text&quot;: &quot;Advertisement. Offeror LEI 9999SYNTH0000ZZQ0166. Price EUR 0.10 per token, notified on 2 March 2026. A crypto-asset white paper has been published at https://synthetic-offeror.example/white-paper. Telephone +49 30 0000 0000, e-mail contact@synthetic-offeror.example.&quot;
+}
+
+White paper given with --whitepaper, as its text reads:
+Synthetic white paper. Offeror LEI 9999SYNTH0000ZZQ0166. Contact: telephone +49 30 0000 0000, e-mail contact@synthetic-offeror.example. Date of notification: 2026-03-02. Fixed price EUR 0.10 per token.</code></pre></div>
+<h2>Limitations</h2>
+<ul class="plain"><li>Reads the whole text of the marketing communication as a reader sees it: the <code>text</code> value of a JSON file, or the text of a Markdown, text, HTML, XHTML, DOCX or PDF file without what the loader finds a reader cannot see. It cannot see layout, placement, prominence, images, audio or video, so wording shown only in an image, a banner or a voice-over is not read.</li><li>Compares only values it can read: LEIs with valid check digits, nine-character codes of capital letters and digits such as a DTI, e-mail addresses, web hosts, international telephone numbers (+ or 00), calendar dates, percentages and amounts with a currency code or symbol (EUR, USD, GBP, CHF, USDC, USDT, €, $, £, with million and similar words). A value counts as found where the white paper contains it anywhere: a web host also inside an e-mail address, a date in any form the check reads, an amount or a percentage of the same value. It does not compare statements, names or descriptions, so a claim that the white paper does not support passes where it holds no such value. It does not run without a white paper (<code>--whitepaper</code>).</li><li>Status and severity are fixed by the rule. A draft cannot waive or downgrade them.</li><li>The marketing communication checks have not yet been run against a real marketing communication.</li></ul>
+<p class="small muted">Disagree with this rule, or missing one? <a href="https://github.com/sebastianfoerste/micar-whitepaper-linter/issues/new?template=rule-proposal.yml">Propose a rule change</a>.</p>
+
+</main>
+<footer><span>MiCAR Whitepaper Linter 1.3.0 · MIT licence · First-pass screening, not legal advice.</span><span>Generated from the rule set by <code>scripts/build_rule_docs.py</code>.</span></footer>
+</body>
+</html>
